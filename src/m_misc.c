@@ -266,6 +266,8 @@ char *M_GetExecutableFolder(void)
         *pos = '\0';
 
     return folder;
+#elif defined(__ANDROID__)
+    return "."; // CWD
 #elif defined(__linux__)
     char        *exe = malloc(MAX_PATH);
     ssize_t     len = readlink("/proc/self/exe", exe, MAX_PATH - 1);

@@ -257,6 +257,10 @@ void C_Output(char *string, ...)
     M_vsnprintf(buffer, CONSOLETEXTMAXLENGTH - 1, string, argptr);
     va_end(argptr);
 
+#ifdef __ANDROID__
+    LOGI("%s",buffer);
+#endif
+
     console = Z_Realloc(console, (consolestrings + 1) * sizeof(*console));
     M_StringCopy(console[consolestrings].string, buffer, CONSOLETEXTMAXLENGTH);
     console[consolestrings].type = outputstring;

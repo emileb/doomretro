@@ -475,6 +475,11 @@ void G_BuildTiccmd(ticcmd_t *cmd)
     mousex = 0;
     mousey = 0;
 
+#ifdef __ANDROID__
+    extern void G_AndroidBuildTiccmd(ticcmd_t *cmd);
+    G_AndroidBuildTiccmd(cmd);
+#endif
+
     cmd->forwardmove += BETWEEN(-MAXPLMOVE, forward, MAXPLMOVE);
     cmd->sidemove += BETWEEN(-MAXPLMOVE, side, MAXPLMOVE);
 

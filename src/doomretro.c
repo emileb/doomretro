@@ -251,7 +251,11 @@ void I_ShutdownWindows32(void)
 }
 #endif
 
+#ifdef __ANDROID__
+int main_android(int argc, char **argv)
+#else
 int main(int argc, char **argv)
+#endif
 {
 #if defined(_WIN32)
     hInstanceMutex = CreateMutex(NULL, true, PACKAGE_MUTEX);

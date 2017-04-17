@@ -82,7 +82,7 @@
 #include <dirent.h>
 #include <fnmatch.h>
 #include <libgen.h>
-#if !defined(__OpenBSD__)
+#if !defined(__OpenBSD__) && !defined(__ANDROID__)
 #include <wordexp.h>
 #endif
 #endif
@@ -822,7 +822,7 @@ dboolean D_CheckParms(void)
 {
     dboolean    result = false;
 
-#if !defined(_WIN32) && !defined(__OpenBSD__)
+#if !defined(_WIN32) && !defined(__OpenBSD__)  && !defined(__ANDROID__)
     wordexp_t p;
 #endif
 
@@ -883,7 +883,7 @@ dboolean D_CheckParms(void)
             else
             {
                 // otherwise try the iwadfolder CVAR
-#if defined(_WIN32) || defined(__OpenBSD__)
+#if defined(_WIN32) || defined(__OpenBSD__)  || defined(__ANDROID__)
                 M_snprintf(fullpath, sizeof(fullpath), "%s"DIR_SEPARATOR_S"%s", iwadfolder,
                     (iwadrequired == doom ? "DOOM.WAD" : "DOOM2.WAD"));
 #else
@@ -915,7 +915,7 @@ dboolean D_CheckParms(void)
                 else
                 {
                     // still nothing? try the DOOMWADDIR environment variable
-#if defined(_WIN32) || defined(__OpenBSD__)
+#if defined(_WIN32) || defined(__OpenBSD__)  || defined(__ANDROID__)
                     M_snprintf(fullpath, sizeof(fullpath), "%s"DIR_SEPARATOR_S"%s",
                         getenv("DOOMWADDIR"), (iwadrequired == doom ? "DOOM.WAD" :
                             "DOOM2.WAD"));

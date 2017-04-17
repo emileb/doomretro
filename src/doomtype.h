@@ -50,6 +50,12 @@ typedef enum
 
 typedef uint8_t byte;
 
+
+#ifdef __ANDROID__
+#include <android/log.h>
+#define LOGI(...) ((void)__android_log_print(ANDROID_LOG_INFO,"JNI", __VA_ARGS__))
+#endif
+
 #if defined(_WIN32)
 #define DIR_SEPARATOR   '\\'
 #define DIR_SEPARATOR_S "\\"

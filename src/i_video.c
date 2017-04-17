@@ -706,6 +706,11 @@ void I_StartTic(void)
         I_ReadMouse();
 
     gamepadfunc();
+
+#ifdef __ANDROID__
+    extern void I_UpdateAndroid(void);
+    I_UpdateAndroid();
+#endif
 }
 
 static void UpdateGrab(void)
@@ -1050,7 +1055,11 @@ void I_CreateExternalAutomap(dboolean output)
     if (SDL_FillRect(mapbuffer, NULL, 0) < 0)
         I_SDLError("SDL_FillRect");
 
+#ifdef __ANDROID__
+    if (!(maptexture = SDL_CreateTexture(maprenderer, SDL_PIXELFORMAT_RGBA8888,
+#else
     if (!(maptexture = SDL_CreateTexture(maprenderer, SDL_PIXELFORMAT_ARGB8888,
+#endif
         SDL_TEXTUREACCESS_STREAMING, SCREENWIDTH, SCREENHEIGHT)))
         I_SDLError("SDL_CreateTexture");
 
@@ -1450,11 +1459,17 @@ static void SetVideoMode(dboolean output)
     displaycenterx = displaywidth / 2;
     displaycentery = displayheight / 2;
 
+#ifdef __ANDROID__
+    flags  = SDL_RENDERER_ACCELERATED;
+#endif
+
     if (!(renderer = SDL_CreateRenderer(window, -1, flags)))
         I_SDLError("SDL_CreateRenderer");
 
+#ifndef __ANDROID__
     if (SDL_RenderSetLogicalSize(renderer, SCREENWIDTH, SCREENWIDTH * 3 / 4) < 0)
         I_SDLError("SDL_RenderSetLogicalSize");
+#endif
 
     if (!SDL_GetRendererInfo(renderer, &rendererinfo))
     {
@@ -1651,16 +1666,22 @@ static void SetVideoMode(dboolean output)
     if (nearestlinear)
         SDL_SetHintWithPriority(SDL_HINT_RENDER_SCALE_QUALITY, vid_scalefilter_nearest,
             SDL_HINT_OVERRIDE);
-
+#ifdef __ANDROID__
+    if (!(texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA8888,
+#else
     if (!(texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB8888,
+#endif
         SDL_TEXTUREACCESS_STREAMING, SCREENWIDTH, SCREENHEIGHT)))
         I_SDLError("SDL_CreateTexture");
 
     if (nearestlinear)
     {
         SDL_SetHintWithPriority(SDL_HINT_RENDER_SCALE_QUALITY, vid_scalefilter_linear, SDL_HINT_OVERRIDE);
-
+#ifdef __ANDROID__
+        if (!(texture_upscaled = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA8888,
+#else
         if (!(texture_upscaled = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB8888,
+#endif
             SDL_TEXTUREACCESS_TARGET, upscaledwidth * SCREENWIDTH, upscaledheight * SCREENHEIGHT)))
             I_SDLError("SDL_CreateTexture");
     }

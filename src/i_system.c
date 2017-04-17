@@ -239,6 +239,8 @@ void I_WaitVBL(int count)
     I_Sleep((count * 1000) / 70);
 }
 
+
+
 //
 // I_Error
 //
@@ -273,6 +275,13 @@ void I_Error(char *error, ...)
 #endif
 
     va_start(argptr, error);
+
+#ifdef __ANDROID__
+    char string[512];
+    vsprintf(string, error, argptr);
+    LOGI("%s",string);
+#endif
+
     vfprintf(stderr, error, argptr);
     fprintf(stderr, "\n\n");
     va_end(argptr);
