@@ -74,61 +74,60 @@
 typedef struct
 {
     // sound information (if null, channel avail.)
-    sfxinfo_t           *sfxinfo;
+    sfxinfo_t       *sfxinfo;
 
     // origin of sound
-    mobj_t              *origin;
+    mobj_t          *origin;
 
     // handle of the sound being played
-    int                 handle;
+    int             handle;
 
-    int                 pitch;
+    int             pitch;
 } channel_t;
 
 // [crispy] "sound objects" hold the coordinates of removed map objects
 typedef struct
 {
-    thinker_t           dummy;
-    fixed_t             x;
-    fixed_t             y;
-    fixed_t             z;
+    thinker_t       dummy;
+    fixed_t         x;
+    fixed_t         y;
+    fixed_t         z;
 } sobj_t;
 
 // The set of channels available
-static channel_t        *channels;
-static sobj_t           *sobjs;
+static channel_t    *channels;
+static sobj_t       *sobjs;
 
-int                     s_channels = s_channels_default;
-int                     s_musicvolume = s_musicvolume_default;
-int                     s_samplerate = s_samplerate_default;
-int                     s_sfxvolume = s_sfxvolume_default;
-dboolean                s_randommusic = s_randommusic_default;
-dboolean                s_randompitch = s_randompitch_default;
+int                 s_channels = s_channels_default;
+int                 s_musicvolume = s_musicvolume_default;
+dboolean            s_randommusic = s_randommusic_default;
+dboolean            s_randompitch = s_randompitch_default;
+int                 s_sfxvolume = s_sfxvolume_default;
 
 // Maximum volume of a sound effect.
 // Internal default is max out of 0-31.
-int                     sfxVolume;
+int                 sfxVolume;
 
 // Maximum volume of music.
-int                     musicVolume;
+int                 musicVolume;
 
 // Internal volume level, ranging from 0-MAX_SFX_VOLUME
-static int              snd_SfxVolume;
+static int          snd_SfxVolume;
 
 // Whether songs are mus_paused
-static dboolean         mus_paused;
+static dboolean     mus_paused;
 
 // music currently should play
-static int              musicnum_current;
+static int          musicnum_current;
 
 // Music currently being played
-musicinfo_t             *mus_playing;
+musicinfo_t         *mus_playing;
 
-dboolean                nosfx;
-dboolean                nomusic;
+dboolean            nosfx;
+dboolean            nomusic;
 
 #if defined(_WIN32)
-extern dboolean         serverMidiPlaying;
+extern dboolean     serverMidiPlaying;
 #endif
 
 // Find and initialize a sound_module_t appropriate for the setting
@@ -137,8 +136,8 @@ static void InitSfxModule(void)
 {
     if (I_InitSound())
     {
-        C_Output("Sound effects will play at a sample rate of %.1fkHz on %i channels.",
-            s_samplerate / 1000.0f, s_channels);
+        C_Output("Sound effects will play at a sample rate of %.1fkHz on %i channels.", SAMPLERATE / 1000.0f,
+            s_channels);
         return;
     }
 
@@ -164,27 +163,26 @@ static void InitMusicModule(void)
 // Sets channels, SFX and music volume,
 //  allocates channel buffer, sets S_sfx lookup.
 //
-void S_Init(int sfxvol, int musicvol)
+void S_Init(void)
 {
     if (M_CheckParm("-nosound"))
     {
-        C_Output("A <b>-nosound</b> parameter was found on the command-line. Both sound effects "
-            "and music have been disabled.");
+        C_Output("A <b>-nosound</b> parameter was found on the command-line. Both sound effects and music "
+            "have been disabled.");
         nomusic = true;
         nosfx = true;
     }
 
     if (M_CheckParm("-nomusic"))
     {
-        C_Output("A <b>-nomusic</b> parameter was found on the command-line. Music has been "
-            "disabled.");
+        C_Output("A <b>-nomusic</b> parameter was found on the command-line. Music has been disabled.");
         nomusic = true;
     }
 
     if (M_CheckParm("-nosfx"))
     {
-        C_Output("A <b>-nosfx</b> parameter was found on the command-line. Sound effects have "
-            "been disabled.");
+        C_Output("A <b>-nosfx</b> parameter was found on the command-line. Sound effects have been "
+            "disabled.");
         nosfx = true;
     }
 
@@ -199,12 +197,12 @@ void S_Init(int sfxvol, int musicvol)
         int i;
 
         InitSfxModule();
-        S_SetSfxVolume(sfxvol);
+        S_SetSfxVolume(sfxVolume * MAX_SFX_VOLUME / 31);
 
         // Allocating the internal channels for mixing
         // (the maximum number of sounds rendered
         // simultaneously) within zone memory.
-        channels = (channel_t *)Z_Calloc(s_channels, sizeof(channel_t), PU_STATIC, NULL);
+        channels = Z_Calloc(s_channels, sizeof(channel_t), PU_STATIC, NULL);
         sobjs = Z_Malloc(s_channels * sizeof(sobj_t), PU_STATIC, NULL);
 
         // Note that sounds have not been cached (yet).
@@ -215,7 +213,7 @@ void S_Init(int sfxvol, int musicvol)
     if (!nomusic)
     {
         InitMusicModule();
-        S_SetMusicVolume(musicvol);
+        S_SetMusicVolume(musicVolume * MAX_MUSIC_VOLUME / 31);
 
         // no sounds are playing, and they are not mus_paused
         mus_paused = false;
@@ -234,7 +232,7 @@ static void S_StopChannel(int cnum)
 
     if (c->sfxinfo)
     {
-        int     i;
+        int i;
 
         // stop the sound playing
         if (I_SoundIsPlaying(c->handle))
@@ -348,7 +346,7 @@ void S_UnlinkSound(mobj_t *origin)
     for (cnum = 0; cnum < s_channels; cnum++)
         if (channels[cnum].sfxinfo && channels[cnum].origin == origin)
         {
-            sobj_t *const       sobj = &sobjs[cnum];
+            sobj_t *const   sobj = &sobjs[cnum];
 
             sobj->x = origin->x;
             sobj->y = origin->y;
@@ -405,10 +403,10 @@ static int S_GetChannel(mobj_t *origin, sfxinfo_t *sfxinfo)
 // modifies parameters and returns 1.
 static int S_AdjustSoundParams(mobj_t *listener, mobj_t *source, int *vol, int *sep)
 {
-    fixed_t     dist;
-    fixed_t     adx;
-    fixed_t     ady;
-    angle_t     angle;
+    fixed_t dist;
+    fixed_t adx;
+    fixed_t ady;
+    angle_t angle;
 
     if (nosfx || !listener)
         return 0;
@@ -438,6 +436,7 @@ static int S_AdjustSoundParams(mobj_t *listener, mobj_t *source, int *vol, int *
 
     if (angle <= listener->angle)
         angle += 0xFFFFFFFF;
+
     angle -= listener->angle;
     angle >>= ANGLETOFINESHIFT;
 
@@ -487,8 +486,7 @@ static void S_StartSoundAtVolume(mobj_t *origin, int sfx_id, int pitch, int volu
 
     // kill old sound
     for (cnum = 0; cnum < s_channels; cnum++)
-        if (channels[cnum].sfxinfo
-            && channels[cnum].sfxinfo->singularity == sfx->singularity
+        if (channels[cnum].sfxinfo && channels[cnum].sfxinfo->singularity == sfx->singularity
             && channels[cnum].origin == origin)
         {
             S_StopChannel(cnum);
@@ -561,20 +559,21 @@ void S_UpdateSounds(mobj_t *listener)
 
     for (cnum = 0; cnum < s_channels; cnum++)
     {
-        channel_t       *c = &channels[cnum];
-        sfxinfo_t       *sfx = c->sfxinfo;
+        channel_t   *c = &channels[cnum];
+        sfxinfo_t   *sfx = c->sfxinfo;
 
         if (sfx)
         {
             if (I_SoundIsPlaying(c->handle))
             {
                 // initialize parameters
-                int     volume = snd_SfxVolume;
-                int     sep = NORM_SEP;
+                int volume = snd_SfxVolume;
+                int sep = NORM_SEP;
 
                 if (sfx->link)
                 {
                     volume += sfx->volume;
+
                     if (volume < 1)
                     {
                         S_StopChannel(cnum);
@@ -646,7 +645,7 @@ void S_ChangeMusic(int music_id, dboolean looping, dboolean cheating, dboolean m
     if (music->lumpnum != -1)
     {
         // Load & register it
-        music->data = W_CacheLumpNum(music->lumpnum, PU_STATIC);
+        music->data = W_CacheLumpNum(music->lumpnum);
         handle = I_RegisterSong(music->data, W_LumpLength(music->lumpnum));
     }
 
@@ -676,7 +675,7 @@ void S_StopMusic(void)
 
         I_StopSong();
         I_UnRegisterSong(mus_playing->handle);
-        W_ReleaseLumpNum(mus_playing->lumpnum);
+        W_UnlockLumpNum(mus_playing->lumpnum);
         mus_playing->data = NULL;
         mus_playing = NULL;
     }
@@ -704,7 +703,7 @@ void S_ChangeMusInfoMusic(int lumpnum, int looping)
     music->lumpnum = lumpnum;
 
     // load & register it
-    music->data = W_CacheLumpNum(music->lumpnum, PU_CACHE);
+    music->data = W_CacheLumpNum(music->lumpnum);
     music->handle = I_RegisterSong(music->data, W_LumpLength(music->lumpnum));
 
     // play it
@@ -752,7 +751,7 @@ void S_ParseMusInfo(char *mapid)
                 if (M_StrToInt(sc_String, &num) && num > 0 && num < MAX_MUS_ENTRIES)
                     if (SC_GetString())
                     {
-                        int     lumpnum = W_CheckNumForName(sc_String);
+                        int lumpnum = W_CheckNumForName(sc_String);
 
                         if (lumpnum >= 0)
                             musinfo.items[num] = lumpnum;

@@ -43,11 +43,12 @@
 #include "SDL_mixer.h"
 #include "sounds.h"
 
+#define SAMPLERATE              44100
+
 #define MAX_MUSIC_VOLUME        MIX_MAX_VOLUME
 #define MAX_SFX_VOLUME          MIX_MAX_VOLUME
 
 extern dboolean s_randompitch;
-extern int      s_samplerate;
 
 dboolean I_InitSound(void);
 void I_ShutdownSound(void);
@@ -73,7 +74,7 @@ void I_StopSong(void);
 // Sets channels, SFX and music volume,
 //  allocates channel buffer, sets S_sfx lookup.
 //
-void S_Init(int sfxvol, int musicvol);
+void S_Init(void);
 
 // Shut down sound
 void S_Shutdown(void);

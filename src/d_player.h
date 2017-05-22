@@ -57,9 +57,9 @@
 
 typedef enum
 {
-    NOARMOR             = 0,
-    GREENARMOR          = 1,
-    BLUEARMOR           = 2
+    NOARMOR    = 0,
+    GREENARMOR = 1,
+    BLUEARMOR  = 2
 } armortype_t;
 
 //
@@ -81,21 +81,21 @@ typedef enum
 typedef enum
 {
     // No clipping, walk through barriers.
-    CF_NOCLIP           = 1,
+    CF_NOCLIP        = 1,
     // No damage, no health loss.
-    CF_GODMODE          = 2,
+    CF_GODMODE       = 2,
 
-    CF_NOTARGET         = 4,
+    CF_NOTARGET      = 4,
 
-    CF_MYPOS            = 8,
+    CF_MYPOS         = 8,
 
-    CF_ALLMAP           = 16,
+    CF_ALLMAP        = 16,
 
-    CF_ALLMAP_THINGS    = 32,
+    CF_ALLMAP_THINGS = 32,
 
-    CF_CHOPPERS         = 64,
+    CF_CHOPPERS      = 64,
 
-    CF_BUDDHA           = 128
+    CF_BUDDHA        = 128
 } cheat_t;
 
 //
@@ -197,6 +197,9 @@ typedef struct player_s
     // [AM] Previous position of viewz before think.
     //      Used to interpolate between camera positions.
     angle_t             oldviewz;
+
+    int                 lookdir;
+    int                 oldlookdir;
 
     // For playerstats cmd
     int                 damageinflicted;

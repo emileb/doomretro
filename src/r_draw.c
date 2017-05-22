@@ -167,7 +167,7 @@ int             dc_baseclip;
 // first pixel in a column (possibly virtual)
 byte            *dc_source;
 
-extern int      skycolor;
+extern int      r_skycolor;
 
 //
 // A column is a vertical slice/span from a wall texture that,
@@ -253,8 +253,8 @@ void R_DrawFuzzyShadowColumn(void)
 
 void R_DrawSolidShadowColumn(void)
 {
-    int         count = dc_yh - dc_yl + 1;
-    byte        *dest = topleft0 + dc_yl * SCREENWIDTH + dc_x;
+    int     count = dc_yh - dc_yl + 1;
+    byte    *dest = topleft0 + dc_yl * SCREENWIDTH + dc_x;
 
     while (--count)
     {
@@ -300,7 +300,7 @@ void R_DrawWallColumn(void)
     int                 count = dc_yh - dc_yl + 1;
     byte                *dest = topleft0 + dc_yl * SCREENWIDTH + dc_x;
     const fixed_t       iscale = dc_iscale;
-    fixed_t             frac = dc_texturemid + (dc_yl - centery) * iscale;
+    fixed_t             frac = dc_texturemid + (dc_yl - centery) * iscale + SPARKLEFIX;
     const fixed_t       fracstep = iscale - SPARKLEFIX;
     const byte          *source = dc_source;
     const lighttable_t  *colormap = dc_colormap;
@@ -400,7 +400,7 @@ void R_DrawFullbrightWallColumn(void)
     int                 count = dc_yh - dc_yl + 1;
     byte                *dest = topleft0 + dc_yl * SCREENWIDTH + dc_x;
     const fixed_t       iscale = dc_iscale;
-    fixed_t             frac = dc_texturemid + (dc_yl - centery) * iscale;
+    fixed_t             frac = dc_texturemid + (dc_yl - centery) * iscale + SPARKLEFIX;
     const fixed_t       fracstep = iscale - SPARKLEFIX;
     const byte          *source = dc_source;
     const byte          *colormask = dc_colormask;
@@ -515,11 +515,11 @@ void R_DrawFullbrightWallColumn(void)
 
 void R_DrawPlayerSpriteColumn(void)
 {
-    int                 count = dc_yh - dc_yl + 1;
-    byte                *dest = topleft1 + dc_yl * SCREENWIDTH + dc_x;
-    fixed_t             frac = dc_texturefrac;
-    const fixed_t       fracstep = dc_iscale;
-    const byte          *source = dc_source;
+    int             count = dc_yh - dc_yl + 1;
+    byte            *dest = topleft1 + dc_yl * SCREENWIDTH + dc_x;
+    fixed_t         frac = dc_texturefrac;
+    const fixed_t   fracstep = dc_iscale;
+    const byte      *source = dc_source;
 
     while (--count)
     {
@@ -542,7 +542,7 @@ void R_DrawSuperShotgunColumn(void)
 
     while (--count)
     {
-        byte            dot = source[frac >> FRACBITS];
+        byte    dot = source[frac >> FRACBITS];
 
         if (dot != 71)
             *dest = colormap[dot];
@@ -566,7 +566,7 @@ void R_DrawTranslucentSuperShotgunColumn(void)
 
     while (--count)
     {
-        byte            dot = source[frac >> FRACBITS];
+        byte    dot = source[frac >> FRACBITS];
 
         if (dot != 71)
             *dest = colormap[translucency[(*dest << 8) + dot]];
@@ -701,9 +701,9 @@ void R_DrawFlippedSkyColumn(void)
 
 void R_DrawSkyColorColumn(void)
 {
-    int         count = dc_yh - dc_yl + 1;
-    byte        *dest = topleft0 + dc_yl * SCREENWIDTH + dc_x;
-    byte        color = skycolor;
+    int     count = dc_yh - dc_yl + 1;
+    byte    *dest = topleft0 + dc_yl * SCREENWIDTH + dc_x;
+    byte    color = r_skycolor;
 
     while (--count)
     {
@@ -856,7 +856,8 @@ void R_DrawDitheredColumn(void)
         *dest = translucency[(*dest << 8) + colormap[source[frac >> FRACBITS]]];
         dest += SCREENWIDTH << 1;
         frac += fracstep;
-    } while ((count -= 2) > 0);
+    }
+    while ((count -= 2) > 0);
 }
 
 void R_DrawTranslucent33Column(void)
@@ -1101,94 +1102,82 @@ void R_DrawTranslucentBlue25Column(void)
 //
 // Spectre/Invisibility.
 //
-extern int      fuzzpos;
+#define FUZZ(a, b)  fuzzrange[rand() % (b - a + 1) + a]
+#define NOFUZZ      251
 
-int             fuzzrange[3] = { -SCREENWIDTH, 0, SCREENWIDTH };
+int         fuzzrange[3] = { -SCREENWIDTH, 0, SCREENWIDTH };
 
-#define FUZZ(a, b)      fuzzrange[rand() % (b - a + 1) + a]
-#define NOFUZZ          251
+extern int  fuzzpos;
 
 void R_DrawFuzzColumn(void)
 {
-    byte        *dest;
-    int         count = dc_yh - dc_yl;
+    byte    *dest = topleft0 + dc_yl * SCREENWIDTH + dc_x;
+    int     count = dc_yh - dc_yl + 1;
 
-    if (count < 0)
-        return;
+    // top
+    if (!dc_yl)
+        *dest = fullcolormap[6 * 256 + dest[(fuzztable[fuzzpos++] = FUZZ(1, 2))]];
+    else if (!(rand() % 4))
+        *dest = fullcolormap[12 * 256 + dest[(fuzztable[fuzzpos++] = FUZZ(0, 2))]];
 
-    dest = topleft0 + dc_yl * SCREENWIDTH + dc_x;
+    dest += SCREENWIDTH;
 
-    if (count)
+    while (--count)
     {
-        // top
-        if (!dc_yl)
-            *dest = fullcolormap[6 * 256 + dest[(fuzztable[fuzzpos++] = FUZZ(1, 2))]];
-        else if (!(rand() % 4))
-            *dest = fullcolormap[12 * 256 + dest[(fuzztable[fuzzpos++] = FUZZ(0, 2))]];
+        // middle
+        *dest = fullcolormap[6 * 256 + dest[(fuzztable[fuzzpos++] = FUZZ(0, 2))]];
         dest += SCREENWIDTH;
-
-        while (--count)
-        {
-            // middle
-            *dest = fullcolormap[6 * 256 + dest[(fuzztable[fuzzpos++] = FUZZ(0, 2))]];
-            dest += SCREENWIDTH;
-        }
-
-        // bottom
-        if (dc_yh == viewheight - 1)
-            *dest = fullcolormap[5 * 256 + dest[(fuzztable[fuzzpos] = FUZZ(0, 1))]];
-        else if (dc_baseclip == -1 && !(rand() % 4))
-            *dest = fullcolormap[14 * 256 + dest[(fuzztable[fuzzpos] = FUZZ(0, 1))]];
     }
+
+    // bottom
+    if (dc_yh == viewheight - 1)
+        *dest = fullcolormap[5 * 256 + dest[(fuzztable[fuzzpos] = FUZZ(0, 1))]];
+    else if (dc_baseclip == viewheight && !(rand() % 4))
+        *dest = fullcolormap[14 * 256 + dest[(fuzztable[fuzzpos] = FUZZ(0, 1))]];
 }
 
 void R_DrawPausedFuzzColumn(void)
 {
-    byte        *dest;
-    int         count = dc_yh - dc_yl;
+    byte    *dest = topleft0 + dc_yl * SCREENWIDTH + dc_x;
+    int     count = dc_yh - dc_yl + 1;
 
-    if (count < 0)
-        return;
-
-    dest = topleft0 + dc_yl * SCREENWIDTH + dc_x;
-
-    if (count)
+    // top
+    if (!dc_yl)
     {
-        // top
-        if (!dc_yl)
-        {
-            *dest = fullcolormap[6 * 256 + dest[fuzztable[fuzzpos++]]];
-            if (fuzzpos == SCREENWIDTH * SCREENHEIGHT)
-                fuzzpos = 0;
-        }
-        dest += SCREENWIDTH;
+        *dest = fullcolormap[6 * 256 + dest[fuzztable[fuzzpos++]]];
 
-        while (--count)
-        {
-            // middle
-            *dest = fullcolormap[6 * 256 + dest[fuzztable[fuzzpos++]]];
-            if (fuzzpos == SCREENWIDTH * SCREENHEIGHT)
-                fuzzpos = 0;
-            dest += SCREENWIDTH;
-        }
-
-        // bottom
-        if (dc_yh == viewheight - 1)
-            *dest = fullcolormap[5 * 256 + dest[fuzztable[fuzzpos]]];
+        if (fuzzpos == SCREENWIDTH * SCREENHEIGHT)
+            fuzzpos = 0;
     }
+    dest += SCREENWIDTH;
+
+    while (--count)
+    {
+        // middle
+        *dest = fullcolormap[6 * 256 + dest[fuzztable[fuzzpos++]]];
+
+        if (fuzzpos == SCREENWIDTH * SCREENHEIGHT)
+            fuzzpos = 0;
+
+        dest += SCREENWIDTH;
+    }
+
+    // bottom
+    if (dc_yh == viewheight - 1)
+        *dest = fullcolormap[5 * 256 + dest[fuzztable[fuzzpos]]];
 }
 
 void R_DrawFuzzColumns(void)
 {
-    int         x, y;
-    int         w = viewwindowx + viewwidth;
-    int         h = (viewwindowy + viewheight) * SCREENWIDTH;
+    int x, y;
+    int w = viewwindowx + viewwidth;
+    int h = (viewwindowy + viewheight) * SCREENWIDTH;
 
     for (x = viewwindowx; x < w; x++)
         for (y = viewwindowy * SCREENWIDTH; y < h; y += SCREENWIDTH)
         {
-            int         i = x + y;
-            byte        *src = screens[1] + i;
+            int     i = x + y;
+            byte    *src = screens[1] + i;
 
             if (*src != NOFUZZ)
             {
@@ -1228,15 +1217,15 @@ void R_DrawFuzzColumns(void)
 
 void R_DrawPausedFuzzColumns(void)
 {
-    int         x, y;
-    int         w = viewwindowx + viewwidth;
-    int         h = (viewwindowy + viewheight) * SCREENWIDTH;
+    int x, y;
+    int w = viewwindowx + viewwidth;
+    int h = (viewwindowy + viewheight) * SCREENWIDTH;
 
     for (x = viewwindowx; x < w; x++)
         for (y = viewwindowy * SCREENWIDTH; y < h; y += SCREENWIDTH)
         {
-            int         i = x + y;
-            byte        *src = screens[1] + i;
+            int     i = x + y;
+            byte    *src = screens[1] + i;
 
             if (*src != NOFUZZ)
             {
@@ -1426,14 +1415,12 @@ void R_DrawSpan(void)
 
 void R_DrawColorSpan(void)
 {
-    unsigned int        count = ds_x2 - ds_x1 + 1;
-    byte                *dest = topleft0 + ds_y * SCREENWIDTH + ds_x1;
-    byte                color = ds_colormap[NOTEXTURECOLOR];
+    unsigned int    count = ds_x2 - ds_x1 + 1;
+    byte            *dest = topleft0 + ds_y * SCREENWIDTH + ds_x1;
+    byte            color = ds_colormap[NOTEXTURECOLOR];
 
-    while (--count)
+    while (count--)
         *dest++ = color;
-
-    *dest = color;
 }
 
 //
@@ -1459,15 +1446,12 @@ void R_InitBuffer(int width, int height)
 //
 void R_FillBackScreen(void)
 {
-    byte        *src;
-    byte        *dest;
-    int         x;
-    int         y;
-    int         i;
-    int         width;
-    int         height;
-    int         windowx;
-    int         windowy;
+    byte    *src;
+    byte    *dest;
+    int     x, y;
+    int     i;
+    int     width, height;
+    int     windowx, windowy;
 
     if (scaledviewwidth == SCREENWIDTH)
         return;
@@ -1485,10 +1469,13 @@ void R_FillBackScreen(void)
 
                 if (y * SCREENWIDTH + x + j < SCREENWIDTH * (SCREENHEIGHT - 1))
                     *(dest + j) = dot;
+
                 j++;
+
                 if (y * SCREENWIDTH + x + j < SCREENWIDTH * (SCREENHEIGHT - 1))
                     *(dest + j) = dot;
             }
+
             dest += 128;
         }
 
@@ -1506,10 +1493,12 @@ void R_FillBackScreen(void)
 
     for (y = 0; y < height - 8; y += 8)
         V_DrawPatch(windowx - 8, windowy + y, 1, brdr_l);
+
     V_DrawPatch(windowx - 8, windowy + y - 2 * (r_screensize >= 2), 1, brdr_l);
 
     for (y = 0; y < height - 8; y += 8)
         V_DrawPatch(windowx + width, windowy + y, 1, brdr_r);
+
     V_DrawPatch(windowx + width, windowy + y - 2 * (r_screensize >= 2), 1, brdr_r);
 
     // Draw beveled edge.

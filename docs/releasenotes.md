@@ -1,17 +1,35 @@
 ### DOOM Retro v2.5
 
 * Optimizations have been made to further improve the overall performance and stability of *DOOM Retro*.
+* Minor improvements have been made to *DOOM Retro’s* renderer.
 * The gray elements in the alternate widescreen HUD now appear correctly in PWADs with custom `PLAYPAL` lumps.
-* Minor changes have been made to elements in the status bar and alternate widescreen HUD.
-* The `Shots Fired`, `Shots Hit` and `Weapon Accuracy` stats displayed by the `playerstats` CCMD are now calculated correctly.
-* The `Ammo`, `Armor` and `Health` stats no longer increase when using the `give` CCMD or certain cheats.
-* A bug has been fixed whereby some teleports wouldn’t animate correctly in [*Back To Saturn X E1: Get Out Of My Stations*](https://www.doomworld.com/vb/thread/62529) and [*Back To Saturn X E2: Tower in the Fountain of Sparks*](https://www.doomworld.com/vb/thread/69960).
-* Three new CVARs have been implemented to toggle the translucency of individual elements: `r_bloodsplats_translucency`, `r_hud_translucency` and `r_shadows_translucency`. They are all `on` by default.
+* Minor changes have been made to some elements in both the status bar and alternate widescreen HUD.
+* A countdown bar is now displayed in the alternate widescreen HUD underneath the ammo bar when the player has a power-up that runs out.
+* Mouselook can now be enabled using the new `m_look` CVAR. It is `off` by default. (Please note that due to the addition of this feature, savegames created with previous versions of *DOOM Retro* are not compatible with this version.)
+* An `m_invert` CVAR has also been implemented that toggles inverting the mouse when using mouselook.
+* The following changes have been made to stats displayed by the `playerstats` CCMD:
+  * The `Shots Fired`, `Shots Hit` and `Weapon Accuracy` stats are now calculated correctly.
+  * The `Ammo`, `Armor` and `Health` no longer increase when using the `give` CCMD or certain cheats.
+  * The `Health` stat now increases when the player picks up a health bonus.
+* Several compatibility fixes have been made for [*Ancient Aliens*](https://www.doomworld.com/idgames/levels/doom2/Ports/megawads/aaliens), [*Back To Saturn X E1: Get Out Of My Stations*](https://www.doomworld.com/vb/thread/62529) and [*Back To Saturn X E2: Tower in the Fountain of Sparks*](https://www.doomworld.com/vb/thread/69960).
+* Three new CVARs have been implemented to toggle the translucency of individual elements: `r_bloodsplats_translucency`, `r_hud_translucency` and `r_shadows_translucency`. They are all `on` by default. (The `r_translucency` CVAR remains to toggle the translucency of sprites and *BOOM*-compatible wall textures.)
 * The console’s background is now always translucent.
-* The number of sound effects that can play at the same time is now specified using the new `s_channels` CVAR. It can be between `8` and `256`, and is `32` by default.
-* The sample rate of sound effects is now specified using the new `s_samplerate` CVAR. It can be `11,025`, `22,050`, `44,100` or `48,000` Hz, and is `44,100` Hz by default.
+* The number of sound effects that can be played at the same time is now specified using the new `s_channels` CVAR. It can be between `8` and `256`, and is `32` by default.
 * The skull in the menu is no longer positioned incorrectly when certain PWADs with custom menu lumps are loaded.
+* Minor changes have been made to text that is output to the console.
 * Linedefs with specials 166 (“S1 Ceiling Raise To Highest Ceiling”) and 186 (“SR Ceiling Raise To Highest Ceiling”) in *BOOM*-compatible maps now behave as intended.
+* The bottom of spectres are now clipped correctly when partially obscured by a higher sector.
+* The gold palette effect will no longer stay on the screen if the player picks up an item and dies at the same time.
+* Red walls in the automap are now drawn thinner when the player zooms out far enough.
+* If the `r_skycolor` CVAR is set to a color rather than `none`, that color will now be used to render the sky when the `r_textures` CVAR is `off`.
+* When exiting a map that has no monsters to kill and/or no items to pick up, the intermission screen will now show `100%` kills and/or items instead of `0%`.
+* The map name will now be displayed on the intermission screen before starting MAP31 in *DOOM II* and MAP09 in *DOOM II: No Rest For The Living*.
+* Monster corpses are now gibbed rather than just becoming a pool of blood splats when crushed by a lowering platform or door.
+* Monster corpses spawned at the start of a map can now be crushed by a lowering platform or door.
+* The `health` CVAR can now be reduced when freeze mode is on.
+* A bug has been fixed whereby blood splats could be black in some rare instances.
+* The default value of the `r_bloodsplats_max` CVAR has been doubled to `65,536`.
+* All blood splats are now restored when turning off vanilla mode.
 
 ---
 
@@ -1239,7 +1257,7 @@
 * The `saturation` setting in `doomretro.cfg` has been deprecated.
 * A bug has been fixed whereby the shadows of dropped items weren’t also being mirrored when the `mirrorweapons` setting was `true` in `doomretro.cfg`.
 * Weapons spawned at the start of a map are now also mirrored when the `mirrorweapons` setting was `true` in `doomretro.cfg`.
-* Thanks to some [*excellent coding*](https://www.doomworld.com/vb/post/1340126) from Linguica, entryway and kb1, *Vanilla DOOM’s* [“long wall error”](http://doomwiki.org/wiki/Long_wall_error) has been fixed.
+* *Vanilla DOOM’s* [“long wall error”](http://doomwiki.org/wiki/Long_wall_error) has been fixed.
 * Further optimizations have been made to improve the overall performance and stability of *DOOM Retro*.
 * Teleporters in [*Back To Saturn X E1: Get Out Of My Stations*](https://www.doomworld.com/vb/thread/62529) and [*Back To Saturn X E2: Tower in the Fountain of Sparks*](https://www.doomworld.com/vb/thread/69960) are now drawn correctly in the automap before they have been triggered.
 * Whether the automap is active or not, and any automap marks, are now saved in savegames. (Note that this change breaks savegame compatibility with previous versions of *DOOM Retro*.)
@@ -1275,7 +1293,7 @@
 * A bug has been fixed whereby secret sectors that lower and change their texture may not be displayed in the automap correctly.
 * Decorative corpses spawned at the start of a map are now randomly mirrored as intended.
 * A bug has been fixed whereby the player sometimes wouldn’t trigger a teleport when running over it in some instances.
-* Changes have been made to how lighting is calculated. See Linguica’s findings on the [*Doomworld* forums](https://www.doomworld.com/vb/post/1336337) for more information.
+* Changes have been made to how lighting is calculated.
 * Liquid sectors, and the partially submerged objects that are on them, now animate up and down. This feature may be disabled by changing the `animatedliquid` setting in `doomretro.cfg` to `false`.
 * A bug has been fixed whereby objects on a sector that lowers and becomes liquid wouldn’t update immediately (that is, the bottom of their sprites wouldn’t be clipped, their shadow wouldn’t be removed, and blood splats wouldn’t be removed either).
 * Blood splats that are spawned around decorative corpses at the start of a map are now spawned in a more natural-looking circular pattern, and may also be offset slightly from the corpse to give the impression that the corpse may have slid.

@@ -56,34 +56,34 @@ static XINPUTSETSTATE pXInputSetState;
 #include "m_fixed.h"
 #include "m_misc.h"
 
-float                   gp_deadzone_left = gp_deadzone_left_default;
-float                   gp_deadzone_right = gp_deadzone_right_default;
+float               gp_deadzone_left = gp_deadzone_left_default;
+float               gp_deadzone_right = gp_deadzone_right_default;
 
-static SDL_Joystick     *gamepad;
+static SDL_Joystick *gamepad;
 
-int                     gamepadbuttons;
-short                   gamepadthumbLX;
-short                   gamepadthumbLY;
-short                   gamepadthumbRX;
-float                   gamepadsensitivity;
-short                   gamepadleftdeadzone;
-short                   gamepadrightdeadzone;
+int                 gamepadbuttons;
+short               gamepadthumbLX;
+short               gamepadthumbLY;
+short               gamepadthumbRX;
+float               gamepadsensitivity;
+short               gamepadleftdeadzone;
+short               gamepadrightdeadzone;
 
-dboolean                vibrate;
-int                     damagevibrationtics;
-int                     weaponvibrationtics;
-int                     currentmotorspeed;
-int                     idlemotorspeed;
-int                     restoremotorspeed;
+dboolean            vibrate;
+int                 damagevibrationtics;
+int                 weaponvibrationtics;
+int                 currentmotorspeed;
+int                 idlemotorspeed;
+int                 restoremotorspeed;
 
-extern dboolean         idclev;
-extern dboolean         idmus;
-extern dboolean         idbehold;
-extern dboolean         menuactive;
-extern dboolean         message_clearable;
+extern dboolean     idclev;
+extern dboolean     idmus;
+extern dboolean     idbehold;
+extern dboolean     menuactive;
+extern dboolean     message_clearable;
 
 #if defined(_WIN32)
-HMODULE                 pXInputDLL;
+HMODULE             pXInputDLL;
 #endif
 
 void (*gamepadfunc)(void);
@@ -104,8 +104,8 @@ void I_InitGamepad(void)
         C_Warning("Gamepad support couldn't be initialized.");
     else
     {
-        int     i;
-        int     numgamepads = SDL_NumJoysticks();
+        int i;
+        int numgamepads = SDL_NumJoysticks();
 
         for (i = 0; i < numgamepads; i++)
             if ((gamepad = SDL_JoystickOpen(i)))
@@ -135,7 +135,7 @@ void I_InitGamepad(void)
 
                 if (pXInputGetState && pXInputSetState)
                 {
-                    XINPUT_STATE        state;
+                    XINPUT_STATE    state;
 
                     ZeroMemory(&state, sizeof(XINPUT_STATE));
 
@@ -144,9 +144,10 @@ void I_InitGamepad(void)
                         gamepadfunc = I_PollXInputGamepad;
                         gamepadthumbsfunc = (gp_swapthumbsticks ? I_PollThumbs_XInput_LeftHanded :
                             I_PollThumbs_XInput_RightHanded);
+
                         if (initcount++ == 1)
-                            C_Output("An <i><b>XInput</b></i> gamepad is connected. Using "
-                                "<b>%s</b>.", XInputDLL);
+                            C_Output("An <i><b>XInput</b></i> gamepad is connected. Using <b>%s</b>.",
+                                XInputDLL);
                     }
                 }
                 else
@@ -155,11 +156,10 @@ void I_InitGamepad(void)
 
             if (initcount == 1)
             {
-                const char      *name = SDL_JoystickName(gamepad);
+                const char  *name = SDL_JoystickName(gamepad);
 
                 if (*name)
-                    C_Output("A <i><b>DirectInput</b></i> gamepad called \"%s\" is connected.",
-                        name);
+                    C_Output("A <i><b>DirectInput</b></i> gamepad called \"%s\" is connected.", name);
                 else
                     C_Output("A <i><b>DirectInput</b></i> gamepad is connected.");
             }
@@ -215,7 +215,7 @@ void I_PollDirectInputGamepad(void)
 {
     if (gamepad && !noinput)
     {
-        int     hat = SDL_JoystickGetHat(gamepad, 0);
+        int hat = SDL_JoystickGetHat(gamepad, 0);
 
         gamepadbuttons = (SDL_JoystickGetButton(gamepad, 0) << 14)
             | (SDL_JoystickGetButton(gamepad, 1) << 12)
@@ -240,6 +240,7 @@ void I_PollDirectInputGamepad(void)
         {
             idclev = false;
             idmus = false;
+
             if (idbehold)
             {
                 message_clearable = true;
@@ -250,7 +251,7 @@ void I_PollDirectInputGamepad(void)
 
         if (gp_sensitivity || menuactive || (gamepadbuttons & gamepadmenu))
         {
-            event_t     ev;
+            event_t ev;
 
             ev.type = ev_gamepad;
             D_PostEvent(&ev);
@@ -271,6 +272,7 @@ void XInputVibration(int motorspeed)
 {
 #if defined(_WIN32)
     motorspeed = MIN(motorspeed, 65535);
+
     if (motorspeed > currentmotorspeed || motorspeed == idlemotorspeed)
     {
         XINPUT_VIBRATION    vibration;
@@ -326,6 +328,7 @@ void I_PollXInputGamepad(void)
             vibrate = true;
             idclev = false;
             idmus = false;
+
             if (idbehold)
             {
                 message_clearable = true;
@@ -336,7 +339,7 @@ void I_PollXInputGamepad(void)
 
         if (gp_sensitivity || menuactive || (gamepadbuttons & gamepadmenu))
         {
-            event_t      ev;
+            event_t  ev;
 
             ev.type = ev_gamepad;
             D_PostEvent(&ev);

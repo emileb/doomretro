@@ -46,9 +46,9 @@
 #include "w_wad.h"
 #include "z_zone.h"
 
-#define MAX_SPRITE_FRAMES       29
-#define MINZ                    (FRACUNIT * 4)
-#define BASEYCENTER             (ORIGINALHEIGHT / 2)
+#define MAX_SPRITE_FRAMES   29
+#define MINZ                (FRACUNIT * 4)
+#define BASEYCENTER         (ORIGINALHEIGHT / 2)
 
 //
 // Sprite rotation 0 is facing the viewer,
@@ -91,6 +91,7 @@ dboolean                r_playersprites = r_playersprites_default;
 extern fixed_t          animatedliquiddiff;
 extern dboolean         drawbloodsplats;
 extern dboolean         inhelpscreens;
+extern dboolean         m_look;
 extern dboolean         notranslucency;
 extern dboolean         r_liquid_bob;
 extern dboolean         r_shadows;
@@ -106,8 +107,7 @@ extern dboolean         SHT2A0;
 static void R_InstallSpriteLump(lumpinfo_t *lump, int lumpnum, unsigned int frame, char rot,
     dboolean flipped)
 {
-    unsigned int        rotation = (rot >= '0' && rot <= '9' ? rot - '0' : (rot >= 'A' ?
-                            rot - 'A' + 10 : 17));
+    unsigned int    rotation = (rot >= '0' && rot <= '9' ? rot - '0' : (rot >= 'A' ? rot - 'A' + 10 : 17));
 
     if (frame >= MAX_SPRITE_FRAMES || rotation > 16)
         I_Error("R_InstallSpriteLump: Bad frame characters in lump %s", lump->name);
@@ -117,7 +117,7 @@ static void R_InstallSpriteLump(lumpinfo_t *lump, int lumpnum, unsigned int fram
 
     if (!rotation)
     {
-        int     r;
+        int r;
 
         // the lump should be used for all rotations
         for (r = 14; r >= 0; r -= 2)
@@ -125,8 +125,10 @@ static void R_InstallSpriteLump(lumpinfo_t *lump, int lumpnum, unsigned int fram
             if (sprtemp[frame].lump[r] == -1)
             {
                 sprtemp[frame].lump[r] = lumpnum - firstspritelump;
+
                 if (flipped)
-                    sprtemp[frame].flip |= (1 << r);
+                    sprtemp[frame].flip |= 1 << r;
+
                 sprtemp[frame].rotate = 0;      // jff 4/24/98 if any subbed, rotless
             }
         }
@@ -140,8 +142,10 @@ static void R_InstallSpriteLump(lumpinfo_t *lump, int lumpnum, unsigned int fram
     if (sprtemp[frame].lump[rotation] == -1)
     {
         sprtemp[frame].lump[rotation] = lumpnum - firstspritelump;
+
         if (flipped)
-            sprtemp[frame].flip |= (1 << rotation);
+            sprtemp[frame].flip |= 1 << rotation;
+
         sprtemp[frame].rotate = 1;              // jff 4/24/98 only change if rot used
     }
 }
@@ -173,13 +177,13 @@ static void R_InstallSpriteLump(lumpinfo_t *lump, int lumpnum, unsigned int fram
 
 static void R_InitSpriteDefs(void)
 {
-    size_t              numentries = lastspritelump - firstspritelump + 1;
-    unsigned int        i;
+    size_t          numentries = lastspritelump - firstspritelump + 1;
+    unsigned int    i;
 
     struct
     {
-        int     index;
-        int     next;
+        int index;
+        int next;
     } *hash;
 
     if (!numentries)
@@ -196,7 +200,7 @@ static void R_InitSpriteDefs(void)
 
     for (i = 0; i < numentries; i++)            // Prepend each sprite to hash chain
     {                                           // prepend so that later ones win
-        int     j = R_SpriteNameHash(lumpinfo[i + firstspritelump]->name) % numentries;
+        int j = R_SpriteNameHash(lumpinfo[i + firstspritelump]->name) % numentries;
 
         hash[i].next = hash[j].index;
         hash[j].index = i;
@@ -206,40 +210,44 @@ static void R_InitSpriteDefs(void)
     //  noting the highest frame letter.
     for (i = 0; i < NUMSPRITES; i++)
     {
-        const char      *spritename = sprnames[i];
-        int             j = hash[R_SpriteNameHash(spritename) % numentries].index;
+        const char  *spritename = sprnames[i];
+        int         j = hash[R_SpriteNameHash(spritename) % numentries].index;
 
         if (j >= 0)
         {
             int k;
 
             memset(sprtemp, -1, sizeof(sprtemp));
+
             for (k = 0; k < MAX_SPRITE_FRAMES; k++)
                 sprtemp[k].flip = 0;
 
             maxframe = -1;
+
             do
             {
-                lumpinfo_t      *lump = lumpinfo[j + firstspritelump];
+                lumpinfo_t  *lump = lumpinfo[j + firstspritelump];
 
                 // Fast portable comparison -- killough
                 // (using int pointer cast is nonportable):
                 if (!((lump->name[0] ^ spritename[0]) | (lump->name[1] ^ spritename[1])
                     | (lump->name[2] ^ spritename[2]) | (lump->name[3] ^ spritename[3])))
                 {
-                    R_InstallSpriteLump(lump, j + firstspritelump, lump->name[4] - 'A',
-                        lump->name[5], false);
+                    R_InstallSpriteLump(lump, j + firstspritelump, lump->name[4] - 'A', lump->name[5],
+                        false);
+
                     if (lump->name[6])
-                        R_InstallSpriteLump(lump, j + firstspritelump, lump->name[6] - 'A',
-                           lump->name[7], true);
+                        R_InstallSpriteLump(lump, j + firstspritelump, lump->name[6] - 'A', lump->name[7],
+                            true);
                 }
-            } while ((j = hash[j].next) >= 0);
+            }
+            while ((j = hash[j].next) >= 0);
 
             // check the frames that were found for completeness
             if ((sprites[i].numframes = ++maxframe))  // killough 1/31/98
             {
-                int     frame;
-                int     rot;
+                int frame;
+                int rot;
 
                 for (frame = 0; frame < maxframe; frame++)
                     switch (sprtemp[frame].rotate)
@@ -256,6 +264,7 @@ static void R_InitSpriteDefs(void)
                             // If the frame is flipped, they all should be
                             if (sprtemp[frame].flip & 1)
                                 sprtemp[frame].flip = 0xFFFF;
+
                             break;
 
                         case 1:
@@ -265,20 +274,24 @@ static void R_InitSpriteDefs(void)
                                 if (sprtemp[frame].lump[rot + 1] == -1)
                                 {
                                     sprtemp[frame].lump[rot + 1] = sprtemp[frame].lump[rot];
+
                                     if (sprtemp[frame].flip & (1 << rot))
                                         sprtemp[frame].flip |= 1 << (rot + 1);
                                 }
+
                                 if (sprtemp[frame].lump[rot] == -1)
                                 {
                                     sprtemp[frame].lump[rot] = sprtemp[frame].lump[rot + 1];
+
                                     if (sprtemp[frame].flip & (1 << (rot + 1)))
                                         sprtemp[frame].flip |= 1 << rot;
                                 }
                             }
+
                             for (rot = 0; rot < 16; rot++)
                                 if (sprtemp[frame].lump[rot] == -1)
-                                    I_Error("R_InitSprites: Frame %c of sprite %.8s frame %c is "
-                                        "missing rotations", frame + 'A', sprnames[i]);
+                                    I_Error("R_InitSprites: Frame %c of sprite %.8s is missing rotations",
+                                        frame + 'A', sprnames[i]);
                             break;
                     }
 
@@ -367,11 +380,11 @@ static int64_t  shift;
 
 static void R_BlastSpriteColumn(const rcolumn_t *column)
 {
-    int                 i;
-    const int           numposts = column->numPosts;
-    const int           ceilingclip = mceilingclip[dc_x] + 1;
-    const int           floorclip = MIN(dc_baseclip, mfloorclip[dc_x] - 1);
-    unsigned char       *pixels = column->pixels;
+    int             i;
+    const int       numposts = column->numPosts;
+    const int       ceilingclip = mceilingclip[dc_x] + 1;
+    const int       floorclip = MIN(dc_baseclip, mfloorclip[dc_x]) - 1;
+    unsigned char   *pixels = column->pixels;
 
     for (i = 0; i < numposts; i++)
     {
@@ -396,9 +409,9 @@ static void R_BlastSpriteColumn(const rcolumn_t *column)
 
 static void R_BlastPlayerSpriteColumn(const rcolumn_t *column)
 {
-    int                 i;
-    const int           numposts = column->numPosts;
-    unsigned char       *pixels = column->pixels;
+    int             i;
+    const int       numposts = column->numPosts;
+    unsigned char   *pixels = column->pixels;
 
     for (i = 0; i < numposts; i++)
     {
@@ -470,26 +483,26 @@ static void R_BlastShadowColumn(const rcolumn_t *column)
 //
 static void R_DrawVisSprite(const vissprite_t *vis)
 {
-    fixed_t             frac;
-    const fixed_t       startfrac = vis->startfrac;
-    const fixed_t       xiscale = vis->xiscale;
-    const fixed_t       x2 = vis->x2;
-    const int           id = vis->patch + firstspritelump;
-    const rpatch_t      *patch = R_CachePatchNum(id);
-    const mobj_t        *mobj = vis->mobj;
+    fixed_t         frac;
+    const fixed_t   startfrac = vis->startfrac;
+    const fixed_t   xiscale = vis->xiscale;
+    const fixed_t   x2 = vis->x2;
+    const int       id = vis->patch + firstspritelump;
+    const rpatch_t  *patch = R_CachePatchNum(id);
+    const mobj_t    *mobj = vis->mobj;
 
     spryscale = vis->scale;
     dc_colormap = vis->colormap;
 
-    if ((mobj->flags2 & MF2_CASTSHADOW) && drawshadows)
+    if ((mobj->flags2 & MF2_CASTSHADOW) && spryscale >= FRACUNIT / 4 && drawshadows)
     {
         sector_t    *sector = mobj->subsector->sector;
+        fixed_t     height = sector->interpfloorheight + mobj->info->shadowoffset - viewz;
 
-        if (!sector->isliquid)
+        if (!sector->isliquid && height <= 0)
         {
             colfunc = mobj->shadowcolfunc;
-            sprtopscreen = centeryfrac - FixedMul(sector->interpfloorheight
-                + mobj->info->shadowoffset - viewz, spryscale);
+            sprtopscreen = centeryfrac - FixedMul(height, spryscale);
             shift = (sprtopscreen * 9 / 10) >> FRACBITS;
 
             for (dc_x = vis->x1, frac = startfrac; dc_x <= x2; dc_x++, frac += xiscale)
@@ -504,8 +517,7 @@ static void R_DrawVisSprite(const vissprite_t *vis)
     if (mobj->flags & MF_TRANSLATION)
     {
         colfunc = transcolfunc;
-        dc_translation = translationtables - 256
-            + ((mobj->flags & MF_TRANSLATION) >> (MF_TRANSSHIFT - 8));
+        dc_translation = translationtables - 256 + ((mobj->flags & MF_TRANSLATION) >> (MF_TRANSSHIFT - 8));
     }
 
     sprtopscreen = centeryfrac - FixedMul(dc_texturemid, spryscale);
@@ -543,10 +555,10 @@ static void R_DrawVisSprite(const vissprite_t *vis)
 //
 static void R_DrawPlayerVisSprite(const vissprite_t *vis)
 {
-    fixed_t             frac = vis->startfrac;
-    const fixed_t       x2 = vis->x2;
-    const int           id = vis->patch + firstspritelump;
-    const rpatch_t      *patch = R_CachePatchNum(id);
+    fixed_t         frac = vis->startfrac;
+    const fixed_t   x2 = vis->x2;
+    const int       id = vis->patch + firstspritelump;
+    const rpatch_t  *patch = R_CachePatchNum(id);
 
     dc_colormap = vis->colormap;
     colfunc = vis->colfunc;
@@ -563,11 +575,11 @@ static void R_DrawPlayerVisSprite(const vissprite_t *vis)
 
 static void R_DrawBloodSplatVisSprite(const bloodsplatvissprite_t *vis)
 {
-    fixed_t             frac = vis->startfrac;
-    const fixed_t       xiscale = vis->xiscale;
-    const fixed_t       x2 = vis->x2;
-    const int           id = vis->patch + firstspritelump;
-    const rcolumn_t     *columns = R_CachePatchNum(id)->columns;
+    fixed_t         frac = vis->startfrac;
+    const fixed_t   xiscale = vis->xiscale;
+    const fixed_t   x2 = vis->x2;
+    const int       id = vis->patch + firstspritelump;
+    const rcolumn_t *columns = R_CachePatchNum(id)->columns;
 
     colfunc = vis->colfunc;
     dc_colormap = vis->colormap;
@@ -589,46 +601,28 @@ static void R_DrawBloodSplatVisSprite(const bloodsplatvissprite_t *vis)
 //
 static void R_ProjectSprite(mobj_t *thing)
 {
-    fixed_t             tx;
-
-    fixed_t             xscale;
-
-    int                 x1;
-    int                 x2;
-
-    spritedef_t         *sprdef;
-    spriteframe_t       *sprframe;
-    int                 lump;
-    fixed_t             width;
-
-    dboolean            flip;
-
-    vissprite_t         *vis;
-
-    int                 heightsec;
-
-    int                 flags2 = thing->flags2;
-    int                 frame;
-
-    // transform the origin point
-    fixed_t             tr_x;
-    fixed_t             tr_y;
-
-    fixed_t             gzt;
-
-    fixed_t             tz;
-
-    angle_t             rot = 0;
-
-    sector_t            *sector;
-    fixed_t             floorheight;
-
-    fixed_t             fx;
-    fixed_t             fy;
-    fixed_t             fz;
-
-    fixed_t             offset;
-    fixed_t             topoffset;
+    fixed_t         tx;
+    fixed_t         xscale;
+    int             x1;
+    int             x2;
+    spritedef_t     *sprdef;
+    spriteframe_t   *sprframe;
+    int             lump;
+    fixed_t         width;
+    dboolean        flip;
+    vissprite_t     *vis;
+    int             heightsec;
+    int             flags2 = thing->flags2;
+    int             frame;
+    fixed_t         tr_x, tr_y;
+    fixed_t         gzt;
+    fixed_t         tz;
+    angle_t         rot = 0;
+    sector_t        *sector;
+    fixed_t         floorheight;
+    fixed_t         fx, fy, fz;
+    fixed_t         offset;
+    fixed_t         topoffset;
 
     if (flags2 & MF2_DONTDRAW)
         return;
@@ -678,6 +672,7 @@ static void R_ProjectSprite(mobj_t *thing)
             rot = (ang - thing->angle + (angle_t)(ANG45 / 2) * 9) >> 28;
         else
             rot = (ang - thing->angle + (angle_t)(ANG45 / 2) * 9 - (angle_t)(ANG180 / 16)) >> 28;
+
         lump = sprframe->lump[rot];
         flip = (!!(sprframe->flip & (1 << rot)) || (flags2 & MF2_MIRRORED));
     }
@@ -728,15 +723,14 @@ static void R_ProjectSprite(mobj_t *thing)
 
     if (heightsec != -1)   // only clip things which are in special sectors
     {
-        int     phs = viewplayer->mo->subsector->sector->heightsec;
+        int phs = viewplayer->mo->subsector->sector->heightsec;
 
         if (phs != -1 && (viewz < sectors[phs].interpfloorheight ?
-            fz >= sectors[heightsec].interpfloorheight :
-            gzt < sectors[heightsec].interpfloorheight))
+            fz >= sectors[heightsec].interpfloorheight : gzt < sectors[heightsec].interpfloorheight))
             return;
+
         if (phs != -1 && (viewz > sectors[phs].interpceilingheight ?
-            gzt < sectors[heightsec].interpceilingheight &&
-            viewz >= sectors[heightsec].interpceilingheight :
+            gzt < sectors[heightsec].interpceilingheight && viewz >= sectors[heightsec].interpceilingheight :
             fz >= sectors[heightsec].interpceilingheight))
             return;
     }
@@ -754,7 +748,6 @@ static void R_ProjectSprite(mobj_t *thing)
     floorheight = sector->interpfloorheight;
     vis->gz = floorheight;
     vis->gzt = gzt;
-    vis->blood = thing->blood;
 
     if ((thing->flags & MF_FUZZ) && pausesprites && r_textures)
         vis->colfunc = R_DrawPausedFuzzColumn;
@@ -810,28 +803,19 @@ static void R_ProjectSprite(mobj_t *thing)
 
 static void R_ProjectBloodSplat(const bloodsplat_t *splat)
 {
-    fixed_t                     tx;
-
-    fixed_t                     xscale;
-
-    int                         x1;
-    int                         x2;
-
-    int                         lump;
-
-    bloodsplatvissprite_t       *vis;
-
-    int                         flags;
-    fixed_t                     fx = splat->x;
-    fixed_t                     fy = splat->y;
-
-    fixed_t                     width;
-
-    // transform the origin point
-    fixed_t                     tr_x = fx - viewx;
-    fixed_t                     tr_y = fy - viewy;
-
-    fixed_t                     tz = FixedMul(tr_x, viewcos) + FixedMul(tr_y, viewsin);
+    fixed_t                 tx;
+    fixed_t                 xscale;
+    int                     x1;
+    int                     x2;
+    int                     lump;
+    bloodsplatvissprite_t   *vis;
+    int                     flags;
+    fixed_t                 fx = splat->x;
+    fixed_t                 fy = splat->y;
+    fixed_t                 width;
+    fixed_t                 tr_x = fx - viewx;
+    fixed_t                 tr_y = fy - viewy;
+    fixed_t                 tz = FixedMul(tr_x, viewcos) + FixedMul(tr_y, viewsin);
 
     // thing is behind view plane?
     if (tz < MINZ)
@@ -871,8 +855,8 @@ static void R_ProjectBloodSplat(const bloodsplat_t *splat)
     vis->gy = fy;
     vis->blood = splat->blood;
     flags = splat->flags;
-    vis->colfunc = ((flags & BSF_FUZZ) && pausesprites && r_textures ?
-        R_DrawPausedFuzzColumn : splat->colfunc);
+    vis->colfunc = ((flags & BSF_FUZZ) && pausesprites && r_textures ? R_DrawPausedFuzzColumn :
+        splat->colfunc);
     vis->texturemid = splat->sector->interpfloorheight - viewz;
     vis->x1 = MAX(0, x1);
     vis->x2 = MIN(x2, viewwidth - 1);
@@ -904,23 +888,29 @@ static void R_ProjectBloodSplat(const bloodsplat_t *splat)
 // killough 9/18/98: add lightlevel as parameter, fixing underwater lighting
 void R_AddSprites(sector_t *sec, int lightlevel)
 {
-    mobj_t      *thing;
+    mobj_t  *thing = sec->thinglist;
 
-    spritelights = scalelight[MIN((lightlevel >> LIGHTSEGSHIFT) + extralight * LIGHTBRIGHT, LIGHTLEVELS - 1)];
+    spritelights = scalelight[MIN((lightlevel >> LIGHTSEGSHIFT) + extralight, LIGHTLEVELS - 1)];
 
     if (drawbloodsplats && sec->interpfloorheight <= viewz)
     {
-        bloodsplat_t    *splat;
+        bloodsplat_t    *splat = sec->splatlist;
 
-        for (splat = sec->splatlist; splat; splat = splat->snext)
+        while (splat)
+        {
             R_ProjectBloodSplat(splat);
+            splat = splat->snext;
+        }
     }
 
     drawshadows = (r_shadows && !fixedcolormap && sec->floorpic != skyflatnum);
 
     // Handle all things in sector.
-    for (thing = sec->thinglist; thing; thing = thing->snext)
+    while (thing)
+    {
         R_ProjectSprite(thing);
+        thing = thing->snext;
+    }
 }
 
 //
@@ -930,18 +920,16 @@ static dboolean muzzleflash;
 
 static void R_DrawPlayerSprite(pspdef_t *psp, dboolean invisibility, dboolean dehacked)
 {
-    fixed_t             tx;
-    int                 x1, x2;
-    vissprite_t         *vis;
-    vissprite_t         tempvis;
-
-    // decide which patch to use
-    state_t             *state = psp->state;
-    spritenum_t         spr = state->sprite;
-    spritedef_t         *sprdef = &sprites[spr];
-    long                frame = state->frame;
-    spriteframe_t       *sprframe = &sprdef->spriteframes[frame & FF_FRAMEMASK];
-    int                 lump = sprframe->lump[0];
+    fixed_t         tx;
+    int             x1, x2;
+    vissprite_t     *vis;
+    vissprite_t     tempvis;
+    state_t         *state = psp->state;
+    spritenum_t     spr = state->sprite;
+    spritedef_t     *sprdef = &sprites[spr];
+    long            frame = state->frame;
+    spriteframe_t   *sprframe = &sprdef->spriteframes[frame & FF_FRAMEMASK];
+    int             lump = sprframe->lump[0];
 
     // calculate edges of the shape
     tx = psp->sx - ORIGINALWIDTH / 2 * FRACUNIT - (dehacked ? spriteoffset[lump] : newspriteoffset[lump]);
@@ -951,10 +939,62 @@ static void R_DrawPlayerSprite(pspdef_t *psp, dboolean invisibility, dboolean de
     // store information in a vissprite
     vis = &tempvis;
     vis->texturemid = (BASEYCENTER << FRACBITS) + FRACUNIT / 4 - (psp->sy - spritetopoffset[lump]);
+
     vis->x1 = MAX(0, x1);
     vis->x2 = MIN(x2, viewwidth - 1);
     vis->startfrac = (vis->x1 > x1 ? pspriteiscale * (vis->x1 - x1) : 0);
     vis->patch = lump;
+
+    // interpolation for weapon bobbing
+    if (interpolatesprites)
+    {
+        typedef struct
+        {
+            int x1;
+            int x1_prev;
+            int texturemid;
+            int texturemid_prev;
+            int lump;
+        } psp_interpolate_t;
+
+        static psp_interpolate_t    psp_inter;
+
+        if (realframe)
+        {
+            psp_inter.x1 = psp_inter.x1_prev;
+            psp_inter.texturemid = psp_inter.texturemid_prev;
+        }
+
+        psp_inter.x1_prev = vis->x1;
+        psp_inter.texturemid_prev = vis->texturemid;
+
+        if (lump == psp_inter.lump && !skippsprinterp && !skippsprinterp2)
+        {
+            int deltax = vis->x2 - vis->x1;
+
+            vis->x1 = psp_inter.x1 + FixedMul(fractionaltic, vis->x1 - psp_inter.x1);
+            vis->x2 = vis->x1 + deltax;
+            vis->texturemid = psp_inter.texturemid
+                + FixedMul(fractionaltic, vis->texturemid - psp_inter.texturemid);
+        }
+        else
+        {
+            psp_inter.x1 = vis->x1;
+            psp_inter.texturemid = vis->texturemid;
+            psp_inter.lump = lump;
+
+            skippsprinterp2 = false;
+
+            if (skippsprinterp)
+                skippsprinterp2 = true;
+
+            skippsprinterp = false;
+        }
+    }
+
+    if (m_look)
+        vis->texturemid += FixedMul(((centery - viewheight / 2) << FRACBITS), pspriteiscale)
+            - viewplayer->lookdir * 0x5C0;
 
     if (invisibility)
     {
@@ -1011,58 +1051,11 @@ static void R_DrawPlayerSprite(pspdef_t *psp, dboolean invisibility, dboolean de
                 sector_t *sec = viewplayer->mo->subsector->sector;
                 short    lightlevel = (sec->floorlightsec == -1 ? sec->lightlevel :
                              sectors[sec->floorlightsec].lightlevel);
-                int      lightnum = (lightlevel >> OLDLIGHTSEGSHIFT) + extralight * OLDLIGHTBRIGHT;
+                int      lightnum = (lightlevel >> OLDLIGHTSEGSHIFT) + extralight;
 
                 vis->colormap = psprscalelight[MIN(lightnum, OLDLIGHTLEVELS - 1)]
                     [MIN(lightnum + 16, OLDMAXLIGHTSCALE - 1)];
             }
-        }
-    }
-
-    // e6y: interpolation for weapon bobbing
-    if (interpolatesprites)
-    {
-        typedef struct
-        {
-            int x1;
-            int x1_prev;
-            int texturemid;
-            int texturemid_prev;
-            int lump;
-        } psp_interpolate_t;
-
-        static psp_interpolate_t        psp_inter;
-
-        if (realframe)
-        {
-            psp_inter.x1 = psp_inter.x1_prev;
-            psp_inter.texturemid = psp_inter.texturemid_prev;
-        }
-
-        psp_inter.x1_prev = vis->x1;
-        psp_inter.texturemid_prev = vis->texturemid;
-
-        if (lump == psp_inter.lump && !skippsprinterp && !skippsprinterp2)
-        {
-            int deltax = vis->x2 - vis->x1;
-
-            vis->x1 = psp_inter.x1 + FixedMul(fractionaltic, vis->x1 - psp_inter.x1);
-            vis->x2 = vis->x1 + deltax;
-            vis->texturemid = psp_inter.texturemid
-                + FixedMul(fractionaltic, vis->texturemid - psp_inter.texturemid);
-        }
-        else
-        {
-            psp_inter.x1 = vis->x1;
-            psp_inter.texturemid = vis->texturemid;
-            psp_inter.lump = lump;
-
-            skippsprinterp2 = false;
-
-            if (skippsprinterp)
-                skippsprinterp2 = true;
-
-            skippsprinterp = false;
         }
     }
 
@@ -1080,12 +1073,13 @@ void R_DrawPlayerSprites(void)
     pspdef_t    *flash = weapon + 1;
 
     // add all active psprites
-    if ((invisibility > 128 || (invisibility & 8)) && r_textures)
+    if ((invisibility > STARTFLASHING || (invisibility & 8)) && r_textures)
     {
         V_FillRect(1, viewwindowx, viewwindowy, viewwidth, viewheight, 251);
 
         if (weapon->state)
             R_DrawPlayerSprite(weapon, true, dehacked);
+
         if (flash->state)
             R_DrawPlayerSprite(flash, true, dehacked);
 
@@ -1104,6 +1098,7 @@ void R_DrawPlayerSprites(void)
 
         if (weapon->state)
             R_DrawPlayerSprite(weapon, false, dehacked);
+
         if (flash->state)
             R_DrawPlayerSprite(flash, false, dehacked);
     }
@@ -1137,18 +1132,17 @@ static void R_DrawBloodSplatSprite(bloodsplatvissprite_t *spr)
     //  is the clip seg.
     for (ds = ds_p; ds-- > drawsegs;)
     {
-        int             r1;
-        int             r2;
-        int             silhouette = ds->silhouette;
-        dboolean        bottom;
-        dboolean        top;
+        int         r1;
+        int         r2;
+        int         silhouette = ds->silhouette;
+        dboolean    bottom;
+        dboolean    top;
 
         // determine if the drawseg obscures the sprite
         if (ds->x1 > x2 || ds->x2 < x1 || (!(silhouette & SIL_BOTH) && !ds->maskedtexturecol))
             continue;       // does not cover sprite
 
-        if (MAX(ds->scale1, ds->scale2) < spr->scale
-            || (MIN(ds->scale1, ds->scale2) < spr->scale
+        if (MAX(ds->scale1, ds->scale2) < spr->scale || (MIN(ds->scale1, ds->scale2) < spr->scale
             && !R_PointOnSegSide(spr->gx, spr->gy, ds->curline)))
             continue;       // seg is behind sprite
 
@@ -1159,10 +1153,12 @@ static void R_DrawBloodSplatSprite(bloodsplatvissprite_t *spr)
         // killough 3/27/98: optimized and made much shorter
         bottom = (silhouette & SIL_BOTTOM);
         top = (silhouette & SIL_TOP);
+
         for (i = r1; i <= r2; i++)
         {
             if (bottom && clipbot[i] > ds->sprbottomclip[i])
                 clipbot[i] = ds->sprbottomclip[i];
+
             if (top && cliptop[i] < ds->sprtopclip[i])
                 cliptop[i] = ds->sprtopclip[i];
         }
@@ -1178,11 +1174,11 @@ static void msort(vissprite_t **s, vissprite_t **t, int n)
 {
     if (n >= 16)
     {
-        int             n1 = n / 2;
-        int             n2 = n - n1;
-        vissprite_t     **s1 = s;
-        vissprite_t     **s2 = s + n1;
-        vissprite_t     **d = t;
+        int         n1 = n / 2;
+        int         n2 = n - n1;
+        vissprite_t **s1 = s;
+        vissprite_t **s2 = s + n1;
+        vissprite_t **d = t;
 
         msort(s1, t, n1);
         msort(s2, t, n2);
@@ -1198,7 +1194,7 @@ static void msort(vissprite_t **s, vissprite_t **t, int n)
     }
     else
     {
-        int     i;
+        int i;
 
         for (i = 1; i < n; i++)
         {
@@ -1206,9 +1202,10 @@ static void msort(vissprite_t **s, vissprite_t **t, int n)
 
             if (s[i - 1]->scale < temp->scale)
             {
-                int     j = i;
+                int j = i;
 
                 while ((s[j] = s[j - 1])->scale < temp->scale && --j);
+
                 s[j] = temp;
             }
         }
@@ -1219,7 +1216,7 @@ void R_SortVisSprites (void)
 {
     if (num_vissprite)
     {
-        int     i = num_vissprite;
+        int i = num_vissprite;
 
         if (num_vissprite_ptrs < num_vissprite * 2)
         {
@@ -1259,18 +1256,17 @@ static void R_DrawSprite(vissprite_t *spr)
     // The first drawseg that has a greater scale is the clip seg.
     for (ds = ds_p; ds-- > drawsegs;)
     {
-        int             r1;
-        int             r2;
-        int             silhouette = ds->silhouette;
-        dboolean        bottom;
-        dboolean        top;
+        int         r1;
+        int         r2;
+        int         silhouette = ds->silhouette;
+        dboolean    bottom;
+        dboolean    top;
 
         // determine if the drawseg obscures the sprite
         if (ds->x1 > x2 || ds->x2 < x1 || (!(silhouette & SIL_BOTH) && !ds->maskedtexturecol))
             continue;       // does not cover sprite
 
-        if (MAX(ds->scale1, ds->scale2) < spr->scale
-            || (MIN(ds->scale1, ds->scale2) < spr->scale
+        if (MAX(ds->scale1, ds->scale2) < spr->scale || (MIN(ds->scale1, ds->scale2) < spr->scale
             && !R_PointOnSegSide(spr->gx, spr->gy, ds->curline)))
         {
             // masked mid texture?
@@ -1288,10 +1284,12 @@ static void R_DrawSprite(vissprite_t *spr)
         // killough 3/27/98: optimized and made much shorter
         bottom = (silhouette & SIL_BOTTOM);
         top = (silhouette & SIL_TOP);
+
         for (i = r1; i <= r2; i++)
         {
             if (bottom && clipbot[i] > ds->sprbottomclip[i])
                 clipbot[i] = ds->sprbottomclip[i];
+
             if (top && cliptop[i] < ds->sprtopclip[i])
                 cliptop[i] = ds->sprtopclip[i];
         }
@@ -1304,12 +1302,12 @@ static void R_DrawSprite(vissprite_t *spr)
     // killough 11/98: fix disappearing sprites
     if (spr->heightsec != -1)  // only things in specially marked sectors
     {
-        fixed_t     h, mh;
-        int         phs = viewplayer->mo->subsector->sector->heightsec;
+        fixed_t h;
+        fixed_t mh;
+        int     phs = viewplayer->mo->subsector->sector->heightsec;
 
         if ((mh = sectors[spr->heightsec].interpfloorheight) > spr->gz
-            && (h = centeryfrac - FixedMul(mh -= viewz, spr->scale)) >= 0
-            && (h >>= FRACBITS) < viewheight)
+            && (h = centeryfrac - FixedMul(mh -= viewz, spr->scale)) >= 0 && (h >>= FRACBITS) < viewheight)
         {
             if (mh <= 0 || (phs != -1 && viewz > sectors[phs].interpfloorheight))
             {                          // clip bottom
@@ -1325,8 +1323,7 @@ static void R_DrawSprite(vissprite_t *spr)
         }
 
         if ((mh = sectors[spr->heightsec].interpceilingheight) < spr->gzt
-            && (h = centeryfrac - FixedMul(mh - viewz, spr->scale)) >= 0
-            && (h >>= FRACBITS) < viewheight)
+            && (h = centeryfrac - FixedMul(mh - viewz, spr->scale)) >= 0 && (h >>= FRACBITS) < viewheight)
         {
             if (phs != -1 && viewz >= sectors[phs].interpceilingheight)
             {                         // clip bottom
@@ -1360,6 +1357,7 @@ void R_DrawMasked(void)
 
     // draw all blood splats
     i = num_bloodsplatvissprite;
+
     while (i > 0)
         R_DrawBloodSplatSprite(&bloodsplatvissprites[--i]);
 
@@ -1367,6 +1365,7 @@ void R_DrawMasked(void)
 
     // draw all other vissprites back to front
     i = num_vissprite;
+
     while (i > 0)
         R_DrawSprite(vissprite_ptrs[--i]);
 

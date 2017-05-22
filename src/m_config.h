@@ -206,6 +206,10 @@ typedef enum
 
 #define m_doubleclick_use_default               false
 
+#define m_invert_default                        false
+
+#define m_look_default                          false
+
 #define m_novertical_default                    true
 
 #define m_sensitivity_min                       0
@@ -233,7 +237,7 @@ typedef enum
 #define r_blood_max                             r_blood_all
 
 #define r_bloodsplats_max_min                   0
-#define r_bloodsplats_max_default               32768
+#define r_bloodsplats_max_default               65536
 #define r_bloodsplats_max_max                   1048576
 
 #define r_bloodsplats_total_min                 0
@@ -332,14 +336,6 @@ typedef enum
 #define s_randommusic_default                   false
 
 #define s_randompitch_default                   false
-
-#define s_samplerate_11025                      11025
-#define s_samplerate_22050                      22050
-#define s_samplerate_44100                      44100
-#define s_samplerate_48000                      48000
-#define s_samplerate_min                        s_samplerate_11025
-#define s_samplerate_default                    s_samplerate_44100
-#define s_samplerate_max                        s_samplerate_48000
 
 #define s_sfxvolume_min                         0
 #define s_sfxvolume_default                     100

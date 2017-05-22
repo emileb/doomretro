@@ -142,15 +142,10 @@ void P_InitPicAnims(void)
     // [BH] indicate obvious teleport textures for automap
     if (BTSX)
     {
+        isteleport[R_CheckFlatNumForName("SLIME05")] = true;
+        isteleport[R_CheckFlatNumForName("SLIME08")] = true;
         isteleport[R_CheckFlatNumForName("SLIME09")] = true;
         isteleport[R_CheckFlatNumForName("SLIME12")] = true;
-        isteleport[R_CheckFlatNumForName("TELEPRT1")] = true;
-        isteleport[R_CheckFlatNumForName("TELEPRT2")] = true;
-        isteleport[R_CheckFlatNumForName("TELEPRT3")] = true;
-        isteleport[R_CheckFlatNumForName("TELEPRT4")] = true;
-        isteleport[R_CheckFlatNumForName("TELEPRT5")] = true;
-        isteleport[R_CheckFlatNumForName("TELEPRT6")] = true;
-        isteleport[R_CheckFlatNumForName("SLIME05")] = true;
         isteleport[R_CheckFlatNumForName("SHNPRT02")] = true;
         isteleport[R_CheckFlatNumForName("SHNPRT03")] = true;
         isteleport[R_CheckFlatNumForName("SHNPRT04")] = true;
@@ -164,7 +159,12 @@ void P_InitPicAnims(void)
         isteleport[R_CheckFlatNumForName("SHNPRT12")] = true;
         isteleport[R_CheckFlatNumForName("SHNPRT13")] = true;
         isteleport[R_CheckFlatNumForName("SHNPRT14")] = true;
-        isteleport[R_CheckFlatNumForName("SLIME08")] = true;
+        isteleport[R_CheckFlatNumForName("TELEPRT1")] = true;
+        isteleport[R_CheckFlatNumForName("TELEPRT2")] = true;
+        isteleport[R_CheckFlatNumForName("TELEPRT3")] = true;
+        isteleport[R_CheckFlatNumForName("TELEPRT4")] = true;
+        isteleport[R_CheckFlatNumForName("TELEPRT5")] = true;
+        isteleport[R_CheckFlatNumForName("TELEPRT6")] = true;
     }
     else
     {
@@ -182,19 +182,20 @@ void P_SetLiquids(void)
 {
     int         i;
     int         lump = W_GetNumForName2("ANIMATED");
-    animdef_t   *animdefs = W_CacheLumpNum(lump, PU_STATIC);
+    animdef_t   *animdefs = W_CacheLumpNum(lump);
 
     for (i = 0; i < numflats; i++)
         isliquid[i] = false;
 
     // Init animation
     lastanim = anims;
+
     for (i = 0; animdefs[i].istexture != -1; i++)
     {
         // 1/11/98 killough -- removed limit by array-doubling
         if (lastanim >= anims + maxanims)
         {
-            size_t      newmax = (maxanims ? maxanims * 2 : MAXANIMS);
+            size_t  newmax = (maxanims ? maxanims * 2 : MAXANIMS);
 
             anims = Z_Realloc(anims, newmax * sizeof(*anims));
             lastanim = anims + maxanims;
@@ -231,16 +232,17 @@ void P_SetLiquids(void)
         }
 
         if (lastanim->numpics < 2)
-            I_Error("P_InitPicAnims: bad cycle from %s to %s",
-                animdefs[i].startname, animdefs[i].endname);
+            I_Error("P_InitPicAnims: bad cycle from %s to %s",  animdefs[i].startname, animdefs[i].endname);
 
         lastanim->speed = LONG(animdefs[i].speed);
         lastanim++;
     }
-    W_ReleaseLumpNum(lump);
+
+    W_UnlockLumpNum(lump);
 
     // [BH] parse DRCOMPAT lump to find animated textures that are not liquid in current wad
     SC_Open("DRCOMPAT");
+
     while (SC_GetString())
     {
         if (M_StringCompare(sc_String, "NOLIQUID"))
@@ -250,12 +252,14 @@ void P_SetLiquids(void)
             SC_MustGetString();
             lump = R_CheckFlatNumForName(sc_String);
             SC_MustGetString();
-            if (lump >= 0 && M_StringCompare(leafname(lumpinfo[firstflat + lump]->wad_file->path), sc_String))
+
+            if (lump >= 0 && M_StringCompare(leafname(lumpinfo[firstflat + lump]->wadfile->path), sc_String))
                 isliquid[lump] = false;
         }
     }
 
     numliquid = 0;
+
     for (i = 0; i < numsectors; i++)
         if (isliquid[sectors[i].floorpic])
         {
@@ -331,6 +335,7 @@ fixed_t P_FindLowestFloorSurrounding(sector_t *sec)
     for (i = 0; i < sec->linecount; i++)
         if ((other = getNextSector(sec->lines[i], sec)) && other->floorheight < floor)
             floor = other->floorheight;
+
     return floor;
 }
 
@@ -347,6 +352,7 @@ fixed_t P_FindHighestFloorSurrounding(sector_t *sec)
     for (i = 0; i < sec->linecount; i++)
         if ((other = getNextSector(sec->lines[i], sec)) && other->floorheight > floor)
             floor = other->floorheight;
+
     return floor;
 }
 
@@ -368,8 +374,10 @@ fixed_t P_FindNextHighestFloor(sector_t *sec, int currentheight)
                 if ((other = getNextSector(sec->lines[i], sec)) && other->floorheight < height
                     && other->floorheight > currentheight)
                     height = other->floorheight;
+
             return height;
         }
+
     return currentheight;
 }
 
@@ -391,8 +399,10 @@ fixed_t P_FindNextLowestFloor(sector_t *sec, int currentheight)
                 if ((other = getNextSector(sec->lines[i], sec)) && other->floorheight > height
                     && other->floorheight < currentheight)
                     height = other->floorheight;
+
             return height;
         }
+
     return currentheight;
 }
 
@@ -412,17 +422,18 @@ fixed_t P_FindNextLowestCeiling(sector_t *sec, int currentheight)
     sector_t    *other;
 
     for (i = 0; i < sec->linecount; i++)
-        if ((other = getNextSector(sec->lines[i], sec)) &&
-            other->ceilingheight < currentheight)
+        if ((other = getNextSector(sec->lines[i], sec)) && other->ceilingheight < currentheight)
         {
             int height = other->ceilingheight;
+
             while (++i < sec->linecount)
-                if ((other = getNextSector(sec->lines[i], sec)) &&
-                    other->ceilingheight > height &&
-                    other->ceilingheight < currentheight)
+                if ((other = getNextSector(sec->lines[i], sec)) && other->ceilingheight > height
+                    && other->ceilingheight < currentheight)
                     height = other->ceilingheight;
+
             return height;
         }
+
     return currentheight;
 }
 
@@ -442,17 +453,18 @@ fixed_t P_FindNextHighestCeiling(sector_t *sec, int currentheight)
     sector_t    *other;
 
     for (i = 0; i < sec->linecount; i++)
-        if ((other = getNextSector(sec->lines[i], sec)) &&
-            other->ceilingheight > currentheight)
+        if ((other = getNextSector(sec->lines[i], sec)) && other->ceilingheight > currentheight)
         {
             int height = other->ceilingheight;
+
             while (++i < sec->linecount)
-                if ((other = getNextSector(sec->lines[i], sec)) &&
-                    other->ceilingheight < height &&
-                    other->ceilingheight > currentheight)
+                if ((other = getNextSector(sec->lines[i], sec)) && other->ceilingheight < height
+                    && other->ceilingheight > currentheight)
                     height = other->ceilingheight;
+
             return height;
         }
+
     return currentheight;
 }
 
@@ -468,6 +480,7 @@ fixed_t P_FindLowestCeilingSurrounding(sector_t *sec)
     for (i = 0; i < sec->linecount; i++)
         if ((other = getNextSector(sec->lines[i], sec)) && other->ceilingheight < height)
             height = other->ceilingheight;
+
     return height;
 }
 
@@ -483,6 +496,7 @@ fixed_t P_FindHighestCeilingSurrounding(sector_t *sec)
     for (i = 0; i < sec->linecount; i++)
         if ((other = getNextSector(sec->lines[i], sec)) && other->ceilingheight > height)
             height = other->ceilingheight;
+
     return height;
 }
 
@@ -500,17 +514,19 @@ fixed_t P_FindHighestCeilingSurrounding(sector_t *sec)
 // killough 11/98: reformatted
 fixed_t P_FindShortestTextureAround(int secnum)
 {
-    const sector_t      *sec = &sectors[secnum];
-    int                 i, minsize = 32000 * FRACUNIT;
+    const sector_t  *sec = &sectors[secnum];
+    int             i;
+    int             minsize = 32000 * FRACUNIT;
 
     for (i = 0; i < sec->linecount; i++)
         if (twoSided(secnum, i))
         {
-            const side_t        *side;
+            const side_t    *side;
 
             if ((side = getSide(secnum, i, 0))->bottomtexture > 0
                 && textureheight[side->bottomtexture] < minsize)
                 minsize = textureheight[side->bottomtexture];
+
             if ((side = getSide(secnum, i, 1))->bottomtexture > 0
                 && textureheight[side->bottomtexture] < minsize)
                 minsize = textureheight[side->bottomtexture];
@@ -533,17 +549,19 @@ fixed_t P_FindShortestTextureAround(int secnum)
 // killough 11/98: reformatted
 fixed_t P_FindShortestUpperAround(int secnum)
 {
-    const sector_t      *sec = &sectors[secnum];
-    int                 i, minsize = 32000 * FRACUNIT;
+    const sector_t  *sec = &sectors[secnum];
+    int             i;
+    int             minsize = 32000 * FRACUNIT;
 
     for (i = 0; i < sec->linecount; i++)
         if (twoSided(secnum, i))
         {
-            const side_t        *side;
+            const side_t    *side;
 
             if ((side = getSide(secnum, i, 0))->toptexture > 0)
                 if (textureheight[side->toptexture] < minsize)
                     minsize = textureheight[side->toptexture];
+
             if ((side = getSide(secnum, i, 1))->toptexture > 0)
                 if (textureheight[side->toptexture] < minsize)
                     minsize = textureheight[side->toptexture];
@@ -570,7 +588,8 @@ fixed_t P_FindShortestUpperAround(int secnum)
 sector_t *P_FindModelFloorSector(fixed_t floordestheight, int secnum)
 {
     sector_t    *sec = &sectors[secnum];
-    int         i, linecount = sec->linecount;
+    int         i;
+    int         linecount = sec->linecount;
 
     for (i = 0; i < linecount; i++)
         if (twoSided(secnum, i) && (sec = getSector(secnum, i, getSide(secnum, i, 0)->sector
@@ -599,7 +618,8 @@ sector_t *P_FindModelFloorSector(fixed_t floordestheight, int secnum)
 sector_t *P_FindModelCeilingSector(fixed_t ceildestheight, int secnum)
 {
     sector_t    *sec = &sectors[secnum];
-    int         i, linecount = sec->linecount;
+    int         i;
+    int         linecount = sec->linecount;
 
     for (i = 0; i < linecount; i++)
         if (twoSided(secnum, i) && (sec = getSector(secnum, i, getSide(secnum, i, 0)->sector
@@ -619,8 +639,10 @@ int P_FindSectorFromLineTag(const line_t *line, int start)
 {
     start = (start >= 0 ? sectors[start].nexttag :
         sectors[(unsigned int)line->tag % (unsigned int)numsectors].firsttag);
+
     while (start >= 0 && sectors[start].tag != line->tag)
         start = sectors[start].nexttag;
+
     return start;
 }
 
@@ -629,8 +651,10 @@ int P_FindLineFromLineTag(const line_t *line, int start)
 {
     start = (start >= 0 ? lines[start].nexttag :
         lines[(unsigned int)line->tag % (unsigned int)numlines].firsttag);
+
     while (start >= 0 && lines[start].tag != line->tag)
         start = lines[start].nexttag;
+
     return start;
 }
 
@@ -641,9 +665,10 @@ static void P_InitTagLists(void)
 
     for (i = numsectors; --i >= 0;)     // Initially make all slots empty.
         sectors[i].firsttag = -1;
+
     for (i = numsectors; --i >= 0;)     // Proceed from last to first sector
     {                                   // so that lower sectors appear first
-        int     j = (unsigned int)sectors[i].tag % (unsigned int)numsectors;    // Hash func
+        int j = (unsigned int)sectors[i].tag % (unsigned int)numsectors;    // Hash func
 
         sectors[i].nexttag = sectors[j].firsttag;     // Prepend sector to chain
         sectors[j].firsttag = i;
@@ -652,9 +677,10 @@ static void P_InitTagLists(void)
     // killough 4/17/98: same thing, only for linedefs
     for (i = numlines; --i >= 0;)       // Initially make all slots empty.
         lines[i].firsttag = -1;
+
     for (i = numlines; --i >= 0;)       // Proceed from last to first linedef
     {                                   // so that lower linedefs appear first
-        int     j = (unsigned int)lines[i].tag % (unsigned int)numlines;        // Hash func
+        int j = (unsigned int)lines[i].tag % (unsigned int)numlines;        // Hash func
 
         lines[i].nexttag = lines[j].firsttag;   // Prepend linedef to chain
         lines[j].firsttag = i;
@@ -672,6 +698,7 @@ int P_FindMinSurroundingLight(sector_t *sector, int min)
     for (i = 0; i < sector->linecount; i++)
         if ((check = getNextSector(sector->lines[i], sector)) && check->lightlevel < min)
             min = check->lightlevel;
+
     return min;
 }
 
@@ -709,68 +736,72 @@ dboolean P_CanUnlockGenDoor(line_t *line, player_t *player)
                 S_StartSound(player->mo, sfx_noway);
                 return false;
             }
+
             break;
 
         case RCard:
-            if (player->cards[it_redcard] <= 0
-                && (!skulliscard || player->cards[it_redskull] <= 0))
+            if (player->cards[it_redcard] <= 0 && (!skulliscard || player->cards[it_redskull] <= 0))
             {
                 if (!player->neededcardflash || player->neededcard != it_redcard)
                 {
                     player->neededcard = it_redcard;
                     player->neededcardflash = NEEDEDCARDFLASH;
                 }
+
                 M_snprintf(buffer, sizeof(buffer), (skulliscard ? s_PD_REDK : s_PD_REDC),
                     playername, (M_StringCompare(playername, playername_default) ? "" : "s"));
                 HU_PlayerMessage(buffer, false);
                 S_StartSound(player->mo, sfx_noway);
                 return false;
             }
+
             break;
 
         case BCard:
-            if (player->cards[it_bluecard] <= 0
-                && (!skulliscard || player->cards[it_blueskull] <= 0))
+            if (player->cards[it_bluecard] <= 0 && (!skulliscard || player->cards[it_blueskull] <= 0))
             {
                 if (!player->neededcardflash || player->neededcard != it_bluecard)
                 {
                     player->neededcard = it_bluecard;
                     player->neededcardflash = NEEDEDCARDFLASH;
                 }
+
                 M_snprintf(buffer, sizeof(buffer), (skulliscard ? s_PD_BLUEK : s_PD_BLUEC),
                     playername,  (M_StringCompare(playername, playername_default) ? "" : "s"));
                 HU_PlayerMessage(buffer, false);
                 S_StartSound(player->mo, sfx_noway);
                 return false;
             }
+
             break;
 
         case YCard:
-            if (player->cards[it_yellowcard] <= 0
-                && (!skulliscard || player->cards[it_yellowskull] <= 0))
+            if (player->cards[it_yellowcard] <= 0 && (!skulliscard || player->cards[it_yellowskull] <= 0))
             {
                 if (!player->neededcardflash || player->neededcard != it_yellowcard)
                 {
                     player->neededcard = it_yellowcard;
                     player->neededcardflash = NEEDEDCARDFLASH;
                 }
+
                 M_snprintf(buffer, sizeof(buffer), (skulliscard ? s_PD_YELLOWK : s_PD_YELLOWC),
                     playername, (M_StringCompare(playername, playername_default) ? "" : "s"));
                 HU_PlayerMessage(buffer, false);
                 S_StartSound(player->mo, sfx_noway);
+
                 return false;
             }
             break;
 
         case RSkull:
-            if (player->cards[it_redskull] <= 0
-                && (!skulliscard || player->cards[it_redcard] <= 0))
+            if (player->cards[it_redskull] <= 0 && (!skulliscard || player->cards[it_redcard] <= 0))
             {
                 if (!player->neededcardflash || player->neededcard != it_redskull)
                 {
                     player->neededcard = it_redskull;
                     player->neededcardflash = NEEDEDCARDFLASH;
                 }
+
                 M_snprintf(buffer, sizeof(buffer), (skulliscard ? s_PD_REDK : s_PD_REDS),
                     playername, (M_StringCompare(playername, playername_default) ? "" : "s"));
                 HU_PlayerMessage(buffer, false);
@@ -780,37 +811,39 @@ dboolean P_CanUnlockGenDoor(line_t *line, player_t *player)
             break;
 
         case BSkull:
-            if (player->cards[it_blueskull] <= 0
-                && (!skulliscard || player->cards[it_bluecard] <= 0))
+            if (player->cards[it_blueskull] <= 0 && (!skulliscard || player->cards[it_bluecard] <= 0))
             {
                 if (!player->neededcardflash || player->neededcard != it_blueskull)
                 {
                     player->neededcard = it_blueskull;
                     player->neededcardflash = NEEDEDCARDFLASH;
                 }
+
                 M_snprintf(buffer, sizeof(buffer), (skulliscard ? s_PD_BLUEK : s_PD_BLUES),
                     playername, (M_StringCompare(playername, playername_default) ? "" : "s"));
                 HU_PlayerMessage(buffer, false);
                 S_StartSound(player->mo, sfx_noway);
                 return false;
             }
+
             break;
 
         case YSkull:
-            if (player->cards[it_yellowskull] <= 0
-                && (!skulliscard || player->cards[it_yellowcard] <= 0))
+            if (player->cards[it_yellowskull] <= 0 && (!skulliscard || player->cards[it_yellowcard] <= 0))
             {
                 if (!player->neededcardflash || player->neededcard != it_yellowskull)
                 {
                     player->neededcard = it_yellowskull;
                     player->neededcardflash = NEEDEDCARDFLASH;
                 }
+
                 M_snprintf(buffer, sizeof(buffer), (skulliscard ? s_PD_YELLOWK : s_PD_YELLOWS),
                     playername, (M_StringCompare(playername, playername_default) ? "" : "s"));
                 HU_PlayerMessage(buffer, false);
                 S_StartSound(player->mo, sfx_noway);
                 return false;
             }
+
             break;
 
         case AllKeys:
@@ -824,6 +857,7 @@ dboolean P_CanUnlockGenDoor(line_t *line, player_t *player)
                 S_StartSound(player->mo, sfx_noway);
                 return false;
             }
+
             if (skulliscard && ((player->cards[it_redcard] <= 0 && player->cards[it_redskull] <= 0)
                 || (player->cards[it_bluecard] <= 0 && player->cards[it_blueskull] <= 0)
                 || (player->cards[it_yellowcard] <= 0 && player->cards[it_yellowskull] <= 0)))
@@ -834,8 +868,10 @@ dboolean P_CanUnlockGenDoor(line_t *line, player_t *player)
                 S_StartSound(player->mo, sfx_noway);
                 return false;
             }
+
             break;
     }
+
     return true;
 }
 
@@ -865,7 +901,7 @@ dboolean P_SectorActive(special_e t, sector_t *sec)
 // [BH] Returns true if sector has a light special
 dboolean P_SectorHasLightSpecial(sector_t *sec)
 {
-    short       special = sec->special;
+    short   special = sec->special;
 
     return (special && special != Secret && special != Door_CloseStay_After30sec
         && special != Door_OpenClose_OpensAfter5Min);
@@ -943,6 +979,7 @@ dboolean P_CheckTag(line_t *line)
         default:
             break;
     }
+
     return false;               // zero tag not allowed
 }
 
@@ -995,6 +1032,7 @@ void P_CrossSpecialLine(line_t *line, int side, mobj_t *thing)
             if (!thing->player)
                 if ((line->special & FloorChange) || !(line->special & FloorModel))
                     return;             // FloorModel is "Allow Monsters" if FloorChange is 0
+
             linefunc = EV_DoGenFloor;
         }
         else if ((unsigned int)line->special >= GenCeilingBase)
@@ -1002,6 +1040,7 @@ void P_CrossSpecialLine(line_t *line, int side, mobj_t *thing)
             if (!thing->player)
                 if ((line->special & CeilingChange) || !(line->special & CeilingModel))
                     return;             // CeilingModel is "Allow Monsters" if CeilingChange is 0
+
             linefunc = EV_DoGenCeiling;
         }
         else if ((unsigned int)line->special >= GenDoorBase)
@@ -1013,12 +1052,14 @@ void P_CrossSpecialLine(line_t *line, int side, mobj_t *thing)
                 if (line->flags & ML_SECRET)    // they can't open secret doors either
                     return;
             }
+
             linefunc = EV_DoGenDoor;
         }
         else if ((unsigned int)line->special >= GenLockedBase)
         {
             if (!thing->player)
                 return;                 // monsters disallowed from unlocking doors
+
             if (((line->special & TriggerType) == WalkOnce)
                 || ((line->special & TriggerType) == WalkMany))
             {
@@ -1028,6 +1069,7 @@ void P_CrossSpecialLine(line_t *line, int side, mobj_t *thing)
             }
             else
                 return;
+
             linefunc = EV_DoGenLockedDoor;
         }
         else if ((unsigned int)line->special >= GenLiftBase)
@@ -1035,6 +1077,7 @@ void P_CrossSpecialLine(line_t *line, int side, mobj_t *thing)
             if (!thing->player)
                 if (!(line->special & LiftMonster))
                     return;             // monsters disallowed
+
             linefunc = EV_DoGenLift;
         }
         else if ((unsigned int)line->special >= GenStairsBase)
@@ -1042,6 +1085,7 @@ void P_CrossSpecialLine(line_t *line, int side, mobj_t *thing)
             if (!thing->player)
                 if (!(line->special & StairMonster))
                     return;             // monsters disallowed
+
             linefunc = EV_DoGenStairs;
         }
         else if ((unsigned int)line->special >= GenCrusherBase)
@@ -1049,6 +1093,7 @@ void P_CrossSpecialLine(line_t *line, int side, mobj_t *thing)
             if (!thing->player)
                 if (!(line->special & CrusherMonster))
                     return;             // monsters disallowed
+
             linefunc = EV_DoGenCrusher;
         }
 
@@ -1059,6 +1104,7 @@ void P_CrossSpecialLine(line_t *line, int side, mobj_t *thing)
                 case WalkOnce:
                     if (linefunc(line))
                         line->special = 0;      // clear special if a walk once type
+
                     return;
 
                 case WalkMany:
@@ -1072,7 +1118,7 @@ void P_CrossSpecialLine(line_t *line, int side, mobj_t *thing)
 
     if (!thing->player)
     {
-        dboolean        okay = false;
+        dboolean    okay = false;
 
         switch (line->special)
         {
@@ -1098,6 +1144,7 @@ void P_CrossSpecialLine(line_t *line, int side, mobj_t *thing)
                 okay = true;
                 break;
         }
+
         if (!okay)
             return;
     }
@@ -1115,7 +1162,7 @@ void P_CrossSpecialLine(line_t *line, int side, mobj_t *thing)
 
                 if (nomonsters && (line->flags & ML_TRIGGER666))
                 {
-                    line_t      junk;
+                    line_t  junk;
 
                     switch (gameepisode)
                     {
@@ -1132,16 +1179,19 @@ void P_CrossSpecialLine(line_t *line, int side, mobj_t *thing)
                     line->flags &= ~ML_TRIGGER666;
                 }
             }
+
             break;
 
         case W1_Door_CloseStay:
             if (EV_DoDoor(line, doorClose))
                 line->special = 0;
+
             break;
 
         case W1_Door_OpenWaitClose:
             if (EV_DoDoor(line, doorNormal))
                 line->special = 0;
+
             break;
 
         case W1_Floor_RaiseToLowestCeiling:
@@ -1152,96 +1202,115 @@ void P_CrossSpecialLine(line_t *line, int side, mobj_t *thing)
             }
             else if (EV_DoFloor(line, raiseFloor))
                 line->special = 0;
+
             break;
 
         case W1_Crusher_StartWithFastDamage:
             if (EV_DoCeiling(line, fastCrushAndRaise))
                 line->special = 0;
+
             break;
 
         case W1_Stairs_RaiseBy8:
             if (EV_BuildStairs(line, build8))
                 line->special = 0;
+
             break;
 
         case W1_Lift_LowerWaitRaise:
             if (EV_DoPlat(line, downWaitUpStay, 0))
                 line->special = 0;
+
             break;
 
         case W1_Light_ChangeToBrightestAdjacent:
             if (EV_LightTurnOn(line, 0))
                 line->special = 0;
+
             break;
 
         case W1_Light_ChangeTo255:
             if (EV_LightTurnOn(line, 255))
                 line->special = 0;
+
             break;
 
         case W1_Door_CloseWaitOpen:
             if (EV_DoDoor(line, doorClose30ThenOpen))
                 line->special = 0;
+
             break;
 
         case W1_Light_StartBlinking:
             if (EV_StartLightStrobing(line))
                 line->special = 0;
+
             break;
 
         case W1_Floor_LowerToHighestFloor:
             if (EV_DoFloor(line, lowerFloor))
                 line->special = 0;
+
             break;
 
         case W1_Floor_RaiseToNextHighestFloor_ChangesTexture:
             if (EV_DoPlat(line, raiseToNearestAndChange, 0))
                 line->special = 0;
+
             break;
 
         case W1_Crusher_StartWithSlowDamage:
             if (EV_DoCeiling(line, crushAndRaise))
                 line->special = 0;
+
             break;
 
         case W1_Floor_RaiseByShortestLowerTexture:
             if (EV_DoFloor(line, raiseToTexture))
                 line->special = 0;
+
             break;
 
         case W1_Light_ChangeTo35:
             if (EV_LightTurnOn(line, 35))
                 line->special = 0;
+
             break;
 
         case W1_Floor_LowerTo8AboveHighestFloor:
             if (EV_DoFloor(line, turboLower))
                 line->special = 0;
+
             break;
 
         case W1_Floor_LowerToLowestFloor_ChangesTexture:
             if (EV_DoFloor(line, lowerAndChange))
                 line->special = 0;
+
             break;
 
         case W1_Floor_LowerToLowestFloor:
             if (EV_DoFloor(line, lowerFloorToLowest))
                 line->special = 0;
+
             break;
 
         case W1_Teleport:
             if (EV_Teleport(line, side, thing))
                 line->special = 0;
+
             break;
 
         case W1_Ceiling_RaiseToHighestCeiling:
             if (EV_DoCeiling(line, raiseToHighest))
                 line->special = 0;
+
             break;
 
         case W1_Ceiling_LowerTo8AboveFloor:
             if (EV_DoCeiling(line, lowerAndCrush))
                 line->special = 0;
+
             break;
 
         case W1_ExitLevel:
@@ -1251,85 +1320,102 @@ void P_CrossSpecialLine(line_t *line, int side, mobj_t *thing)
         case W1_Floor_StartMovingUpAndDown:
             if (EV_DoPlat(line, perpetualRaise, 0))
                 line->special = 0;
+
             break;
 
         case W1_Floor_StopMoving:
             if (EV_StopPlat(line))
                 line->special = 0;
+
             break;
 
         case W1_Floor_RaiseTo8BelowLowestCeiling_Crushes:
             if (EV_DoFloor(line, raiseFloorCrush))
                 line->special = 0;
+
             break;
 
         case W1_Crusher_Stop:
             if (EV_CeilingCrushStop(line))
                 line->special = 0;
+
             break;
 
         case W1_Floor_RaiseBy24:
             if (EV_DoFloor(line, raiseFloor24))
                 line->special = 0;
+
             break;
 
         case W1_Floor_RaiseBy24_ChangesTexture:
             if (EV_DoFloor(line, raiseFloor24AndChange))
                 line->special = 0;
+
             break;
 
         case W1_Stairs_RaiseBy16_Fast:
             if (EV_BuildStairs(line, turbo16))
                 line->special = 0;
+
             break;
 
         case W1_Light_ChangeToDarkestAdjacent:
             if (EV_TurnTagLightsOff(line))
                 line->special = 0;
+
             break;
 
         case W1_Door_OpenWaitClose_Fast:
             if (EV_DoDoor(line, doorBlazeRaise))
                 line->special = 0;
+
             break;
 
         case W1_Door_OpenStay_Fast:
             if (EV_DoDoor(line, doorBlazeOpen))
                 line->special = 0;
+
             break;
 
         case W1_Door_CloseStay_Fast:
             if (EV_DoDoor(line, doorBlazeClose))
                 line->special = 0;
+
             break;
 
         case W1_Floor_RaiseToNextHighestFloor:
             if (EV_DoFloor(line, raiseFloorToNearest))
                 line->special = 0;
+
             break;
 
         case W1_Lift_LowerWaitRaise_Fast:
             if (EV_DoPlat(line, blazeDWUS, 0))
                 line->special = 0;
+
             break;
 
         case W1_ExitLevel_GoesToSecretLevel:
             G_SecretExitLevel();
+
             break;
 
         case W1_Teleport_MonstersOnly:
             if (!thing->player && EV_Teleport(line, side, thing))
                 line->special = 0;
+
             break;
 
         case W1_Floor_RaiseToNextHighestFloor_Fast:
             if (EV_DoFloor(line, raiseFloorTurbo))
                 line->special = 0;
+
             break;
 
         case W1_Crusher_StartWithSlowDamage_Silent:
             if (EV_DoCeiling(line, silentCrushAndRaise))
                 line->special = 0;
+
             break;
 
         // Retriggers
@@ -1755,7 +1841,7 @@ void P_ShootSpecialLine(mobj_t *thing, line_t *line)
                     P_ChangeSwitchTexture(line, true);
                 return;
 
-            default:                // if not a gun type, do nothing here
+            default:            // if not a gun type, do nothing here
                 return;
         }
 
@@ -1774,10 +1860,12 @@ void P_ShootSpecialLine(mobj_t *thing, line_t *line)
             break;
 
         case GR_Door_OpenStay:
-            EV_DoDoor(line, doorOpen);
-            P_ChangeSwitchTexture(line, true);
-            if (canmodify && gamemission == doom2 && gamemap == 18)
-                line->special = -GR_Door_OpenStay;
+            if (EV_DoDoor(line, doorOpen))
+            {
+                P_ChangeSwitchTexture(line, true);
+                if (canmodify && gamemission == doom2 && gamemap == 18)
+                    line->special = 0;
+            }
             break;
 
         case G1_Floor_RaiseToNextHighestFloor_ChangesTexture:
@@ -1804,7 +1892,7 @@ static void P_SecretFound(player_t *player)
 
     if (DSSECRET)
     {
-        static char     buffer[1024];
+        static char buffer[1024];
 
         S_StartSound(NULL, sfx_secret);
         M_snprintf(buffer, sizeof(buffer), s_SECRET, playername);
@@ -1964,22 +2052,19 @@ void P_UpdateSpecials(void)
                 switch (buttonlist[i].where)
                 {
                     case top:
-                        sides[buttonlist[i].line->sidenum[0]].toptexture =
-                            buttonlist[i].btexture;
+                        sides[buttonlist[i].line->sidenum[0]].toptexture = buttonlist[i].btexture;
                         break;
 
                     case middle:
-                        sides[buttonlist[i].line->sidenum[0]].midtexture =
-                            buttonlist[i].btexture;
+                        sides[buttonlist[i].line->sidenum[0]].midtexture = buttonlist[i].btexture;
                         break;
 
                     case bottom:
-                        sides[buttonlist[i].line->sidenum[0]].bottomtexture =
-                            buttonlist[i].btexture;
+                        sides[buttonlist[i].line->sidenum[0]].bottomtexture = buttonlist[i].btexture;
                         break;
                 }
-                if (buttonlist[i].line->special != -GR_Door_OpenStay)
-                    S_StartSectorSound(buttonlist[i].soundorg, sfx_swtchn);
+
+                S_StartSectorSound(buttonlist[i].soundorg, sfx_swtchn);
                 memset(&buttonlist[i], 0, sizeof(button_t));
             }
 }
@@ -2713,7 +2798,11 @@ void T_Pusher(pusher_t *p)
     {
         // Seek out all pushable things within the force radius of this
         // point pusher. Crosses sectors, so use blockmap.
-        int     xl, xh, yl, yh, bx, by;
+        int     xl;
+        int     xh;
+        int     yl;
+        int     yh;
+        int     bx, by;
         int     radius;
 
         tmpusher = p;                                   // MT_PUSH/MT_PULL point source
