@@ -1,12 +1,25 @@
 #include "port_act_defs.h"
 
-
-
 #ifdef __cplusplus
 extern "C"
 {
 #endif
-int PortableKeyEvent(int state, int code, int unicode);
+
+typedef enum
+{
+	TS_BLANK,
+	TS_MENU,
+	TS_GAME,
+	TS_MAP,
+	TS_CONSOLE,
+	TS_Y_N,
+	TS_CUSTOM
+} touchscreemode_t;
+
+
+void PortableInit(int argc,const char ** argv);
+
+int PortableKeyEvent(int state, int code ,int unitcode);
 void PortableAction(int state, int action);
 
 void PortableMove(float fwd, float strafe);
@@ -14,18 +27,12 @@ void PortableMoveFwd(float fwd);
 void PortableMoveSide(float strafe);
 void PortableLookPitch(int mode, float pitch);
 void PortableLookYaw(int mode, float pitch);
+
 void PortableCommand(const char * cmd);
-
-void PortableMouse(float dx,float dy);
-
-void PortableMouseAbs(float x,float y);
-
-void PortableInit(int argc,const char ** argv);
-void PortableFrame(void);
-
-int PortableInMenu(void);
+void PortableAutomapControl(float zoom, float x, float y);
 int PortableShowKeyboard(void);
-int PortableInAutomap(void);
+touchscreemode_t PortableGetScreenMode();
+
 
 
 #ifdef __cplusplus

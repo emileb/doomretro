@@ -1381,7 +1381,9 @@ static void SetVideoMode(dboolean output)
             height = displays[displayindex].h;
             acronym = getacronym(width, height);
             ratio = getaspectratio(width, height);
-
+#ifdef __ANDROID__
+            SDL_GL_SetAttribute( SDL_GL_DEPTH_SIZE, 16 ); // Defaults to 24 which is not needed and fails on old Tegras
+#endif
             if (!(window = SDL_CreateWindow(PACKAGE_NAME,
                 SDL_WINDOWPOS_UNDEFINED_DISPLAY(displayindex),
                 SDL_WINDOWPOS_UNDEFINED_DISPLAY(displayindex), 0, 0,
