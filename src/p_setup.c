@@ -64,22 +64,24 @@
 #define NUMLIQUIDS              256
 
 #define MCMD_AUTHOR             1
-#define MCMD_LIQUID             2
-#define MCMD_MUSIC              3
-#define MCMD_NEXT               4
-#define MCMD_NOLIQUID           5
-#define MCMD_PAR                6
-#define MCMD_PISTOLSTART        7
-#define MCMD_SECRETNEXT         8
-#define MCMD_SKY1               9
-#define MCMD_TITLEPATCH         10
-#define MCMD_NOBRIGHTMAP        11
+#define MCMD_CLUSTER            2
+#define MCMD_LIQUID             3
+#define MCMD_MUSIC              4
+#define MCMD_NEXT               5
+#define MCMD_NOBRIGHTMAP        6
+#define MCMD_NOLIQUID           7
+#define MCMD_PAR                8
+#define MCMD_PISTOLSTART        9
+#define MCMD_SECRETNEXT         10
+#define MCMD_SKY1               11
+#define MCMD_TITLEPATCH         12
 
 typedef struct mapinfo_s mapinfo_t;
 
 struct mapinfo_s
 {
     char        author[128];
+    int         cluster;
     int         liquid[NUMLIQUIDS];
     int         music;
     char        name[128];
@@ -93,7 +95,7 @@ struct mapinfo_s
     int         titlepatch;
 };
 
-mobj_t *P_SpawnMapThing(mapthing_t *mthing, int index);
+mobj_t *P_SpawnMapThing(mapthing_t *mthing, int index, dboolean nomonsters);
 
 //
 // MAP related Lookup tables.
@@ -165,7 +167,7 @@ dboolean        skipblstart;            // MaxW: Skip initial blocklist short
 static int      rejectlump = -1;        // cph - store reject lump num if cached
 const byte      *rejectmatrix;          // cph - const*
 
-static mapinfo_t mapinfo[99];
+static mapinfo_t mapinfo[101];
 
 static char *mapcmdnames[] =
 {
@@ -228,7 +230,7 @@ static fixed_t GetOffset(vertex_t *v1, vertex_t *v2)
     fixed_t dx = (v1->x - v2->x) >> FRACBITS;
     fixed_t dy = (v1->y - v2->y) >> FRACBITS;
 
-    return ((fixed_t)(sqrt((double)dx * dx + (double)dy * dy)) << FRACBITS);
+    return (fixed_t)(sqrt((double)dx * dx + (double)dy * dy)) << FRACBITS;
 }
 
 // e6y: Smart malloc
@@ -336,8 +338,10 @@ void P_LoadSegs(int lump)
     {
         seg_t           *li = segs + i;
         const mapseg_t  *ml = data + i;
-        unsigned short  v1, v2;
-        int             side, linedef;
+        unsigned short  v1;
+        unsigned short  v2;
+        int             side;
+        int             linedef;
         line_t          *ldef;
 
         v1 = (unsigned short)SHORT(ml->v1);
@@ -393,13 +397,11 @@ void P_LoadSegs(int lump)
         // http://www.doomworld.com/idgames/index.php?id=12647
         if (v1 >= numvertexes || v2 >= numvertexes)
         {
-            char    *buffer = "Seg %s references an invalid vertex of %s.";
-
             if (v1 >= numvertexes)
-                C_Warning(buffer, commify(i), commify(v1));
+                C_Warning("Seg %s references an invalid vertex of %s.", commify(i), commify(v1));
 
             if (v2 >= numvertexes)
-                C_Warning(buffer, commify(i), commify(v2));
+                C_Warning("Seg %s references an invalid vertex of %s.", commify(i), commify(v2));
 
             if (li->sidedef == &sides[li->linedef->sidenum[0]])
             {
@@ -538,8 +540,10 @@ static void P_LoadSegs_V4(int lump)
     {
         seg_t               *li = segs + i;
         const mapseg_v4_t   *ml = data + i;
-        int                 v1, v2;
-        int                 side, linedef;
+        int                 v1;
+        int                 v2;
+        int                 side;
+        int                 linedef;
         line_t              *ldef;
 
         v1 = ml->v1;
@@ -598,13 +602,11 @@ static void P_LoadSegs_V4(int lump)
         // http://www.doomworld.com/idgames/index.php?id=12647
         if (v1 >= numvertexes || v2 >= numvertexes)
         {
-            char    *buffer = "Seg %s references an invalid vertex of %s.";
-
             if (v1 >= numvertexes)
-                C_Warning(buffer, commify(i), commify(v1));
+                C_Warning("Seg %s references an invalid vertex of %s.", commify(i), commify(v1));
 
             if (v2 >= numvertexes)
-                C_Warning(buffer, commify(i), commify(v2));
+                C_Warning("Seg %s references an invalid vertex of %s.", commify(i), commify(v2));
 
             if (li->sidedef == &sides[li->linedef->sidenum[0]])
             {
@@ -799,6 +801,8 @@ void P_LoadSectors(int lump)
                 numdamaging++;
 
             default:
+                if ((ss->special & DAMAGE_MASK) >> DAMAGE_SHIFT)
+                    numdamaging++;
                 break;
         }
     }
@@ -1218,7 +1222,7 @@ void P_LoadThings(int lump)
             mt.type = Zombieman;
 
         if (spawn)
-            P_SpawnMapThing(&mt, i);
+            P_SpawnMapThing(&mt, i, nomonsters);
     }
 
     M_ClearRandom();
@@ -1243,7 +1247,8 @@ static void P_LoadLineDefs(int lump)
     {
         const maplinedef_t  *mld = (const maplinedef_t *)data + i;
         line_t              *ld = lines + i;
-        vertex_t            *v1, *v2;
+        vertex_t            *v1;
+        vertex_t            *v2;
 
         ld->flags = (unsigned short)SHORT(mld->flags);
 
@@ -1355,6 +1360,7 @@ static void P_LoadLineDefs2(int lump)
                         if (lines[j].tag == ld->tag)   // affect all matching linedefs
                             lines[j].tranlump = lump;
                 }
+
                 break;
 
             case TransferSkyTextureToTaggedSectors:
@@ -1394,8 +1400,7 @@ static void P_LoadSideDefs2(int lump)
         // cph 2006/09/30 - catch out-of-range sector numbers; use sector 0 instead
         if (sector_num >= numsectors)
         {
-            C_Warning("Sidedef %s references an invalid sector of %s.",
-                commify(i), commify(sector_num));
+            C_Warning("Sidedef %s references an invalid sector of %s.", commify(i), commify(sector_num));
             sector_num = 0;
         }
 
@@ -1490,13 +1495,11 @@ static dboolean P_VerifyBlockMap(int count)
 
             // scan the list for out-of-range linedef indicies in list
             for (tmplist = list; *tmplist != -1; tmplist++)
-            {
                 if (*tmplist < 0 || *tmplist >= numlines)
                 {
                     isvalid = false;
                     break;
                 }
-            }
 
             if (!isvalid) // if a list has a bad linedef index, break now
                 break;
@@ -1830,7 +1833,9 @@ static int P_GroupLines(void)
 {
     line_t      *li;
     sector_t    *sector;
-    int         i, j, total = numlines;
+    int         i;
+    int         j;
+    int         total = numlines;
 
     // figgi
     for (i = 0; i < numsubsectors; i++)
@@ -1990,7 +1995,8 @@ static void P_RemoveSlimeTrails(void)                   // killough 10/98
                         int64_t dy2 = (l->dy >> FRACBITS) * (l->dy >> FRACBITS);
                         int64_t dxy = (l->dx >> FRACBITS) * (l->dy >> FRACBITS);
                         int64_t s = dx2 + dy2;
-                        int     x0 = v->x, y0 = v->y, x1 = l->v1->x, y1 = l->v1->y;
+                        int     x0 = v->x, y0 = v->y;
+                        int     x1 = l->v1->x, y1 = l->v1->y;
 
                         v->x = (fixed_t)((dx2 * x0 + dy2 * x1 + dxy * (y0 - y1)) / s);
                         v->y = (fixed_t)((dy2 * y0 + dx2 * y1 + dxy * (x0 - x1)) / s);
@@ -2008,6 +2014,7 @@ static void P_RemoveSlimeTrails(void)                   // killough 10/98
             while (v != segs[i].v2 && (v = segs[i].v2));
         }
     }
+
     free(hit);
 }
 
@@ -2026,6 +2033,8 @@ static void P_CalcSegsLength(void)
 
         // [crispy] re-calculate angle used for rendering
         li->angle = R_PointToAngleEx2(li->v1->x, li->v1->y, li->v2->x, li->v2->y);
+
+        li->fakecontrast = (!dy ? -LIGHTBRIGHT : (!dx ? LIGHTBRIGHT : 0));
     }
 }
 
@@ -2196,7 +2205,9 @@ static mapformat_t P_CheckMapFormat(int lumpnum)
     byte        *nodes = NULL;
     int         b;
 
-    if ((b = lumpnum + ML_NODES) < numlumps && (nodes = W_CacheLumpNum(b)) && W_LumpLength(b))
+    if ((b = lumpnum + ML_BLOCKMAP + 1) < numlumps && !strncasecmp(lumpinfo[b]->name, "BEHAVIOR", 8))
+        I_Error("Hexen format maps are not supported.");
+    else if ((b = lumpnum + ML_NODES) < numlumps && (nodes = W_CacheLumpNum(b)) && W_LumpLength(b))
     {
         if (!memcmp(nodes, "xNd4\0\0\0\0", 8))
             format = DEEPBSP;
@@ -2204,7 +2215,7 @@ static mapformat_t P_CheckMapFormat(int lumpnum)
             && W_LumpLength(lumpnum + ML_NODES) >= 12)
             format = ZDBSPX;
         else if (!memcmp(nodes, "ZNOD", 4))
-            I_Error("Compressed ZDoom nodes are not supported.");
+            I_Error("Compressed ZDBSP nodes are not supported.");
     }
 
     if (nodes)
@@ -2225,8 +2236,12 @@ void P_SetupLevel(int ep, int map)
     int         lumpnum;
     player_t    *player = &players[0];
 
-    totalkills = totalitems = totalsecret = 0;
+    totalkills = 0;
+    totalitems = 0;
+    totalsecret = 0;
+    totalpickups = 0;
     memset(monstercount, 0, sizeof(int) * NUMMOBJTYPES);
+    barrelcount = 0;
     wminfo.partime = 0;
     player->killcount = 0;
     player->secretcount = 0;
@@ -2261,10 +2276,7 @@ void P_SetupLevel(int ep, int map)
     else
         M_snprintf(lumpname, 5, "E%iM%i", ep, map);
 
-    if (nerve && gamemission == doom2)
-        lumpnum = W_GetNumForName2(lumpname);
-    else
-        lumpnum = W_GetNumForName(lumpname);
+    lumpnum = (nerve && gamemission == doom2 ? W_GetNumForName2(lumpname) : W_GetNumForName(lumpname));
 
     mapformat = P_CheckMapFormat(lumpnum);
 
@@ -2275,11 +2287,13 @@ void P_SetupLevel(int ep, int map)
     animatedliquiddiff = FRACUNIT;
     animatedliquidxdir = M_RandomInt(-1, 1) * FRACUNIT / 12;
     animatedliquidydir = M_RandomInt(-1, 1) * FRACUNIT / 12;
+
     if (!animatedliquidxdir && !animatedliquidydir)
     {
         animatedliquidxdir = FRACUNIT / 12;
         animatedliquidydir = FRACUNIT / 12;
     }
+
     animatedliquidxoffs = 0;
     animatedliquidyoffs = 0;
 
@@ -2370,8 +2384,6 @@ int noliquidlumps;
 static void InitMapInfo(void)
 {
     int         i;
-    int         episode;
-    int         map;
     int         mapmax = 1;
     int         mcmdvalue;
     mapinfo_t   *info;
@@ -2384,16 +2396,7 @@ static void InitMapInfo(void)
             return;
 
     info = mapinfo;
-
-    info->author[0] = '\0';
-    info->music = 0;
-    info->name[0] = '\0';
-    info->next = 0;
-    info->par = 0;
-    info->secretnext = 0;
-    info->sky1texture = 0;
-    info->sky1scrolldelta = 0;
-    info->titlepatch = 0;
+    memset(info, 0, sizeof(mapinfo_t));
 
     for (i = 0; i < NUMLIQUIDS; i++)
     {
@@ -2401,201 +2404,208 @@ static void InitMapInfo(void)
         info->noliquid[i] = -1;
     }
 
-    for (i = 0; i < numtextures; i++)
-        nobrightmap[i] = false;
-
     SC_Open(RMAPINFO >= 0 ? RMAPINFO_SCRIPT_NAME : MAPINFO_SCRIPT_NAME);
 
     while (SC_GetString())
     {
-        if (!SC_Compare("MAP"))
-            continue;
+        int episode = -1;
+        int map = -1;
 
-        SC_MustGetString();
-        map = strtol(sc_String, NULL, 0);
-
-        if (map < 1 || map > 99)
+        if (SC_Compare("MAP"))
         {
-            char    *mapnum = uppercase(sc_String);
+            SC_MustGetString();
+            sscanf(sc_String, "%i", &map);
 
-            if (gamemode == commercial)
+            if (map < 0 || map > 99)
             {
-                episode = 1;
-                sscanf(mapnum, "MAP0%1i", &map);
+                char    *mapnum = uppercase(sc_String);
 
-                if (!map)
-                    sscanf(mapnum, "MAP%2i", &map);
-            }
-            else
-            {
-                sscanf(mapnum, "E%1iM%1i", &episode, &map);
-                map += (episode - 1) * 10;
-            }
-        }
-        if (map < 1 || map > 99)
-        {
-            if (M_StringCompare(leafname(lumpinfo[MAPINFO]->wadfile->path), "NERVE.WAD"))
-            {
-                C_Warning("The map markers in PWAD %s are invalid.", lumpinfo[MAPINFO]->wadfile->path);
-                nerve = false;
-                NewDef.prevMenu = &MainDef;
-                MAPINFO = -1;
-                return;
-            }
-            else
-            {
-                C_Warning("The MAPINFO lump contains an invalid map marker.");
-                continue;
-            }
-
-        }
-
-        info = &mapinfo[map];
-
-        // Copy defaults to current map definition
-        memcpy(info, &mapinfo[0], sizeof(*info));
-
-        // Map name must follow the number
-        SC_MustGetString();
-
-        if (!SC_Compare("LOOKUP"))
-            M_StringCopy(info->name, sc_String, sizeof(info->name));
-
-        // Process optional tokens
-        while (SC_GetString())
-        {
-            if (SC_Compare("MAP"))
-            {
-                SC_UnGet();
-                break;
-            }
-
-            if ((mcmdvalue = SC_MatchString(mapcmdnames)) >= 0)
-                switch (mapcmdids[mcmdvalue])
+                if (gamemode == commercial)
                 {
-                    case MCMD_AUTHOR:
-                        SC_MustGetString();
-                        M_StringCopy(info->author, sc_String, sizeof(info->author));
-                        break;
+                    episode = 1;
+                    sscanf(mapnum, "MAP0%1i", &map);
 
-                    case MCMD_LIQUID:
-                    {
-                        int     lump;
-
-                        SC_MustGetString();
-                        if ((lump = R_CheckFlatNumForName(sc_String)) >= 0)
-                            info->liquid[liquidlumps++] = lump;
-                        break;
-                    }
-
-                    case MCMD_MUSIC:
-                        SC_MustGetString();
-                        info->music = W_CheckNumForName(sc_String);
-                        break;
-
-                    case MCMD_NEXT:
-                    {
-                        int nextepisode = 0;
-                        int nextmap = 0;
-
-                        SC_MustGetString();
-                        nextmap = strtol(sc_String, (char **)NULL, 10);
-
-                        if (nextmap < 1 || nextmap > 99)
-                        {
-                            char        *mapnum = uppercase(sc_String);
-
-                            if (gamemode == commercial)
-                            {
-                                nextepisode = 1;
-                                sscanf(mapnum, "MAP0%1i", &nextmap);
-                                if (!nextmap)
-                                    sscanf(mapnum, "MAP%2i", &nextmap);
-                            }
-                            else
-                                sscanf(mapnum, "E%1iM%1i", &nextepisode, &nextmap);
-                        }
-
-                        info->next = (nextepisode - 1) * 10 + nextmap;
-                        break;
-                    }
-
-                    case MCMD_NOLIQUID:
-                    {
-                        int lump;
-
-                        SC_MustGetString();
-
-                        if ((lump = R_CheckFlatNumForName(sc_String)) >= 0)
-                            info->noliquid[noliquidlumps++] = lump;
-
-                        break;
-                    }
-
-                    case MCMD_PAR:
-                        SC_MustGetNumber();
-                        info->par = sc_Number;
-                        break;
-
-                    case MCMD_PISTOLSTART:
-                        info->pistolstart = true;
-                        break;
-
-                    case MCMD_SECRETNEXT:
-                    {
-                        int nextepisode = 0;
-                        int nextmap = 0;
-
-                        SC_MustGetString();
-                        nextmap = strtol(sc_String, (char **)NULL, 10);
-
-                        if (nextmap < 1 || nextmap > 99)
-                        {
-                            char        *mapnum = uppercase(sc_String);
-
-                            if (gamemode == commercial)
-                            {
-                                nextepisode = 1;
-                                sscanf(mapnum, "MAP0%1i", &nextmap);
-
-                                if (!nextmap)
-                                    sscanf(mapnum, "MAP%2i", &nextmap);
-                            }
-                            else
-                                sscanf(mapnum, "E%1iM%1i", &nextepisode, &nextmap);
-                        }
-
-                        info->secretnext = (nextepisode - 1) * 10 + nextmap;
-                        break;
-                    }
-
-                    case MCMD_SKY1:
-                        SC_MustGetString();
-                        info->sky1texture = R_TextureNumForName(sc_String);
-                        SC_MustGetNumber();
-                        info->sky1scrolldelta = sc_Number << 8;
-                        break;
-
-                    case MCMD_TITLEPATCH:
-                        SC_MustGetString();
-                        info->titlepatch = W_CheckNumForName(sc_String);
-                        break;
-
-                    case MCMD_NOBRIGHTMAP:
-                    {
-                        int texture;
-
-                        SC_MustGetString();
-
-                        if ((texture = R_TextureNumForName(sc_String)) >= 0)
-                            nobrightmap[texture] = true;
-
-                        break;
-                    }
+                    if (map == -1)
+                        sscanf(mapnum, "MAP%2i", &map);
                 }
-        }
+                else
+                {
+                    sscanf(mapnum, "E%1iM%1i", &episode, &map);
 
-        mapmax = MAX(map, mapmax);
+                    if (episode != -1 && map != -1)
+                        map += (episode - 1) * 10;
+                }
+            }
+
+            if (map < 0 || map > 99)
+            {
+                if (M_StringCompare(leafname(lumpinfo[MAPINFO]->wadfile->path), "NERVE.WAD"))
+                {
+                    C_Warning("The map markers in PWAD %s are invalid.", lumpinfo[MAPINFO]->wadfile->path);
+                    nerve = false;
+                    NewDef.prevMenu = &MainDef;
+                    MAPINFO = -1;
+                    return;
+                }
+                else
+                {
+                    C_Warning("The MAPINFO lump contains an invalid map marker.");
+                    continue;
+                }
+            }
+
+            info = &mapinfo[map];
+
+            // Map name must follow the number
+            SC_MustGetString();
+
+            if (!SC_Compare("LOOKUP"))
+                M_StringCopy(info->name, sc_String, sizeof(info->name));
+
+            // Process optional tokens
+            while (SC_GetString())
+            {
+                if (SC_Compare("MAP"))
+                {
+                    SC_UnGet();
+                    break;
+                }
+
+                if ((mcmdvalue = SC_MatchString(mapcmdnames)) >= 0)
+                    switch (mapcmdids[mcmdvalue])
+                    {
+                        case MCMD_AUTHOR:
+                            SC_MustGetString();
+                            M_StringCopy(info->author, sc_String, sizeof(info->author));
+                            break;
+
+                        case MCMD_CLUSTER:
+                            SC_MustGetNumber();
+                            info->cluster = sc_Number;
+                            break;
+
+                        case MCMD_LIQUID:
+                        {
+                            int lump;
+
+                            SC_MustGetString();
+
+                            if ((lump = R_CheckFlatNumForName(sc_String)) >= 0)
+                                info->liquid[liquidlumps++] = lump;
+
+                            break;
+                        }
+
+                        case MCMD_MUSIC:
+                            SC_MustGetString();
+                            info->music = W_CheckNumForName(sc_String);
+                            break;
+
+                        case MCMD_NEXT:
+                        {
+                            int nextepisode = -1;
+                            int nextmap = -1;
+
+                            SC_MustGetString();
+                            sscanf(sc_String, "%i", &nextmap);
+
+                            if (nextmap < 0 || nextmap > 99)
+                            {
+                                char    *mapnum = uppercase(sc_String);
+
+                                if (gamemode == commercial)
+                                {
+                                    nextepisode = 1;
+                                    sscanf(mapnum, "MAP0%1i", &nextmap);
+
+                                    if (nextmap == -1)
+                                        sscanf(mapnum, "MAP%2i", &nextmap);
+                                }
+                                else
+                                    sscanf(mapnum, "E%1iM%1i", &nextepisode, &nextmap);
+                            }
+
+                            info->next = (nextepisode - 1) * 10 + nextmap;
+                            break;
+                        }
+
+                        case MCMD_NOBRIGHTMAP:
+                        {
+                            int texture;
+
+                            SC_MustGetString();
+
+                            if ((texture = R_TextureNumForName(sc_String)) >= 0)
+                                nobrightmap[texture] = true;
+
+                            break;
+                        }
+
+                        case MCMD_NOLIQUID:
+                        {
+                            int lump;
+
+                            SC_MustGetString();
+
+                            if ((lump = R_CheckFlatNumForName(sc_String)) >= 0)
+                                info->noliquid[noliquidlumps++] = lump;
+
+                            break;
+                        }
+
+                        case MCMD_PAR:
+                            SC_MustGetNumber();
+                            info->par = sc_Number;
+                            break;
+
+                        case MCMD_PISTOLSTART:
+                            info->pistolstart = true;
+                            break;
+
+                        case MCMD_SECRETNEXT:
+                        {
+                            int nextepisode = -1;
+                            int nextmap = -1;
+
+                            SC_MustGetString();
+                            sscanf(sc_String, "%i", &nextmap);
+
+                            if (nextmap < 0 || nextmap > 99)
+                            {
+                                char    *mapnum = uppercase(sc_String);
+
+                                if (gamemode == commercial)
+                                {
+                                    nextepisode = 1;
+                                    sscanf(mapnum, "MAP0%1i", &nextmap);
+
+                                    if (nextmap == -1)
+                                        sscanf(mapnum, "MAP%2i", &nextmap);
+                                }
+                                else
+                                    sscanf(mapnum, "E%1iM%1i", &nextepisode, &nextmap);
+                            }
+
+                            info->secretnext = (nextepisode - 1) * 10 + nextmap;
+                            break;
+                        }
+
+                        case MCMD_SKY1:
+                            SC_MustGetString();
+                            info->sky1texture = R_TextureNumForName(sc_String);
+                            SC_MustGetNumber();
+                            info->sky1scrolldelta = sc_Number << 8;
+                            break;
+
+                        case MCMD_TITLEPATCH:
+                            SC_MustGetString();
+                            info->titlepatch = W_CheckNumForName(sc_String);
+                            break;
+                    }
+            }
+
+            mapmax = MAX(map, mapmax);
+        }
     }
 
     SC_Close();
@@ -2607,7 +2617,7 @@ static void InitMapInfo(void)
 
 static int QualifyMap(int map)
 {
-    return (map < 1 || map > mapcount ? 0 : map);
+    return (map < 0 || map > mapcount ? 100 : map);
 }
 
 char *P_GetMapAuthor(int map)

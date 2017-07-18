@@ -39,26 +39,26 @@
 #if !defined(__M_CONFIG_H__)
 #define __M_CONFIG_H__
 
-typedef enum
+typedef enum r_blood_values_e
 {
     r_blood_none,
     r_blood_red,
     r_blood_all
 } r_blood_values_t;
 
-typedef enum
+typedef enum r_messagescale_values_e
 {
     r_messagescale_small,
     r_messagescale_big
 } r_messagescale_values_t;
 
-typedef enum
+typedef enum r_detail_values_e
 {
     r_detail_low,
     r_detail_high
 } r_detail_values_t;
 
-typedef enum
+typedef enum units_values_e
 {
     units_imperial,
     units_metric
@@ -103,7 +103,7 @@ typedef enum
 #define am_gridsize_default                     "128x128"
 
 #define am_gridcolor_min                        0
-#define am_gridcolor_default                    5
+#define am_gridcolor_default                    7
 #define am_gridcolor_max                        255
 
 #define am_markcolor_min                        0
@@ -154,17 +154,13 @@ typedef enum
 
 #define con_timestamps_default                  true
 
-#define episode_default                         ""
+#define episode_min                             1
+#define episode_default                         1
+#define episode_max                             4
 
-#define episodeselected_min                     0
-#define episodeselected_default                 0
-#define episodeselected_max                     3
-
-#define expansion_default                       ""
-
-#define expansionselected_min                   0
-#define expansionselected_default               0
-#define expansionselected_max                   1
+#define expansion_min                           1
+#define expansion_default                       1
+#define expansion_max                           2
 
 #define facebackcolor_min                       0
 #define facebackcolor_default                   5
@@ -177,6 +173,8 @@ typedef enum
 #define gp_deadzone_right_min                   0.0f
 #define gp_deadzone_right_default               26.5f
 #define gp_deadzone_right_max                   100.0f
+
+#define gp_invertyaxis_default                  false
 
 #define gp_sensitivity_min                      0
 #define gp_sensitivity_default                  64
@@ -198,17 +196,13 @@ typedef enum
 
 #define iwadfolder_default                      "C:\\"
 
-#define messages_default                        false
-
 #define m_acceleration_min                      0
 #define m_acceleration_default                  2.0
 #define m_acceleration_max                      INT_MAX
 
 #define m_doubleclick_use_default               false
 
-#define m_invert_default                        false
-
-#define m_look_default                          false
+#define m_invertyaxis_default                   false
 
 #define m_novertical_default                    true
 
@@ -219,6 +213,10 @@ typedef enum
 #define m_threshold_min                         0
 #define m_threshold_default                     10
 #define m_threshold_max                         INT_MAX
+
+#define messages_default                        false
+
+#define mouselook_default                       false
 
 #define movebob_min                             0
 #define movebob_default                         75
@@ -341,19 +339,13 @@ typedef enum
 #define s_sfxvolume_default                     100
 #define s_sfxvolume_max                         100
 
-#define s_timiditycfgpath_default               ""
+#define savegame_min                            1
+#define savegame_default                        1
+#define savegame_max                            6
 
-#define savegame_default                        ""
-
-#define savegameselected_min                    0
-#define savegameselected_default                0
-#define savegameselected_max                    5
-
-#define skilllevel_default                      ""
-
-#define skilllevelselected_min                  sk_baby
-#define skilllevelselected_default              sk_medium
-#define skilllevelselected_max                  sk_nightmare
+#define skilllevel_min                          1
+#define skilllevel_default                      3
+#define skilllevel_max                          5
 
 #define stillbob_min                            0
 #define stillbob_default                        0
@@ -424,6 +416,8 @@ typedef enum
 #define weaponbob_default                       75
 #define weaponbob_max                           100
 
+#define weaponrecoil_default                    false
+
 #define GAMEPADALWAYSRUN_DEFAULT                0
 #define GAMEPADAUTOMAP_DEFAULT                  GAMEPAD_BACK
 #define GAMEPADAUTOMAPCLEARMARK_DEFAULT         0
@@ -439,6 +433,7 @@ typedef enum
 #define GAMEPADFORWARD_DEFAULT                  0
 #define GAMEPADLEFT_DEFAULT                     0
 #define GAMEPADMENU_DEFAULT                     GAMEPAD_START
+#define GAMEPADMOUSELOOK_DEFAULT                0
 #define GAMEPADNEXTWEAPON_DEFAULT               GAMEPAD_B
 #define GAMEPADPREVWEAPON_DEFAULT               GAMEPAD_Y
 #define GAMEPADRIGHT_DEFAULT                    0
@@ -465,6 +460,7 @@ typedef enum
 #define KEYDOWN2_DEFAULT                        's'
 #define KEYFIRE_DEFAULT                         KEY_CTRL
 #define KEYLEFT_DEFAULT                         KEY_LEFTARROW
+#define KEYMOUSELOOK_DEFAULT                    0
 #define KEYNEXTWEAPON_DEFAULT                   0
 #define KEYPREVWEAPON_DEFAULT                   0
 #define KEYRIGHT_DEFAULT                        KEY_RIGHTARROW
@@ -493,13 +489,14 @@ typedef enum
 
 #define MOUSEFIRE_DEFAULT                       0
 #define MOUSEFORWARD_DEFAULT                    -1
-#define MOUSEPREVWEAPON_DEFAULT                 MOUSE_WHEELUP
+#define MOUSEMOUSELOOK_DEFAULT                  -1
 #define MOUSENEXTWEAPON_DEFAULT                 MOUSE_WHEELDOWN
+#define MOUSEPREVWEAPON_DEFAULT                 MOUSE_WHEELUP
 #define MOUSESTRAFE_DEFAULT                     -1
 #define MOUSERUN_DEFAULT                        -1
 #define MOUSEUSE_DEFAULT                        -1
 
-typedef enum
+typedef enum default_type_e
 {
     DEFAULT_INT,
     DEFAULT_INT_UNSIGNED,
@@ -510,7 +507,7 @@ typedef enum
     DEFAULT_OTHER
 } default_type_t;
 
-typedef enum
+typedef enum valuealias_type_e
 {
     NOVALUEALIAS,
     BOOLVALUEALIAS,
@@ -523,7 +520,7 @@ typedef enum
     SCALEVALUEALIAS
 } valuealias_type_t;
 
-typedef struct
+typedef struct default_s
 {
     // Name of the variable
     char                *name;
@@ -537,7 +534,7 @@ typedef struct
     valuealias_type_t   valuealiastype;
 } default_t;
 
-typedef struct
+typedef struct valuealias_s
 {
     char                *text;
     int                 value;

@@ -155,15 +155,46 @@ char *M_ExtractFolder(char *path)
     M_StringCopy(folder, path, MAX_PATH);
 
     pos = strrchr(folder, DIR_SEPARATOR);
+
     if (pos)
         *pos = '\0';
 
     return folder;
 }
 
+static char *M_StaticAppData(void)
+{
+    static char *appdata = NULL;
+
+    return appdata;
+}
+
+static char *M_StaticResourceFolder(void)
+{
+    static char *resourceFolder = NULL;
+    char        *executableFolder = M_GetExecutableFolder();
+
+    if (!resourceFolder)
+        resourceFolder = M_StringJoin(executableFolder, DIR_SEPARATOR_S".."DIR_SEPARATOR_S"share"
+            DIR_SEPARATOR_S"doomretro", NULL);
+
+    return resourceFolder;
+}
+
+void M_FreeAppData(void)
+{
+    free(M_StaticAppData());
+}
+
+void M_FreeResourceFolder(void)
+{
+    free(M_StaticResourceFolder());
+}
+
 char *M_GetAppDataFolder(void)
 {
     char    *executableFolder = M_GetExecutableFolder();
+    char    *appdata = M_StaticAppData();
 
 #if defined(_WIN32)
 
@@ -171,8 +202,11 @@ char *M_GetAppDataFolder(void)
     // On Windows, store generated application files in <username>\DOOM Retro.
     TCHAR   buffer[MAX_PATH];
 
-    if (SUCCEEDED(SHGetFolderPath(NULL, CSIDL_PROFILE, NULL, 0, buffer)))
-        return M_StringJoin(buffer, DIR_SEPARATOR_S, PACKAGE_NAME, NULL);
+    if (!appdata && SUCCEEDED(SHGetFolderPath(NULL, CSIDL_PROFILE, NULL, 0, buffer)))
+    {
+        appdata = M_StringJoin(buffer, DIR_SEPARATOR_S, PACKAGE_NAME, NULL);
+        return appdata;
+    }
     else
         return executableFolder;
 #else
@@ -182,9 +216,8 @@ char *M_GetAppDataFolder(void)
 #else
     // On Linux and OS X, if ../share/doomretro doesn't exist then we're dealing with
     // a portable installation, and we write doomretro.cfg to the executable directory.
-    char        *resourceFolder = M_StringJoin(executableFolder, DIR_SEPARATOR_S".."
-                    DIR_SEPARATOR_S"share"DIR_SEPARATOR_S"doomretro", NULL);
-    DIR         *resourceDir = opendir(resourceFolder);
+    char    *resourceFolder = M_StaticResourceFolder();
+    DIR     *resourceDir = opendir(resourceFolder);
 
     if (resourceDir)
     {
@@ -197,7 +230,10 @@ char *M_GetAppDataFolder(void)
                             inDomains: NSUserDomainMask].firstObject;
         NSURL           *appSupportURL = [baseAppSupportURL URLByAppendingPathComponent: @PACKAGE_NAME];
 
-        return appSupportURL.fileSystemRepresentation;
+        if (!appdata)
+            appdata = strdup(appSupportURL.fileSystemRepresentation);
+
+        return appdata;
 #else
         // On Linux, store generated application files in /home/<username>/.config/doomretro
         char            *buffer;
@@ -205,11 +241,31 @@ char *M_GetAppDataFolder(void)
         if (!(buffer = getenv("HOME")))
             buffer = getpwuid(getuid())->pw_dir;
 
-        return M_StringJoin(buffer, DIR_SEPARATOR_S".config"DIR_SEPARATOR_S, PACKAGE, NULL);
+        appdata = M_StringJoin(buffer, DIR_SEPARATOR_S".config"DIR_SEPARATOR_S, PACKAGE, NULL);
+        return appdata;
 #endif
     }
     else
         return executableFolder;
+#endif
+}
+
+#if defined(__MACOSX__)
+static char *M_StaticResourceURL(void)
+{
+    static char *resourceURL = NULL;
+
+    if (!resourceURL)
+       resourceURL = strdup([NSBundle mainBundle].resourceURL.fileSystemRepresentation);
+
+    return resourceURL;
+}
+#endif
+
+void M_FreeResourceURL(void)
+{
+#if defined(__MACOSX__)
+    free(M_StaticResourceURL());
 #endif
 }
 
@@ -220,8 +276,7 @@ char *M_GetResourceFolder(void)
 #if !defined(_WIN32)
     // On Linux and OS X, first assume that the executable is in .../bin and
     // try to load resources from .../share/doomretro.
-    char    *resourceFolder = M_StringJoin(executableFolder, DIR_SEPARATOR_S".."
-                DIR_SEPARATOR_S"share"DIR_SEPARATOR_S"doomretro", NULL);
+    char    *resourceFolder = M_StaticResourceFolder();
     DIR     *resourceDir = opendir(resourceFolder);
 
     if (resourceDir)
@@ -233,9 +288,7 @@ char *M_GetResourceFolder(void)
 #if defined(__MACOSX__)
     // On OSX, load resources from the Contents/Resources folder within the application bundle
     // if ../share/doomretro is not available.
-    NSURL   *resourceURL = [NSBundle mainBundle].resourceURL;
-
-    return resourceURL.fileSystemRepresentation;
+    return M_StaticResourceURL();
 #else
     // And on Linux, fall back to the same folder as the executable.
     return executableFolder;
@@ -247,49 +300,93 @@ char *M_GetResourceFolder(void)
 #endif
 }
 
+static char *M_StaticPath(void)
+{
+    static char *path = NULL;
+
+    if (!path)
+        path = malloc(MAX_PATH);
+
+    return path;
+}
+
+void M_FreeExecutableFolder(void)
+{
+    free(M_StaticPath());
+}
+
+void M_Shutdown(void)
+{
+    M_FreeExecutableFolder();
+    M_FreeAppData();
+    M_FreeResourceFolder();
+    M_FreeResourceURL();
+}
+
 char *M_GetExecutableFolder(void)
 {
+    static dboolean pathset = false;
 #if defined(_WIN32)
-    char    *pos;
-    char    *folder = malloc(MAX_PATH);
-    TCHAR   buffer[MAX_PATH];
+    char            *folder = M_StaticPath();
+    TCHAR           buffer[MAX_PATH];
 
     if (!folder)
         return NULL;
 
-    GetModuleFileName(NULL, buffer, MAX_PATH);
-    M_StringCopy(folder, buffer, MAX_PATH);
+    if (!pathset)
+    {
+        char    *pos;
 
-    pos = strrchr(folder, '\\');
+        GetModuleFileName(NULL, buffer, MAX_PATH);
+        M_StringCopy(folder, buffer, MAX_PATH);
 
-    if (pos)
-        *pos = '\0';
+        pos = strrchr(folder, '\\');
+
+        if (pos)
+            *pos = '\0';
+
+        pathset = true;
+    }
 
     return folder;
 #elif defined(__ANDROID__)
     return "."; // CWD
 #elif defined(__linux__)
-    char    *exe = malloc(MAX_PATH);
-    ssize_t len = readlink("/proc/self/exe", exe, MAX_PATH - 1);
+    char            *exe = M_StaticPath();
+    static ssize_t  len = -1;
 
-    if (len == -1)
+    if (!pathset)
     {
-        free(exe);
-        return ".";
+        len = readlink("/proc/self/exe", exe, MAX_PATH - 1);
+        pathset = true;
+
+        if (len != -1)
+        {
+            exe[len] = '\0';
+            exe = dirname(exe);
+        }
+        else
+            exe = ".";
     }
-    else
-    {
-        exe[len] = '\0';
-        return dirname(exe);
-    }
+
+    return exe;
 #elif defined(__MACOSX__)
-    char    *exe = malloc(MAX_PATH);
-    ssize_t len = MAX_PATH;
+    char        *exe = M_StaticPath();
+    static int  getpath = -1;
+    uint32_t    len = MAX_PATH;
 
-    if (!_NSGetExecutablePath(exe, &len))
-        return dirname(exe);
-    else
-        return ".";
+    if (!pathset)
+    {
+        getpath = (_NSGetExecutablePath(exe, &len) == 0);
+        pathset = true;
+
+        if (getpath)
+            exe = dirname(exe);
+        else
+            exe = ".";
+    }
+
+    return exe;
 #else
     return ".";
 #endif
@@ -538,7 +635,7 @@ char *strndup(const char *s, size_t n)
 
 char *M_SubString(const char *str, size_t begin, size_t len)
 {
-    if (!str|| !strlen(str) || strlen(str) < begin || strlen(str) < begin + len)
+    if (!str || !strlen(str) || strlen(str) < begin || strlen(str) < begin + len)
         return 0;
 
     return strndup(str + begin, len);
@@ -691,6 +788,7 @@ dboolean wildcard(char *input, char *pattern)
         else if (pattern[i] != input[i])
             return false;
     }
+
     return true;
 }
 
@@ -708,7 +806,7 @@ char *removespaces(const char *input)
         char    *p2 = p;
 
         while (*input != '\0')
-            if (!isspace((unsigned char)*input))
+            if (!isspace((unsigned char)*input) && *input != '-')
                 *p2++ = *input++;
             else
                 input++;
@@ -750,6 +848,7 @@ char *removenewlines(const char *str)
     {
         if (*p == '\n')
             *p = ' ';
+
         p++;
     }
 
@@ -769,10 +868,10 @@ char *makevalidfilename(const char *input)
     return newstr;
 }
 
-const char *leafname(const char *path)
+char *leafname(char *path)
 {
-    char        cc;
-    const char  *ptr = path;
+    char    cc;
+    char    *ptr = path;
 
     do
     {
@@ -819,17 +918,17 @@ char *striptrailingzero(float value, int precision)
     return result;
 }
 
-void strreplace(char *target, const char *needle, const char *replacement)
+void strreplace(char *target, char *needle, const char *replacement)
 {
-    char        buffer[1024] = "";
-    char        *insert_point = &buffer[0];
-    const char  *tmp = target;
-    size_t      needle_len = strlen(needle);
-    size_t      repl_len = strlen(replacement);
+    char    buffer[1024] = "";
+    char    *insert_point = &buffer[0];
+    char    *tmp = target;
+    size_t  needle_len = strlen(needle);
+    size_t  repl_len = strlen(replacement);
 
     while (1)
     {
-        const char  *p = strstr(tmp, needle);
+        char    *p = stristr(tmp, needle);
 
         if (!p)
         {

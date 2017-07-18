@@ -79,7 +79,6 @@ dboolean                s_STSTR_BEHOLD2;
 static hu_stext_t       w_message;
 int                     message_counter;
 
-
 int M_StringWidth(char *string);
 
 static dboolean         headsupactive;
@@ -123,7 +122,7 @@ static int              coloroffset;
 void (*althudfunc)(int, int, patch_t *, int, int);
 void (*fillrectfunc)(int, int, int, int, int, int);
 
-static struct
+static struct ammopic_s
 {
     char    *patchname;
     int     mobjnum;
@@ -137,7 +136,7 @@ static struct
     { "ROCKA0", MT_MISC18, 8, -6, NULL }
 };
 
-static struct
+static struct keypic_s
 {
     char    *patchnamea;
     char    *patchnameb;
@@ -591,7 +590,7 @@ static void HU_DrawHUD(void)
 #define BLUE            200
 #define YELLOW          231
 
-typedef struct
+typedef struct altkeypic_s
 {
     int     color;
     patch_t *patch;
@@ -637,30 +636,30 @@ void HU_AltInit(void)
     for (i = 0; i < 10; i++)
     {
         M_snprintf(buffer, 7, "DRHUD%i", i);
-        altnum[i] = W_CacheLumpName2(buffer);
+        altnum[i] = W_CacheLumpName(buffer);
         M_snprintf(buffer, 9, "DRHUD%i_2", i);
-        altnum2[i] = W_CacheLumpName2(buffer);
+        altnum2[i] = W_CacheLumpName(buffer);
     }
 
-    altnegpatch = W_CacheLumpName2("DRHUDNEG");
+    altnegpatch = W_CacheLumpName("DRHUDNEG");
     altnegpatchwidth = SHORT(altnegpatch->width);
 
     for (i = 1; i < NUMWEAPONS; i++)
     {
         M_snprintf(buffer, 9, "DRHUDWP%i", i);
-        altweapon[i] = W_CacheLumpName2(buffer);
+        altweapon[i] = W_CacheLumpName(buffer);
     }
 
-    altleftpatch = W_CacheLumpName2("DRHUDL");
-    altarmpatch = W_CacheLumpName2("DRHUDARM");
-    altrightpatch = W_CacheLumpName2("DRHUDR");
+    altleftpatch = W_CacheLumpName("DRHUDL");
+    altarmpatch = W_CacheLumpName("DRHUDARM");
+    altrightpatch = W_CacheLumpName("DRHUDR");
 
-    altendpatch = W_CacheLumpName2("DRHUDE");
-    altmarkpatch = W_CacheLumpName2("DRHUDI");
-    altmark2patch = W_CacheLumpName2("DRHUDI_2");
+    altendpatch = W_CacheLumpName("DRHUDE");
+    altmarkpatch = W_CacheLumpName("DRHUDI");
+    altmark2patch = W_CacheLumpName("DRHUDI_2");
 
-    altkeypatch = W_CacheLumpName2("DRHUDKEY");
-    altskullpatch = W_CacheLumpName2("DRHUDSKU");
+    altkeypatch = W_CacheLumpName("DRHUDKEY");
+    altskullpatch = W_CacheLumpName("DRHUDSKU");
 
     for (i = 0; i < NUMCARDS; i++)
         altkeypics[i].color = nearestcolors[altkeypics[i].color];
@@ -776,7 +775,8 @@ static void HU_DrawAltHUD(void)
     int color1 = color2 + (color2 == green ? coloroffset : 0);
     int keys = 0;
     int i = 0;
-    int power;
+    int power = 0;
+    int max;
 
     DrawAltHUDNumber(ALTHUD_LEFT_X + 35 - AltHUDNumberWidth(ABS(health)), ALTHUD_Y + 12, health);
     health = MAX(0, plr->health) * 200 / maxhealth;
@@ -894,14 +894,32 @@ static void HU_DrawAltHUD(void)
         }
     }
 
-    power = MAX(plr->powers[pw_invulnerability], MAX(plr->powers[pw_invisibility],
-        MAX(plr->powers[pw_infrared], plr->powers[pw_ironfeet])));
+    if (plr->powers[pw_invulnerability] > 0)
+    {
+        power = plr->powers[pw_invulnerability];
+        max = INVULNTICS;
+    }
+
+    if (plr->powers[pw_invisibility] > 0 && (!power || plr->powers[pw_invisibility] < power))
+    {
+        power = plr->powers[pw_invisibility];
+        max = INVISTICS;
+    }
+
+    if (plr->powers[pw_ironfeet] > 0 && (!power || plr->powers[pw_ironfeet] < power))
+    {
+        power = plr->powers[pw_ironfeet];
+        max = IRONTICS;
+    }
+
+    if (plr->powers[pw_infrared] > 0 && (!power || plr->powers[pw_infrared] < power))
+    {
+        power = plr->powers[pw_infrared];
+        max = INFRATICS;
+    }
 
     if (power > STARTFLASHING || (power & 8))
     {
-        int max = (power == plr->powers[pw_invulnerability] ? INVULNTICS :
-                (power == plr->powers[pw_infrared] ? INFRATICS : IRONTICS));
-
         fillrectfunc(0, ALTHUD_RIGHT_X, ALTHUD_Y + 26, 101, 2, darkgray);
         fillrectfunc(0, ALTHUD_RIGHT_X, ALTHUD_Y + 26, power * 101 / max, 2, gray);
     }

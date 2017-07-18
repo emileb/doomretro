@@ -36,6 +36,7 @@
 ========================================================================
 */
 
+#include <stdlib.h>
 #include <string.h>
 
 #include "doomstat.h"
@@ -71,7 +72,7 @@ void R_ClearDrawSegs(void)
 // Clips the given range of columns
 // and includes it in the new clip list.
 //
-typedef struct
+typedef struct cliprange_s
 {
     int first;
     int last;
@@ -164,7 +165,6 @@ static void R_ClipSolidWallSegment(int first, int last)
 
     // Remove start + 1 to next from the clip list,
     // because start now covers their area.
-
 crunch:
     if (next == start)
         return;                 // Post just extended past the bottom of one post.
@@ -239,24 +239,24 @@ void R_ClearClipSegs(void)
 //
 // It assumes that DOOM has already ruled out a door being closed because
 // of front-back closure (e.g. front floor is taller than back ceiling).
-dboolean R_DoorClosed(void)
+static dboolean R_DoorClosed(void)
 {
     return
         // if door is closed because back is shut:
         (backsector->interpceilingheight <= backsector->interpfloorheight
 
-        // preserve a kind of transparent door/lift special effect:
-        && (backsector->interpceilingheight >= frontsector->interpceilingheight
-            || curline->sidedef->toptexture)
-        && (backsector->interpfloorheight <= frontsector->interpfloorheight
-            || curline->sidedef->bottomtexture)
+            // preserve a kind of transparent door/lift special effect:
+            && (backsector->interpceilingheight >= frontsector->interpceilingheight
+                || curline->sidedef->toptexture)
+            && (backsector->interpfloorheight <= frontsector->interpfloorheight
+                || curline->sidedef->bottomtexture)
 
-        // properly render skies (consider door "open" if both ceilings are sky):
-        && (backsector->ceilingpic != skyflatnum || frontsector->ceilingpic != skyflatnum));
+            // properly render skies (consider door "open" if both ceilings are sky):
+            && (backsector->ceilingpic != skyflatnum || frontsector->ceilingpic != skyflatnum));
 }
 
 // [AM] Interpolate the passed sector, if prudent.
-void R_MaybeInterpolateSector(sector_t *sector)
+static void R_MaybeInterpolateSector(sector_t *sector)
 {
     if (vid_capfps != TICRATE
         // Only if we moved the sector last tic.
@@ -399,14 +399,11 @@ static void R_AddLine(seg_t *line)
 {
     int             x1;
     int             x2;
-    angle_t         angle1;
-    angle_t         angle2;
+    angle_t         angle1 = R_PointToAngleEx(line->v1->x, line->v1->y);
+    angle_t         angle2 = R_PointToAngleEx(line->v2->x, line->v2->y);
     static sector_t tempsec;        // killough 3/8/98: ceiling/water hack
 
     curline = line;
-
-    angle1 = R_PointToAngleEx(line->v1->x, line->v1->y);
-    angle2 = R_PointToAngleEx(line->v2->x, line->v2->y);
 
     // Back side? I.e. backface culling?
     if (angle1 - angle2 >= ANG180)
@@ -451,10 +448,8 @@ static void R_AddLine(seg_t *line)
     if (x1 >= x2)
         return;
 
-    backsector = line->backsector;
-
     // Single sided line?
-    if (!backsector)
+    if (!(backsector = line->backsector))
         goto clipsolid;
 
     // [AM] Interpolate sector movement before
@@ -517,23 +512,23 @@ clipsolid:
 // Returns true
 //  if some part of the bbox might be visible.
 //
-static const int checkcoord[12][4] =
-{
-    { 3, 0, 2, 1 },
-    { 3, 0, 2, 0 },
-    { 3, 1, 2, 0 },
-    { 0 },
-    { 2, 0, 2, 1 },
-    { 0, 0, 0, 0 },
-    { 3, 1, 3, 0 },
-    { 0 },
-    { 2, 0, 3, 1 },
-    { 2, 1, 3, 1 },
-    { 2, 1, 3, 0 }
-};
-
 static dboolean R_CheckBBox(const fixed_t *bspcoord)
 {
+    const int checkcoord[12][4] =
+    {
+        { 3, 0, 2, 1 },
+        { 3, 0, 2, 0 },
+        { 3, 1, 2, 0 },
+        { 0 },
+        { 2, 0, 2, 1 },
+        { 0, 0, 0, 0 },
+        { 3, 1, 3, 0 },
+        { 0 },
+        { 2, 0, 3, 1 },
+        { 2, 1, 3, 1 },
+        { 2, 1, 3, 0 }
+    };
+
     int         boxpos;
     const int   *check;
 
@@ -586,22 +581,14 @@ static dboolean R_CheckBBox(const fixed_t *bspcoord)
     // Find the first clippost
     //  that touches the source post
     //  (adjacent pixels are touching).
-    angle1 = (angle1 + ANG90) >> ANGLETOFINESHIFT;
-    angle2 = (angle2 + ANG90) >> ANGLETOFINESHIFT;
-    sx1 = viewangletox[angle1];
-    sx2 = viewangletox[angle2];
+    sx1 = viewangletox[(angle1 + ANG90) >> ANGLETOFINESHIFT];
+    sx2 = viewangletox[(angle2 + ANG90) >> ANGLETOFINESHIFT];
 
-    // SoM: To account for the rounding error of the old BSP system, I needed to
-    // make adjustments.
-    // SoM: Moved this to before the "does not cross a pixel" check to fix
-    // another slime trail
     if (sx1 > 0)
         sx1--;
 
     if (sx2 < viewwidth - 1)
         sx2++;
-
-    // SoM: Removed the "does not cross a pixel" test
 
     start = solidsegs;
 
@@ -703,5 +690,6 @@ void R_RenderBSPNode(int bspnum)
 
         bspnum = bsp->children[side];
     }
+
     R_Subsector(bspnum == -1 ? 0 : (bspnum & ~NF_SUBSECTOR));
 }

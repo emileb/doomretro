@@ -44,6 +44,7 @@
 
 #include "c_console.h"
 #include "d_deh.h"
+#include "d_iwad.h"
 #include "doomstat.h"
 #include "dstrings.h"
 #include "g_game.h"
@@ -116,10 +117,10 @@ short           itemOn;                 // menu item skull is on
 short           skullAnimCounter;       // skull animation counter
 short           whichSkull;             // which skull to draw
 
-int             episodeselected = episodeselected_default;
-int             expansionselected = expansionselected_default;
-int             savegameselected = savegameselected_default;
-int             skilllevelselected = skilllevelselected_default;
+int             episode = episode_default;
+int             expansion = expansion_default;
+int             savegame = savegame_default;
+int             skilllevel = skilllevel_default;
 
 static int      functionkey;
 
@@ -131,10 +132,10 @@ char            *skullName[2] = { "M_SKULL1", "M_SKULL2" };
 // current menudef
 menu_t          *currentMenu;
 
-byte            *tempscreen1;
-byte            *tempscreen2;
-byte            *blurscreen1;
-byte            *blurscreen2;
+byte            tempscreen1[SCREENWIDTH * SCREENHEIGHT];
+byte            tempscreen2[SCREENWIDTH * SCREENHEIGHT];
+byte            blurscreen1[SCREENWIDTH * SCREENHEIGHT];
+byte            blurscreen2[SCREENWIDTH * SCREENHEIGHT];
 
 dboolean        blurred;
 dboolean        blurred2;
@@ -204,7 +205,7 @@ void M_ClearMenus(void);
 // DOOM MENU
 //
 
-typedef enum
+typedef enum main_e
 {
     new_game,
     options,
@@ -237,7 +238,7 @@ menu_t MainDef =
 // EPISODE SELECT
 //
 
-typedef enum
+typedef enum episodes_e
 {
     ep1,
     ep2,
@@ -268,7 +269,7 @@ menu_t EpiDef =
 // EXPANSION SELECT
 //
 
-typedef enum
+typedef enum expansions_e
 {
     ex1,
     ex2,
@@ -295,7 +296,7 @@ menu_t ExpDef =
 // NEW GAME
 //
 
-typedef enum
+typedef enum newgame_e
 {
     killthings,
     toorough,
@@ -328,7 +329,7 @@ menu_t NewDef =
 // OPTIONS MENU
 //
 
-typedef enum
+typedef enum options_e
 {
     endgame,
     msgs,
@@ -363,7 +364,7 @@ menu_t OptionsDef =
     endgame
 };
 
-typedef enum
+typedef enum read_e
 {
     rdthsempty,
     read_end
@@ -388,7 +389,7 @@ menu_t ReadDef =
 // SOUND VOLUME MENU
 //
 
-typedef enum
+typedef enum sound_e
 {
     sfx_vol,
     sfx_empty1,
@@ -419,7 +420,7 @@ menu_t SoundDef =
 // LOAD GAME MENU
 //
 
-typedef enum
+typedef enum load_e
 {
     load1,
     load2,
@@ -642,7 +643,7 @@ static const int chartoi[123] =
     56, 57, 58
 };
 
-static struct
+static struct kern_s
 {
     char    char1;
     char    char2;
@@ -657,7 +658,7 @@ static struct
     { 'L', 'S', -1 }, { 't', ' ', -1 }, {  0,   0,   0 }
 };
 
-static struct
+static struct overlap_s
 {
     char    char1;
     char    char2;
@@ -679,10 +680,10 @@ static struct
 //
 void M_DrawString(int x, int y, char *str)
 {
-    int         i;
+    size_t      i;
     static char prev;
 
-    for (i = 0; (unsigned int)i < strlen(str); i++)
+    for (i = 0; i < strlen(str); i++)
     {
         int         j = -1;
         int         k = 0;
@@ -733,12 +734,12 @@ void M_DrawString(int x, int y, char *str)
 //
 int M_BigStringWidth(char *str)
 {
-    int         i;
+    size_t      i;
     int         w = 0;
     static char prev;
     size_t      len = strlen(str);
 
-    for (i = 0; (unsigned int)i < len; i++)
+    for (i = 0; i < len; i++)
     {
         int j = chartoi[(int)str[i]];
         int k = 0;
@@ -774,9 +775,9 @@ void M_DrawCenteredString(int y, char *str)
 //
 void M_SplitString(char *string)
 {
-    int i;
+    size_t  i;
 
-    for (i = strlen(string) / 2 - 1; (unsigned int)i < strlen(string); i++)
+    for (i = strlen(string) / 2 - 1; i < strlen(string); i++)
         if (string[i] == ' ')
         {
             string[i] = '\n';
@@ -882,7 +883,6 @@ dboolean M_CheckSaveGame(int choice)
     ep = saveg_read8(handle);
     saveg_read8(handle);
     mission = saveg_read8(handle);
-
     fclose(handle);
 
     // switch expansions if necessary
@@ -894,7 +894,7 @@ dboolean M_CheckSaveGame(int choice)
         if (gamemission == pack_nerve)
         {
             ExpDef.lastOn = ex1;
-            expansionselected = ex1;
+            expansion = 1;
             gamemission = doom2;
             return true;
         }
@@ -909,7 +909,7 @@ dboolean M_CheckSaveGame(int choice)
         if (gamemission == doom2 && nerve)
         {
             ExpDef.lastOn = ex2;
-            expansionselected = ex2;
+            expansion = 2;
             gamemission = pack_nerve;
             return true;
         }
@@ -927,6 +927,18 @@ dboolean M_CheckSaveGame(int choice)
         return false;
 
     return true;
+}
+
+int M_CountSaveGames(void)
+{
+    int i;
+    int count = 0;
+
+    for (i = 0; i < load_end; i++)
+        if (M_FileExists(P_SaveGameFile(i)))
+            count++;
+
+    return count;
 }
 
 //
@@ -965,7 +977,6 @@ void M_DrawSaveLoadBorder(int x, int y)
     {
         x += 3;
         M_DrawPatchWithShadow(x, y + 11, W_CacheLumpName("M_LSLEFT"));
-
         x += 8;
 
         for (i = 0; i < 24; i++)
@@ -1011,7 +1022,6 @@ void M_LoadSelect(int choice)
         char    name[SAVESTRINGSIZE];
 
         M_StringCopy(name, P_SaveGameFile(choice), sizeof(name));
-
         S_StartSound(NULL, sfx_pistol);
         I_WaitVBL(2 * TICRATE);
         functionkey = 0;
@@ -1047,8 +1057,8 @@ int             caretcolor;
 //
 void M_DrawSave(void)
 {
-    char    *left = Z_Malloc(256, PU_STATIC, NULL);
-    char    *right = Z_Malloc(256, PU_STATIC, NULL);
+    char    left[256];
+    char    right[256];
     int     i;
     int     j;
 
@@ -1076,14 +1086,14 @@ void M_DrawSave(void)
             for (j = 0; j < saveCharIndex; j++)
                 left[j] = savegamestrings[i][j];
 
-            left[j] = 0;
+            left[j] = '\0';
             M_WriteText(LoadDef.x - 2, y - !M_LSCNTR, left, false);
 
             // draw text to right of text caret
             for (j = 0; (unsigned int)j < strlen(savegamestrings[i]) - saveCharIndex; j++)
                 right[j] = savegamestrings[i][j + saveCharIndex];
 
-            right[j] = 0;
+            right[j] = '\0';
             M_WriteText(LoadDef.x - 2 + M_StringWidth(left) + 1, y - !M_LSCNTR, right, false);
         }
         else
@@ -1119,9 +1129,6 @@ void M_DrawSave(void)
             caretwait = 0;
         }
     }
-
-    Z_Free(left);
-    Z_Free(right);
 }
 
 //
@@ -1131,19 +1138,15 @@ void M_DoSave(int slot)
 {
     M_ClearMenus();
     G_SaveGame(slot, savegamestrings[slot], "");
-
     savegames = true;
     functionkey = 0;
     quickSaveSlot = slot;
-
-    savegame = savegamestrings[slot];
 }
 
 //
 // User wants to save. Start string input for M_Responder
 //
 extern char maptitle[128];
-
 extern char **mapnames[];
 extern char **mapnames2[];
 extern char **mapnames2_bfg[];
@@ -1153,9 +1156,9 @@ extern char **mapnamesn[];
 
 const char *RemoveMapNum(const char *str)
 {
-    char    *pos;
+    char    *pos = strchr(str, ':');
 
-    if ((pos = strchr(str, ':')))
+    if (pos)
     {
         str = pos + 1;
 
@@ -1209,8 +1212,7 @@ void M_UpdateSaveGameName(int i)
                     if (bfgedition)
                     {
                         for (j = 0; j < 33; j++)
-                            if (M_StringCompare(savegamestrings[i],
-                                RemoveMapNum(*mapnames2_bfg[j])))
+                            if (M_StringCompare(savegamestrings[i], RemoveMapNum(*mapnames2_bfg[j])))
                             {
                                 match = true;
                                 break;
@@ -1282,7 +1284,6 @@ void M_SaveSelect(int choice)
 {
     // we are going to be intercepting all chars
     saveStringEnter = 1;
-
     saveSlot = choice;
     M_StringCopy(saveOldString, savegamestrings[saveSlot], SAVESTRINGSIZE);
     M_UpdateSaveGameName(saveSlot);
@@ -1382,7 +1383,6 @@ static void M_DeleteSavegameResponse(int key)
         HU_PlayerMessage(buffer, false);
         blurred = false;
         message_dontfuckwithme = true;
-
         M_ReadSaveStrings();
 
         if (currentMenu == &LoadDef)
@@ -1434,6 +1434,7 @@ void M_DrawReadThis(void)
         default:
             break;
     }
+
     if (W_CheckNumForName(lumpname) >= 0)
     {
         if (automapactive)
@@ -1445,9 +1446,9 @@ void M_DrawReadThis(void)
         }
 
         if (hacx)
-            V_DrawPatch(0, 0, 0, W_CacheLumpNum(W_GetNumForNameX("HELP", 1)));
+            V_DrawPatch(0, 0, 0, W_CacheLumpName("HELP"));
         else if (W_CheckMultipleLumps(lumpname) > 2)
-            V_DrawPatch(0, 0, 0, W_CacheLumpNum(W_GetNumForNameX(lumpname, 2)));
+            V_DrawPatch(0, 0, 0, W_CacheLumpName(lumpname));
         else
             M_DrawPatchWithShadow(0, 0, W_CacheLumpName(lumpname));
     }
@@ -1650,7 +1651,7 @@ void M_SetWindowCaption(void)
     {
         if (nerve && (currentMenu == &ExpDef || currentMenu == &NewDef))
             M_snprintf(caption, sizeof(caption), "%s: %s", gamedescription,
-            (expansionselected == ex1 ? s_CAPTION_HELLONEARTH : s_CAPTION_NERVE));
+                (expansion == 1 ? s_CAPTION_HELLONEARTH : s_CAPTION_NERVE));
         else
             M_StringCopy(caption, gamedescription, sizeof(caption));
 
@@ -1692,8 +1693,7 @@ void M_ChooseSkill(int choice)
             M_StartMessage(s_NIGHTMARE, M_VerifyNightmare, true);
         else
         {
-            M_snprintf(tempstring, 160, "%s\n\n%s", s_NIGHTMARE,
-                (usinggamepad ? s_PRESSA : s_PRESSYN));
+            M_snprintf(tempstring, 160, "%s\n\n%s", s_NIGHTMARE, (usinggamepad ? s_PRESSA : s_PRESSYN));
             M_StartMessage(tempstring, M_VerifyNightmare, true);
         }
 
@@ -1716,8 +1716,7 @@ void M_Episode(int choice)
             M_StartMessage(s_SWSTRING, NULL, false);
         else
         {
-            M_snprintf(tempstring, 160, "%s\n\n%s", s_SWSTRING,
-                (usinggamepad ? s_PRESSA : s_PRESSYN));
+            M_snprintf(tempstring, 160, "%s\n\n%s", s_SWSTRING, (usinggamepad ? s_PRESSA : s_PRESSKEY));
             M_StartMessage(tempstring, NULL, false);
         }
 
@@ -1732,6 +1731,7 @@ void M_Episode(int choice)
 void M_Expansion(int choice)
 {
     gamemission = (choice == ex1 ? doom2 : pack_nerve);
+    D_SetSaveGameFolder(false);
     M_SetupNextMenu(&NewDef);
 }
 
@@ -1824,7 +1824,7 @@ void M_ChangeMessages(int choice)
 //
 // M_EndGame
 //
-dboolean        endinggame;
+dboolean    endinggame;
 
 void M_EndingGame(void)
 {
@@ -1839,10 +1839,7 @@ void M_EndingGame(void)
     if (gamemission == pack_nerve)
         gamemission = doom2;
 
-    episode = "";
-    expansion = "";
-    savegame = "";
-    skilllevel = "";
+    C_Input("endgame");
     C_AddConsoleDivider();
     M_SetWindowCaption();
     D_StartTitle(1);
@@ -1851,6 +1848,7 @@ void M_EndingGame(void)
 void M_EndGameResponse(int key)
 {
     messageToPrint = false;
+
     if (key != 'y')
     {
         if (functionkey == KEY_F7)
@@ -1963,6 +1961,7 @@ void M_QuitResponse(int key)
 
             if (!I_AnySoundStillPlaying())
                 break;
+
             i--;
         }
     }
@@ -1972,7 +1971,10 @@ void M_QuitResponse(int key)
 
 static char *M_SelectEndMessage(void)
 {
-    return *endmsg[M_Random() % NUM_QUITMESSAGES + (gamemission != doom) * NUM_QUITMESSAGES];
+    if (deh_strlookup[p_QUITMSG].assigned == 2)
+        return s_QUITMSG;
+    else
+        return *endmsg[M_Random() % NUM_QUITMESSAGES + (gamemission != doom) * NUM_QUITMESSAGES];
 }
 
 void M_QuitDOOM(int choice)
@@ -2409,7 +2411,6 @@ void M_ChangeGamma(dboolean shift)
 
     message_dontpause = true;
     message_dontfuckwithme = true;
-
     I_SetPalette((byte *)W_CacheLumpName("PLAYPAL") + st_palette * 768);
     M_SaveCVARs();
 }
@@ -2708,6 +2709,7 @@ dboolean M_Responder(event_t *ev)
                     showcaret = true;
                 }
         }
+
         return true;
     }
 
@@ -2849,7 +2851,7 @@ dboolean M_Responder(event_t *ev)
                 functionkey = KEY_F3;
                 M_StartControlPanel();
                 itemOn = currentMenu->lastOn;
-                S_StartSound(NULL,sfx_swtchn);
+                S_StartSound(NULL, sfx_swtchn);
                 M_LoadGame(0);
             }
 
@@ -2970,6 +2972,7 @@ dboolean M_Responder(event_t *ev)
         if (key != KEY_PRINTSCREEN)
 #endif
             G_ScreenShot();
+
         return false;
     }
 
@@ -2992,6 +2995,7 @@ dboolean M_Responder(event_t *ev)
                 S_StartSound(NULL, sfx_swtchn);
             }
         }
+
         return false;
     }
 
@@ -3016,8 +3020,10 @@ dboolean M_Responder(event_t *ev)
                 if (itemOn != old)
                     S_StartSound(NULL, sfx_pstop);
 
-                SaveDef.lastOn = savegameselected = itemOn;
+                SaveDef.lastOn = itemOn;
+                savegame = itemOn + 1;
                 M_SaveCVARs();
+                C_IntCVAROutput(stringize(savegame), savegame);
             }
             else
             {
@@ -3046,24 +3052,30 @@ dboolean M_Responder(event_t *ev)
 
             if (currentMenu == &EpiDef && gamemode != shareware)
             {
-                episodeselected = itemOn;
+                episode = itemOn + 1;
                 M_SaveCVARs();
+                C_IntCVAROutput(stringize(episode), episode);
             }
             else if (currentMenu == &ExpDef)
             {
-                expansionselected = itemOn;
+                expansion = itemOn + 1;
                 M_SaveCVARs();
+                C_IntCVAROutput(stringize(expansion), expansion);
             }
             else if (currentMenu == &NewDef)
             {
-                skilllevelselected = itemOn;
+                skilllevel = itemOn + 1;
                 M_SaveCVARs();
+                C_IntCVAROutput(stringize(skilllevel), skilllevel);
             }
             else if (currentMenu == &SaveDef)
             {
-                LoadDef.lastOn = savegameselected = itemOn;
+                LoadDef.lastOn = itemOn;
+                savegame = itemOn + 1;
                 M_SaveCVARs();
+                C_IntCVAROutput(stringize(savegame), savegame);
             }
+
             keywait = I_GetTime() + 2;
             M_SetWindowCaption();
             return false;
@@ -3087,8 +3099,10 @@ dboolean M_Responder(event_t *ev)
                 if (itemOn != old)
                     S_StartSound(NULL, sfx_pstop);
 
-                SaveDef.lastOn = savegameselected = itemOn;
+                SaveDef.lastOn = itemOn;
+                savegame = itemOn + 1;
                 M_SaveCVARs();
+                C_IntCVAROutput(stringize(savegame), savegame);
             }
             else
             {
@@ -3117,23 +3131,28 @@ dboolean M_Responder(event_t *ev)
 
             if (currentMenu == &EpiDef && gamemode != shareware)
             {
-                episodeselected = itemOn;
+                episode = itemOn + 1;
                 M_SaveCVARs();
+                C_IntCVAROutput(stringize(episode), episode);
             }
             else if (currentMenu == &ExpDef)
             {
-                expansionselected = itemOn;
+                expansion = itemOn + 1;
                 M_SaveCVARs();
+                C_IntCVAROutput(stringize(expansion), expansion);
             }
             else if (currentMenu == &NewDef)
             {
-                skilllevelselected = itemOn;
+                skilllevel = itemOn + 1;
                 M_SaveCVARs();
+                C_IntCVAROutput(stringize(skilllevel), skilllevel);
             }
             else if (currentMenu == &SaveDef)
             {
-                LoadDef.lastOn = savegameselected = itemOn;
+                LoadDef.lastOn = itemOn;
+                savegame = itemOn + 1;
                 M_SaveCVARs();
+                C_IntCVAROutput(stringize(savegame), savegame);
             }
 
             keywait = I_GetTime() + 2;
@@ -3177,6 +3196,7 @@ dboolean M_Responder(event_t *ev)
         {
             // Activate menu item
             keydown = key;
+
             if (inhelpscreens)
             {
                 functionkey = 0;
@@ -3211,6 +3231,13 @@ dboolean M_Responder(event_t *ev)
                     currentMenu->menuitems[itemOn].routine(itemOn);
                 }
             }
+
+            if (currentMenu == &EpiDef)
+                C_IntCVAROutput(stringize(episode), episode);
+            else if (currentMenu == &ExpDef)
+                C_IntCVAROutput(stringize(expansion), expansion);
+            else if (currentMenu == &NewDef)
+                C_IntCVAROutput(stringize(skilllevel), skilllevel);
 
             M_SetWindowCaption();
             skipaction = (currentMenu == &LoadDef || currentMenu == &SaveDef);
@@ -3270,7 +3297,7 @@ dboolean M_Responder(event_t *ev)
         }
 
         // Keyboard shortcut?
-        else if (ch != 0 && !(modstate & (KMOD_ALT | KMOD_CTRL)))
+        else if (ch && !(modstate & (KMOD_ALT | KMOD_CTRL)))
         {
             for (i = itemOn + 1; i < currentMenu->numitems; i++)
             {
@@ -3298,28 +3325,35 @@ dboolean M_Responder(event_t *ev)
 
                     if (currentMenu == &EpiDef && gamemode != shareware)
                     {
-                        episodeselected = itemOn;
+                        episode = itemOn + 1;
                         M_SaveCVARs();
+                        C_IntCVAROutput(stringize(episode), episode);
                     }
                     else if (currentMenu == &ExpDef)
                     {
-                        expansionselected = itemOn;
+                        expansion = itemOn + 1;
                         M_SaveCVARs();
+                        C_IntCVAROutput(stringize(expansion), expansion);
                     }
                     else if (currentMenu == &NewDef)
                     {
-                        skilllevelselected = itemOn;
+                        skilllevel = itemOn + 1;
                         M_SaveCVARs();
+                        C_IntCVAROutput(stringize(skilllevel), skilllevel);
                     }
                     else if (currentMenu == &SaveDef)
                     {
-                        LoadDef.lastOn = savegameselected = itemOn;
+                        LoadDef.lastOn = itemOn;
+                        savegame = itemOn + 1;
                         M_SaveCVARs();
+                        C_IntCVAROutput(stringize(savegame), savegame);
                     }
                     else if (currentMenu == &LoadDef)
                     {
-                        SaveDef.lastOn = savegameselected = itemOn;
+                        SaveDef.lastOn = itemOn;
+                        savegame = itemOn + 1;
                         M_SaveCVARs();
+                        C_IntCVAROutput(stringize(savegame), savegame);
                     }
 
                     M_SetWindowCaption();
@@ -3353,28 +3387,35 @@ dboolean M_Responder(event_t *ev)
 
                     if (currentMenu == &EpiDef && gamemode != shareware)
                     {
-                        episodeselected = itemOn;
+                        episode = itemOn + 1;
                         M_SaveCVARs();
+                        C_IntCVAROutput(stringize(episode), episode);
                     }
                     else if (currentMenu == &ExpDef)
                     {
-                        expansionselected = itemOn;
+                        expansion = itemOn + 1;
                         M_SaveCVARs();
+                        C_IntCVAROutput(stringize(expansion), expansion);
                     }
                     else if (currentMenu == &NewDef)
                     {
-                        skilllevelselected = itemOn;
+                        skilllevel = itemOn + 1;
                         M_SaveCVARs();
+                        C_IntCVAROutput(stringize(skilllevel), skilllevel);
                     }
                     else if (currentMenu == &SaveDef)
                     {
-                        LoadDef.lastOn = savegameselected = itemOn;
+                        LoadDef.lastOn = itemOn;
+                        savegame = itemOn + 1;
                         M_SaveCVARs();
+                        C_IntCVAROutput(stringize(savegame), savegame);
                     }
                     else if (currentMenu == &LoadDef)
                     {
-                        SaveDef.lastOn = savegameselected = itemOn;
+                        SaveDef.lastOn = itemOn;
+                        savegame = itemOn + 1;
                         M_SaveCVARs();
+                        C_IntCVAROutput(stringize(savegame), savegame);
                     }
 
                     M_SetWindowCaption();
@@ -3383,6 +3424,7 @@ dboolean M_Responder(event_t *ev)
             }
         }
     }
+
     return false;
 }
 
@@ -3508,16 +3550,15 @@ void M_Drawer(void)
 
         if (*name)
         {
-            if (!strcmp(name, "M_NMARE"))
+            if (M_StringCompare(name, "M_NMARE"))
             {
                 if (M_NMARE)
                     M_DrawPatchWithShadow(x, y + OFFSET, W_CacheLumpName(name));
                 else
                     M_DrawNightmare();
             }
-            else if (!strcmp(name, "M_MSENS") && !M_MSENS)
-                M_DrawString(x, y + OFFSET,
-                    (usinggamepad ? s_M_GAMEPADSENSITIVITY : s_M_MOUSESENSITIVITY));
+            else if (M_StringCompare(name, "M_MSENS") && !M_MSENS)
+                M_DrawString(x, y + OFFSET, (usinggamepad ? s_M_GAMEPADSENSITIVITY : s_M_MOUSESENSITIVITY));
             else if (W_CheckMultipleLumps(name) > 1)
                 M_DrawPatchWithShadow(x, y + OFFSET, W_CacheLumpName(name));
             else
@@ -3541,8 +3582,10 @@ void M_Drawer(void)
 
             if (itemOn != old)
             {
-                SaveDef.lastOn = savegameselected = itemOn;
+                SaveDef.lastOn = itemOn;
+                savegame = itemOn + 1;
                 M_SaveCVARs();
+                C_IntCVAROutput(stringize(savegame), savegame);
             }
         }
 
@@ -3558,6 +3601,14 @@ void M_Drawer(void)
 
         if (currentMenu == &OptionsDef && !itemOn && gamestate != GS_LEVEL)
             itemOn++;
+
+        if (currentMenu == &MainDef)
+        {
+            patch_t *patch = W_CacheLumpName("M_DOOM");
+
+            if (SHORT(patch->height) >= ORIGINALHEIGHT)
+                y -= OFFSET;
+        }
 
         if (M_SKULL1)
             M_DrawPatchWithShadow(x - 32, y, patch);
@@ -3619,23 +3670,19 @@ void M_Init(void)
     messageString = NULL;
     messageLastMenuActive = menuactive;
     quickSaveSlot = -1;
-    tempscreen1 = Z_Malloc(SCREENWIDTH * SCREENHEIGHT, PU_STATIC, NULL);
-    tempscreen2 = Z_Malloc(SCREENWIDTH * SCREENHEIGHT, PU_STATIC, NULL);
-    blurscreen1 = Z_Malloc(SCREENWIDTH * SCREENHEIGHT, PU_STATIC, NULL);
-    blurscreen2 = Z_Malloc(SCREENWIDTH * SCREENHEIGHT, PU_STATIC, NULL);
 
     if (autostart)
     {
-        episodeselected = startepisode - 1;
-        skilllevelselected = startskill;
+        episode = startepisode;
+        skilllevel = startskill + 1;
     }
 
     if (gamemode != shareware)
-        EpiDef.lastOn = episodeselected;
+        EpiDef.lastOn = episode - 1;
 
-    ExpDef.lastOn = expansionselected;
-    NewDef.lastOn = skilllevelselected;
-    SaveDef.lastOn = LoadDef.lastOn = savegameselected;
+    ExpDef.lastOn = expansion - 1;
+    NewDef.lastOn = skilllevel - 1;
+    SaveDef.lastOn = LoadDef.lastOn = savegame - 1;
     OptionsDef.lastOn = msgs;
     M_ReadSaveStrings();
 

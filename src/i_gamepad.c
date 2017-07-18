@@ -56,34 +56,39 @@ static XINPUTSETSTATE pXInputSetState;
 #include "m_fixed.h"
 #include "m_misc.h"
 
-float               gp_deadzone_left = gp_deadzone_left_default;
-float               gp_deadzone_right = gp_deadzone_right_default;
+float           gp_deadzone_left = gp_deadzone_left_default;
+float           gp_deadzone_right = gp_deadzone_right_default;
+dboolean        gp_invertyaxis = gp_invertyaxis_default;
+dboolean        gp_swapthumbsticks = gp_swapthumbsticks_default;
+int             gp_vibrate_damage = gp_vibrate_damage_default;
+int             gp_vibrate_weapons = gp_vibrate_weapons_default;
 
 static SDL_Joystick *gamepad;
 
-int                 gamepadbuttons;
-short               gamepadthumbLX;
-short               gamepadthumbLY;
-short               gamepadthumbRX;
-float               gamepadsensitivity;
-short               gamepadleftdeadzone;
-short               gamepadrightdeadzone;
+int             gamepadbuttons;
+short           gamepadthumbLX;
+short           gamepadthumbLY;
+short           gamepadthumbRX;
+short           gamepadthumbRY;
+float           gamepadsensitivity;
+short           gamepadleftdeadzone;
+short           gamepadrightdeadzone;
 
-dboolean            vibrate;
-int                 damagevibrationtics;
-int                 weaponvibrationtics;
-int                 currentmotorspeed;
-int                 idlemotorspeed;
-int                 restoremotorspeed;
+dboolean        vibrate;
+int             damagevibrationtics;
+int             weaponvibrationtics;
+int             currentmotorspeed;
+int             idlemotorspeed;
+int             restoremotorspeed;
 
-extern dboolean     idclev;
-extern dboolean     idmus;
-extern dboolean     idbehold;
-extern dboolean     menuactive;
-extern dboolean     message_clearable;
+extern dboolean idclev;
+extern dboolean idmus;
+extern dboolean idbehold;
+extern dboolean menuactive;
+extern dboolean message_clearable;
 
 #if defined(_WIN32)
-HMODULE             pXInputDLL;
+HMODULE         pXInputDLL;
 #endif
 
 void (*gamepadfunc)(void);
@@ -116,15 +121,15 @@ void I_InitGamepad(void)
         else
         {
 #if defined(_WIN32)
-            char        *XInputDLL;
+            char        *XInputVersion;
             static int  initcount;
 
             if ((pXInputDLL = LoadLibrary("XInput1_4.dll")))
-                XInputDLL = "XInput1_4.dll";
+                XInputVersion = "XInput 1.4";
             else if ((pXInputDLL = LoadLibrary("XInput9_1_0.dll")))
-                XInputDLL = "XInput9_1_0.dll";
+                XInputVersion = "XInput 9.1.0";
             else if ((pXInputDLL = LoadLibrary("XInput1_3.dll")))
-                XInputDLL = "XInput1_3.dll";
+                XInputVersion = "XInput 1.3";
 
             initcount++;
 
@@ -146,8 +151,7 @@ void I_InitGamepad(void)
                             I_PollThumbs_XInput_RightHanded);
 
                         if (initcount++ == 1)
-                            C_Output("An <i><b>XInput</b></i> gamepad is connected. Using <b>%s</b>.",
-                                XInputDLL);
+                            C_Output("A gamepad is connected. Using <i><b>%s</b></i>.", XInputVersion);
                     }
                 }
                 else
@@ -159,17 +163,17 @@ void I_InitGamepad(void)
                 const char  *name = SDL_JoystickName(gamepad);
 
                 if (*name)
-                    C_Output("A <i><b>DirectInput</b></i> gamepad called \"%s\" is connected.", name);
+                    C_Output("A gamepad called \"%s\" is connected. Using <i><b>DirectInput</b></i>.", name);
                 else
-                    C_Output("A <i><b>DirectInput</b></i> gamepad is connected.");
+                    C_Output("A gamepad is connected. Using <i><b>DirectInput</b></i>.");
             }
 #else
             const char  *name = SDL_JoystickName(gamepad);
 
             if (*name)
-                C_Output("A <i><b>DirectInput</b></i> gamepad called \"%s\" is connected.", name);
+                C_Output("A gamepad called \"%s\" is connected. Using <i><b>DirectInput</b></i>.", name);
             else
-                C_Output("A <i><b>DirectInput</b></i> gamepad is connected.");
+                C_Output("A gamepad is connected. Using <i><b>DirectInput</b></i>.");
 #endif
 
             SDL_JoystickEventState(SDL_ENABLE);
@@ -202,6 +206,7 @@ void I_PollThumbs_DirectInput_RightHanded(short LX, short LY, short RX, short RY
     gamepadthumbLX = clamp(SDL_JoystickGetAxis(gamepad, LX), gamepadleftdeadzone);
     gamepadthumbLY = clamp(SDL_JoystickGetAxis(gamepad, LY), gamepadleftdeadzone);
     gamepadthumbRX = clamp(SDL_JoystickGetAxis(gamepad, RX), gamepadrightdeadzone);
+    gamepadthumbRY = clamp(SDL_JoystickGetAxis(gamepad, RY), gamepadrightdeadzone);
 }
 
 void I_PollThumbs_DirectInput_LeftHanded(short LX, short LY, short RX, short RY)
@@ -209,6 +214,7 @@ void I_PollThumbs_DirectInput_LeftHanded(short LX, short LY, short RX, short RY)
     gamepadthumbLX = clamp(SDL_JoystickGetAxis(gamepad, RX), gamepadrightdeadzone);
     gamepadthumbLY = clamp(SDL_JoystickGetAxis(gamepad, RY), gamepadrightdeadzone);
     gamepadthumbRX = clamp(SDL_JoystickGetAxis(gamepad, LX), gamepadleftdeadzone);
+    gamepadthumbRY = clamp(SDL_JoystickGetAxis(gamepad, LY), gamepadleftdeadzone);
 }
 
 void I_PollDirectInputGamepad(void)
@@ -217,7 +223,7 @@ void I_PollDirectInputGamepad(void)
     {
         int hat = SDL_JoystickGetHat(gamepad, 0);
 
-        gamepadbuttons = (SDL_JoystickGetButton(gamepad, 0) << 14)
+        gamepadbuttons = ((SDL_JoystickGetButton(gamepad, 0) << 14)
             | (SDL_JoystickGetButton(gamepad, 1) << 12)
             | (SDL_JoystickGetButton(gamepad, 2) << 13)
             | (SDL_JoystickGetButton(gamepad, 3) << 15)
@@ -228,13 +234,13 @@ void I_PollDirectInputGamepad(void)
             | (SDL_JoystickGetButton(gamepad, 8) << 5)
             | (SDL_JoystickGetButton(gamepad, 9) << 4)
             | (SDL_JoystickGetButton(gamepad, 10) << 6)
-            | (SDL_JoystickGetButton(gamepad, 11) << 7);
+            | (SDL_JoystickGetButton(gamepad, 11) << 7));
 
         if (hat)
-            gamepadbuttons |= !!(hat & SDL_HAT_UP)
+            gamepadbuttons |= (!!(hat & SDL_HAT_UP)
                 | (!!(hat & SDL_HAT_RIGHT) << 3)
                 | (!!(hat & SDL_HAT_DOWN) << 1)
-                | (!!(hat & SDL_HAT_LEFT) << 2);
+                | (!!(hat & SDL_HAT_LEFT) << 2));
 
         if (gamepadbuttons)
         {
@@ -255,7 +261,6 @@ void I_PollDirectInputGamepad(void)
 
             ev.type = ev_gamepad;
             D_PostEvent(&ev);
-
             gamepadthumbsfunc(0, 1, 2, 3);
         }
         else
@@ -264,6 +269,7 @@ void I_PollDirectInputGamepad(void)
             gamepadthumbLX = 0;
             gamepadthumbLY = 0;
             gamepadthumbRX = 0;
+            gamepadthumbRY = 0;
         }
     }
 }
@@ -290,6 +296,7 @@ void I_PollThumbs_XInput_RightHanded(short LX, short LY, short RX, short RY)
     gamepadthumbLX = clamp(LX, gamepadleftdeadzone);
     gamepadthumbLY = -clamp(LY, gamepadleftdeadzone);
     gamepadthumbRX = clamp(RX, gamepadrightdeadzone);
+    gamepadthumbRY = (gp_invertyaxis ? -1 : 1) * clamp(RY, gamepadrightdeadzone);
 }
 
 void I_PollThumbs_XInput_LeftHanded(short LX, short LY, short RX, short RY)
@@ -297,6 +304,7 @@ void I_PollThumbs_XInput_LeftHanded(short LX, short LY, short RX, short RY)
     gamepadthumbLX = clamp(RX, gamepadrightdeadzone);
     gamepadthumbLY = -clamp(RY, gamepadrightdeadzone);
     gamepadthumbRX = clamp(LX, gamepadleftdeadzone);
+    gamepadthumbRY = (gp_invertyaxis ? -1 : 1) * clamp(LY, gamepadleftdeadzone);
 }
 
 void I_PollXInputGamepad(void)
@@ -310,10 +318,9 @@ void I_PollXInputGamepad(void)
         ZeroMemory(&state, sizeof(XINPUT_STATE));
         pXInputGetState(0, &state);
         Gamepad = state.Gamepad;
-
-        gamepadbuttons = Gamepad.wButtons
+        gamepadbuttons = (Gamepad.wButtons
             | ((Gamepad.bLeftTrigger >= XINPUT_GAMEPAD_TRIGGER_THRESHOLD) << 10)
-            | ((Gamepad.bRightTrigger >= XINPUT_GAMEPAD_TRIGGER_THRESHOLD) << 11);
+            | ((Gamepad.bRightTrigger >= XINPUT_GAMEPAD_TRIGGER_THRESHOLD) << 11));
 
         if (damagevibrationtics)
             if (!--damagevibrationtics && !weaponvibrationtics)
@@ -343,9 +350,7 @@ void I_PollXInputGamepad(void)
 
             ev.type = ev_gamepad;
             D_PostEvent(&ev);
-
-            gamepadthumbsfunc(Gamepad.sThumbLX, Gamepad.sThumbLY, Gamepad.sThumbRX,
-                Gamepad.sThumbRY);
+            gamepadthumbsfunc(Gamepad.sThumbLX, Gamepad.sThumbLY, Gamepad.sThumbRX, Gamepad.sThumbRY);
         }
         else
         {
@@ -353,6 +358,7 @@ void I_PollXInputGamepad(void)
             gamepadthumbLX = 0;
             gamepadthumbLY = 0;
             gamepadthumbRX = 0;
+            gamepadthumbRY = 0;
         }
     }
 #endif

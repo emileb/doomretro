@@ -74,24 +74,25 @@ extern dboolean     autoload;
 extern dboolean     centerweapon;
 extern dboolean     con_obituaries;
 extern dboolean     con_timestamps;
-extern int          episodeselected;
-extern int          expansionselected;
+extern int          episode;
+extern int          expansion;
 extern int          facebackcolor;
 extern float        gp_deadzone_left;
 extern float        gp_deadzone_right;
+extern dboolean     gp_invertyaxis;
 extern int          gp_sensitivity;
 extern dboolean     gp_swapthumbsticks;
 extern int          gp_vibrate_damage;
 extern int          gp_vibrate_weapons;
 extern char         *iwadfolder;
-extern dboolean     messages;
 extern float        m_acceleration;
 extern dboolean     m_doubleclick_use;
-extern dboolean     m_invert;
-extern dboolean     m_look;
+extern dboolean     m_invertyaxis;
 extern dboolean     m_novertical;
 extern int          m_sensitivity;
 extern int          m_threshold;
+extern dboolean     messages;
+extern dboolean     mouselook;
 extern int          movebob;
 extern char         *playername;
 extern dboolean     r_althud;
@@ -138,9 +139,8 @@ extern int          s_musicvolume;
 extern dboolean     s_randommusic;
 extern dboolean     s_randompitch;
 extern int          s_sfxvolume;
-extern char         *s_timiditycfgpath;
-extern int          savegameselected;
-extern int          skilllevelselected;
+extern int          savegame;
+extern int          skilllevel;
 extern int          stillbob;
 extern unsigned int stat_barrelsexploded;
 extern unsigned int stat_cheated;
@@ -201,6 +201,7 @@ extern char         *vid_windowsize;
 extern char         *wad;
 #endif
 extern int          weaponbob;
+extern dboolean     weaponrecoil;
 
 extern char         *packageconfig;
 extern dboolean     returntowidescreen;
@@ -245,11 +246,12 @@ static default_t cvars[] =
     CONFIG_VARIABLE_INT          (centerweapon,                                      BOOLVALUEALIAS  ),
     CONFIG_VARIABLE_INT          (con_obituaries,                                    BOOLVALUEALIAS  ),
     CONFIG_VARIABLE_INT          (con_timestamps,                                    BOOLVALUEALIAS  ),
-    CONFIG_VARIABLE_INT          (episodeselected,                                   NOVALUEALIAS    ),
-    CONFIG_VARIABLE_INT          (expansionselected,                                 NOVALUEALIAS    ),
+    CONFIG_VARIABLE_INT          (episode,                                           NOVALUEALIAS    ),
+    CONFIG_VARIABLE_INT          (expansion,                                         NOVALUEALIAS    ),
     CONFIG_VARIABLE_INT          (facebackcolor,                                     NOVALUEALIAS    ),
     CONFIG_VARIABLE_FLOAT_PERCENT(gp_deadzone_left,                                  NOVALUEALIAS    ),
     CONFIG_VARIABLE_FLOAT_PERCENT(gp_deadzone_right,                                 NOVALUEALIAS    ),
+    CONFIG_VARIABLE_INT          (gp_invertyaxis,                                    BOOLVALUEALIAS  ),
     CONFIG_VARIABLE_INT          (gp_sensitivity,                                    NOVALUEALIAS    ),
     CONFIG_VARIABLE_INT          (gp_swapthumbsticks,                                BOOLVALUEALIAS  ),
     CONFIG_VARIABLE_INT_PERCENT  (gp_vibrate_damage,                                 NOVALUEALIAS    ),
@@ -257,12 +259,12 @@ static default_t cvars[] =
     CONFIG_VARIABLE_STRING       (iwadfolder,                                        NOVALUEALIAS    ),
     CONFIG_VARIABLE_FLOAT        (m_acceleration,                                    NOVALUEALIAS    ),
     CONFIG_VARIABLE_INT          (m_doubleclick_use,                                 BOOLVALUEALIAS  ),
-    CONFIG_VARIABLE_INT          (m_invert,                                          BOOLVALUEALIAS  ),
-    CONFIG_VARIABLE_INT          (m_look,                                            BOOLVALUEALIAS  ),
+    CONFIG_VARIABLE_INT          (m_invertyaxis,                                     BOOLVALUEALIAS  ),
     CONFIG_VARIABLE_INT          (m_novertical,                                      BOOLVALUEALIAS  ),
     CONFIG_VARIABLE_INT          (m_sensitivity,                                     NOVALUEALIAS    ),
     CONFIG_VARIABLE_INT          (m_threshold,                                       NOVALUEALIAS    ),
     CONFIG_VARIABLE_INT          (messages,                                          BOOLVALUEALIAS  ),
+    CONFIG_VARIABLE_INT          (mouselook,                                         BOOLVALUEALIAS  ),
     CONFIG_VARIABLE_INT_PERCENT  (movebob,                                           NOVALUEALIAS    ),
     CONFIG_VARIABLE_STRING       (playername,                                        NOVALUEALIAS    ),
     CONFIG_VARIABLE_INT          (r_althud,                                          BOOLVALUEALIAS  ),
@@ -310,9 +312,8 @@ static default_t cvars[] =
     CONFIG_VARIABLE_INT          (s_randommusic,                                     BOOLVALUEALIAS  ),
     CONFIG_VARIABLE_INT          (s_randompitch,                                     BOOLVALUEALIAS  ),
     CONFIG_VARIABLE_INT_PERCENT  (s_sfxvolume,                                       NOVALUEALIAS    ),
-    CONFIG_VARIABLE_STRING       (s_timiditycfgpath,                                 NOVALUEALIAS    ),
-    CONFIG_VARIABLE_INT          (savegameselected,                                  NOVALUEALIAS    ),
-    CONFIG_VARIABLE_INT          (skilllevelselected,                                NOVALUEALIAS    ),
+    CONFIG_VARIABLE_INT          (savegame,                                          NOVALUEALIAS    ),
+    CONFIG_VARIABLE_INT          (skilllevel,                                        NOVALUEALIAS    ),
     CONFIG_VARIABLE_INT_PERCENT  (stillbob,                                          NOVALUEALIAS    ),
     CONFIG_VARIABLE_INT_PERCENT  (turbo,                                             NOVALUEALIAS    ),
     CONFIG_VARIABLE_INT          (units,                                             UNITSVALUEALIAS ),
@@ -336,6 +337,7 @@ static default_t cvars[] =
     CONFIG_VARIABLE_STRING       (wad,                                               NOVALUEALIAS    ),
 #endif
     CONFIG_VARIABLE_INT_PERCENT  (weaponbob,                                         NOVALUEALIAS    ),
+    CONFIG_VARIABLE_INT          (weaponrecoil,                                      BOOLVALUEALIAS  ),
     BLANKLINE,
     COMMENT("; player stats\n"),
     CONFIG_VARIABLE_INT_UNSIGNED (stat_barrelsexploded,                              NOVALUEALIAS    ),
@@ -582,9 +584,6 @@ void M_SaveCVARs(void)
         if (actions[i].keyboard1)
             SaveBind(file, actions[i].action, *(int *)actions[i].keyboard1, keyboardcontrol);
 
-        if (actions[i].mouse2)
-            SaveBind(file, actions[i].action, *(int *)actions[i].mouse2, mousecontrol);
-
         if (actions[i].mouse1)
             SaveBind(file, actions[i].action, *(int *)actions[i].mouse1, mousecontrol);
 
@@ -725,10 +724,9 @@ static void M_CheckCVARs(void)
     if (con_timestamps != false && con_timestamps != true)
         con_timestamps = con_timestamps_default;
 
-    episodeselected = BETWEEN(episodeselected_min, episodeselected,
-        episodeselected_max - (gamemode == registered));
+    episode = BETWEEN(episode_min, episode, episode_max - (gamemode == registered));
 
-    expansionselected = BETWEEN(expansionselected_min, expansionselected, expansionselected_max);
+    expansion = BETWEEN(expansion_min, expansion, expansion_max);
 
     if (facebackcolor < facebackcolor_min || facebackcolor > facebackcolor_max)
         facebackcolor = facebackcolor_default;
@@ -738,6 +736,9 @@ static void M_CheckCVARs(void)
 
     gp_deadzone_right = BETWEENF(gp_deadzone_right_min, gp_deadzone_right, gp_deadzone_right_max);
     I_SetGamepadRightDeadZone(gp_deadzone_right);
+
+    if (gp_invertyaxis != false && gp_invertyaxis != true)
+        gp_invertyaxis = gp_invertyaxis_default;
 
     gp_sensitivity = BETWEEN(gp_sensitivity_min, gp_sensitivity, gp_sensitivity_max);
     I_SetGamepadSensitivity(gp_sensitivity);
@@ -752,11 +753,8 @@ static void M_CheckCVARs(void)
     if (m_doubleclick_use != false && m_doubleclick_use != true)
         m_doubleclick_use = m_doubleclick_use_default;
 
-    if (m_invert != false && m_invert != true)
-        m_invert = m_invert_default;
-
-    if (m_look != false && m_look != true)
-        m_look = m_look_default;
+    if (m_invertyaxis != false && m_invertyaxis != true)
+        m_invertyaxis = m_invertyaxis_default;
 
     if (m_novertical != false && m_novertical != true)
         m_novertical = m_novertical_default;
@@ -765,6 +763,9 @@ static void M_CheckCVARs(void)
 
     if (messages != false && messages != true)
         messages = messages_default;
+
+    if (mouselook != false && mouselook != true)
+        mouselook = mouselook_default;
 
     movebob = BETWEEN(movebob_min, movebob, movebob_max);
 
@@ -898,9 +899,9 @@ static void M_CheckCVARs(void)
     s_sfxvolume = BETWEEN(s_sfxvolume_min, s_sfxvolume, s_sfxvolume_max);
     sfxVolume = (s_sfxvolume * 31 + 50) / 100;
 
-    savegameselected = BETWEEN(savegameselected_min, savegameselected, savegameselected_max);
+    savegame = BETWEEN(savegame_min, savegame, savegame_max);
 
-    skilllevelselected = BETWEEN(skilllevelselected_min, skilllevelselected, skilllevelselected_max);
+    skilllevel = BETWEEN(skilllevel_min, skilllevel, skilllevel_max);
 
     stillbob = BETWEEN(stillbob_min, stillbob, stillbob_max);
 
@@ -958,6 +959,7 @@ void bind_cmd_func2(char *cmd, char *parms);
 void M_LoadCVARs(char *filename)
 {
     int     i;
+    int     count = 0;
 
     // read the file in, overriding any set defaults
     FILE    *file = fopen(filename, "r");
@@ -979,37 +981,37 @@ void M_LoadCVARs(char *filename)
 
     while (!feof(file))
     {
-        char    defname[64] = "";
-        char    strparm[256] = "";
+        char    cvar[64] = "";
+        char    value[256] = "";
 
-        if (fscanf(file, "%63s %255[^\n]\n", defname, strparm) != 2)
+        if (fscanf(file, "%63s %255[^\n]\n", cvar, value) != 2)
             continue;
 
-        if (defname[0] == ';')
+        if (cvar[0] == ';')
             continue;
 
-        if (M_StringCompare(defname, "bind"))
+        if (M_StringCompare(cvar, "bind"))
         {
             if (!togglingvanilla)
-                bind_cmd_func2("bind", strparm);
+                bind_cmd_func2("bind", value);
 
             continue;
         }
-        else if (M_StringCompare(defname, "alias"))
+        else if (M_StringCompare(cvar, "alias"))
         {
             if (!togglingvanilla)
-                alias_cmd_func2("alias", strparm);
+                alias_cmd_func2("alias", value);
 
             continue;
         }
 
         // Strip off trailing non-printable characters (\r characters from DOS text files)
-        while (strlen(strparm) > 0 && !isprint((unsigned char)strparm[strlen(strparm) - 1]))
-            strparm[strlen(strparm) - 1] = '\0';
+        while (strlen(value) > 0 && !isprint((unsigned char)value[strlen(value) - 1]))
+            value[strlen(value) - 1] = '\0';
 
         if (togglingvanilla)
         {
-            C_ValidateInput(M_StringJoin(defname, " ", strparm, NULL));
+            C_ValidateInput(M_StringJoin(cvar, " ", value, NULL));
             continue;
         }
 
@@ -1018,31 +1020,33 @@ void M_LoadCVARs(char *filename)
         {
             char    *s;
 
-            if (!M_StringCompare(defname, cvars[i].name))
+            if (!M_StringCompare(cvar, cvars[i].name))
                 continue;       // not this one
+
+            count++;
 
             // parameter found
             switch (cvars[i].type)
             {
                 case DEFAULT_STRING:
-                    s = strdup(strparm + 1);
+                    s = strdup(value + 1);
                     s[strlen(s) - 1] = '\0';
                     *(char **)cvars[i].location = s;
                     break;
 
                 case DEFAULT_INT:
-                    M_StringCopy(strparm, uncommify(strparm), 256);
-                    *(int *)cvars[i].location = ParseIntParameter(strparm, cvars[i].valuealiastype);
+                    M_StringCopy(value, uncommify(value), 256);
+                    *(int *)cvars[i].location = ParseIntParameter(value, cvars[i].valuealiastype);
                     break;
 
                 case DEFAULT_INT_UNSIGNED:
-                    M_StringCopy(strparm, uncommify(strparm), 256);
-                    sscanf(strparm, "%10u", (unsigned int *)cvars[i].location);
+                    M_StringCopy(value, uncommify(value), 256);
+                    sscanf(value, "%10u", (unsigned int *)cvars[i].location);
                     break;
 
                 case DEFAULT_INT_PERCENT:
-                    M_StringCopy(strparm, uncommify(strparm), 256);
-                    s = strdup(strparm);
+                    M_StringCopy(value, uncommify(value), 256);
+                    s = strdup(value);
 
                     if (strlen(s) >= 1 && s[strlen(s) - 1] == '%')
                         s[strlen(s) - 1] = '\0';
@@ -1051,13 +1055,13 @@ void M_LoadCVARs(char *filename)
                     break;
 
                 case DEFAULT_FLOAT:
-                    M_StringCopy(strparm, uncommify(strparm), 256);
-                    *(float *)cvars[i].location = ParseFloatParameter(strparm, cvars[i].valuealiastype);
+                    M_StringCopy(value, uncommify(value), 256);
+                    *(float *)cvars[i].location = ParseFloatParameter(value, cvars[i].valuealiastype);
                     break;
 
                 case DEFAULT_FLOAT_PERCENT:
-                    M_StringCopy(strparm, uncommify(strparm), 256);
-                    s = strdup(strparm);
+                    M_StringCopy(value, uncommify(value), 256);
+                    s = strdup(value);
 
                     if (strlen(s) >= 1 && s[strlen(s) - 1] == '%')
                         s[strlen(s) - 1] = '\0';
@@ -1066,7 +1070,7 @@ void M_LoadCVARs(char *filename)
                     break;
 
                 case DEFAULT_OTHER:
-                    *(char **)cvars[i].location = strdup(strparm);
+                    *(char **)cvars[i].location = strdup(value);
                     break;
             }
 
@@ -1079,7 +1083,7 @@ void M_LoadCVARs(char *filename)
 
     if (!togglingvanilla)
     {
-        C_Output("Loaded CVARs from <b>%s</b>.", filename);
+        C_Output("Loaded %i CVARs from <b>%s</b>.", count, filename);
         M_CheckCVARs();
         cvarsloaded = true;
     }

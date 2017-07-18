@@ -36,6 +36,10 @@
 ========================================================================
 */
 
+#if defined(_WIN32)
+#include <Windows.h>
+#endif
+
 #include <ctype.h>
 
 #include "c_console.h"
@@ -43,6 +47,8 @@
 #include "i_swap.h"
 #include "i_system.h"
 #include "m_misc.h"
+#include "version.h"
+#include "w_merge.h"
 #include "w_wad.h"
 #include "z_zone.h"
 
@@ -50,7 +56,7 @@
 #pragma pack(push, 1)
 #endif
 
-typedef struct
+typedef struct wadinfo_s
 {
     // Should be "IWAD" or "PWAD".
     char            identification[4];
@@ -58,7 +64,7 @@ typedef struct
     int             infotableofs;
 } PACKEDATTR wadinfo_t;
 
-typedef struct
+typedef struct filelump_s
 {
     int             filepos;
     int             size;
@@ -69,7 +75,8 @@ typedef struct
 #pragma pack(pop)
 #endif
 
-static struct {
+static struct cachelump_s
+{
     void            *cache;
     unsigned int    locks;
 } *cachelump;
@@ -77,6 +84,8 @@ static struct {
 // Location of each lump on disk.
 lumpinfo_t          **lumpinfo;
 int                 numlumps;
+
+extern char *packagewad;
 
 static dboolean IsFreedoom(const char *iwadname)
 {
@@ -113,6 +122,24 @@ static dboolean IsFreedoom(const char *iwadname)
     return result;
 }
 
+char *GetCorrectCase(char *path)
+{
+#if defined(_WIN32)
+    WIN32_FIND_DATA FindFileData;
+    HANDLE          hFile = FindFirstFile(path, &FindFileData);
+
+    if (hFile == INVALID_HANDLE_VALUE)
+        return path;
+    else
+    {
+        FindClose(hFile);
+        strreplace(path, FindFileData.cFileName, FindFileData.cFileName);
+    }
+#endif
+
+    return path;
+}
+
 //
 // LUMP BASED ROUTINES.
 //
@@ -125,23 +152,25 @@ static dboolean IsFreedoom(const char *iwadname)
 //  with multiple lumps.
 wadfile_t *W_AddFile(char *filename, dboolean automatic)
 {
-    wadinfo_t   header;
-    lumpindex_t i;
-    int         length;
-    int         startlump;
-    filelump_t  *fileinfo;
-    filelump_t  *filerover;
-    lumpinfo_t  *filelumps;
+    static dboolean packagewadadded;
+    wadinfo_t       header;
+    lumpindex_t     i;
+    int             length;
+    int             startlump;
+    filelump_t      *fileinfo;
+    filelump_t      *filerover;
+    lumpinfo_t      *filelumps;
 
     // open the file and add to directory
-    wadfile_t  *wadfile = W_OpenFile(filename);
+    wadfile_t   *wadfile = W_OpenFile(filename);
 
     if (!wadfile)
         return NULL;
 
-    M_StringCopy(wadfile->path, filename, sizeof(wadfile->path));
+    M_StringCopy(wadfile->path, GetCorrectCase(filename), sizeof(wadfile->path));
 
-    wadfile->freedoom = IsFreedoom(filename);
+    if ((wadfile->freedoom = IsFreedoom(filename)))
+        FREEDOOM = true;
 
     // WAD file
     W_Read(wadfile, 0, &header, sizeof(header));
@@ -152,7 +181,6 @@ wadfile_t *W_AddFile(char *filename, dboolean automatic)
 
     wadfile->type = (!strncmp(header.identification, "IWAD", 4)
         || M_StringCompare(leafname(filename), "DOOM2.WAD") ? IWAD : PWAD);
-
 
     header.numlumps = LONG(header.numlumps);
     header.infotableofs = LONG(header.infotableofs);
@@ -188,7 +216,15 @@ wadfile_t *W_AddFile(char *filename, dboolean automatic)
 
     C_Output("%s %s lump%s from %s <b>%s</b>.", (automatic ? "Automatically added" : "Added"),
         commify(numlumps - startlump), (numlumps - startlump == 1 ? "" : "s"),
-        (wadfile->type == IWAD ? "IWAD" : "PWAD"), filename);
+        (wadfile->type == IWAD ? "IWAD" : "PWAD"), wadfile->path);
+
+    if (!packagewadadded)
+    {
+        packagewadadded = true;
+
+        if (!W_MergeFile(packagewad, true))
+            I_Error("%s is invalid.", packagewad);
+    }
 
     return wadfile;
 }
@@ -478,7 +514,7 @@ void *W_CacheLumpNum(lumpindex_t lump)
 
     // cph - if wasn't locked but now is, tell z_zone to hold it
     if (!cachelump[lump].locks && locks)
-        Z_ChangeTag(cachelump[lump].cache,PU_STATIC);
+        Z_ChangeTag(cachelump[lump].cache, PU_STATIC);
 
     cachelump[lump].locks += locks;
 

@@ -46,9 +46,10 @@
 #define DEADLOOKDIRINC  24
 
 extern fixed_t  animatedliquiddiff;
-extern dboolean m_look;
+extern dboolean canmouselook;
 extern dboolean r_liquid_bob;
 extern dboolean skipaction;
+extern dboolean usemouselook;
 
 void G_RemoveChoppers(void);
 
@@ -57,9 +58,9 @@ void G_RemoveChoppers(void);
 //
 
 int             movebob = movebob_default;
-int             stillbob = stillbob_default;
 dboolean        r_liquid_lowerview = r_liquid_lowerview_default;
 int             r_shake_damage = r_shake_damage_default;
+int             stillbob = stillbob_default;
 
 static dboolean onground;
 
@@ -67,7 +68,7 @@ static dboolean onground;
 // P_Thrust
 // Moves the given origin along a given angle.
 //
-static void P_Thrust(player_t *player, angle_t angle, fixed_t move)
+void P_Thrust(player_t *player, angle_t angle, fixed_t move)
 {
     player->mo->momx += FixedMul(move, finecosine[angle >>= ANGLETOFINESHIFT]);
     player->mo->momy += FixedMul(move, finesine[angle]);
@@ -217,9 +218,18 @@ static void P_MovePlayer(player_t *player)
             P_SetMobjState(mo, S_PLAY_RUN1);
     }
 
-    if (m_look)
-        player->lookdir = BETWEEN(-LOOKDIRMAX * MLOOKUNIT, player->lookdir + cmd->lookdir,
-            LOOKDIRMAX * MLOOKUNIT);
+    player->lookdir = BETWEEN(-LOOKDIRMAX * MLOOKUNIT, player->lookdir + cmd->lookdir,
+        LOOKDIRMAX * MLOOKUNIT);
+
+    if (player->lookdir && !usemouselook)
+    {
+        if (player->lookdir > 0)
+            player->lookdir -= 16 * MLOOKUNIT;
+        else if (player->lookdir < 0)
+            player->lookdir += 16 * MLOOKUNIT;
+        if (ABS(player->lookdir) < 16 * MLOOKUNIT)
+            player->lookdir = 0;
+    }
 }
 
 // P_ReduceDamageCount
@@ -261,7 +271,7 @@ static void P_DeathThink(player_t *player)
         if (player->viewheight < 6 * FRACUNIT)
             player->viewheight = 6 * FRACUNIT;
 
-        if (m_look)
+        if (canmouselook)
         {
             if (player->lookdir > DEADLOOKDIR)
                 player->lookdir -= DEADLOOKDIRINC;
@@ -302,10 +312,8 @@ static void P_DeathThink(player_t *player)
     if (consoleheight)
         return;
 
-    if (((player->cmd.buttons & BT_USE)
-        || ((player->cmd.buttons & BT_ATTACK) && !player->damagecount && count > TICRATE * 2)
-        || keystate[SDL_SCANCODE_RETURN]
-        || keystate[SDL_SCANCODE_KP_ENTER]))
+    if (((player->cmd.buttons & BT_USE) || ((player->cmd.buttons & BT_ATTACK) && !player->damagecount
+        && count > TICRATE * 2) || keystate[SDL_SCANCODE_RETURN] || keystate[SDL_SCANCODE_KP_ENTER]))
     {
         count = 0;
         damagevibrationtics = 1;
@@ -369,8 +377,7 @@ void P_PlayerThink(player_t *player)
     const struct msecnode_s *seclist;
     static int              motionblur;
 
-    // [AM] Assume we can interpolate at the beginning
-    //      of the tic.
+    // [AM] Assume we can interpolate at the beginning of the tic.
     mo->interp = true;
 
     // [AM] Store starting position for player interpolation.
@@ -380,6 +387,7 @@ void P_PlayerThink(player_t *player)
     mo->oldangle = mo->angle;
     player->oldviewz = player->viewz;
     player->oldlookdir = player->lookdir;
+    player->oldrecoil = player->recoil;
 
     if (player->cheats & CF_NOCLIP)
         mo->flags |= MF_NOCLIP;
@@ -403,8 +411,14 @@ void P_PlayerThink(player_t *player)
         {
             if (player->damagecount)
                 motionblur = MAX(motionblur, 100);
-            else if (cmd->angleturn)
-                motionblur = MIN(ABS(cmd->angleturn) * 100 / 960, 150);
+            else
+            {
+                if (cmd->angleturn)
+                    motionblur = MIN(ABS(cmd->angleturn) * 100 / 960, 150);
+
+                if (cmd->lookdir)
+                    motionblur = MAX(motionblur, 100);
+            }
         }
 
         I_SetMotionBlur(motionblur * vid_motionblur / 100);
@@ -414,6 +428,9 @@ void P_PlayerThink(player_t *player)
         motionblur = 0;
         I_SetMotionBlur(0);
     }
+
+    if (player->recoil)
+        player->recoil += (player->recoil > 0 ? -1 : 1);
 
     if (player->playerstate == PST_DEAD)
     {

@@ -39,26 +39,26 @@
 #if !defined(__M_MENU_H__)
 #define __M_MENU_H__
 
-typedef struct
+typedef struct menuitem_s
 {
-    short               status;
-    char                name[10];
-    void                (*routine)(int choice);
-    char                **text;
+    short           status;
+    char            name[10];
+    void            (*routine)(int choice);
+    char            **text;
 } menuitem_t;
 
 typedef struct menu_s
 {
-    short               numitems;
-    struct menu_s       *prevMenu;
-    menuitem_t          *menuitems;
-    void                (*routine)(void);
-    short               x;
-    short               y;
-    int                 lastOn;
+    short           numitems;
+    struct menu_s   *prevMenu;
+    menuitem_t      *menuitems;
+    void            (*routine)(void);
+    short           x;
+    short           y;
+    int             lastOn;
 } menu_t;
 
-dboolean        startingnewgame;
+dboolean    startingnewgame;
 
 //
 // MENUS
@@ -95,6 +95,7 @@ void M_DrawCenteredString(int y, char *str);
 void M_SetWindowCaption(void);
 
 void M_UpdateSaveGameName(int i);
+int M_CountSaveGames(void);
 
 void M_StartMessage(char *string, void *routine, dboolean input);
 
@@ -112,13 +113,9 @@ extern int      s_sfxvolume;
 extern dboolean vid_widescreen;
 extern dboolean r_hud;
 extern dboolean returntowidescreen;
-extern char     *episode;
-extern char     *expansion;
-extern char     *savegame;
-extern char     *skilllevel;
-extern int      episodeselected;
-extern int      expansionselected;
-extern int      savegameselected;
-extern int      skilllevelselected;
+extern int      episode;
+extern int      expansion;
+extern int      savegame;
+extern int      skilllevel;
 
 #endif

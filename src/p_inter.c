@@ -155,6 +155,7 @@ static void P_AddAmmo(player_t *player, ammotype_t ammo, int num)
             break;
     }
 }
+
 //
 // GET STUFF
 //
@@ -629,11 +630,11 @@ dboolean P_GivePower(player_t *player, int power)
     static const int tics[NUMPOWERS] =
     {
         /* pw_invulnerability */ INVULNTICS,
-        /* pw_strength */        1,
-        /* pw_invisibility */    INVISTICS,
-        /* pw_ironfeet */        IRONTICS,
-        /* pw_allmap */          STARTFLASHING + 1,
-        /* pw_infrared */        INFRATICS
+        /* pw_strength        */ 1,
+        /* pw_invisibility    */ INVISTICS,
+        /* pw_ironfeet        */ IRONTICS,
+        /* pw_allmap          */ STARTFLASHING + 1,
+        /* pw_infrared        */ INFRATICS
    };
 
     if (player->powers[power] < 0)
@@ -711,7 +712,6 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, dboolean message, dbo
 
                 if (player->health > maxhealth)
                     player->health = maxhealth;
-
                 else
                 {
                     P_AddHealth(player, 1);
@@ -940,7 +940,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, dboolean message, dbo
 
             if (message)
             {
-                if (ammo == clipammo[am_clip] || deh_strlookup[p_GOTCLIP].assigned == 2)
+                if (ammo == clipammo[am_clip] || deh_strlookup[p_GOTCLIP].assigned == 2 || hacx)
                     HU_PlayerMessage(s_GOTCLIP, false);
                 else
                     HU_PlayerMessage((ammo == clipammo[am_clip] / 2 ? s_GOTHALFCLIP : s_GOTCLIPX2), false);
@@ -963,7 +963,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, dboolean message, dbo
 
             if (message)
             {
-                if (ammo == clipammo[am_misl] || deh_strlookup[p_GOTROCKET].assigned == 2)
+                if (ammo == clipammo[am_misl] || deh_strlookup[p_GOTROCKET].assigned == 2 || hacx)
                     HU_PlayerMessage(s_GOTROCKET, false);
                 else
                     HU_PlayerMessage(s_GOTROCKETX2, false);
@@ -986,7 +986,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, dboolean message, dbo
 
             if (message)
             {
-                if (ammo == clipammo[am_cell] || deh_strlookup[p_GOTCELL].assigned == 2)
+                if (ammo == clipammo[am_cell] || deh_strlookup[p_GOTCELL].assigned == 2 || hacx)
                     HU_PlayerMessage(s_GOTCELL, false);
                 else
                     HU_PlayerMessage(s_GOTCELLX2, false);
@@ -1009,7 +1009,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, dboolean message, dbo
 
             if (message)
             {
-                if (ammo == clipammo[am_shell] || deh_strlookup[p_GOTSHELLS].assigned == 2)
+                if (ammo == clipammo[am_shell] || deh_strlookup[p_GOTSHELLS].assigned == 2 || hacx)
                     HU_PlayerMessage(s_GOTSHELLS, false);
                 else
                     HU_PlayerMessage(s_GOTSHELLSX2, false);
@@ -1090,6 +1090,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, dboolean message, dbo
 
         case SPR_SHOT:
             weaponowned = player->weaponowned[wp_shotgun];
+
             if (!P_GiveWeapon(player, wp_shotgun, (special->flags & MF_DROPPED), stat))
                 return;
 
@@ -1175,8 +1176,7 @@ void P_UpdateKillStat(mobjtype_t type, int value)
             break;
 
         case MT_CHAINGUY:
-            stat_monsterskilled_heavyweapondudes = SafeAdd(stat_monsterskilled_heavyweapondudes,
-                value);
+            stat_monsterskilled_heavyweapondudes = SafeAdd(stat_monsterskilled_heavyweapondudes, value);
             break;
 
         case MT_KNIGHT:
@@ -1196,8 +1196,7 @@ void P_UpdateKillStat(mobjtype_t type, int value)
             break;
 
         case MT_PAIN:
-            stat_monsterskilled_painelementals = SafeAdd(stat_monsterskilled_painelementals,
-                value);
+            stat_monsterskilled_painelementals = SafeAdd(stat_monsterskilled_painelementals, value);
             break;
 
         case MT_UNDEAD:
@@ -1213,8 +1212,7 @@ void P_UpdateKillStat(mobjtype_t type, int value)
             break;
 
         case MT_SPIDER:
-            stat_monsterskilled_spidermasterminds = SafeAdd(stat_monsterskilled_spidermasterminds,
-                value);
+            stat_monsterskilled_spidermasterminds = SafeAdd(stat_monsterskilled_spidermasterminds, value);
             break;
 
         case MT_POSSESSED:
@@ -1276,21 +1274,22 @@ void P_KillMobj(mobj_t *target, mobj_t *inflicter, mobj_t *source)
         }
     }
 
-    if (!chex && !hacx)
+    if (target->flags & MF_COUNTKILL)
     {
-        if (target->flags & MF_COUNTKILL)
+        // count all monster deaths, even those caused by other monsters
+        player->killcount++;
+        stat_monsterskilled = SafeAdd(stat_monsterskilled, 1);
+
+        if (!chex && !hacx)
         {
-            // count all monster deaths, even those caused by other monsters
-            player->killcount++;
             player->mobjcount[type]++;
-            stat_monsterskilled = SafeAdd(stat_monsterskilled, 1);
             P_UpdateKillStat(type, 1);
         }
-        else if (type == MT_BARREL)
-        {
-            player->mobjcount[type]++;
-            stat_barrelsexploded = SafeAdd(stat_barrelsexploded, 1);
-        }
+    }
+    else if (type == MT_BARREL && !chex && !hacx)
+    {
+        player->mobjcount[type]++;
+        stat_barrelsexploded = SafeAdd(stat_barrelsexploded, 1);
     }
 
     if (type == MT_BARREL && source)
@@ -1343,7 +1342,7 @@ void P_KillMobj(mobj_t *target, mobj_t *inflicter, mobj_t *source)
                 (type == MT_BARREL ? "exploded" : (gibbed ? "gibbed" : "killed")),  (target->player ? "" :
                 (source->type == target->type ? "another " : (isvowel(info->name1[0]) ? "an " : "a "))),
                 (target->player ? (M_StringCompare(playername, playername_default) ? playername :
-                    titlecase(playername)) : info->name1));
+                titlecase(playername)) : info->name1));
     }
 
     // Drop stuff.
@@ -1432,8 +1431,8 @@ void P_DamageMobj(mobj_t *target, mobj_t *inflicter, mobj_t *source, int damage,
         fixed_t         thrust = damage * (FRACUNIT >> 3) * 100 / mass;
 
         // make fall forwards sometimes
-        if (damage < 40 && damage > target->health
-            && target->z - inflicter->z > 64 * FRACUNIT && (M_Random() & 1))
+        if (damage < 40 && damage > target->health  && target->z - inflicter->z > 64 * FRACUNIT
+            && (M_Random() & 1))
         {
             ang += ANG180;
             thrust *= 4;

@@ -79,13 +79,9 @@ gamestate_t     oldgamestate;
 gameaction_t    gameaction;
 gamestate_t     gamestate = GS_TITLESCREEN;
 skill_t         gameskill;
+skill_t         pendinggameskill;
 int             gameepisode;
 int             gamemap;
-
-char            *episode = episode_default;
-char            *expansion = expansion_default;
-char            *savegame = savegame_default;
-char            *skilllevel = skilllevel_default;
 
 char **episodes[] =
 {
@@ -122,16 +118,16 @@ int             gametic;
 int             activetic;
 int             gametime;
 int             levelstarttic;          // gametic at level start
-int             totalkills, totalitems, totalsecret;    // for intermission
+int             totalkills;             // for intermission
+int             totalitems;
+int             totalsecret;
+int             totalpickups;
 int             monstercount[NUMMOBJTYPES];
 int             barrelcount;
 
 wbstartstruct_t wminfo;                 // parms for world map / intermission
 
 dboolean        autoload = autoload_default;
-dboolean        gp_swapthumbsticks = gp_swapthumbsticks_default;
-int             gp_vibrate_damage = gp_vibrate_damage_default;
-int             gp_vibrate_weapons = gp_vibrate_weapons_default;
 
 #define MAXPLMOVE       forwardmove[1]
 
@@ -170,7 +166,7 @@ static int *gamepadweapons[] =
     &gamepadweapon7
 };
 
-struct
+struct weapons_s
 {
     weapontype_t    prev;
     weapontype_t    next;
@@ -202,9 +198,11 @@ int             mousex;
 int             mousey;
 
 dboolean        m_doubleclick_use = m_doubleclick_use_default;
-dboolean        m_invert = m_invert_default;
-dboolean        m_look = m_look_default;
+dboolean        m_invertyaxis = m_invertyaxis_default;
 dboolean        m_novertical = m_novertical_default;
+dboolean        mouselook = mouselook_default;
+dboolean        canmouselook = false;
+dboolean        usemouselook = false;
 
 static int      dclicktime;
 static dboolean dclickstate;
@@ -320,6 +318,9 @@ void G_BuildTiccmd(ticcmd_t *cmd)
     run = (gamekeydown[keyboardrun] + !!mousebuttons[mouserun] + !!(gamepadbuttons & gamepadrun)
         + alwaysrun == 1);
 
+    usemouselook = (mouselook || gamekeydown[keyboardmouselook] || mousebuttons[mousemouselook]
+        || (gamepadbuttons & gamepadmouselook));
+
     // use two stage accelerative turning
     // on the keyboard
     if (gamekeydown[keyboardright] || gamekeydown[keyboardleft] || (gamepadbuttons & gamepadleft)
@@ -348,6 +349,14 @@ void G_BuildTiccmd(ticcmd_t *cmd)
             cmd->angleturn += angleturn[turnheld < SLOWTURNTICS ? 2 : run];
         else if (gamepadthumbRX < 0)
             cmd->angleturn += (int)(gamepadangleturn[run] * gamepadthumbRXleft * gamepadsensitivity);
+    }
+
+    if (usemouselook)
+    {
+        if (gamepadthumbRY < 0)
+            cmd->lookdir = (int)(64 * gamepadthumbRYup * gamepadsensitivity);
+        else if (gamepadthumbRY > 0)
+            cmd->lookdir = (int)(64 * gamepadthumbRYdown * gamepadsensitivity);
     }
 
     if (gamekeydown[keyboardforward] || gamekeydown[keyboardforward2] || (gamepadbuttons & gamepadforward))
@@ -472,18 +481,25 @@ void G_BuildTiccmd(ticcmd_t *cmd)
         }
     }
 
-    if (m_look)
-        cmd->lookdir = (m_invert ? -mousey : mousey);
-    else if (!m_novertical)
-        forward += mousey;
+    if (mousex)
+    {
+        if (strafe)
+            side += mousex * 2;
+        else
+            cmd->angleturn -= mousex * 0x8;
 
-    if (strafe)
-        side += mousex * 2;
-    else
-        cmd->angleturn -= mousex * 0x8;
+        mousex = 0;
+    }
 
-    mousex = 0;
-    mousey = 0;
+    if (mousey)
+    {
+        if (usemouselook && !automapactive)
+            cmd->lookdir = (m_invertyaxis ? -mousey : mousey);
+        else if (!m_novertical)
+            forward += mousey;
+
+        mousey = 0;
+    }
 
 #ifdef __ANDROID__
     extern void G_AndroidBuildTiccmd(ticcmd_t *cmd);
@@ -564,6 +580,7 @@ void G_DoLoadLevel(void)
     HU_DrawDisk();
 
     R_InitSkyMap();
+    R_InitColumnFunctions();
 
     levelstarttic = gametic;                    // for time calculation
 
@@ -599,6 +616,16 @@ void G_DoLoadLevel(void)
     if (pistolstart || P_GetMapPistolStart(map))
         G_ResetPlayer(player);
 
+    if (pendinggameskill)
+    {
+        gameskill = pendinggameskill - 1;
+
+        if (gameskill == sk_nightmare)
+            player->cheats &= ~(CF_NOCLIP | CF_GODMODE | CF_CHOPPERS | CF_BUDDHA);
+
+        pendinggameskill = 0;
+    }
+
     M_ClearRandom();
 
     // initialize the msecnode_t freelist. phares 3/25/98
@@ -617,17 +644,6 @@ void G_DoLoadLevel(void)
         C_Print(titlestring, mapnumandtitle);
 
     P_SetupLevel(ep, gamemap);
-
-    if (r_textures)
-    {
-        if (r_skycolor != r_skycolor_default)
-            skycolfunc = R_DrawSkyColorColumn;
-        else
-            skycolfunc = (canmodify && !transferredsky && (gamemode != commercial || gamemap < 21)
-                && !m_look ? R_DrawFlippedSkyColumn : R_DrawSkyColumn);
-    }
-    else
-        skycolfunc = R_DrawSkyColorColumn;
 
     st_facecount = 0;
 
@@ -894,9 +910,6 @@ dboolean G_Responder(event_t *ev)
             }
 
             return true;            // eat events
-
-        default:
-            break;
     }
     return false;
 }
@@ -1126,7 +1139,10 @@ void G_PlayerReborn(void)
     player->itemcount = itemcount;
     player->secretcount = secretcount;
 
-    player->usedown = player->attackdown = true;        // don't do anything immediately
+    // don't do anything immediately
+    player->usedown = true;
+    player->attackdown = true;
+
     player->playerstate = PST_LIVE;
     player->health = initial_health;
     player->preferredshotgun = wp_shotgun;
@@ -1199,7 +1215,7 @@ void G_SecretExitLevel(void)
     gameaction = ga_completed;
 }
 
-extern int      episodeselected;
+extern int      episode;
 extern menu_t   EpiDef;
 
 void ST_doRefresh(void);
@@ -1252,8 +1268,9 @@ void G_DoCompleted(void)
                 // [BH] this episode is complete, so select the next episode in the menu
                 if ((gamemode == registered && gameepisode < 3) || (gamemode == retail && gameepisode < 4))
                 {
-                    episodeselected = gameepisode;
-                    EpiDef.lastOn = episodeselected;
+                    episode++;
+                    EpiDef.lastOn++;
+                    M_SaveCVARs();
                 }
 
                 break;
@@ -1268,9 +1285,9 @@ void G_DoCompleted(void)
     wminfo.epsd = gameepisode - 1;
     wminfo.last = gamemap - 1;
 
-    if (secretexit && secretnextmap)
+    if (secretexit && secretnextmap > 0)
         wminfo.next = secretnextmap - 1;
-    else if (nextmap)
+    else if (nextmap > 0)
         wminfo.next = nextmap - 1;
     else if (gamemode == commercial)
     {
@@ -1406,6 +1423,8 @@ void G_DoCompleted(void)
 
     stat_mapscompleted = SafeAdd(stat_mapscompleted, 1);
 
+    C_Input("exitmap");
+
     C_AddConsoleDivider();
 
     WI_Start(&wminfo);
@@ -1524,6 +1543,8 @@ void G_DoLoadGame(void)
 
     st_facecount = 0;
 
+    C_Input("load %s", savename);
+
     if (consoleactive)
     {
         C_Output("<b>%s</b> loaded.", savename);
@@ -1596,6 +1617,8 @@ void G_DoSaveGame(void)
         // file, overwriting the old savegame if there was one there.
         remove(savegame_file);
         rename(temp_savegame_file, savegame_file);
+
+        C_Input("save %s", savegame_file);
 
         if (consoleactive)
             C_Output("<b>%s</b> saved.", savename);
@@ -1719,8 +1742,6 @@ void G_SetMovementSpeed(int scale)
 //
 void G_InitNew(skill_t skill, int ep, int map)
 {
-    char    *string = titlecase(*skilllevels[skill]);
-
     if (paused)
     {
         paused = false;
@@ -1744,9 +1765,6 @@ void G_InitNew(skill_t skill, int ep, int map)
             ep = 1;     // only start episode 1 on shareware
     }
 
-    if (map < 1)
-        map = 1;
-
     if (map > 9 && gamemode != commercial)
         map = 9;
 
@@ -1763,15 +1781,8 @@ void G_InitNew(skill_t skill, int ep, int map)
     gamemap = map;
     gameskill = skill;
 
-    if (gamemode == commercial)
-        expansion = *(gamemission == pack_nerve ? &s_M_EXPANSION2 : &s_M_EXPANSION1);
-    else
-        episode = *episodes[gameepisode - 1];
-
-    strreplace(string, ".", "");
-    strreplace(string, "!", "");
-
-    skilllevel = string;
+    if (!consolestrings || !M_StringCompare(console[consolestrings - 1].string, "newgame"))
+        C_Input("newgame");
 
     G_DoLoadLevel();
 }

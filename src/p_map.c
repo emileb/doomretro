@@ -93,6 +93,7 @@ unsigned int        stat_distancetraveled;
 extern dboolean     r_liquid_bob;
 extern dboolean     r_corpses_nudge;
 extern dboolean     successfulshot;
+extern dboolean     telefragonmap30;
 extern unsigned int stat_shotshit;
 
 //
@@ -221,8 +222,7 @@ dboolean P_TeleportMove(mobj_t *thing, fixed_t x, fixed_t y, fixed_t z, dboolean
     sector_t    *newsec;
     fixed_t     radius = thing->radius;
 
-    // killough 8/9/98: make telefragging more consistent
-    telefrag = (thing->player || boss);
+    telefrag = (thing->player || boss || (gamemap == 30 && telefragonmap30));
 
     // kill anything occupying the position
     tmthing = thing;
@@ -418,7 +418,6 @@ static dboolean PIT_CheckLine(line_t *ld)
 dboolean PIT_CheckThing(mobj_t *thing)
 {
     fixed_t     blockdist;
-    int         damage;
     dboolean    unblocking = false;
     int         flags = thing->flags;
     int         tmflags = tmthing->flags;
@@ -474,9 +473,7 @@ dboolean PIT_CheckThing(mobj_t *thing)
     // check for skulls slamming into things
     if ((tmflags & MF_SKULLFLY) && (flags & MF_SOLID))
     {
-        damage = ((M_Random() % 8) + 1) * tmthing->info->damage;
-
-        P_DamageMobj(thing, tmthing, tmthing, damage, true);
+        P_DamageMobj(thing, tmthing, tmthing, ((M_Random() % 8) + 1) * tmthing->info->damage, true);
 
         tmthing->flags &= ~MF_SKULLFLY;
         tmthing->momx = tmthing->momy = tmthing->momz = 0;
@@ -515,8 +512,7 @@ dboolean PIT_CheckThing(mobj_t *thing)
             return !(flags & MF_SOLID);                         // didn't do any damage
 
         // damage / explode
-        damage = ((M_Random() % 8) + 1) * tmthing->info->damage;
-        P_DamageMobj(thing, tmthing, tmthing->target, damage, true);
+        P_DamageMobj(thing, tmthing, tmthing->target, ((M_Random() % 8) + 1) * tmthing->info->damage, true);
 
         if (thing->type != MT_BARREL)
         {
@@ -615,6 +611,7 @@ dboolean P_CheckLineSide(mobj_t *actor, fixed_t x, fixed_t y)
     yh = (tmbbox[BOXTOP] - bmaporgy) >> MAPBLOCKSHIFT;
 
     validcount++;               // prevents checking same line twice
+
     for (bx = xl; bx <= xh; bx++)
         for (by = yl; by <= yh; by++)
             if (!P_BlockLinesIterator(bx, by, PIT_CrossLine))
@@ -690,8 +687,7 @@ dboolean P_CheckPosition(mobj_t *thing, fixed_t x, fixed_t y)
     int         xh;
     int         yl;
     int         yh;
-    int         bx;
-    int         by;
+    int         bx, by;
     subsector_t *newsubsec;
     fixed_t     radius = thing->radius;
 
@@ -825,7 +821,6 @@ mobj_t *P_CheckOnmobj(mobj_t * thing)
             }
 
     *tmthing = oldmo;
-
     return NULL;
 }
 
@@ -838,7 +833,6 @@ void P_FakeZMovement(mobj_t *mo)
     mo->z += mo->momz;
 
     if ((mo->flags & MF_FLOAT) && mo->target)
-    {
         // float down towards target if too close
         if (!(mo->flags & MF_SKULLFLY) && !(mo->flags & MF_INFLOAT))
         {
@@ -847,7 +841,6 @@ void P_FakeZMovement(mobj_t *mo)
             if (P_ApproxDistance(mo->x - mo->target->x, mo->y - mo->target->y) < ABS(delta))
                 mo->z += (delta < 0 ? -FLOATSPEED : FLOATSPEED);
         }
-    }
 
     // clip movement
     if (mo->z <= mo->floorz)
@@ -889,8 +882,7 @@ void P_FakeZMovement(mobj_t *mo)
 //
 dboolean P_TryMove(mobj_t *thing, fixed_t x, fixed_t y, dboolean dropoff)
 {
-    fixed_t     oldx;
-    fixed_t     oldy;
+    fixed_t     oldx, oldy;
     sector_t    *newsec;
     int         flags = thing->flags;
 
@@ -1250,7 +1242,7 @@ void P_HitSlideLine(line_t *ld)
 //
 dboolean PTR_SlideTraverse(intercept_t *in)
 {
-    line_t      *li = in->d.line;
+    line_t  *li = in->d.line;
 
     if (!(li->flags & ML_TWOSIDED))
     {
@@ -1511,72 +1503,92 @@ dboolean    hitwall;
 //
 dboolean PTR_ShootTraverse(intercept_t *in)
 {
-    fixed_t x;
-    fixed_t y;
-    fixed_t z;
+    fixed_t x, y, z;
     fixed_t frac;
     mobj_t  *th;
-    fixed_t slope;
     fixed_t dist;
-    fixed_t thingtopslope;
-    fixed_t thingbottomslope;
 
     if (in->isaline)
     {
         line_t  *li = in->d.line;
+        int     side;
+        fixed_t distz;
 
         if (li->special)
             P_ShootSpecialLine(shootthing, li);
 
-        if (!(li->flags & ML_TWOSIDED))
-            goto hitline;
-
-        // crosses a two sided line
-        P_LineOpening(li);
-
-        dist = FixedMul(attackrange, in->frac);
-
-        if (li->frontsector->floorheight != li->backsector->floorheight)
+        if (li->flags & ML_TWOSIDED)
         {
-            slope = FixedDiv(openbottom - shootz, dist);
+            // crosses a two sided line
+            P_LineOpening(li);
 
-            if (slope > aimslope)
-                goto hitline;
+            dist = FixedMul(attackrange, in->frac);
+
+            if (!li->backsector)
+            {
+                if (FixedDiv(openbottom - shootz, dist) <= aimslope
+                    && FixedDiv(opentop - shootz, dist) >= aimslope)
+                    return true;      // shot continues
+            }
+            else
+            {
+                if ((li->frontsector->interpfloorheight == li->backsector->interpfloorheight
+                        || FixedDiv(openbottom - shootz, dist) <= aimslope)
+                    && (li->frontsector->interpceilingheight == li->backsector->interpceilingheight
+                        || FixedDiv(opentop - shootz, dist) >= aimslope))
+                    return true;      // shot continues
+            }
         }
 
-        if (li->frontsector->ceilingheight != li->backsector->ceilingheight)
-        {
-            slope = FixedDiv(opentop - shootz, dist);
-
-            if (slope < aimslope)
-                goto hitline;
-        }
-
-        // shot continues
-        return true;
-
-        // hit line
-hitline:
         // position a bit closer
         frac = in->frac - FixedDiv(4 * FRACUNIT, attackrange);
-        x = dlTrace.x + FixedMul(dlTrace.dx, frac);
-        y = dlTrace.y + FixedMul(dlTrace.dy, frac);
-        z = shootz + FixedMul(aimslope, FixedMul(frac, attackrange));
+        distz = FixedMul(aimslope, FixedMul(attackrange, frac));
+        z = shootz + distz;
+
+        // clip shots on floor and ceiling
+        if ((side = li->sidenum[P_PointOnLineSide(shootthing->x, shootthing->y, li)]) != NO_INDEX)
+        {
+            sector_t    *sector = sides[side].sector;
+            fixed_t     ceilingz = sector->interpceilingheight;
+
+            if (z > ceilingz && distz)
+            {
+                if (sector->ceilingpic == skyflatnum)
+                    return false;
+
+                frac = FixedDiv(FixedMul(frac, ceilingz - shootz), distz);
+                z = ceilingz;
+            }
+            else
+            {
+                fixed_t floorz = sector->interpfloorheight;
+
+                if (z < floorz && distz)
+                {
+                    if (sector->isliquid || sector->floorpic == skyflatnum)
+                        return false;
+
+                    frac = -FixedDiv(FixedMul(frac, shootz - floorz), distz);
+                    z = floorz;
+                }
+            }
+        }
 
         if (li->frontsector->ceilingpic == skyflatnum)
         {
             // don't shoot the sky!
-            if (z > li->frontsector->ceilingheight)
+            if (z > li->frontsector->interpceilingheight)
                 return false;
 
             // it's a sky hack wall
             if (li->backsector && li->backsector->ceilingpic == skyflatnum
-                && li->backsector->ceilingheight < z)
+                && li->backsector->interpceilingheight < z)
                 return false;
         }
 
         // Spawn bullet puffs.
-        P_SpawnPuff(x, y, z, shootangle);
+        P_SpawnPuff(dlTrace.x + FixedMul(dlTrace.dx, frac), dlTrace.y + FixedMul(dlTrace.dy, frac), z,
+            shootangle);
 
         hitwall = true;
 
@@ -1593,16 +1605,13 @@ hitline:
     if (!(th->flags & MF_SHOOTABLE))
         return true;                    // corpse or something
 
-    // check angles to see if the thing can be aimed at
     dist = FixedMul(attackrange, in->frac);
-    thingtopslope = FixedDiv(th->z + th->height - shootz, dist);
 
-    if (thingtopslope < aimslope)
+    // check angles to see if the thing can be aimed at
+    if (FixedDiv(th->z + th->height - shootz, dist) < aimslope)
         return true;                    // shot over the thing
 
-    thingbottomslope = FixedDiv(th->z - shootz, dist);
-
-    if (thingbottomslope > aimslope)
+    if (FixedDiv(th->z - shootz, dist) > aimslope)
         return true;                    // shot under the thing
 
     // hit thing
@@ -1977,7 +1986,24 @@ void PIT_ChangeSector(mobj_t *thing)
     nofit = true;
 
     if (crushchange && !(leveltime & 3))
+    {
+        int i;
+
+        for (i = 0; i < 4; i++)
+            if (!(flags & MF_NOBLOOD) && thing->blood && (thing->type != MT_PLAYER
+                || (!viewplayer->powers[pw_invulnerability] && !(viewplayer->cheats & CF_GODMODE))))
+            {
+                // spray blood in a random direction
+                int     type = (r_blood == r_blood_all ? ((thing->flags & MF_FUZZ) ? MT_FUZZYBLOOD :
+                                thing->blood) : MT_BLOOD);
+                mobj_t  *mo = P_SpawnMobj(thing->x, thing->y, thing->z + thing->height / 2, type);
+
+                mo->momx = (M_Random() - M_Random()) << 12;
+                mo->momy = (M_Random() - M_Random()) << 12;
+            }
+
         P_DamageMobj(thing, NULL, NULL, 10, true);
+    }
 }
 
 //

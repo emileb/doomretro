@@ -53,9 +53,10 @@
 // killough 10/98: new functions, to allow processing DEH files in-memory
 // (e.g. from wads)
 
-typedef struct
+typedef struct DEHFILE_s
 {
-    byte    *inp, *lump;    // Pointer to string or FILE
+    byte    *inp;
+    byte    *lump;
     long    size;
     FILE    *f;
 } DEHFILE;
@@ -101,9 +102,6 @@ static int dehfgetc(DEHFILE *fp)
 {
     return (!fp->lump ? fgetc(fp->f) : fp->size > 0 ? fp->size--, *fp->inp++ : EOF);
 }
-
-// variables used in other routines
-dboolean    deh_pars;                           // in wi_stuff to allow pars in modified games
 
 // #include "d_deh.h" -- we don't do that here but we declare the
 // variables. This externalizes everything that there is a string
@@ -1391,6 +1389,7 @@ char **mapnamesn[] =    // Nerve WAD map names.
 void lfstrip(char *);           // strip the \r and/or \n off of a line
 void rstrip(char *);            // strip trailing whitespace
 char *ptr_lstrip(char *);       // point past leading whitespace
+char *lwrcase(char *);
 int deh_GetData(char *, char *, long *, char **);
 dboolean deh_procStringSub(char *, char *, char *);
 char *dehReformatStr(char *);
@@ -1414,10 +1413,10 @@ void deh_procBexCodePointers(DEHFILE *, char *);
 
 // Structure deh_block is used to hold the block names that can
 // be encountered, and the routines to use to decipher them
-typedef struct
+typedef struct deh_block_s
 {
     char    *key;                                       // a mnemonic block code name
-    void (*const fptr)(DEHFILE *, char *);              // handler
+    void    (*const fptr)(DEHFILE *, char *);           // handler
 } deh_block;
 
 #define DEH_BUFFERMAX   1024    // input buffer area size, hardcoded for now
@@ -1629,18 +1628,6 @@ static char *deh_sfxinfo[] =
     "Neg. One 2"        // .lumpnum
 };
 
-// MUSICINFO is not supported in Dehacked. Ignored here.
-// * music entries are base zero but have a dummy #0
-
-// SPRITE - Dehacked block name = "Sprite"
-// Usage = Sprite nn
-// Sprite redirection by offset into the text area - unsupported by BOOM
-// * sprites are base zero and dehacked uses it that way.
-//static char *deh_sprite[] =
-//{
-//    "Offset"            // supposed to be the offset into the text section
-//};
-
 // AMMO - Dehacked block name = "Ammo"
 // usage = Ammo n (name)
 // Ammo information for the few types of ammo
@@ -1808,7 +1795,7 @@ void A_FireOldBFG(mobj_t *actor, player_t *player, pspdef_t *psp);
 void A_BetaSkullAttack(mobj_t *actor, player_t *player, pspdef_t *psp);
 void A_Stop(mobj_t *actor, player_t *player, pspdef_t *psp);
 
-typedef struct
+typedef struct deh_bexptr_s
 {
     actionf_t   cptr;           // actual pointer to the subroutine
     const char  *lookup;        // mnemonic lookup string to be specified in BEX
@@ -1903,8 +1890,8 @@ static const deh_bexptr deh_bexptrs[] =
     { A_LineEffect,      "A_LineEffect"      },   // killough 11/98
 
     { A_FireOldBFG,      "A_FireOldBFG"      },   // killough 7/19/98: classic BFG firing function
-    { A_BetaSkullAttack, "A_BetaSkullAttack" },   // killough 10/98: beta lost souls attacked
-    { A_Stop,            "A_Stop"            },   //                 different
+    { A_BetaSkullAttack, "A_BetaSkullAttack" },   // killough 10/98: beta lost souls attacked different
+    { A_Stop,            "A_Stop"            },
 
     // This NULL entry must be the last in the list
     { NULL,              "A_NULL"            }    // Ty 05/16/98
@@ -1973,10 +1960,7 @@ void ProcessDehFile(char *filename, int lumpnum)
     else                        // DEH file comes from lump indicated by second argument
     {
         if (!(infile.size = W_LumpLength(lumpnum)))
-        {
-            fclose(infile.f);
             return;
-        }
 
         infile.inp = infile.lump = W_CacheLumpNum(lumpnum);
         filename = lumpinfo[lumpnum]->wadfile->path;
@@ -2007,10 +1991,10 @@ void ProcessDehFile(char *filename, int lumpnum)
     // loop until end of file
     while (dehfgets(inbuffer, sizeof(inbuffer), filein))
     {
-        dboolean            match;
-        unsigned int        i;
-        static unsigned int last_i = DEH_BLOCKMAX - 1;
-        static long         filepos;
+        dboolean        match;
+        unsigned int    i;
+        unsigned int    last_i = DEH_BLOCKMAX - 1;
+        long            filepos = 0;
 
         lfstrip(inbuffer);
 
@@ -2062,11 +2046,11 @@ void ProcessDehFile(char *filename, int lumpnum)
             continue;
         }
 
-        for (match = 0, i = 0; i < DEH_BLOCKMAX; i++)
+        for (match = false, i = 0; i < DEH_BLOCKMAX; i++)
             if (!strncasecmp(inbuffer, deh_blocks[i].key, strlen(deh_blocks[i].key)))
             {
                 if (i < DEH_BLOCKMAX - 1)
-                    match = 1;
+                    match = true;
 
                 break;          // we got one, that's enough for this block
             }
@@ -2105,7 +2089,7 @@ void ProcessDehFile(char *filename, int lumpnum)
     else
         C_Output("Parsed the <i><b>DeHackEd</b></i>%s file <b>%s</b>.",
             (M_StringEndsWith(uppercase(filename), "BEX") ? " with <i><b>BOOM</b></i> extensions" : ""),
-            filename);
+            GetCorrectCase(filename));
 }
 
 // ====================================================================
@@ -2143,8 +2127,7 @@ void deh_procBexCodePointers(DEHFILE *fpin, char *line)
         if ((sscanf(inbuffer, "%31s %10i = %31s", key, &indexnum, mnemonic) != 3)
             || !M_StringCompare(key, "FRAME"))        // NOTE: different format from normal
         {
-            C_Warning("Invalid BEX codepointer line - must start with \"FRAME\": \"%s\".",
-                inbuffer);
+            C_Warning("Invalid BEX codepointer line - must start with \"FRAME\": \"%s\".", inbuffer);
             return;     // early return
         }
 
@@ -2172,6 +2155,7 @@ void deh_procBexCodePointers(DEHFILE *fpin, char *line)
 
                 found = true;
             }
+
             i++;
         }
 
@@ -2224,7 +2208,8 @@ void deh_procThing(DEHFILE *fpin, char *line)
     while (!dehfeof(fpin) && *inbuffer && *inbuffer != ' ')
     {
         // e6y: Correction of wrong processing of Bits parameter if its value is equal to zero
-        int bGetData;
+        int         bGetData;
+        dboolean    gibhealth = false;
 
         if (!dehfgets(inbuffer, sizeof(inbuffer), fpin))
             break;
@@ -2286,7 +2271,6 @@ void deh_procThing(DEHFILE *fpin, char *line)
 
                             // [BH] no blood splats if thing is dehacked...
                             mobjinfo[indexnum].blood = 0;
-
                             break;
                         }
 
@@ -2351,11 +2335,16 @@ void deh_procThing(DEHFILE *fpin, char *line)
                     mobjinfo[indexnum].projectilepassheight = 0;
                 else if (M_StringCompare(key, "Width"))
                     mobjinfo[indexnum].pickupradius = (int)value;
+                else if (M_StringCompare(key, "Gib health"))
+                    gibhealth = true;
             }
 
             if (devparm)
                 C_Output("Assigned %i to %s (%i) at index %i.", (int)value, key, indexnum, ix);
         }
+
+        if (!gibhealth && mobjinfo[indexnum].spawnhealth && !mobjinfo[indexnum].gibhealth)
+            mobjinfo[indexnum].gibhealth = -mobjinfo[indexnum].spawnhealth;
     }
 }
 
@@ -2760,10 +2749,13 @@ extern int cpars[33];
 //
 void deh_procPars(DEHFILE *fpin, char *line) // extension
 {
-    char        key[DEH_MAXKEYLEN];
-    char        inbuffer[DEH_BUFFERMAX];
-    int         indexnum;
-    int         episode, level, partime, oldpar;
+    char    key[DEH_MAXKEYLEN];
+    char    inbuffer[DEH_BUFFERMAX];
+    int     indexnum;
+    int     episode;
+    int     level;
+    int     partime;
+    int     oldpar;
 
     // new item, par times
     // usage: After [PARS] Par 0 section identifier, use one or more of these
@@ -2779,6 +2771,7 @@ void deh_procPars(DEHFILE *fpin, char *line) // extension
 
     // killough 8/98: allow hex numbers in input:
     sscanf(inbuffer, "%31s %10i", key, &indexnum);
+
     if (devparm)
         C_Output("Processing Par value at index %i: %s", indexnum, key);
 
@@ -2790,7 +2783,7 @@ void deh_procPars(DEHFILE *fpin, char *line) // extension
         if (*inbuffer == '#')
             continue;                           // skip comment lines
 
-        lfstrip(lowercase(inbuffer));           // lowercase it
+        lfstrip(lwrcase(inbuffer));             // lowercase it
 
         if (!*inbuffer)
             break;                              // killough 11/98
@@ -2813,7 +2806,6 @@ void deh_procPars(DEHFILE *fpin, char *line) // extension
                             partime);
 
                     cpars[level - 1] = partime;
-                    deh_pars = true;
                 }
             }
         }
@@ -2834,8 +2826,6 @@ void deh_procPars(DEHFILE *fpin, char *line) // extension
                 if (devparm)
                     C_Output("Changed par time for E%iM%i from %i to %i seconds", episode, level, oldpar,
                         partime);
-
-                deh_pars = true;
             }
         }
     }
@@ -3260,7 +3250,7 @@ void deh_procText(DEHFILE *fpin, char *line)
     {
         usedlen = (fromlen < tolen ? fromlen : tolen);
 
-        if (fromlen != tolen)
+        if (fromlen != tolen && !hacx)
             C_Warning("Mismatched lengths from %i to %i. Using %i.", fromlen, tolen, usedlen);
 
         // Try sound effects entries - see sounds.c
@@ -3490,7 +3480,7 @@ dboolean deh_procStringSub(char *key, char *lookfor, char *newstring)
                 && !deh_strlookup[p_GOTREDSKULL].assigned)
             {
                 s_GOTREDSKULL = s_GOTREDSKUL;
-                deh_strlookup[p_GOTREDSKULL].assigned = true;
+                deh_strlookup[p_GOTREDSKULL].assigned++;
                 return true;
             }
 
@@ -3498,7 +3488,7 @@ dboolean deh_procStringSub(char *key, char *lookfor, char *newstring)
         }
     }
 
-    if (!found)
+    if (!found && !hacx)
         C_Warning("Couldn't find \"%s\".", (key ? key : lookfor));
 
     return found;
@@ -3582,7 +3572,18 @@ char *ptr_lstrip(char *p)       // point past leading whitespace
 {
     while (isspace(*p))
         p++;
+
     return p;
+}
+
+char *lwrcase(char *str)
+{
+    char    *p;
+
+    for (p = str; *p; p++)
+        *p = tolower(*p);
+
+    return str;
 }
 
 // ====================================================================

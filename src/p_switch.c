@@ -47,11 +47,11 @@
 #include "z_zone.h"
 
 // killough 2/8/98: Remove switch limit
-static int *switchlist;         // killough
-static int max_numswitches;     // killough
-static int numswitches;         // killough
+static int  *switchlist;        // killough
+static int  max_numswitches;    // killough
+static int  numswitches;        // killough
 
-button_t  buttonlist[MAXBUTTONS];
+button_t    buttonlist[MAXBUTTONS];
 
 //
 // P_InitSwitchList()
@@ -65,7 +65,7 @@ button_t  buttonlist[MAXBUTTONS];
 // allow wad designers to insert or modify switches.
 //
 // Lump format is an array of byte packed switchlist_t structures, terminated
-// by a structure with episode == -0. The lump can be generated from a
+// by a structure with episode == -1. The lump can be generated from a
 // text source file using SWANTBLS.EXE, distributed with the BOOM utils.
 // The standard list of switches and animations is contained in the example
 // source text file DEFSWANI.DAT also in the BOOM util distribution.
@@ -79,7 +79,7 @@ void P_InitSwitchList(void)
     int             episode = (gamemode == registered || gamemode == retail ? 2 :
                         (gamemode == commercial ? 3 : 1));
     switchlist_t    *alphSwitchList;                        // jff 3/23/98 pointer to switch table
-    int             lump = W_GetNumForName2("SWITCHES");    // cph - new wad lump handling
+    int             lump = W_GetNumForName("SWITCHES");     // cph - new wad lump handling
 
     // jff 3/23/98 read the switch table from a predefined lump
     alphSwitchList = (switchlist_t *)W_CacheLumpNum(lump);
@@ -87,10 +87,10 @@ void P_InitSwitchList(void)
     for (i = 0;; i++)
     {
         if (index + 1 >= max_numswitches)
-            switchlist = Z_Realloc(switchlist, sizeof(*switchlist) * (max_numswitches = max_numswitches ?
-                max_numswitches * 2 : 8));
+            switchlist = Z_Realloc(switchlist, sizeof(*switchlist) * (max_numswitches = (max_numswitches ?
+                max_numswitches * 2 : 8)));
 
-        if (SHORT(alphSwitchList[i].episode) <= episode)        // jff 5/11/98 endianess
+        if (SHORT(alphSwitchList[i].episode) <= episode)    // jff 5/11/98 endianness
         {
             int texture1;
             int texture2;
@@ -100,15 +100,11 @@ void P_InitSwitchList(void)
 
             // Ignore switches referencing unknown texture names, instead of exiting.
             // Warn if either one is missing, but only add if both are valid.
-            texture1 = R_CheckTextureNumForName(alphSwitchList[i].name1);
-
-            if (texture1 == -1)
+            if ((texture1 = R_CheckTextureNumForName(alphSwitchList[i].name1)) == -1)
                 C_Warning("Switch %i in SWITCHES lump has an unknown texture of %s.", i,
                     alphSwitchList[i].name1);
 
-            texture2 = R_CheckTextureNumForName(alphSwitchList[i].name2);
-
-            if (texture2 == -1)
+            if ((texture2 = R_CheckTextureNumForName(alphSwitchList[i].name2)) == -1)
                 C_Warning("Switch %i in SWITCHES lump has an unknown texture of %s.", i,
                     alphSwitchList[i].name2);
 
@@ -156,56 +152,44 @@ void P_StartButton(line_t *line, bwhere_e w, int texture, int time)
 //
 void P_ChangeSwitchTexture(line_t *line, dboolean useAgain)
 {
-    int     i = 0;
-    int     swtex;
-    side_t  *side = &sides[line->sidenum[0]];
-    short   texTop = side->toptexture;
-    short   texMid = side->midtexture;
-    short   texBot = side->bottomtexture;
+    int         i;
+    short       *texture = NULL;
+    short       *ttop = &sides[line->sidenum[0]].toptexture;
+    short       *tmid = &sides[line->sidenum[0]].midtexture;
+    short       *tbot = &sides[line->sidenum[0]].bottomtexture;
+    bwhere_e    position = 0;
 
-    // don't zero line->special until after exit switch test
     if (!useAgain)
         line->special = 0;
 
-    // search for a texture to change
-    do
-    {
-        swtex = switchlist[i];
-
-        if (swtex == texTop)
+    for (i = 0; i < numswitches * 2; i++)
+        if (switchlist[i] == *ttop)
         {
-            S_StartSectorSound(&line->soundorg, sfx_swtchn);
-
-            if (useAgain)
-                P_StartButton(line, top, swtex, BUTTONTIME);
-
-            side->toptexture = switchlist[i ^ 1];
+            texture = ttop;
+            position = top;
             break;
         }
-        else if (swtex == texMid)
+        else if (switchlist[i] == *tmid)
         {
-            S_StartSectorSound(&line->soundorg, sfx_swtchn);
-
-            if (useAgain)
-                P_StartButton(line, middle, swtex, BUTTONTIME);
-
-            side->midtexture = switchlist[i ^ 1];
+            texture = tmid;
+            position = middle;
             break;
         }
-        else if (swtex == texBot)
+        else if (switchlist[i] == *tbot)
         {
-            S_StartSectorSound(&line->soundorg, sfx_swtchn);
-
-            if (useAgain)
-                P_StartButton(line, bottom, swtex, BUTTONTIME);
-
-            side->bottomtexture = switchlist[i ^ 1];
+            texture = tbot;
+            position = bottom;
             break;
         }
 
-        i++;
-    }
-    while (swtex != -1);
+    if (!texture)
+        return;
+
+    *texture = switchlist[i ^ 1];
+    S_StartSectorSound(&line->soundorg, sfx_swtchn);
+
+    if (useAgain)
+        P_StartButton(line, position, switchlist[i], BUTTONTIME);
 }
 
 //
@@ -254,6 +238,7 @@ dboolean P_UseSpecialLine(mobj_t *thing, line_t *line, int side)
                 if (line->flags & ML_SECRET)            // they can't open secret doors either
                     return false;
             }
+
             linefunc = EV_DoGenDoor;
         }
         else if ((unsigned int)line->special >= GenLockedBase)
@@ -295,9 +280,8 @@ dboolean P_UseSpecialLine(mobj_t *thing, line_t *line, int side)
             switch ((line->special & TriggerType) >> TriggerTypeShift)
             {
                 case PushOnce:
-                    if (!side)
-                        if (linefunc(line))
-                            line->special = 0;
+                    if (!side && linefunc(line))
+                        line->special = 0;
 
                     return true;
 
@@ -604,7 +588,7 @@ dboolean P_UseSpecialLine(mobj_t *thing, line_t *line, int side)
             break;
 
         case S1_Ceiling_RaiseToHighestCeiling:
-            if (EV_DoCeiling(line, raiseToHighest) || EV_DoFloor(line, lowerFloorToLowest))
+            if (EV_DoCeiling(line, raiseToHighest) | EV_DoFloor(line, lowerFloorToLowest))
                 P_ChangeSwitchTexture(line, false);
 
             break;
@@ -777,7 +761,7 @@ dboolean P_UseSpecialLine(mobj_t *thing, line_t *line, int side)
             break;
 
         case SR_Ceiling_RaiseToHighestCeiling:
-            if (EV_DoCeiling(line, raiseToHighest) || EV_DoFloor(line, lowerFloorToLowest))
+            if (EV_DoCeiling(line, raiseToHighest) | EV_DoFloor(line, lowerFloorToLowest))
                 P_ChangeSwitchTexture(line, true);
 
             break;

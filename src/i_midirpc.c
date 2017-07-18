@@ -52,13 +52,11 @@
 //
 // Data
 //
-static unsigned char            *szStringBinding;       // RPC client binding string
-static dboolean                 serverInit;             // if true, server was started
-static dboolean                 clientInit;             // if true, client was bound
-
-// server process information
-static STARTUPINFO              si;
-static PROCESS_INFORMATION      pi;
+static STARTUPINFO          si;
+static PROCESS_INFORMATION  pi;
+static unsigned char        *szStringBinding;       // RPC client binding string
+static dboolean             serverInit;             // if true, server was started
+static dboolean             clientInit;             // if true, client was bound
 
 //
 // RPC Memory Management
@@ -257,21 +255,20 @@ dboolean I_MidiRPCInitServer(void)
     // Look for executable file
     if (!M_FileExists(module))
     {
-        C_Warning("The RPC server %s couldn't be found.", module);
+        C_Warning("%s couldn't be found.", module);
         return false;
     }
 
     si.cb = sizeof(si);
-
-    result = CreateProcess(module, NULL, NULL, NULL, FALSE, 0, NULL, NULL, &si, &pi);
+    result = CreateProcess(module, NULL, NULL, NULL, false, 0, NULL, NULL, &si, &pi);
 
     if (result)
     {
-        C_Output("Using the RPC server <b>%s</b> to play MUS and MIDI music lumps.", module);
+        C_Output("Using <b>%s</b> to play MUS and MIDI music lumps.", module);
         serverInit = true;
     }
     else
-        C_Warning("The RPC server %s couldn't be initialized.", module);
+        C_Warning("%s couldn't be initialized.", module);
 
     return result;
 }
@@ -321,6 +318,9 @@ void I_MidiRPCClientShutDown(void)
         RpcEndExcept
 
         serverInit = false;
+
+        CloseHandle(pi.hProcess);
+        CloseHandle(pi.hThread);
     }
 
     if (szStringBinding)

@@ -42,7 +42,7 @@
 #include "doomtype.h"
 #include "d_think.h"
 
-typedef enum
+typedef enum spritenum_e
 {
     // Sprites 0 to 137
     SPR_TROO, SPR_SHTG, SPR_PUNG, SPR_PISG, SPR_PISF, SPR_SHTF, SPR_SHT2, SPR_CHGG, SPR_CHGF, SPR_MISG,
@@ -86,7 +86,7 @@ typedef enum
     NUMSPRITES
 } spritenum_t;
 
-typedef enum
+typedef enum statenum_e
 {
     S_NULL,
     S_LIGHTDONE,
@@ -1189,26 +1189,18 @@ typedef enum
 
     // [BH] DOOM Retro states
     S_BAR1,
-    S_BLOODSPLAT,
-    S_BLOODSPLAT2,
-    S_BLOODSPLAT3,
-    S_BLOODSPLAT4,
-    S_BLOODSPLAT5,
-    S_BLOODSPLAT6,
-    S_BLOODSPLAT7,
-    S_BLOODSPLAT8,
     S_TRAIL,
     S_TRAIL2,
     S_TRAIL3,
     S_TRAIL4,
 
     // [BH] extra DeHacked states 1089 to 3999
-    EXTRASTATES,
+    EXTRASTATES = 1089,
 
     NUMSTATES = 4000
 } statenum_t;
 
-typedef struct
+typedef struct state_s
 {
     spritenum_t sprite;
     long        frame;
@@ -1225,7 +1217,7 @@ typedef struct
 extern state_t  states[NUMSTATES];
 extern char     *sprnames[];
 
-typedef enum
+typedef enum mobjtype_e
 {
     NOTYPE = -1,
     MT_PLAYER,
@@ -1371,7 +1363,7 @@ typedef enum
 
     MT_DOGS,    // killough 7/19/98: Marine's best friend
 
-    MT_PLASMA1, // killough 7/11/98: first  of alternating beta plasma fireballs
+    MT_PLASMA1, // killough 7/11/98: first of alternating beta plasma fireballs
     MT_PLASMA2, // killough 7/11/98: second of alternating beta plasma fireballs
     MT_SCEPTRE, // killough 7/11/98: evil sceptre in beta version
     MT_BIBLE,   // killough 7/11/98: unholy bible in beta version
@@ -1379,14 +1371,13 @@ typedef enum
     MT_MUSICSOURCE,
     MT_GIBDTH,
 
+    // [BH] DOOM Retro mobjs
     MT_BLUEBLOOD,
     MT_GREENBLOOD,
     MT_FUZZYBLOOD,
-    MT_BLOODSPLAT,      // [BH] Now unused
     MT_TRAIL,
-    MT_SHADOW,          // [BH] Now unused
 
-    // [BH] Mobjs 152 to 251 (100 extra mobjs to use in DeHackEd patches)
+    // [BH] Mobjs 150 to 249 (100 extra mobjs to use in DeHackEd patches)
     MT_EXTRA00, MT_EXTRA01, MT_EXTRA02, MT_EXTRA03, MT_EXTRA04,
     MT_EXTRA05, MT_EXTRA06, MT_EXTRA07, MT_EXTRA08, MT_EXTRA09,
     MT_EXTRA10, MT_EXTRA11, MT_EXTRA12, MT_EXTRA13, MT_EXTRA14,
@@ -1411,7 +1402,7 @@ typedef enum
     NUMMOBJTYPES
 } mobjtype_t;
 
-typedef struct
+typedef struct mobjinfo_s
 {
     int         doomednum;
     int         spawnstate;
@@ -1455,7 +1446,7 @@ typedef struct
 
 extern mobjinfo_t       mobjinfo[NUMMOBJTYPES];
 
-typedef struct
+typedef struct offset_s
 {
     char        name[9];
     short       x;

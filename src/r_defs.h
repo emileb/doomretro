@@ -60,10 +60,9 @@
 // Note: transformed values not buffered locally,
 //  like some DOOM-alikes ("wt", "WebView") did.
 //
-typedef struct
+typedef struct vertex_s
 {
-    fixed_t             x;
-    fixed_t             y;
+    fixed_t             x, y;
     angle_t             viewangle;      // e6y: precalculated angle for clipping
     int                 angletime;      // e6y: recalculation time for view angle
 } vertex_t;
@@ -77,12 +76,10 @@ struct line_s;
 //  moving objects (doppler), because
 //  position is prolly just buffered, not
 //  updated.
-typedef struct
+typedef struct degenmobj_s
 {
     thinker_t           thinker;        // not used for anything
-    fixed_t             x;
-    fixed_t             y;
-    fixed_t             z;
+    fixed_t             x, y, z;
 } degenmobj_t;
 
 //
@@ -93,10 +90,8 @@ typedef struct sector_s
 {
     fixed_t             floorheight;
     fixed_t             ceilingheight;
-    int                 nexttag, firsttag;
-    short               floorpic;
-    short               ceilingpic;
-    short               lightlevel;
+    int                 nexttag;
+    int                 firsttag;
     short               special;
     short               tag;
 
@@ -162,19 +157,27 @@ typedef struct sector_s
     fixed_t             floor_xoffs, floor_yoffs;
     fixed_t             ceiling_xoffs, ceiling_yoffs;
 
+    // killough 4/11/98: support for lightlevels coming from another sector
+    int                 floorlightsec;
+    int                 ceilinglightsec;
+
+    short               floorpic;
+    short               ceilingpic;
+    short               lightlevel;
+
     // killough 3/7/98: support flat heights drawn at another sector's heights
     int                 heightsec;      // other sector, or -1 if no other sector
 
-    // killough 4/11/98: support for lightlevels coming from another sector
-    int                 floorlightsec, ceilinglightsec;
-
     // killough 4/4/98: dynamic colormaps
-    int                 bottommap, midmap, topmap;
+    int                 bottommap;
+    int                 midmap;
+    int                 topmap;
 
     // killough 8/28/98: friction is a sector property, not an mobj property.
     // these fields used to be in mobj_t, but presented performance problems
     // when processed as mobj properties. Fix is to make them sector properties.
-    int                 friction, movefactor;
+    int                 friction;
+    int                 movefactor;
 
     // killough 10/98: support skies coming from sidedefs. Allows scrolling
     // skies and other effects. No "level info" kind of lump is needed,
@@ -190,7 +193,7 @@ typedef struct sector_s
 //
 // The SideDef.
 //
-typedef struct
+typedef struct side_s
 {
     // add this to the calculated texture column
     fixed_t             textureoffset;
@@ -216,7 +219,7 @@ typedef struct
 //
 // Move clipping aid for LineDefs.
 //
-typedef enum
+typedef enum slopetype_e
 {
     ST_HORIZONTAL,
     ST_VERTICAL,
@@ -231,8 +234,7 @@ typedef struct line_s
     vertex_t            *v2;
 
     // Precalculated v2 - v1 for side checking.
-    fixed_t             dx;
-    fixed_t             dy;
+    fixed_t             dx, dy;
 
     // Animation related.
     unsigned short      flags;
@@ -264,15 +266,16 @@ typedef struct line_s
 
     int                 tranlump;       // killough 4/11/98: translucency filter, -1 == none
 
-    int                 nexttag, firsttag;
+    int                 nexttag;
+    int                 firsttag;
 
     // sound origin for switches/buttons
     degenmobj_t         soundorg;
 } line_t;
 
-#define BOOMLINESPECIALS        142
+#define BOOMLINESPECIALS    142
 
-typedef enum
+typedef enum linespecial_e
 {
     NoSpecial                                                      =   0,
     DR_Door_OpenWaitClose_AlsoMonsters                             =   1,
@@ -546,11 +549,13 @@ typedef enum
     WR_TeleportToLineWithSameTag_MonstersOnly_Silent               = 267,
     W1_Teleport_MonstersOnly_Silent                                = 268,
     WR_Teleport_MonstersOnly_Silent                                = 269,
+
+    // Extended line specials from MBF
     TransferSkyTextureToTaggedSectors                              = 271,
     TransferSkyTextureToTaggedSectors_Flipped                      = 272
 } linespecial_e;
 
-typedef enum
+typedef enum sectorspecial_e
 {
     Normal                                              =  0,
     LightBlinks_Randomly                                =  1,
@@ -572,7 +577,7 @@ typedef enum
     UNKNOWNSECTORSPECIAL
 } sectorspecial_e;
 
-typedef enum
+typedef enum thingtype_e
 {
     Nothing                                            =     0,
     Player1Start                                       =     1,
@@ -745,7 +750,7 @@ typedef struct msecnode_s
 //
 // The LineSeg.
 //
-typedef struct
+typedef struct seg_s
 {
     vertex_t            *v1;
     vertex_t            *v2;
@@ -764,18 +769,18 @@ typedef struct
     // backsector is NULL for one sided lines
     sector_t            *frontsector;
     sector_t            *backsector;
+
+    int                 fakecontrast;
 } seg_t;
 
 //
 // BSP node.
 //
-typedef struct
+typedef struct node_s
 {
     // Partition line.
-    fixed_t             x;
-    fixed_t             y;
-    fixed_t             dx;
-    fixed_t             dy;
+    fixed_t             x, y;
+    fixed_t             dx, dy;
 
     // Bounding box for each child.
     fixed_t             bbox[2][4];
@@ -789,7 +794,7 @@ typedef struct
 #endif
 
 // posts are runs of non masked source pixels
-typedef struct
+typedef struct post_s
 {
     byte               topdelta;        // -1 is the last post in a column
     byte               length;          // length data bytes follows
@@ -813,7 +818,7 @@ typedef post_t column_t;
 // Could even use more than 32 levels.
 typedef byte lighttable_t;
 
-typedef struct
+typedef struct drawseg_s
 {
     seg_t               *curline;
     int                 x1;
@@ -842,7 +847,7 @@ typedef struct
 // Patches are used for sprites and all masked pictures,
 // and we compose textures from the TEXTURE1/2 lists
 // of patches.
-typedef struct
+typedef struct patch_ts
 {
     short               width;          // bounding box size
     short               height;
@@ -865,8 +870,7 @@ typedef struct vissprite_s
     int                 x2;
 
     // for line side calculation
-    fixed_t             gx;
-    fixed_t             gy;
+    fixed_t             gx, gy;
 
     // global bottom / top for silhouette clipping
     fixed_t             gz;
@@ -904,8 +908,7 @@ typedef struct bloodsplatvissprite_s
 {
     int                 x1;
     int                 x2;
-    fixed_t             gx;
-    fixed_t             gy;
+    fixed_t             gx, gy;
     fixed_t             startfrac;
     fixed_t             scale;
     fixed_t             xiscale;
@@ -931,7 +934,7 @@ typedef struct bloodsplatvissprite_s
 // Some sprites will only have one picture used
 // for all views: NNNNF0
 //
-typedef struct
+typedef struct spriteframe_s
 {
     // If false use 0 for any position.
     // Note: as eight entries are available,
@@ -949,7 +952,7 @@ typedef struct
 // A sprite definition:
 //  a number of animation frames.
 //
-typedef struct
+typedef struct spritedef_s
 {
     int                 numframes;
     spriteframe_t       *spriteframes;

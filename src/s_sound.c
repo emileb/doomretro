@@ -71,7 +71,7 @@
 
 #define TIDNUM(x)       ((int)(x->id & 0xFFFF)) // thing identifier
 
-typedef struct
+typedef struct channel_s
 {
     // sound information (if null, channel avail.)
     sfxinfo_t       *sfxinfo;
@@ -86,7 +86,7 @@ typedef struct
 } channel_t;
 
 // [crispy] "sound objects" hold the coordinates of removed map objects
-typedef struct
+typedef struct sobj_s
 {
     thinker_t       dummy;
     fixed_t         x;
@@ -149,10 +149,7 @@ static void InitSfxModule(void)
 static void InitMusicModule(void)
 {
     if (I_InitMusic())
-    {
-        CheckTimidityConfig();
         return;
-    }
 
     C_Warning("Music couldn't be initialized.");
     nomusic = true;
@@ -185,12 +182,6 @@ void S_Init(void)
             "disabled.");
         nosfx = true;
     }
-
-    // This is kind of a hack. If native MIDI is enabled, set up
-    // the TIMIDITY_CFG environment variable here before SDL_mixer
-    // is opened.
-    if (!nomusic)
-        I_InitTimidityConfig();
 
     if (!nosfx)
     {
@@ -639,7 +630,7 @@ void S_ChangeMusic(int music_id, dboolean looping, dboolean cheating, dboolean m
         char    namebuf[9];
 
         M_snprintf(namebuf, sizeof(namebuf), "d_%s", music->name);
-        music->lumpnum = W_GetNumForName(namebuf);
+        music->lumpnum = W_CheckNumForName(namebuf);
     }
 
     if (music->lumpnum != -1)
@@ -654,7 +645,8 @@ void S_ChangeMusic(int music_id, dboolean looping, dboolean cheating, dboolean m
         if (!serverMidiPlaying)
 #endif
         {
-            C_Warning("The D_%s music lump can't be played.", uppercase(music->name));
+            if (*music->name)
+                C_Warning("The D_%s music lump can't be played.", uppercase(music->name));
             return;
         }
 

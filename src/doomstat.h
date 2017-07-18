@@ -78,14 +78,11 @@ extern skill_t          startskill;
 extern int              startepisode;
 extern int              startmap;
 
-// Savegame slot to load on startup. This is the value provided to
-// the -loadgame option. If this has not been provided, this is -1.
-extern int              startloadgame;
-
 extern dboolean         autostart;
 
 // Selected by user.
 extern skill_t          gameskill;
+extern skill_t          pendinggameskill;
 extern int              gameepisode;
 extern int              gamemap;
 
@@ -167,7 +164,7 @@ extern int              musicVolume;
 
 extern dboolean         automapactive;  // In automap mode?
 extern dboolean         am_followmode;  // Following player in automap mode?
-extern dboolean         menuactive;     // Menu overlayed?
+extern dboolean         menuactive;     // Menu overlaid?
 extern dboolean         paused;         // Game Pause?
 
 extern dboolean         viewactive;
@@ -179,6 +176,7 @@ extern dboolean         viewactive;
 extern int              totalkills;
 extern int              totalitems;
 extern int              totalsecret;
+extern int              totalpickups;
 extern int              monstercount[NUMMOBJTYPES];
 extern int              barrelcount;
 

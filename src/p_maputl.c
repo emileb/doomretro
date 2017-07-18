@@ -131,9 +131,7 @@ void P_MakeDivline(line_t *li, divline_t *dl)
 //
 fixed_t P_InterceptVector(divline_t *v2, divline_t *v1)
 {
-    int64_t den = (int64_t)v1->dy * v2->dx - (int64_t)v1->dx * v2->dy;
-
-    den >>= FRACBITS;
+    int64_t den = ((int64_t)v1->dy * v2->dx - (int64_t)v1->dx * v2->dy) >> FRACBITS;
 
     if (!den)
         return 0;
@@ -387,6 +385,7 @@ dboolean P_BlockLinesIterator(int x, int y, dboolean func(line_t *))
             if (!func(ld))
                 return false;
         }
+
         return true;            // everything was checked
     }
 }
@@ -404,6 +403,7 @@ dboolean P_BlockThingsIterator(int x, int y, dboolean func(mobj_t *))
             if (!func(mobj))
                 return false;
     }
+
     return true;
 }
 

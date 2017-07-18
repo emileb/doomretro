@@ -52,7 +52,7 @@
 #define channel(e)      ((UBYTE)((e) & 0x0F))
 
 // event types
-typedef enum
+enum noteevent_e
 {
     RELEASE_NOTE,
     PLAY_NOTE,
@@ -62,7 +62,7 @@ typedef enum
     UNKNOWN_EVENT1,
     SCORE_END,
     UNKNOWN_EVENT2
-} mus_event_t;
+};
 
 // MUS format header structure
 
@@ -124,7 +124,7 @@ static UBYTE MUS2MIDcontrol[15] =
 };
 
 // some strings of bytes used in the midi format
-static UBYTE midikey[] = { 0x00, 0xFF, 0x59, 0x02, 0x00 ,0x00 };                // C major
+static UBYTE midikey[] = { 0x00, 0xFF, 0x59, 0x02, 0x00, 0x00 };                // C major
 static UBYTE miditempo[] = { 0x00, 0xFF, 0x51, 0x03, 0x09, 0xA3, 0x1A };        // uS/qnote
 static UBYTE midihdr[] = { 'M', 'T', 'h', 'd', 0, 0, 0, 6, 0, 1, 0, 0, 0, 0 };  // header (length 6, format 1)
 static UBYTE trackhdr[] = { 'M', 'T', 'r', 'k' };                               // track header
@@ -425,7 +425,7 @@ int mmus2mid(UBYTE *mus, size_t size, MIDI *mididata)
                 (MUSchannel == 15 ? 9 : FirstChannelAvailable(MUS2MIDchannel));
 
             // proff: Added typecast to avoid warning
-            MIDItrack = MIDIchan2track[MIDIchannel] = (unsigned char)(TrackCnt++);
+            MIDItrack = MIDIchan2track[MIDIchannel] = (unsigned char)TrackCnt++;
 
             if (TWriteByte(mididata, MIDItrack, 0x00))  // haleyjd 12/30/13: send all notes off
                 return MEMALLOC;
@@ -642,13 +642,12 @@ static void TWriteLength(UBYTE **midiptr, size_t length)
 //
 int MIDIToMidi(MIDI *mididata, UBYTE **mid, int *midlen)
 {
-    size_t  total;
     int     i;
     int     ntrks;
     UBYTE   *midiptr;
 
     // calculate how long the mid buffer must be, and allocate
-    total = sizeof(midihdr);
+    size_t  total = sizeof(midihdr);
 
     for (i = 0, ntrks = 0; i < MIDI_TRACKS; i++)
         if (mididata->track[i].len)

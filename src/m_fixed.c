@@ -54,7 +54,7 @@ int MAX(int a, int b)
 
 int MIN(int a, int b)
 {
-    a = a - b;
+    a -= b;
     return (b + (a & (a >> 31)));
 }
 
@@ -75,7 +75,7 @@ int SIGN(int a)
 
 fixed_t FixedMul(fixed_t a, fixed_t b)
 {
-    return (((int64_t)a * (int64_t)b) >> FRACBITS);
+    return (((int64_t)a * b) >> FRACBITS);
 }
 
 fixed_t FixedDiv(fixed_t a, fixed_t b)
@@ -84,6 +84,18 @@ fixed_t FixedDiv(fixed_t a, fixed_t b)
         return ((a ^ b) >> 31) ^ INT_MAX;
     else
         return (fixed_t)(((int64_t)a << FRACBITS) / b);
+}
+
+fixed_t FixedMod(fixed_t a, fixed_t b)
+{
+    if (b & (b - 1))
+    {
+        fixed_t r = a % b;
+
+        return (r < 0 ? r + b : r);
+    }
+    else
+        return (a & (b - 1));
 }
 
 unsigned int SafeAdd(unsigned int a, int b)

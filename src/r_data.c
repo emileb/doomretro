@@ -69,6 +69,7 @@ int         lastspritelump;
 int         numspritelumps;
 
 dboolean    notranslucency;
+dboolean    telefragonmap30;
 
 int         numtextures;
 texture_t   **textures;
@@ -181,7 +182,7 @@ static byte whiteonly[256] =
 #define DOOM1ONLY   1
 #define DOOM2ONLY   2
 
-static struct
+static struct fullbright_s
 {
     char    texture[9];
     int     game;
@@ -252,7 +253,8 @@ void R_InitTextures(void)
     int                 *patchlookup;
     int                 nummappatches;
     int                 maxoff, maxoff2;
-    int                 numtextures1, numtextures2;
+    int                 numtextures1;
+    int                 numtextures2;
     const int           *directory;
 
     // Load the patch names from pnames.lmp.
@@ -302,8 +304,7 @@ void R_InitTextures(void)
 
     for (i = 0; i < numtextures; i++, directory++)
     {
-        const mappatch_t    
-*mpatch;
+        const mappatch_t    *mpatch;
         texpatch_t          *patch;
         int                 offset;
 
@@ -387,8 +388,8 @@ void R_InitTextures(void)
     {
         int game = fullbright[i].game;
 
-        if (fullbright[i].texture && (game == DOOM1AND2 || (gamemission == doom && game == DOOM1ONLY)
-            || (gamemission != doom && game == DOOM2ONLY)))
+        if (fullbright[i].texture[0] != '\0' && (game == DOOM1AND2
+            || (gamemission == doom && game == DOOM1ONLY) || (gamemission != doom && game == DOOM2ONLY)))
         {
             int num = R_CheckTextureNumForName(fullbright[i].texture);
 
@@ -452,7 +453,7 @@ void R_InitSpriteLumps(void)
             spritetopoffset[i] = newspritetopoffset[i] = SHORT(patch->topoffset) << FRACBITS;
 
             // [BH] override sprite offsets in WAD with those in sproffsets[] in info.c
-            if (r_fixspriteoffsets && !FREEDOOM && !hacx)
+            if (!FREEDOOM && !hacx)
             {
                 int j = 0;
 
@@ -519,6 +520,13 @@ void R_InitSpriteLumps(void)
             if (M_StringCompare(pwadfile, removeext(sc_String)))
                 notranslucency = true;
         }
+        else if (M_StringCompare(sc_String, "TELEFRAGONMAP30"))
+        {
+            SC_MustGetString();
+
+            if (M_StringCompare(pwadfile, removeext(sc_String)))
+                telefragonmap30 = true;
+        }
     }
 }
 
@@ -538,7 +546,8 @@ void R_InitColormaps(void)
 {
     dboolean    COLORMAP = (W_CheckMultipleLumps("COLORMAP") > 1);
     int         i;
-    byte        *palsrc, *palette;
+    byte        *palsrc;
+    byte        *palette;
     wadfile_t   *colormapwad;
 
     if (W_CheckNumForName("C_START") >= 0 && W_CheckNumForName("C_END") >= 0)
@@ -578,18 +587,18 @@ void R_InitColormaps(void)
 
     for (i = 0; i < 255; i++)
     {
-        float   red = *palsrc++ / 256.0f;
-        float   green = *palsrc++ / 256.0f;
-        float   blue = *palsrc++ / 256.0f;
-        float   gray = red * 0.299f + green * 0.587f + blue * 0.114f/*0.144f*/;
+        double  red = *palsrc++ / 256.0;
+        double  green = *palsrc++ / 256.0;
+        double  blue = *palsrc++ / 256.0;
+        double  gray = red * 0.299 + green * 0.587 + blue * 0.114/*0.144*/;
+        int     color = (int)(gray * 255.0);
 
-        grays[i] = FindNearestColor(palette, (int)(gray * 255.0f), (int)(gray * 255.0f),
-            (int)(gray * 255.0f));
+        grays[i] = FindNearestColor(palette, color, color, color);
 
         if (!COLORMAP)
         {
-            gray = (1.0f - gray) * 255.0f;
-            colormaps[0][32 * 256 + i] = FindNearestColor(palette, (int)gray, (int)gray, (int)gray);
+            color = (int)((1.0 - gray) * 255.0);
+            colormaps[0][32 * 256 + i] = FindNearestColor(palette, color, color, color);
         }
     }
 }
@@ -606,6 +615,7 @@ int R_ColormapNumForName(char *name)
     if (strncasecmp(name, "COLORMAP", 8))     // COLORMAP predefined to return 0
         if ((i = W_CheckNumForName(name)) != -1)
             i -= firstcolormaplump;
+
     return i;
 }
 

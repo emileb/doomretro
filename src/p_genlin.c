@@ -128,9 +128,6 @@ manual_floor:
             case SpeedTurbo:
                 floor->speed = FLOORSPEED * 8;
                 break;
-
-            default:
-                break;
         }
 
         // set the destination height
@@ -178,9 +175,6 @@ manual_floor:
                 floor->floordestheight = floor->sector->floorheight
                     + floor->direction * 32 * FRACUNIT;
                 break;
-
-            default:
-                break;
         }
 
         // set texture/type change properties
@@ -215,9 +209,6 @@ manual_floor:
                         case FChgTxt:   // leave type be
                             floor->type = genFloorChg;
                             break;
-
-                        default:
-                            break;
                     }
                 }
             }
@@ -239,9 +230,6 @@ manual_floor:
 
                     case FChgTxt:       // leave type be
                         floor->type = genFloorChg;
-                        break;
-
-                    default:
                         break;
                 }
             }
@@ -342,9 +330,6 @@ manual_ceiling:
             case SpeedTurbo:
                 ceiling->speed = CEILSPEED * 8;
                 break;
-
-            default:
-                break;
         }
 
         // set destination target height
@@ -361,7 +346,7 @@ manual_ceiling:
                 break;
 
             case CtoNnC:
-                targheight = (Dirn ? P_FindNextHighestCeiling(sec,sec->ceilingheight) :
+                targheight = (Dirn ? P_FindNextHighestCeiling(sec, sec->ceilingheight) :
                     P_FindNextLowestCeiling(sec, sec->ceilingheight));
                 break;
 
@@ -391,9 +376,6 @@ manual_ceiling:
 
             case Cby32:
                 targheight = ceiling->sector->ceilingheight + ceiling->direction * 32 * FRACUNIT;
-                break;
-
-            default:
                 break;
         }
 
@@ -432,9 +414,6 @@ manual_ceiling:
                         case CChgTxt:   // type is left alone
                             ceiling->type = genCeilingChg;
                             break;
-
-                        default:
-                            break;
                     }
                 }
             }
@@ -456,9 +435,6 @@ manual_ceiling:
 
                     case CChgTxt:       // type is left alone
                         ceiling->type = genCeilingChg;
-                        break;
-
-                    default:
                         break;
                 }
             }
@@ -547,6 +523,7 @@ manual_lift:
 
                 if (plat->low > sec->floorheight)
                     plat->low = sec->floorheight;
+
                 break;
 
             case F2NnF:
@@ -558,6 +535,7 @@ manual_lift:
 
                 if (plat->low > sec->floorheight)
                     plat->low = sec->floorheight;
+
                 break;
 
             case LnF2HnF:
@@ -573,9 +551,6 @@ manual_lift:
                     plat->high = sec->floorheight;
 
                 plat->status = M_Random() & 1;
-                break;
-
-            default:
                 break;
         }
 
@@ -596,9 +571,6 @@ manual_lift:
 
             case SpeedTurbo:
                 plat->speed = PLATSPEED * 16;
-                break;
-
-            default:
                 break;
         }
 
@@ -759,10 +731,10 @@ manual_stair:
         // Find next sector to raise
         // 1. Find 2-sided line with same sector side[0]
         // 2. Other side is the next sector to raise
-
         do
         {
             okay = false;
+
             for (i = 0; i < sec->linecount; i++)
             {
                 if (!((sec->lines[i])->backsector))
@@ -916,9 +888,6 @@ manual_crusher:
 
             case SpeedTurbo:
                 ceiling->speed = CEILSPEED * 8;
-                break;
-
-            default:
                 break;
         }
 
@@ -1177,9 +1146,6 @@ manual_door:
                 door->direction = -1;
                 S_StartSectorSound(&door->sector->soundorg, sfx_dorcls);
                 door->type = (Sped >= SpeedFast ? genBlazeClose : genClose);
-                break;
-
-            default:
                 break;
         }
 

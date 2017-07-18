@@ -50,7 +50,7 @@
 #define PLAYERSTATSTITLE    "STAT\tCURRENT MAP\tTOTAL"
 #define THINGLISTTITLE      "THING\tPOSITION"
 
-typedef enum
+typedef enum controltype_e
 {
     keyboardcontrol = 1,
     mousecontrol    = 2,
@@ -58,32 +58,31 @@ typedef enum
     invalidcontrol  = 4
 } controltype_t;
 
-typedef struct
+typedef struct control_s
 {
     char            *control;
     controltype_t   type;
     int             value;
 } control_t;
 
-typedef struct
+typedef struct action_s
 {
     char    *action;
     void    *keyboard1;
     void    *keyboard2;
     void    *mouse1;
-    void    *mouse2;
     void    *gamepad1;
     void    *gamepad2;
 } action_t;
 
-typedef enum
+typedef enum cmdtype_e
 {
     CT_CMD   = 1,
     CT_CVAR  = 2,
     CT_CHEAT = 3
 } cmdtype_t;
 
-enum
+enum cmdflag_e
 {
     CF_NONE     =   0,
     CF_BOOLEAN  =   1,
@@ -97,7 +96,7 @@ enum
     CF_TIME     = 256
 };
 
-typedef struct
+typedef struct consolecmd_s
 {
     char        *name;
     char        *alternate;
@@ -116,7 +115,7 @@ typedef struct
     char        *defaultstring;
 } consolecmd_t;
 
-typedef struct
+typedef struct alias_s
 {
     char    name[128];
     char    string[128];

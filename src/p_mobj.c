@@ -48,9 +48,6 @@
 #include "st_stuff.h"
 #include "z_zone.h"
 
-void G_PlayerReborn(void);
-void P_DelSeclist(msecnode_t *node);
-
 int         r_blood = r_blood_default;
 int         r_bloodsplats_max = r_bloodsplats_max_default;
 int         r_bloodsplats_total;
@@ -77,7 +74,6 @@ static fixed_t floatbobdiffs[64] =
 };
 
 extern fixed_t      animatedliquiddiffs[64];
-extern dboolean     m_look;
 extern dboolean     r_liquid_bob;
 extern dboolean     r_liquid_clipsprites;
 extern dboolean     r_liquid_lowerview;
@@ -85,6 +81,11 @@ extern dboolean     r_mirroredweapons;
 extern dboolean     r_textures;
 extern dboolean     r_shadows_translucency;
 extern msecnode_t   *sector_list;   // phares 3/16/98
+extern dboolean     usemouselook;
+
+void A_Recoil(player_t *player, weapontype_t weapon);
+void G_PlayerReborn(void);
+void P_DelSeclist(msecnode_t *node);
 
 dboolean P_IsVoodooDoll(mobj_t *mobj)
 {
@@ -150,7 +151,6 @@ void P_ExplodeMissile(mobj_t *mo)
     P_SetMobjState(mo, mo->info->deathstate);
 
     mo->tics = MAX(1, mo->tics - (M_Random() & 3));
-
     mo->flags &= ~MF_MISSILE;
 
     // [BH] make explosion translucent
@@ -171,7 +171,7 @@ void P_ExplodeMissile(mobj_t *mo)
 #define FRICTION        0xE800
 #define WATERFRICTION   0xFB00
 
-int     puffcount;
+int puffcount;
 
 void P_XYMovement(mobj_t *mo)
 {
@@ -189,7 +189,7 @@ void P_XYMovement(mobj_t *mo)
             // the skull slammed into something
             mo->flags &= ~MF_SKULLFLY;
             mo->momz = 0;
-            P_SetMobjState(mo, mo->info->seestate);
+            P_SetMobjState(mo, mo->info->spawnstate);
         }
 
         return;
@@ -216,7 +216,7 @@ void P_XYMovement(mobj_t *mo)
         // Large negative displacements were never considered.
         // This explains the tendency for Mancubus fireballs
         // to pass through walls.
-        if (xmove > MAXMOVE / 2 || ymove > MAXMOVE / 2 || xmove < -MAXMOVE / 2 || ymove < -MAXMOVE / 2)
+        if ((xmove > MAXMOVE / 2 || ymove > MAXMOVE / 2) && (xmove < -MAXMOVE / 2 || ymove < -MAXMOVE / 2))
         {
             ptryx = mo->x + xmove / 2;
             ptryy = mo->y + ymove / 2;
@@ -288,6 +288,7 @@ void P_XYMovement(mobj_t *mo)
                     P_RemoveMobj(mo);
                     return;
                 }
+
                 P_ExplodeMissile(mo);
             }
             else
@@ -633,23 +634,20 @@ void P_MobjThinker(mobj_t *mobj)
                 P_ZMovement(mobj);
                 mobj->flags2 &= ~MF2_ONMOBJ;
             }
-            else
+            else if (player)
             {
-                if (player)
+                if (mobj->momz < -GRAVITY * 8)
+                    PlayerLandedOnThing(mobj);
+
+                if (onmo->z + onmo->height - mobj->z <= 24 * FRACUNIT)
                 {
-                    if (mobj->momz < -GRAVITY * 8)
-                        PlayerLandedOnThing(mobj);
-
-                    if (onmo->z + onmo->height - mobj->z <= 24 * FRACUNIT)
-                    {
-                        player->viewheight -= onmo->z + onmo->height - mobj->z;
-                        player->deltaviewheight = (VIEWHEIGHT - player->viewheight) >> 3;
-                        mobj->z = onmo->z + onmo->height;
-                        mobj->flags2 |= MF2_ONMOBJ;
-                    }
-
-                    mobj->momz = 0;
+                    player->viewheight -= onmo->z + onmo->height - mobj->z;
+                    player->deltaviewheight = (VIEWHEIGHT - player->viewheight) >> 3;
+                    mobj->z = onmo->z + onmo->height;
+                    mobj->flags2 |= MF2_ONMOBJ;
                 }
+
+                mobj->momz = 0;
             }
         }
         else
@@ -713,13 +711,15 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
     sector_t    *sector;
     static int  prevx, prevy, prevz;
     static int  prevbob;
+    int         height = (z == ONCEILINGZ && type != MT_KEEN && info->projectilepassheight ?
+                    info->projectilepassheight : info->height);
 
     mobj->type = type;
     mobj->info = info;
     mobj->x = x;
     mobj->y = y;
     mobj->radius = info->radius;
-    mobj->height = info->height;
+    mobj->height = height;
     mobj->projectilepassheight = info->projectilepassheight;
     mobj->flags = info->flags;
     mobj->flags2 = info->flags2;
@@ -737,8 +737,8 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
     // so groups of same mobjs are deliberately out of sync
     if (info->frames > 1)
     {
-        int     frames = M_RandomInt(0, info->frames);
-        int     i = 0;
+        int frames = M_RandomInt(0, info->frames);
+        int i = 0;
 
         while (i++ < frames && st->nextstate != S_NULL)
             st = &states[st->nextstate];
@@ -775,7 +775,8 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
     // [BH] initialize bobbing things
     mobj->floatbob = prevbob = (x == prevx && y == prevy && z == prevz ? prevbob : M_Random());
 
-    mobj->z = (z == ONFLOORZ ? mobj->floorz : (z == ONCEILINGZ ? mobj->ceilingz - mobj->height : z));
+    mobj->z = (z == ONFLOORZ ? mobj->floorz : (z == ONCEILINGZ ? mobj->ceilingz - height :
+        BETWEEN(mobj->floorz, z, mobj->ceilingz - height)));
 
     // [AM] Just in case interpolation is attempted...
     mobj->oldx = mobj->x;
@@ -809,7 +810,7 @@ void P_RemoveMobj(mobj_t *mobj)
     int         flags = mobj->flags;
     mobjtype_t  type = mobj->type;
 
-    if (respawnitems && (flags & MF_SPECIAL) && !(flags & MF_DROPPED) && type != MT_INV && type != MT_INS)
+    if ((flags & MF_SPECIAL) && !(flags & MF_DROPPED) && type != MT_INV && type != MT_INS)
     {
         itemrespawnque[iquehead] = mobj->spawnpoint;
         itemrespawntime[iquehead] = leveltime;
@@ -1026,7 +1027,7 @@ void P_SpawnMoreBlood(mobj_t *mobj)
 // The fields of the mapthing should
 //  already be in host byte order.
 //
-mobj_t *P_SpawnMapThing(mapthing_t *mthing, int index)
+mobj_t *P_SpawnMapThing(mapthing_t *mthing, int index, dboolean nomonsters)
 {
     int     i;
     int     bit;
@@ -1114,6 +1115,9 @@ mobj_t *P_SpawnMapThing(mapthing_t *mthing, int index)
     if (flags & MF_COUNTITEM)
         totalitems++;
 
+    if (flags & MF_SPECIAL)
+        totalpickups++;
+
     mobj->angle = ((mthing->angle % 45) ? mthing->angle * (ANG45 / 45) : ANG45 * (mthing->angle / 45));
 
     // [BH] randomly mirror corpses
@@ -1136,7 +1140,8 @@ mobj_t *P_SpawnMapThing(mapthing_t *mthing, int index)
         mobj->flags2 |= MF2_MIRRORED;
 
     // [BH] Spawn blood splats around corpses
-    if (!(flags & (MF_SHOOTABLE | MF_NOBLOOD | MF_SPECIAL)) && mobj->blood && !chex && r_bloodsplats_max)
+    if (!(flags & (MF_SHOOTABLE | MF_NOBLOOD | MF_SPECIAL)) && mobj->blood && !chex
+        && (!hacx || !(mobj->flags2 & MF2_DECORATION)) && r_bloodsplats_max)
     {
         mobj->bloodsplats = CORPSEBLOODSPLATS;
 
@@ -1165,14 +1170,37 @@ extern fixed_t  attackrange;
 
 void P_SpawnPuff(fixed_t x, fixed_t y, fixed_t z, angle_t angle)
 {
-    mobj_t  *th = P_SpawnMobj(x, y, z + ((M_Random() - M_Random()) << 10), MT_PUFF);
+    mobj_t      *th = Z_Calloc(1, sizeof(*th), PU_LEVEL, NULL);
+    mobjinfo_t  *info = &mobjinfo[MT_PUFF];
+    state_t     *st = &states[info->spawnstate];
+    sector_t    *sector;
 
+    th->type = MT_PUFF;
+    th->info = info;
+    th->x = x;
+    th->y = y;
     th->momz = FRACUNIT;
-    th->tics = MAX(1, th->tics - (M_Random() & 3));
-
     th->angle = angle;
+    th->flags = info->flags;
+    th->flags2 = (info->flags2 | ((rand() & 1) * MF2_MIRRORED));
 
-    th->flags2 |= (rand() & 1) * MF2_MIRRORED;
+    th->state = st;
+    th->tics = MAX(1, st->tics - (M_Random() & 3));
+    th->sprite = st->sprite;
+    th->frame = st->frame;
+
+    th->colfunc = info->colfunc;
+
+    P_SetThingPosition(th);
+
+    sector = th->subsector->sector;
+    th->floorz = sector->interpfloorheight;
+    th->ceilingz = sector->interpceilingheight;
+
+    th->z = z + ((M_Random() - M_Random()) << 10);
+
+    th->thinker.function = P_MobjThinker;
+    P_AddThinker(&th->thinker);
 
     // don't make punches spark on the wall
     if (attackrange == MELEERANGE)
@@ -1217,8 +1245,11 @@ void P_SpawnBlood(fixed_t x, fixed_t y, fixed_t z, angle_t angle, int damage, mo
     int         i;
     int         minz = target->z;
     int         maxz = minz + spriteheight[sprites[target->sprite].spriteframes[0].lump[0]];
-    int         color = (r_blood == r_blood_all ? target->blood : MT_BLOOD);
-    mobjinfo_t  *info = &mobjinfo[color];
+    dboolean    fuzz = (target->flags & MF_FUZZ);
+    int         type = (r_blood == r_blood_all ? (fuzz ? MT_FUZZYBLOOD : target->blood) : MT_BLOOD);
+    mobjinfo_t  *info = &mobjinfo[type];
+    int         blood = (fuzz ? FUZZYBLOOD : info->blood);
+    sector_t    *sector;
 
     angle += ANG180;
 
@@ -1227,12 +1258,12 @@ void P_SpawnBlood(fixed_t x, fixed_t y, fixed_t z, angle_t angle, int damage, mo
         mobj_t  *th = Z_Calloc(1, sizeof(*th), PU_LEVEL, NULL);
         state_t *st = &states[info->spawnstate];
 
-        th->type = color;
+        th->type = type;
         th->info = info;
         th->x = x;
         th->y = y;
         th->flags = info->flags;
-        th->flags2 = info->flags2 | ((rand() & 1) * MF2_MIRRORED);
+        th->flags2 = (info->flags2 | ((rand() & 1) * MF2_MIRRORED));
 
         th->state = st;
         th->tics = MAX(1, st->tics - (M_Random() & 3));
@@ -1240,12 +1271,13 @@ void P_SpawnBlood(fixed_t x, fixed_t y, fixed_t z, angle_t angle, int damage, mo
         th->frame = st->frame;
 
         th->colfunc = info->colfunc;
-        th->blood = info->blood;
+        th->blood = blood;
 
         P_SetThingPosition(th);
 
-        th->dropoffz = th->floorz = th->subsector->sector->interpfloorheight;
-        th->ceilingz = th->subsector->sector->interpceilingheight;
+        sector = th->subsector->sector;
+        th->floorz = sector->interpfloorheight;
+        th->ceilingz = sector->interpceilingheight;
 
         th->z = BETWEEN(minz, z + ((M_Random() - M_Random()) << 10), maxz);
 
@@ -1340,6 +1372,7 @@ mobj_t *P_SpawnMissile(mobj_t *source, mobj_t *dest, mobjtype_t type)
     int     speed;
 
     z = source->z + 4 * 8 * FRACUNIT;
+
     if ((source->flags2 & MF2_FEETARECLIPPED) && source->subsector->sector->heightsec == -1
         && r_liquid_clipsprites)
         z -= FOOTCLIPSIZE;
@@ -1379,13 +1412,11 @@ mobj_t *P_SpawnMissile(mobj_t *source, mobj_t *dest, mobjtype_t type)
 void P_SpawnPlayerMissile(mobj_t *source, mobjtype_t type)
 {
     mobj_t  *th;
-    angle_t an;
     fixed_t x, y, z;
-    fixed_t slope;
 
     // see which target is to be aimed at
-    an = source->angle;
-    slope = P_AimLineAttack(source, an, 16 * 64 * FRACUNIT);
+    angle_t an = source->angle;
+    fixed_t slope = P_AimLineAttack(source, an, 16 * 64 * FRACUNIT);
 
     if (!linetarget)
     {
@@ -1401,7 +1432,7 @@ void P_SpawnPlayerMissile(mobj_t *source, mobjtype_t type)
         if (!linetarget)
         {
             an = source->angle;
-            slope = (m_look ? ((source->player->lookdir / MLOOKUNIT) << FRACBITS) / 173 : 0);
+            slope = (usemouselook ? ((source->player->lookdir / MLOOKUNIT) << FRACBITS) / 173 : 0);
         }
     }
 
@@ -1434,13 +1465,15 @@ void P_SpawnPlayerMissile(mobj_t *source, mobjtype_t type)
     }
 
     P_CheckMissileSpawn(th);
+
+    A_Recoil(source->player, source->player->readyweapon);
 }
 
 void P_InitExtraMobjs(void)
 {
     int i;
 
-    for (i = MT_SHADOW; i <= MT_EXTRA99; i++)
+    for (i = MT_EXTRA00; i <= MT_EXTRA99; i++)
     {
         mobjinfo[i].doomednum = -1;
         mobjinfo[i].spawnstate = S_NULL;

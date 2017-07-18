@@ -45,6 +45,7 @@
 #include "doomstat.h"
 #include "i_system.h"
 #include "m_argv.h"
+#include "m_menu.h"
 #include "m_misc.h"
 #include "version.h"
 #include "w_wad.h"
@@ -69,12 +70,12 @@ static void AddIWADDir(char *dir)
 // of installed IWAD files. The registry is inspected to find special
 // keys installed by the Windows installers for various CD versions
 // of DOOM. From these keys we can deduce where to find an IWAD.
-typedef struct
+typedef struct registryvalue_s
 {
     HKEY    root;
     char    *path;
     char    *value;
-} registry_value_t;
+} registryvalue_t;
 
 #define UNINSTALLER_STRING  "\\uninstl.exe /S "
 
@@ -84,16 +85,7 @@ typedef struct
 // C:\Program Files\Path\uninstl.exe /S C:\Program Files\Path
 //
 // With some munging we can find where DOOM was installed.
-
-// [AlexMax] From the perspective of a 64-bit executable, 32-bit registry
-// keys are located in a different spot.
-#if _WIN64
-#define SOFTWARE_KEY        "Software\\Wow6432Node"
-#else
-#define SOFTWARE_KEY        "Software"
-#endif
-
-static registry_value_t uninstall_values[] =
+static registryvalue_t uninstall_values[] =
 {
     // Ultimate DOOM, CD version (Depths of DOOM trilogy)
     {
@@ -125,34 +117,33 @@ static registry_value_t uninstall_values[] =
 };
 
 // Values installed by the GOG.com and Collector's Edition versions
-
-static registry_value_t root_path_keys[] =
+static registryvalue_t root_path_keys[] =
 {
     // DOOM Collector's Edition
     {
         HKEY_LOCAL_MACHINE,
-        SOFTWARE_KEY "\\Activision\\DOOM Collector's Edition\\v1.0",
+        "Software\\Activision\\DOOM Collector's Edition\\v1.0",
         "INSTALLPATH",
     },
 
     // Ultimate DOOM
     {
         HKEY_LOCAL_MACHINE,
-        SOFTWARE_KEY "\\GOG.com\\Games\\1435827232",
+        "Software\\GOG.com\\Games\\1435827232",
         "PATH",
     },
 
     // DOOM II
     {
         HKEY_LOCAL_MACHINE,
-        SOFTWARE_KEY "\\GOG.com\\Games\\1435848814",
+        "Software\\GOG.com\\Games\\1435848814",
         "PATH",
     },
 
     // Final DOOM
     {
         HKEY_LOCAL_MACHINE,
-        SOFTWARE_KEY "\\GOG.com\\Games\\1435848742",
+        "Software\\GOG.com\\Games\\1435848742",
         "PATH",
     },
 };
@@ -169,7 +160,7 @@ static char *root_path_subdirs[] =
 };
 
 // Location where Steam is installed
-static registry_value_t steam_install_location =
+static registryvalue_t steam_install_location =
 {
     HKEY_LOCAL_MACHINE,
     "Software\\Valve\\Steam",
@@ -185,7 +176,7 @@ static char *steam_install_subdirs[] =
     "steamapps\\common\\DOOM 3 BFG Edition\\base\\wads"
 };
 
-static char *GetRegistryString(registry_value_t *reg_val)
+static char *GetRegistryString(registryvalue_t *reg_val)
 {
     HKEY    key;
     DWORD   len;
@@ -209,6 +200,9 @@ static char *GetRegistryString(registry_value_t *reg_val)
             free(result);
             result = NULL;
         }
+        else
+            // Ensure the value is null-terminated
+            result[len] = '\0';
     }
 
     // Close the key
@@ -294,13 +288,13 @@ static void CheckDOSDefaults(void)
 
 #endif
 
-static struct
+static struct iwads_s
 {
     char            *name;
     GameMission_t   mission;
 } iwads[] = {
     { "doom2",    doom2      },
-    { "doom2",    pack_nerve },
+    { "nerve",    pack_nerve },
     { "plutonia", pack_plut  },
     { "tnt",      pack_tnt   },
     { "doom",     doom       },
@@ -328,7 +322,7 @@ void IdentifyIWADByName(char *name)
 
     for (i = 0; i < arrlen(iwads); i++)
     {
-        char    *iwad = M_StringJoin(iwads[i].name, ".wad", NULL);
+        char    *iwad = M_StringJoin(iwads[i].name, ".WAD", NULL);
 
         // Check if the filename is this IWAD name.
         if (M_StringCompare(name, iwad))
@@ -338,14 +332,14 @@ void IdentifyIWADByName(char *name)
         }
     }
 
-    if (M_StringCompare(name, "hacx.wad"))
+    if (M_StringCompare(name, "HACX.WAD"))
         hacx = true;
 }
 
 //
 // Add directories from the list in the DOOMWADPATH environment variable.
 //
-static void AddDoomWadPath(void)
+static void AddDoomWADPath(void)
 {
     char    *doomwadpath = getenv("DOOMWADPATH");
     char    *p;
@@ -387,17 +381,12 @@ static void BuildIWADDirList(void)
     if (iwad_dirs_built)
         return;
 
-    // Look in the current directory. DOOM always does this.
-    AddIWADDir(".");
-
     // Add DOOMWADDIR if it is in the environment
-    doomwaddir = getenv("DOOMWADDIR");
-
-    if (doomwaddir)
+    if ((doomwaddir = getenv("DOOMWADDIR")))
         AddIWADDir(doomwaddir);
 
     // Add dirs from DOOMWADPATH
-    AddDoomWadPath();
+    AddDoomWADPath();
 
 #if defined(_WIN32)
     // Search the registry and find where IWADs have been installed.
@@ -474,14 +463,10 @@ char *D_FindIWAD(void)
 
     if (iwadparm)
     {
-        char    *iwadfile;
-
         // Search through IWAD dirs for an IWAD with the given name.
-        iwadfile = myargv[iwadparm + 1];
+        char    *iwadfile = myargv[iwadparm + 1];
 
-        result = D_FindWADByName(iwadfile);
-
-        if (!result)
+        if (!(result = D_FindWADByName(iwadfile)))
             I_Error("The IWAD file \"%s\" wasn't found!", iwadfile);
 
         IdentifyIWADByName(result);
@@ -505,6 +490,9 @@ static char *SaveGameIWADName(void)
     // Note that we match on gamemission rather than on IWAD name.
     // This ensures that doom1.wad and doom.wad saves are stored
     // in the same place.
+    if (hacx)
+        return "HACX";
+
     for (i = 0; i < arrlen(iwads); i++)
         if (gamemission == iwads[i].mission)
             return iwads[i].name;
@@ -512,14 +500,14 @@ static char *SaveGameIWADName(void)
     return NULL;
 }
 
-extern char     *pwadfile;
+extern char *pwadfile;
 
 //
 // SetSaveGameFolder
 //
 // Chooses the directory used to store saved games.
 //
-void D_SetSaveGameFolder(void)
+void D_SetSaveGameFolder(dboolean output)
 {
     char    *iwad_name = SaveGameIWADName();
     char    *appdatafolder = M_GetAppDataFolder();
@@ -533,7 +521,6 @@ void D_SetSaveGameFolder(void)
     else
     {
         M_MakeDirectory(appdatafolder);
-
         savegamefolder = M_StringJoin(appdatafolder, DIR_SEPARATOR_S, "savegames", DIR_SEPARATOR_S, NULL);
     }
 
@@ -542,7 +529,17 @@ void D_SetSaveGameFolder(void)
     savegamefolder = M_StringJoin(savegamefolder, (*pwadfile ? pwadfile : iwad_name), DIR_SEPARATOR_S, NULL);
     M_MakeDirectory(savegamefolder);
 
-    C_Output("Savegames will be saved and loaded in <b>%s</b>.", savegamefolder);
+    if (output)
+    {
+        int numsavegames = M_CountSaveGames();
+
+        if (!numsavegames)
+            C_Output("Savegames will be saved in <b>%s</b>.", savegamefolder);
+        else if (numsavegames == 1)
+            C_Output("There is 1 savegame in <b>%s</b>.", savegamefolder);
+        else
+            C_Output("There are %i savegames in <b>%s</b>.", numsavegames, savegamefolder);
+    }
 }
 
 //

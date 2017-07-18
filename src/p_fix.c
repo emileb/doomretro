@@ -325,7 +325,7 @@ linefix_t linefix[] =
 
     { doom,             2,   9,     110,    1, "",         "MIDGRATE",    "",            DEFAULT,   DEFAULT, DEFAULT,                   DEFAULT,                                    DEFAULT },
     { doom,             2,   9,     115,    1, "",         "MIDGRATE",    "",            DEFAULT,   DEFAULT, DEFAULT,                   DEFAULT,                                    DEFAULT },
-    { doom,             2,   9,     121,    1, "GSTONE1",  "",            "",            DEFAULT,   DEFAULT, DEFAULT,                   DEFAULT,                                    DEFAULT },
+    { doom,             2,   9,     121,    1, "SW1LION",  "",            "",            DEFAULT,   DEFAULT, DEFAULT,                   DEFAULT,                                    DEFAULT },
     { doom,             2,   9,     123,    1, "GSTONE1",  "",            "",            DEFAULT,   DEFAULT, DEFAULT,                   DEFAULT,                                    DEFAULT },
     { doom,             2,   9,     140,    1, "GSTONE1",  "",            "",            DEFAULT,   DEFAULT, DEFAULT,                   DEFAULT,                                    DEFAULT },
 
@@ -1443,6 +1443,7 @@ sectorfix_t sectorfix[] =
     { doom2,            1,   4,     76, "",        "",                  32,       DEFAULT, DEFAULT,                           DEFAULT },
 
     { doom2,            1,   5,      4, "",        "",             DEFAULT,       DEFAULT, DEFAULT,                                 0 },
+    { doom2,            1,   5,    153, "",        "",             DEFAULT,       DEFAULT, DEFAULT,                                 0 },
 
     { doom2,            1,  12,    134, "",        "FLOOR4_6",     DEFAULT,       DEFAULT, DEFAULT,                           DEFAULT },
 
@@ -1475,6 +1476,8 @@ sectorfix_t sectorfix[] =
 
     { pack_tnt,         1,   3,    260, "",        "CEIL3_3",      DEFAULT,       DEFAULT, DEFAULT,                           DEFAULT },
     { pack_tnt,         1,   3,    329, "",        "CEIL3_3",      DEFAULT,       DEFAULT, DEFAULT,                           DEFAULT },
+
+    { pack_tnt,         1,  15,    330, "",        "",             DEFAULT,       DEFAULT, DEFAULT,                                11 },
 
     { -1,               0,   0,      0, "",        "",             DEFAULT,       DEFAULT, DEFAULT,                           DEFAULT },
 };

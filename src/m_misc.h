@@ -67,6 +67,7 @@ char *M_GetResourceFolder(void);
 char *M_GetAppDataFolder(void);
 
 char *M_GetExecutableFolder(void);
+void M_Shutdown(void);
 dboolean M_StrToInt(const char *str, unsigned int *result);
 char *M_StrCaseStr(char *haystack, char *needle);
 dboolean M_StringCopy(char *dest, char *src, size_t dest_size);
@@ -90,10 +91,10 @@ char *removespaces(const char *input);
 char *trimwhitespace(char *input);
 char *removenewlines(const char *str);
 char *makevalidfilename(const char *input);
-const char *leafname(const char *path);
+char *leafname(char *path);
 char *removeext(const char *file);
 dboolean isvowel(const char ch);
 char *striptrailingzero(float value, int precision);
-void strreplace(char *target, const char *needle, const char *replacement);
+void strreplace(char *target, char *needle, const char *replacement);
 
 #endif

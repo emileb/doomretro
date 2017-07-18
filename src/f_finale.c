@@ -53,7 +53,7 @@
 #include "w_wad.h"
 #include "z_zone.h"
 
-typedef enum
+typedef enum finalestage_e
 {
     F_STAGE_TEXT,
     F_STAGE_ARTSCREEN,
@@ -83,13 +83,9 @@ static int              midstage;               // whether we're in "mid-stage"
 
 extern int              acceleratestage;        // accelerate intermission screens
 
-extern char             *episode;
-extern char             *expansion;
 extern dboolean         r_shadows;
 extern dboolean         r_shadows_translucency;
 extern dboolean         r_translucency;
-extern char             *savegame;
-extern char             *skilllevel;
 
 //
 // F_StartFinale
@@ -137,9 +133,6 @@ void F_StartFinale(void)
                 case 4:
                     finaleflat = bgflatE4;
                     finaletext = s_E4TEXT;
-                    break;
-
-                default:
                     break;
             }
             break;
@@ -197,10 +190,6 @@ void F_StartFinale(void)
                     finaletext = (gamemission == pack_tnt ? s_T6TEXT : (gamemission == pack_plut ? s_P6TEXT :
                         s_C6TEXT));
                     break;
-
-                default:
-                    // Ouch.
-                    break;
             }
             break;
         }
@@ -256,9 +245,6 @@ void F_Ticker(void)
             {
                 finalecount = 0;
                 finalestage = F_STAGE_ARTSCREEN;
-                episode = "";
-                savegame = "";
-                skilllevel = "";
                 wipegamestate = GS_NONE;        // force a wipe
 
                 if (gameepisode == 3)
@@ -275,7 +261,7 @@ void F_Ticker(void)
     }
 }
 
-static struct
+static struct kern_s
 {
     char    char1;
     char    char2;
@@ -418,7 +404,7 @@ static void F_TextWrite(void)
 // Casting by id Software.
 //   in order of appearance
 //
-typedef struct
+typedef struct castinfo_s
 {
     char        **name;
     mobjtype_t  type;
@@ -481,9 +467,6 @@ static void F_StartCast(void)
     if (!M_StringCompare(playername, playername_default))
         s_CC_HERO = playername;
 
-    expansion = "";
-    savegame = "";
-    skilllevel = "";
     S_ChangeMusic(mus_evil, true, false, false);
 }
 
@@ -751,7 +734,6 @@ static void F_CastPrint(char *text)
     const char  *ch = text;
     int         c;
     int         cx;
-    int         w;
     int         width = 0;
 
     while (ch)
@@ -769,8 +751,7 @@ static void F_CastPrint(char *text)
             continue;
         }
 
-        w = SHORT(hu_font[c]->width);
-        width += w;
+        width += SHORT(hu_font[c]->width);
     }
 
     // draw it
@@ -792,9 +773,8 @@ static void F_CastPrint(char *text)
             continue;
         }
 
-        w = SHORT(hu_font[c]->width);
         V_DrawPatchWithShadow(cx + 1, 181, hu_font[c], false);
-        cx += w;
+        cx += SHORT(hu_font[c]->width);
     }
 }
 

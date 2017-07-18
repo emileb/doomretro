@@ -54,17 +54,19 @@ int             skyscrolldelta;
 
 fixed_t         skyiscale;
 
-extern dboolean m_look;
+extern dboolean canmouselook;
+extern dboolean mouselook;
 
 void R_InitSkyMap(void)
 {
     int map = (gameepisode - 1) * 10 + gamemap;
 
     skyflatnum = R_FlatNumForName(SKYFLATNAME);
-
     skytexture = P_GetMapSky1Texture(map);
 
-    if (!skytexture || ((textureheight[skytexture] >> FRACBITS) > 128 && !m_look))
+    canmouselook = (mouselook || keyboardmouselook || mousemouselook != -1);
+
+    if (!skytexture || ((textureheight[skytexture] >> FRACBITS) > 128 && !canmouselook))
     {
         if (gamemode == commercial)
         {
@@ -101,38 +103,23 @@ void R_InitSkyMap(void)
 
     skyscrolldelta = P_GetMapSky1ScrollDelta(map);
 
-    if (!m_look)
-    {
-        skytexturemid = 100 * FRACUNIT;
-        skyiscale = (fixed_t)(((uint64_t)FRACUNIT * SCREENWIDTH * 200) / (viewwidth * SCREENHEIGHT));
-    }
-    else
+    if (canmouselook)
     {
         int skyheight = textureheight[skytexture] >> FRACBITS;
 
-        // There are various combinations for sky rendering depending on how tall the sky is:
-        //        h <  128: Unstretched and tiled, centered on horizon
-        // 128 <= h <  200: Can possibly be stretched. When unstretched, the baseline is
-        //                  28 rows below the horizon so that the top of the texture
-        //                  aligns with the top of the screen when looking straight ahead.
-        //                  When stretched, it is scaled to 228 pixels with the baseline
-        //                  in the same location as an unstretched 128-tall sky, so the top
-        //                  of the texture aligns with the top of the screen when looking
-        //                  fully up.
-        //        h == 200: Unstretched, baseline is on horizon, and top is at the top of
-        //                  the screen when looking fully up.
-        //        h >  200: Unstretched, but the baseline is shifted down so that the top
-        //                  of the texture is at the top of the screen when looking fully up.
-        skytexturemid = 0;
-
         if (skyheight >= 128 && skyheight < 200)
-            skytexturemid = -28 * FRACUNIT;
+            skytexturemid = -54 * FRACUNIT * skyheight / SKYSTRETCH_HEIGHT;
         else if (skyheight > 200)
-            skytexturemid = (200 - skyheight) << FRACBITS;
+            skytexturemid = ((200 - skyheight) << FRACBITS) * skyheight / SKYSTRETCH_HEIGHT;
+        else
+            skytexturemid = 0;
 
+        skyiscale = (fixed_t)(((uint64_t)FRACUNIT * SCREENWIDTH * 200) / (viewwidth * SCREENHEIGHT))
+            * skyheight / SKYSTRETCH_HEIGHT;
+    }
+    else
+    {
+        skytexturemid = 100 * FRACUNIT;
         skyiscale = (fixed_t)(((uint64_t)FRACUNIT * SCREENWIDTH * 200) / (viewwidth * SCREENHEIGHT));
-
-        skyiscale = skyiscale * skyheight / SKYSTRETCH_HEIGHT;
-        skytexturemid = skytexturemid * skyheight / SKYSTRETCH_HEIGHT;
     }
 }

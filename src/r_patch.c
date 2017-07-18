@@ -86,22 +86,18 @@ static rpatch_t     *texture_composites;
 
 static short        BIGDOOR7;
 static short        FIREBLU1;
-static short        SKY1;
 
 extern int          numtextures;
 extern texture_t    **textures;
 
 void R_InitPatches(void)
 {
-    if (!patches)
-        patches = calloc(numlumps, sizeof(rpatch_t));
+    patches = calloc(numlumps, sizeof(rpatch_t));
 
-    if (!texture_composites)
-        texture_composites = calloc(numtextures, sizeof(rpatch_t));
+    texture_composites = calloc(numtextures, sizeof(rpatch_t));
 
     BIGDOOR7 = R_CheckTextureNumForName("BIGDOOR7");
     FIREBLU1 = R_CheckTextureNumForName("FIREBLU1");
-    SKY1 = R_CheckTextureNumForName("SKY1");
 }
 
 static dboolean getIsSolidAtSpot(const column_t *column, int spot)
@@ -151,7 +147,7 @@ static dboolean CheckIfPatch(int lump)
         // point past the end of the patch.
         int x;
 
-        for (x = 0; x < width; ++x)
+        for (x = 0; x < width; x++)
         {
             unsigned int    ofs = LONG(patch->columnofs[x]);
 
@@ -205,7 +201,7 @@ static void createPatch(int id)
     numPostsInColumn = malloc(sizeof(int) * patch->width);
     numPostsTotal = 0;
 
-    for (x = 0; x < patch->width; ++x)
+    for (x = 0; x < patch->width; x++)
     {
         oldColumn = (const column_t *)((const byte *)oldPatch + LONG(oldPatch->columnofs[x]));
         numPostsInColumn[x] = 0;
@@ -222,8 +218,7 @@ static void createPatch(int id)
 
     // allocate our data chunk
     dataSize = pixelDataSize + columnsDataSize + postsDataSize;
-    patch->data = Z_Malloc(dataSize, PU_CACHE, (void **)&patch->data);
-    memset(patch->data, 0, dataSize);
+    patch->data = Z_Calloc(1, dataSize, PU_CACHE, (void **)&patch->data);
 
     // set out pixel, column, and post pointers into our data array
     patch->pixels = patch->data;
@@ -238,7 +233,7 @@ static void createPatch(int id)
     // fill in the pixels, posts, and columns
     numPostsUsedSoFar = 0;
 
-    for (x = 0; x < patch->width; ++x)
+    for (x = 0; x < patch->width; x++)
     {
         int top = -1;
 
@@ -246,7 +241,7 @@ static void createPatch(int id)
 
         // setup the column's data
         patch->columns[x].pixels = patch->pixels + x * patch->height;
-        patch->columns[x].numPosts = numPostsInColumn[x];
+        patch->columns[x].numposts = numPostsInColumn[x];
         patch->columns[x].posts = patch->posts + numPostsUsedSoFar;
 
         while (oldColumn->topdelta != 0xFF)
@@ -287,7 +282,7 @@ static void createPatch(int id)
 
         // copy the patch image down and to the right where there are
         // holes to eliminate the black halo from bilinear filtering
-        for (x = 0; x < patch->width; ++x)
+        for (x = 0; x < patch->width; x++)
         {
             column = R_GetPatchColumnClamped(patch, x);
             prevColumn = R_GetPatchColumnClamped(patch, x - 1);
@@ -305,7 +300,7 @@ static void createPatch(int id)
             }
 
             // copy from above or to the left
-            for (y = 1; y < patch->height; ++y)
+            for (y = 1; y < patch->height; y++)
             {
                 if (getIsSolidAtSpot(oldColumn, y))
                     continue;
@@ -329,7 +324,7 @@ static void createPatch(int id)
     free(numPostsInColumn);
 }
 
-typedef struct
+typedef struct count_s
 {
     unsigned short  patches;
     unsigned short  posts;
@@ -350,11 +345,11 @@ static void switchPosts(rpost_t *post1, rpost_t *post2)
 
 static void removePostFromColumn(rcolumn_t *column, int post)
 {
-    if (post < column->numPosts)
+    if (post < column->numposts)
     {
         int i;
 
-        for (i = post; i < column->numPosts - 1; i++)
+        for (i = post; i < column->numposts - 1; i++)
         {
             rpost_t *post1 = &column->posts[i];
             rpost_t *post2 = &column->posts[i + 1];
@@ -363,7 +358,8 @@ static void removePostFromColumn(rcolumn_t *column, int post)
             post1->length = post2->length;
         }
     }
-    column->numPosts--;
+
+    column->numposts--;
 }
 
 static void createTextureCompositePatch(int id)
@@ -374,8 +370,10 @@ static void createTextureCompositePatch(int id)
     int                 patchNum;
     const patch_t       *oldPatch;
     const column_t      *oldColumn;
-    int                 i, x, y;
-    int                 oy, count;
+    int                 i;
+    int                 x, y;
+    int                 oy;
+    int                 count;
     int                 pixelDataSize;
     int                 columnsDataSize;
     int                 postsDataSize;
@@ -453,7 +451,7 @@ static void createTextureCompositePatch(int id)
     {
         // setup the column's data
         composite_patch->columns[x].pixels = composite_patch->pixels + x * composite_patch->height;
-        composite_patch->columns[x].numPosts = countsInColumn[x].posts;
+        composite_patch->columns[x].numposts = countsInColumn[x].posts;
         composite_patch->columns[x].posts = composite_patch->posts + numPostsUsedSoFar;
         numPostsUsedSoFar += countsInColumn[x].posts;
     }
@@ -493,7 +491,7 @@ static void createTextureCompositePatch(int id)
                 count = oldColumn->length;
 
                 // [BH] use incorrect y-origin for certain textures
-                if (id == BIGDOOR7 || id == FIREBLU1 || id == SKY1)
+                if (id == BIGDOOR7 || id == FIREBLU1)
                     oy = 0;
 
                 // set up the post's data
@@ -553,7 +551,7 @@ static void createTextureCompositePatch(int id)
 
         i = 0;
 
-        while (i < column->numPosts - 1)
+        while (i < column->numposts - 1)
         {
             rpost_t *post1 = &column->posts[i];
             rpost_t *post2 = &column->posts[i + 1];

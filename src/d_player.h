@@ -55,7 +55,7 @@
 // as commands per game tick.
 #include "d_ticcmd.h"
 
-typedef enum
+typedef enum armortype_e
 {
     NOARMOR    = 0,
     GREENARMOR = 1,
@@ -65,7 +65,7 @@ typedef enum
 //
 // Player states.
 //
-typedef enum
+typedef enum playerstate_e
 {
     // Playing or camping.
     PST_LIVE,
@@ -78,7 +78,7 @@ typedef enum
 //
 // Player internal flags, for cheats and debug.
 //
-typedef enum
+typedef enum cheat_e
 {
     // No clipping, walk through barriers.
     CF_NOCLIP        = 1,
@@ -201,6 +201,9 @@ typedef struct player_s
     int                 lookdir;
     int                 oldlookdir;
 
+    fixed_t             recoil;
+    fixed_t             oldrecoil;
+
     // For playerstats cmd
     int                 damageinflicted;
     int                 damagereceived;
@@ -222,17 +225,16 @@ typedef struct player_s
 // INTERMISSION
 // Structure passed e.g. to WI_Start(wb)
 //
-typedef struct
+typedef struct wbplayerstruct_s
 {
     // Player stats, kills, collected items etc.
     int                 skills;
     int                 sitems;
     int                 ssecret;
     int                 stime;
-    int                 score;          // current score on entry, modified on return
 } wbplayerstruct_t;
 
-typedef struct
+typedef struct wbstartstruct_s
 {
     int                 epsd;           // episode # (0-2)
 

@@ -146,7 +146,6 @@
 
 // Ammunition counter.
 #define ST_AMMO0WIDTH       3
-#define ST_AMMO0HEIGHT      6
 #define ST_AMMO0X           288
 #define ST_AMMO0Y           173
 #define ST_AMMO1WIDTH       ST_AMMO0WIDTH
@@ -162,7 +161,6 @@
 // Indicate maximum ammunition.
 // Only needed because backpack exists.
 #define ST_MAXAMMO0WIDTH    3
-#define ST_MAXAMMO0HEIGHT   5
 #define ST_MAXAMMO0X        314
 #define ST_MAXAMMO0Y        173
 #define ST_MAXAMMO1WIDTH    ST_MAXAMMO0WIDTH
@@ -315,9 +313,10 @@ cheatseq_t cheat_buddha = CHEAT("mumu", 0);
 
 static dboolean movekey(char key)
 {
-    return (key == keyboardright || key == keyboardleft || key == keyboardforward || key == keyboardforward2
-        || key == keyboardback || key == keyboardback2 || key == keyboardstrafeleft
-        || key == keyboardstraferight);
+    return (key == keyboardright || key == keyboardleft
+        || key == keyboardforward || key == keyboardforward2
+        || key == keyboardback || key == keyboardback2
+        || key == keyboardstrafeleft || key == keyboardstraferight);
 }
 
 static void ST_InitCheats(void)
@@ -437,7 +436,7 @@ void ST_AutomapEvent(int type)
 }
 
 extern char     cheatkey;
-extern int      episodeselected;
+extern int      episode;
 extern menu_t   EpiDef;
 
 // Respond to keyboard input events,
@@ -495,7 +494,8 @@ dboolean ST_Responder(event_t *ev)
                         message_dontfuckwithme = true;
 
                     // [BH] restore player's health
-                    plyr->health = plyr->mo->health = oldhealth;
+                    plyr->health = oldhealth;
+                    plyr->mo->health = oldhealth;
 
                     if (!oldhealth)
                     {
@@ -794,7 +794,10 @@ dboolean ST_Responder(event_t *ev)
                             plyr->powers[i] = 0;
 
                             if (plyr->readyweapon == wp_fist && plyr->weaponowned[wp_chainsaw])
-                                plyr->pendingweapon = plyr->fistorchainsaw = wp_chainsaw;
+                            {
+                                plyr->pendingweapon = wp_chainsaw;
+                                plyr->fistorchainsaw = wp_chainsaw;
+                            }
                         }
                         else
                         {
@@ -954,7 +957,8 @@ dboolean ST_Responder(event_t *ev)
                 players[0].cheated++;
             }
 
-            else if (cht_CheckCheat(&cheat_buddha, ev->data2) && plyr->health > 0)
+            else if (cht_CheckCheat(&cheat_buddha, ev->data2) && gameskill != sk_nightmare
+                && plyr->health > 0)
             {
                 plyr->cheats ^= CF_BUDDHA;
 
@@ -1052,6 +1056,7 @@ dboolean ST_Responder(event_t *ev)
                         M_snprintf(message, sizeof(message), s_STSTR_CLEVSAME, lump);
                     else
                         M_snprintf(message, sizeof(message), s_STSTR_CLEV, lump);
+
                     HU_PlayerMessage(message, false);
 
                     // [BH] always display message
@@ -1067,9 +1072,9 @@ dboolean ST_Responder(event_t *ev)
 
                     if (gamemission == doom && epsd <= 4)
                     {
-                        episodeselected = gameepisode - 1;
-                        EpiDef.lastOn = episodeselected;
-                        episode = *episodes[episodeselected];
+                        episode = gameepisode;
+                        EpiDef.lastOn = episode - 1;
+                        M_SaveCVARs();
                     }
 
                     gamemap = map;
@@ -1327,7 +1332,7 @@ void ST_Ticker(void)
         }
 }
 
-int     st_palette;
+int st_palette;
 
 static void ST_doPaletteStuff(void)
 {
@@ -1338,7 +1343,7 @@ static void ST_doPaletteStuff(void)
         && plyr->pendingweapon == wp_nochange)) && plyr->health > 0 && r_berserkintensity)
     {
         if (plyr->bonuscount)
-            palette = STARTBONUSPALS + MIN((plyr->bonuscount + 7) >> 3, NUMBONUSPALS - 1);
+            palette = STARTBONUSPALS - 1 + MIN((plyr->bonuscount + 7) >> 3, NUMBONUSPALS);
         else
             palette = MIN((count >> 3) + r_berserkintensity, NUMREDPALS);
     }
@@ -1347,7 +1352,7 @@ static void ST_doPaletteStuff(void)
     else if (plyr->health > 0)
     {
         if (plyr->bonuscount)
-            palette = STARTBONUSPALS + MIN((plyr->bonuscount + 7) >> 3, NUMBONUSPALS - 1);
+            palette = STARTBONUSPALS - 1 + MIN((plyr->bonuscount + 7) >> 3, NUMBONUSPALS);
         else if (plyr->powers[pw_ironfeet] > STARTFLASHING || (plyr->powers[pw_ironfeet] & 8))
             palette = RADIATIONPAL;
     }
@@ -1500,6 +1505,7 @@ static void ST_loadUnloadGraphics(load_callback_t callback)
 
     // face states
     facenum = 0;
+
     for (i = 0; i < ST_NUMPAINFACES; i++)
     {
         for (j = 0; j < ST_NUMSTRAIGHTFACES; j++)
@@ -1519,6 +1525,7 @@ static void ST_loadUnloadGraphics(load_callback_t callback)
         M_snprintf(namebuf, 9, "STFKILL%i", i);         // pissed off
         callback(namebuf, &faces[facenum++]);
     }
+
     callback("STFGOD0", &faces[facenum++]);
     callback("STFDEAD0", &faces[facenum++]);
 
@@ -1555,11 +1562,19 @@ static void ST_loadUnloadGraphics(load_callback_t callback)
 static void ST_loadCallback(char *lumpname, patch_t **variable)
 {
     if (M_StringCompare(lumpname, "STARMS"))
-        *variable = W_CacheLumpNum(W_GetNumForNameX("STARMS", (STARMS <= 2 ? STARMS : (STARMS == 3 ?
-            (FREEDOOM || hacx ? 1 : 2) : 3))));
+    {
+        if (FREEDOOM || hacx)
+            *variable = W_CacheLumpName2("STARMS");
+        else
+            *variable = W_CacheLumpName("STARMS");
+    }
     else if (M_StringCompare(lumpname, "STBAR"))
-        *variable = W_CacheLumpNum(W_GetNumForNameX("STBAR", (STBAR <= 2 ? STBAR : (STBAR == 3 ?
-            (FREEDOOM || hacx ? 1 : 2) : 3))));
+    {
+        if (FREEDOOM || hacx)
+            *variable = W_CacheLumpName2("STBAR");
+        else
+            *variable = W_CacheLumpName("STBAR");
+    }
     else
         *variable = W_CacheLumpName(lumpname);
 }

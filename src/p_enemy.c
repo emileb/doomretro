@@ -49,7 +49,7 @@
 #include "p_tick.h"
 #include "s_sound.h"
 
-typedef enum
+typedef enum dirtype_e
 {
     DI_EAST,
     DI_NORTHEAST,
@@ -87,7 +87,7 @@ dirtype_t diags[] =
 #define EXPLOSIONTICS   (2 * TICRATE)
 #define EXPLOSIONRANGE  (512 * FRACUNIT)
 
-int     explosiontics;
+int explosiontics;
 
 void A_Fall(mobj_t *actor, player_t *player, pspdef_t *psp);
 
@@ -552,6 +552,7 @@ static void P_DoNewChaseDir(mobj_t *actor, fixed_t deltax, fixed_t deltay)
         if (actor->movedir != turnaround)
         {
             attempts[actor->movedir] = true;
+
             if (P_TryWalk(actor))
                 return;
         }
@@ -851,7 +852,7 @@ void A_KeenDie(mobj_t *actor, player_t *player, pspdef_t *psp)
     // scan the remaining thinkers to see if all Keens are dead
     for (th = thinkerclasscap[th_mobj].cnext; th != &thinkerclasscap[th_mobj]; th = th->cnext)
     {
-        mobj_t      *mo = (mobj_t *)th;
+        mobj_t  *mo = (mobj_t *)th;
 
         if (mo != actor && mo->type == actor->type && mo->health > 0)
             return;         // other Keen not dead
@@ -1159,7 +1160,7 @@ void A_HeadAttack(mobj_t *actor, player_t *player, pspdef_t *psp)
     }
 
     // [BH] make cacodemon fullbright when launching missile here instead of in its
-    // S_HEAD_ATK3 state so its not fullbright when during its melee attack above.
+    // S_HEAD_ATK3 state so its not fullbright during its melee attack above.
     actor->frame |= FF_FULLBRIGHT;
 
     // launch a missile
@@ -2054,13 +2055,11 @@ static mobj_t *A_NextBrainTarget(void)
 
         if (mo->type == MT_BOSSTARGET)
         {
-            if (count == braintargeted) // This one the one that we want?
+            if (count++ == braintargeted) // This one the one that we want?
             {
                 braintargeted++;        // Yes.
                 return mo;
             }
-
-            count++;
 
             if (!found)                 // Remember first one in case we wrap.
                 found = mo;
@@ -2304,9 +2303,18 @@ void A_Scratch(mobj_t *actor, player_t *player, pspdef_t *psp)
 {
     state_t *state = actor->state;
 
-    (actor->target && (A_FaceTarget(actor, NULL, NULL), P_CheckMeleeRange(actor)) ? (state->misc2 ?
-        S_StartSound(actor, state->misc2) : (void)0, P_DamageMobj(actor->target, actor, actor, state->misc1,
-        true)) : (void)0);
+    if (!actor->target)
+        return;
+
+    A_FaceTarget(actor, NULL, NULL);
+
+    if (P_CheckMeleeRange(actor))
+    {
+        if (state->misc2)
+            S_StartSound(actor, state->misc2);
+
+        P_DamageMobj(actor->target, actor, actor, state->misc1, true);
+    }
 }
 
 void A_PlaySound(mobj_t *actor, player_t *player, pspdef_t *psp)
@@ -2340,17 +2348,14 @@ void A_RandomJump(mobj_t *actor, player_t *player, pspdef_t *psp)
 //
 void A_LineEffect(mobj_t *actor, player_t *player, pspdef_t *psp)
 {
-    static line_t   junk;
-    player_t        newplayer;
-    player_t        *oldplayer;
+    line_t      junk = *lines;
+    player_t    newplayer;
+    player_t    *oldplayer = actor->player;
 
-    junk = *lines;
-    oldplayer = actor->player;
     actor->player = &newplayer;
     newplayer.health = 100;
-    junk.special = (short)actor->state->misc1;
 
-    if (!junk.special)
+    if (!(junk.special = (short)actor->state->misc1))
         return;
 
     junk.tag = (short)actor->state->misc2;

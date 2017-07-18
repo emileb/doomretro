@@ -52,7 +52,7 @@
 FILE    *save_stream;
 int     savegamelength;
 
-extern dboolean m_look;
+extern dboolean mouselook;
 extern dboolean r_shadows_translucency;
 extern dboolean r_textures;
 
@@ -454,14 +454,17 @@ static void saveg_read_player_t(player_t *str)
     str->chainsawbeforechoppers = saveg_read32();
     str->weaponbeforechoppers = (weapontype_t)saveg_read_enum();
     str->oldviewz = saveg_read32();
-
     str->lookdir = saveg_read32();
     str->oldlookdir = saveg_read32();
+    str->recoil = saveg_read32();
+    str->oldrecoil = saveg_read32();
 
-    if (!m_look)
+    if (!mouselook)
     {
         str->lookdir = 0;
         str->oldlookdir = 0;
+        str->recoil = 0;
+        str->oldrecoil = 0;
     }
 
     str->damageinflicted = saveg_read32();
@@ -549,6 +552,8 @@ static void saveg_write_player_t(player_t *str)
     saveg_write32(str->oldviewz);
     saveg_write32(str->lookdir);
     saveg_write32(str->oldlookdir);
+    saveg_write32(str->recoil);
+    saveg_write32(str->oldrecoil);
     saveg_write32(str->damageinflicted);
     saveg_write32(str->damagereceived);
     saveg_write32(str->cheated);
@@ -1409,7 +1414,7 @@ void P_ArchiveSpecials(void)
 
     do
     {
-        if (button_ptr->btimer != 0)
+        if (button_ptr->btimer)
         {
             saveg_write8(tc_button);
             saveg_write_pad();
@@ -1439,7 +1444,8 @@ void P_UnArchiveSpecials(void)
         switch (tclass)
         {
             case tc_endspecials:
-                return;          // end of list
+                // end of list
+                return;
 
             case tc_ceiling:
             {
@@ -1451,7 +1457,6 @@ void P_UnArchiveSpecials(void)
                 ceiling->thinker.function = T_MoveCeiling;
                 P_AddThinker(&ceiling->thinker);
                 P_AddActiveCeiling(ceiling);
-                Z_Free(ceiling);
                 break;
             }
 
@@ -1464,7 +1469,6 @@ void P_UnArchiveSpecials(void)
                 door->sector->ceilingdata = door;
                 door->thinker.function = T_VerticalDoor;
                 P_AddThinker(&door->thinker);
-                Z_Free(door);
                 break;
             }
 
@@ -1477,7 +1481,6 @@ void P_UnArchiveSpecials(void)
                 floor->sector->floordata = floor;
                 floor->thinker.function = T_MoveFloor;
                 P_AddThinker(&floor->thinker);
-                Z_Free(floor);
                 break;
             }
 
@@ -1490,7 +1493,6 @@ void P_UnArchiveSpecials(void)
                 plat->sector->floordata = plat;
                 P_AddThinker(&plat->thinker);
                 P_AddActivePlat(plat);
-                Z_Free(plat);
                 break;
             }
 
@@ -1502,7 +1504,6 @@ void P_UnArchiveSpecials(void)
                 saveg_read_lightflash_t(flash);
                 flash->thinker.function = T_LightFlash;
                 P_AddThinker(&flash->thinker);
-                Z_Free(flash);
                 break;
             }
 
@@ -1514,7 +1515,6 @@ void P_UnArchiveSpecials(void)
                 saveg_read_strobe_t(strobe);
                 strobe->thinker.function = T_StrobeFlash;
                 P_AddThinker(&strobe->thinker);
-                Z_Free(strobe);
                 break;
             }
 
@@ -1526,7 +1526,6 @@ void P_UnArchiveSpecials(void)
                 saveg_read_glow_t(glow);
                 glow->thinker.function = T_Glow;
                 P_AddThinker(&glow->thinker);
-                Z_Free(glow);
                 break;
             }
 
@@ -1538,7 +1537,6 @@ void P_UnArchiveSpecials(void)
                 saveg_read_fireflicker_t(fireflicker);
                 fireflicker->thinker.function = T_FireFlicker;
                 P_AddThinker(&fireflicker->thinker);
-                Z_Free(fireflicker);
                 break;
             }
 
@@ -1551,7 +1549,6 @@ void P_UnArchiveSpecials(void)
                 elevator->sector->ceilingdata = elevator;
                 elevator->thinker.function = T_MoveElevator;
                 P_AddThinker(&elevator->thinker);
-                Z_Free(elevator);
                 break;
             }
 
@@ -1563,7 +1560,6 @@ void P_UnArchiveSpecials(void)
                 saveg_read_scroll_t(scroll);
                 scroll->thinker.function = T_Scroll;
                 P_AddThinker(&scroll->thinker);
-                Z_Free(scroll);
                 break;
             }
 
@@ -1576,7 +1572,6 @@ void P_UnArchiveSpecials(void)
                 pusher->thinker.function = T_Pusher;
                 pusher->source = P_GetPushThing(pusher->affectee);
                 P_AddThinker(&pusher->thinker);
-                Z_Free(pusher);
                 break;
             }
 
@@ -1587,7 +1582,6 @@ void P_UnArchiveSpecials(void)
                 saveg_read_pad();
                 saveg_read_button_t(button);
                 P_StartButton(button->line, button->where, button->btexture, button->btimer);
-                Z_Free(button);
                 break;
             }
 
@@ -1641,7 +1635,7 @@ void P_UnArchiveMap(void)
     {
         while (markpointnum >= markpointnum_max)
         {
-            markpointnum_max = (markpointnum_max ? markpointnum_max << 1 : 16);
+            markpointnum_max = (markpointnum_max ? (markpointnum_max << 1) : 16);
             markpoints = Z_Realloc(markpoints, markpointnum_max * sizeof(*markpoints));
         }
 
@@ -1656,7 +1650,7 @@ void P_UnArchiveMap(void)
     {
         while (pathpointnum >= pathpointnum_max)
         {
-            pathpointnum_max = (pathpointnum_max ? pathpointnum_max << 1 : 16);
+            pathpointnum_max = (pathpointnum_max ? (pathpointnum_max << 1) : 16);
             pathpoints = Z_Realloc(pathpoints, pathpointnum_max * sizeof(*pathpoints));
         }
 

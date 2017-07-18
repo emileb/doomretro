@@ -124,12 +124,12 @@ dboolean            r_textures = r_textures_default;
 dboolean            r_translucency = r_translucency_default;
 
 extern dboolean     canmodify;
+extern dboolean     canmouselook;
 extern int          explosiontics;
-extern dboolean     m_look;
 extern dboolean     transferredsky;
 extern dboolean     vanilla;
-extern int          viewheight2;
 extern lighttable_t **walllights;
+extern dboolean     weaponrecoil;
 
 //
 // R_PointOnSide
@@ -139,20 +139,25 @@ extern lighttable_t **walllights;
 //
 int R_PointOnSide(fixed_t x, fixed_t y, const node_t *node)
 {
-    if (!node->dx)
-        return (x <= node->x ? node->dy > 0 : node->dy < 0);
+    fixed_t nx = node->x;
+    fixed_t ny = node->y;
+    fixed_t ndx = node->dx;
+    fixed_t ndy = node->dy;
 
-    if (!node->dy)
-        return (y <= node->y ? node->dx < 0 : node->dx > 0);
+    if (!ndx)
+        return (x <= nx ? ndy > 0 : ndy < 0);
 
-    x -= node->x;
-    y -= node->y;
+    if (!ndy)
+        return (y <= ny ? ndx < 0 : ndx > 0);
+
+    x -= nx;
+    y -= ny;
 
     // Try to quickly decide by looking at sign bits.
-    if ((node->dy ^ node->dx ^ x ^ y) < 0)
-        return ((node->dy ^ x) < 0);  // (left is negative)
+    if ((ndy ^ ndx ^ x ^ y) < 0)
+        return ((ndy ^ x) < 0);     // (left is negative)
 
-    return (FixedMul(y, node->dx >> FRACBITS) >= FixedMul(node->dy >> FRACBITS, x));
+    return (FixedMul(y, ndx >> FRACBITS) >= FixedMul(ndy >> FRACBITS, x));
 }
 
 int R_PointOnSegSide(fixed_t x, fixed_t y, seg_t *line)
@@ -173,20 +178,20 @@ int R_PointOnSegSide(fixed_t x, fixed_t y, seg_t *line)
 
     // Try to quickly decide by looking at sign bits.
     if ((ldy ^ ldx ^ x ^ y) < 0)
-        return ((ldy ^ x) < 0);       // (left is negative)
+        return ((ldy ^ x) < 0);     // (left is negative)
 
     return (FixedMul(y, ldx >> FRACBITS) >= FixedMul(ldy >> FRACBITS, x));
 }
 
 int SlopeDiv(unsigned int num, unsigned int den)
 {
-    unsigned int    ans;
+    uint64_t    ans;
 
     if (den < 512)
         return SLOPERANGE;
 
-    ans = (num << 3) / (den >> 8);
-    return (ans <= SLOPERANGE ? ans : SLOPERANGE);
+    ans = ((uint64_t)num << 3) / (den >> 8);
+    return (int)(ans <= SLOPERANGE ? ans : SLOPERANGE);
 }
 
 //
@@ -322,13 +327,7 @@ static void R_InitPointToAngle(void)
 
     // slope (tangent) to angle lookup
     for (i = 0; i <= SLOPERANGE; i++)
-    {
-        double  f = atan((double)i / SLOPERANGE) / (M_PI * 2);
-        long    t = (long)(0xFFFFFFFF * f);
-
-        // this used to have PI (as defined above) written out longhand
-        tantoangle[i] = t;
-    }
+        tantoangle[i] = (long)(0xFFFFFFFF * atan((double)i / SLOPERANGE) / (M_PI * 2));
 }
 
 //
@@ -342,7 +341,6 @@ void R_InitTextureMapping(void)
     // Use tangent table to generate viewangletox:
     //  viewangletox will give the next greatest x
     //  after the view angle.
-
     const fixed_t   hitan = finetangent[FINEANGLES / 4 + FIELDOFVIEW / 2];
     const fixed_t   lotan = finetangent[FINEANGLES / 4 - FIELDOFVIEW / 2];
     const int       highend = viewwidth + 1;
@@ -370,6 +368,7 @@ void R_InitTextureMapping(void)
     for (x = 0; x <= viewwidth; x++)
     {
         for (i = 0; viewangletox[i] > x; i++);
+
         xtoviewangle[x] = (i << ANGLETOFINESHIFT) - ANG90;
     }
 
@@ -439,9 +438,8 @@ void R_SetViewSize(int blocks)
 //
 void R_ExecuteSetViewSize(void)
 {
-    int     i;
-    int     j;
-    fixed_t dy;
+    int i;
+    int j;
 
     setsizeneeded = false;
 
@@ -449,13 +447,11 @@ void R_ExecuteSetViewSize(void)
     {
         scaledviewwidth = SCREENWIDTH;
         viewheight = SCREENHEIGHT;
-        viewheight2 = SCREENHEIGHT;
     }
     else
     {
         scaledviewwidth = setblocks * SCREENWIDTH / 10;
         viewheight = (setblocks * (SCREENHEIGHT - SBARHEIGHT) / 10) & ~7;
-        viewheight2 = SCREENHEIGHT - SBARHEIGHT;
     }
 
     viewwidth = scaledviewwidth;
@@ -487,14 +483,11 @@ void R_ExecuteSetViewSize(void)
         fixed_t num = viewwidth / 2 * FRACUNIT;
 
         for (j = 0; j < LOOKDIRS; j++)
-        {
-            dy = ABS(((i - (viewheight / 2 + (j - LOOKDIRMIN) * 2 * (r_screensize + 3) / 10)) << FRACBITS)
-                + FRACUNIT / 2);
-            yslopes[j][i] = FixedDiv(num, dy);
-        }
+            yslopes[j][i] = FixedDiv(num, ABS(((i - (viewheight / 2 + (j - LOOKDIRMAX) * 2
+                * (r_screensize + 3) / 10)) << FRACBITS) + FRACUNIT / 2));
     }
 
-    yslope = yslopes[LOOKDIRMIN];
+    yslope = yslopes[LOOKDIRMAX];
 
     // Calculate the light levels to use
     //  for each level / scale combination.
@@ -547,7 +540,7 @@ void R_InitColumnFunctions(void)
             skycolfunc = R_DrawSkyColorColumn;
         else
             skycolfunc = (canmodify && !transferredsky && (gamemode != commercial || gamemap < 21)
-                && !m_look ? R_DrawFlippedSkyColumn : R_DrawSkyColumn);
+                && !canmouselook ? R_DrawFlippedSkyColumn : R_DrawSkyColumn);
 
         spanfunc = R_DrawSpan;
 
@@ -711,8 +704,8 @@ void R_SetupFrame(player_t *player)
 {
     int     cm = 0;
     mobj_t  *mo = player->mo;
-    int     tempCentery;
-    int     pitch;
+    int     tempCentery = viewheight / 2;
+    int     pitch = 0;
 
     viewplayer = player;
     viewplayer->mo->flags2 |= MF2_DONTDRAW;
@@ -738,8 +731,18 @@ void R_SetupFrame(player_t *player)
         viewy = mo->oldy + FixedMul(mo->y - mo->oldy, fractionaltic);
         viewz = player->oldviewz + FixedMul(player->viewz - player->oldviewz, fractionaltic);
         viewangle = R_InterpolateAngle(mo->oldangle, mo->angle, fractionaltic);
-        pitch = (player->oldlookdir + (int)((player->lookdir - player->oldlookdir)
-            * FIXED2DOUBLE(fractionaltic))) / MLOOKUNIT;
+
+        if (canmouselook)
+        {
+            pitch = (player->oldlookdir + (int)((player->lookdir - player->oldlookdir)
+                * FIXED2DOUBLE(fractionaltic))) / MLOOKUNIT;
+            
+            if (weaponrecoil)
+                pitch = BETWEEN(-LOOKDIRMAX, pitch + player->oldrecoil + FixedMul(player->recoil
+                    - player->oldrecoil, fractionaltic), LOOKDIRMAX);
+
+            tempCentery += (pitch << 1) * (r_screensize + 3) / 10;
+        }
     }
     else
     {
@@ -747,7 +750,16 @@ void R_SetupFrame(player_t *player)
         viewy = mo->y;
         viewz = player->viewz;
         viewangle = mo->angle;
-        pitch = player->lookdir / MLOOKUNIT;
+
+        if (canmouselook)
+        {
+            pitch = player->lookdir / MLOOKUNIT;
+
+            if (weaponrecoil)
+                pitch = BETWEEN(-LOOKDIRMAX, pitch + player->recoil, LOOKDIRMAX);
+
+            tempCentery += (pitch << 1) * (r_screensize + 3) / 10;
+        }
     }
 
     if (explosiontics && !consoleactive && !menuactive && !paused)
@@ -759,15 +771,11 @@ void R_SetupFrame(player_t *player)
 
     extralight = player->extralight << 2;
 
-    pitch = BETWEEN(-LOOKDIRMAX, pitch, LOOKDIRMAX);
-
-    tempCentery = viewheight / 2 + (pitch << 1) * (r_screensize + 3) / 10;
-
     if (centery != tempCentery)
     {
         centery = tempCentery;
         centeryfrac = centery << FRACBITS;
-        yslope = yslopes[LOOKDIRMIN + pitch];
+        yslope = yslopes[LOOKDIRMAX + pitch];
     }
 
     viewsin = finesine[viewangle >> ANGLETOFINESHIFT];
@@ -830,13 +838,9 @@ void R_RenderPlayerView(player_t *player)
     R_ClearPlanes();
     R_ClearSprites();
 
-    NetUpdate();
-
     if (automapactive)
     {
         R_RenderBSPNode(numnodes - 1);
-
-        NetUpdate();
 
         if (r_playersprites)
             R_DrawPlayerSprites();
@@ -849,17 +853,8 @@ void R_RenderPlayerView(player_t *player)
             V_FillRect(0, viewwindowx, viewwindowy, viewwidth, viewheight,
                 ((gametic % 20) < 9 && !consoleactive && !menuactive && !paused ? RED : BLACK));
 
-        // Make displayed player invisible locally
         R_RenderBSPNode(numnodes - 1);  // head node is the last node output
-
-        NetUpdate();
-
         R_DrawPlanes();
-
-        NetUpdate();
-
         R_DrawMasked();
-
-        NetUpdate();
     }
 }

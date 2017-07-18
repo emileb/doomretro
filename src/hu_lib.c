@@ -82,7 +82,7 @@ dboolean HUlib_addCharToTextLine(hu_textline_t *t, char ch)
     else
     {
         t->l[t->len++] = ch;
-        t->l[t->len] = 0;
+        t->l[t->len] = '\0';
         t->needsupdate = 4;
         return true;
     }
@@ -127,7 +127,7 @@ static void HU_drawChar(int x, int y, int ch)
     }
 }
 
-static struct
+static struct c_kern_s
 {
     char    char1;
     char    char2;
@@ -214,7 +214,7 @@ void HUlib_drawAltHUDTextLine(hu_textline_t *l)
     }
 }
 
-static struct
+static struct hu_kern_s
 {
     char    char1;
     char    char2;
