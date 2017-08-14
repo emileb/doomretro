@@ -89,8 +89,6 @@ typedef struct animdef_s
 
 #define MAXANIMS    32
 
-#define ANIMSPEED   8
-
 unsigned int    stat_secretsrevealed;
 
 dboolean        r_liquid_bob = r_liquid_bob_default;
@@ -320,6 +318,25 @@ sector_t *getNextSector(line_t *line, sector_t *sec)
     //     return NULL;
     return (line->frontsector == sec ? (line->backsector != sec ? line->backsector : NULL) :
         line->frontsector);
+}
+
+//
+// P_IsSelfReferencingSector()
+//
+dboolean P_IsSelfReferencingSector(sector_t *sec)
+{
+    int i;
+
+    for (i = 0; i < sec->linecount; i++)
+    {
+        line_t  *line = sec->lines[i];
+
+        if (line->backsector && line->frontsector == line->backsector && (line->flags & ML_TWOSIDED)
+            && (line->flags & ML_DONTDRAW))
+            return true;
+    }
+
+    return false;
 }
 
 //
@@ -2039,12 +2056,8 @@ void P_PlayerInSpecialSector(player_t *player)
 // P_UpdateSpecials
 // Animate planes, scroll walls, etc.
 //
-#define MAXLINEANIMS    16384
-
-line_t  *linespeciallist[MAXLINEANIMS];
-
-int     timer;
-int     countdown;
+int timer;
+int countdown;
 
 void P_UpdateSpecials(void)
 {
@@ -2126,7 +2139,7 @@ dboolean EV_DoDonut(line_t *line)
     {
         s1 = &sectors[secnum];
 
-        // ALREADY MOVING?  IF SO, KEEP GOING...
+        // ALREADY MOVING? IF SO, KEEP GOING...
         if (P_SectorActive(floor_special, s1))
             continue;
 
@@ -2776,9 +2789,9 @@ static void Add_Pusher(int type, int x_mag, int y_mag, mobj_t *source, int affec
 //
 // killough 10/98: allow to affect things besides players
 
-pusher_t    *tmpusher;      // pusher structure for blockmap searches
+static pusher_t *tmpusher;      // pusher structure for blockmap searches
 
-dboolean PIT_PushThing(mobj_t *thing)
+static dboolean PIT_PushThing(mobj_t *thing)
 {
     if ((sentient(thing) || (thing->flags & MF_SHOOTABLE)) && !(thing->flags & MF_NOCLIP))
     {

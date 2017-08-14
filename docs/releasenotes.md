@@ -1,4 +1,29 @@
-### DOOM Retro v2.6
+### DOOM Retro v2.5.4
+
+* Optimizations have been made to further improve the overall performance and stability of *DOOM Retro*.
+* The behavior of lost souls has been restored to better resemble *Vanilla DOOM*.
+* Wiping when transitioning between screens can now be toggled on or off using the new `wipe` CVAR.
+* Weapon recoil is now disabled when vanilla mode is enabled.
+* A bug has been fixed whereby monsters could use stairs in some instances when they shouldn’t have been able to.
+* Chaingunners, arachnotrons and spider masterminds now go fullbright more in time with their firing animations.
+* A value of `off` can now be used for the `facebackcolor` CVAR and is the equivalent of using the default value of `5`.
+
+---
+
+###### Monday, July 31, 2017
+
+### DOOM Retro v2.5.3
+
+* Extensive optimizations have been made to further improve the overall performance and stability of *DOOM Retro*.
+* The power-up bar is now displayed in the alternate widescreen HUD when the player has the berserk power-up and their fist selected, and when the `IDBEHOLDx` cheat is used.
+* MOD and XM music lumps will now play correctly.
+* Improvements have been made to lowering the player’s view in liquid sectors when the `r_liquid_lowerview` CVAR is `on`.
+* Minor changes have been made to text that is output to the console.
+* A bug has been fixed whereby moving sectors could shudder when the `vid_capfps` CVAR was set to value other than `35` in some rare instances.
+* The bottom of masked midtextures submerged in liquid will now render correctly when the `r_liquid_bob` CVAR is `on` and the `vid_capfps` CVAR is set to value other than `35`.
+* A bug has been fixed whereby some stray pixels weren’t being drawn in some rare instances.
+* Pain elementals can no longer spawn lost souls behind their target when directly in front of them.
+* The Hall of Mirrors indicator enabled using the `r_homindicator` CVAR will now work when in no clipping mode and freeze mode.
 
 ---
 
@@ -13,7 +38,7 @@
 * The `spawn` CCMD can now be used to spawn monsters in a map when the `nomonsters` CCMD or `-nomonsters` command-line parameter have been used.
 * The `+mouselook` action may now be bound to a control. Mouselook will then only work while that control is held down. Releasing that control will then cause the player’s view to spring back.
 * Blood will no longer be spawned when crushing the player while they are invulnerable.
-* A bug has been fixed whereby the player’s rocket launcher will no longer shift to the left when fired.
+* A bug has been fixed whereby the player’s rocket launcher would shift to the left when fired.
 * Frames from *DOOM’s* rocket launcher are no longer shown when firing the missile launcher in [*Freedoom*](http://freedoom.github.io/).
 
 ---
@@ -100,7 +125,7 @@
 * Sprites taller than 255 pixels are now supported.
 * The map title in the automap is now positioned correctly when the `r_messagescale` CVAR is `small`.
 * Frames from *DOOM’s* rocket launcher are no longer shown when firing the missile launcher in [*Freedoom*](http://freedoom.github.io/).
-* Entering the `idmypos` cheat will no longer cause a crash.
+* Entering the `IDMYPOS` cheat will no longer cause a crash.
 * Pressing the <kbd>DEL</kbd> key when in the save or load game menus will now delete the currently selected savegame.
 * Minor changes have been made to text that is output to the console.
 * The inverted gray color palette is now applied to the sky when the player has the invulnerability power-up, as originally intended.
@@ -143,7 +168,7 @@
   * Lost souls will no longer forget their target immediately after attacking them.
 * When using the `kill` CCMD to kill all monsters, all missiles fired by those monsters will now explode at the same time. Also, a `missiles` parameter may now be used to only explode the missiles.
 * `ccmdlist` can now be used as an alternative to the `cmdlist` CCMD, and `explode` as an alternative to the `kill` CCMD.
-* The `idclev` cheat may now be used in the console while no map is loaded.
+* The `IDCLEV` cheat may now be used in the console while no map is loaded.
 * The maximum value the `r_screensize` CVAR can be set to is now `7` rather than `8`. Setting the CVAR to `8` previously had no effect.
 * The player can no longer trigger secrets when in freeze mode.
 
@@ -617,7 +642,7 @@
 * Messages are now paused while the console is open.
 * A bug has been fixed whereby IWADs weren’t being identified correctly.
 * The player’s view is now only lowered if they are actually touching a liquid sector.
-* Bobbing liquid sectors will now animate correctly if adjacent to a masked texture.
+* Bobbing liquid sectors will now animate correctly if adjacent to a masked midtexture.
 * The `centerweapon` CVAR can now also be entered as `centreweapon`.
 * The `centered` value for the `vid_windowposition` CVAR can now also be entered as `centred`.
 
@@ -661,7 +686,7 @@
 * Color CVARs are now set to their defaults, rather than the closest valid value, if invalid at startup.
 * C++ style comments are now allowed in `MAPINFO` lumps.
 * The correct colors are now preserved in the automap, the console and the alternate HUD if a PWAD contains a custom `PLAYPAL` lump. (An example of such a PWAD is skillsaw’s recently released MegaWAD, [*Ancient Aliens*](https://www.doomworld.com/idgames/levels/doom2/Ports/megawads/aaliens).)
-* A bug has been fixed whereby parts of the super shotgun would be transparent in [*Ancient Aliens*](https://www.doomworld.com/idgames/levels/doom2/Ports/megawads/aaliens).
+* A bug has been fixed whereby parts of the super shotgun would be translucent in [*Ancient Aliens*](https://www.doomworld.com/idgames/levels/doom2/Ports/megawads/aaliens).
 * The `r_corpses_color` CVAR is now validated at startup.
 * If `am_external` is on but there’s only one display found, there will no longer be a crash if the graphics system is restarted.
 * The number of logical cores and amount of system RAM is now displayed in the console at startup.
@@ -1173,7 +1198,7 @@
 * The position of the window is now restored correctly at startup, and when switching from fullscreen mode, if using multiple displays.
 * The minimum size that the window can be resized to is now 320×240.
 * The console is now closed when pressing the close button in the window’s title bar.
-* If a masked texture is used on a one-sided line, the transparent parts will now be displayed as black rather than randomly-colored pixels. Code by Fabian Greffrath.
+* If a masked midtexture is used on a one-sided line, the transparent parts will now be displayed as black rather than randomly-colored pixels. Code by Fabian Greffrath.
 * Autocomplete and input history are now reset if a character is deleted in the console.
 * The output in the console is now correct when the music and SFX volumes are changed in the menu.
 * The graphics subsystem will now be reset when the `vid_display` CVAR is changed in the console, so displays can now be switched during a game.

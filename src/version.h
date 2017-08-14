@@ -39,9 +39,9 @@
 #if !defined(__VERSION_H__)
 #define __VERSION_H__
 
-#define PACKAGE_VERSION                 2,6,0,0
-#define PACKAGE_VERSIONSTRING           "2.6"
-#define PACKAGE_NAMEANDVERSIONSTRING    "DOOM Retro v2.6"
+#define PACKAGE_VERSION                 2,5,4,0
+#define PACKAGE_VERSIONSTRING           "2.5.4"
+#define PACKAGE_NAMEANDVERSIONSTRING    "DOOM Retro v2.5.4"
 #define PACKAGE_SAVEGAMEVERSIONSTRING   "DOOM Retro v2.5"
 
 #define PACKAGE                         "doomretro"
@@ -54,7 +54,6 @@
 #define PACKAGE_REPORT_URL              "https://github.com/bradharding/doomretro/issues/new"
 #define PACKAGE_SAVE                    "doomretro%i.save"
 #define PACKAGE_WAD                     "doomretro.wad"
-#define PACKAGE_WIKI_START_URL          "http://wiki.doomretro.com/STARTING-A-GAME"
 #define PACKAGE_WIKI_HELP_URL           "http://wiki.doomretro.com/THE-CONSOLE"
 
 #endif

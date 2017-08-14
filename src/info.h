@@ -1194,7 +1194,7 @@ typedef enum statenum_e
     S_TRAIL3,
     S_TRAIL4,
 
-    // [BH] extra DeHacked states 1089 to 3999
+    // [BH] extra DeHackEd states 1089 to 3999
     EXTRASTATES = 1089,
 
     NUMSTATES = 4000
@@ -1211,7 +1211,6 @@ typedef struct state_s
     long        misc2;
     dboolean    translucent;
     dboolean    dehacked;
-    statenum_t  num;
 } state_t;
 
 extern state_t  states[NUMSTATES];
@@ -1453,7 +1452,6 @@ typedef struct offset_s
     short       y;
     short       width;
     short       height;
-    mobjtype_t  type;
     dboolean    sprfix18;
 } offset_t;
 

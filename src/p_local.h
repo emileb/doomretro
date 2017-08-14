@@ -75,7 +75,6 @@
 
 #define MOUSE_LEFTBUTTON        1
 #define MOUSE_RIGHTBUTTON       2
-#define MOUSE_MIDDLEBUTTON      4
 
 #define MOUSE_WHEELUP           MAX_MOUSE_BUTTONS
 #define MOUSE_WHEELDOWN         (MAX_MOUSE_BUTTONS + 1)
@@ -286,11 +285,6 @@ extern int blue_armor_class;
 extern int max_soul;
 extern int soul_health;
 extern int mega_health;
-extern int god_health;
-extern int idfa_armor;
-extern int idfa_armor_class;
-extern int idkfa_armor;
-extern int idkfa_armor_class;
 extern int bfgcells;
 extern int species_infighting;
 extern int maxammo[];

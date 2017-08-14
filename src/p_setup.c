@@ -101,7 +101,7 @@ mobj_t *P_SpawnMapThing(mapthing_t *mthing, int index, dboolean nomonsters);
 // MAP related Lookup tables.
 // Store VERTEXES, LINEDEFS, SIDEDEFS, etc.
 //
-int             mapcount;
+static int      mapcount;
 
 int             numvertexes;
 vertex_t        *vertexes;
@@ -164,10 +164,10 @@ dboolean        skipblstart;            // MaxW: Skip initial blocklist short
 // Without special effect, this could be
 //  used as a PVS lookup as well.
 //
-static int      rejectlump = -1;        // cph - store reject lump num if cached
-const byte      *rejectmatrix;          // cph - const*
+static int          rejectlump = -1;        // cph - store reject lump num if cached
+const byte          *rejectmatrix;          // cph - const*
 
-static mapinfo_t mapinfo[101];
+static mapinfo_t    mapinfo[101];
 
 static char *mapcmdnames[] =
 {
@@ -200,30 +200,30 @@ static int mapcmdids[] =
     MCMD_NOBRIGHTMAP
 };
 
-dboolean        canmodify;
-dboolean        transferredsky;
-lumpindex_t     RMAPINFO;
-lumpindex_t     MAPINFO;
+dboolean            canmodify;
+dboolean            transferredsky;
+static lumpindex_t  RMAPINFO;
+static lumpindex_t  MAPINFO;
 
-dboolean        r_fixmaperrors = r_fixmaperrors_default;
+dboolean            r_fixmaperrors = r_fixmaperrors_default;
 
-static int      current_episode = -1;
-static int      current_map = -1;
-static int      samelevel;
+static int          current_episode = -1;
+static int          current_map = -1;
+static int          samelevel;
 
-mapformat_t     mapformat;
+mapformat_t         mapformat;
 
-dboolean        boomlinespecials;
-dboolean        blockmaprecreated;
+dboolean            boomlinespecials;
+dboolean            blockmaprecreated;
 
-extern fixed_t  animatedliquiddiff;
-extern fixed_t  animatedliquidxdir;
-extern fixed_t  animatedliquidydir;
-extern fixed_t  animatedliquidxoffs;
-extern fixed_t  animatedliquidyoffs;
+extern fixed_t      animatedliquiddiff;
+extern fixed_t      animatedliquidxdir;
+extern fixed_t      animatedliquidydir;
+extern fixed_t      animatedliquidxoffs;
+extern fixed_t      animatedliquidyoffs;
 
-extern menu_t   MainDef;
-extern menu_t   NewDef;
+extern menu_t       MainDef;
+extern menu_t       NewDef;
 
 static fixed_t GetOffset(vertex_t *v1, vertex_t *v2)
 {
@@ -261,7 +261,7 @@ static void *calloc_IfSameLevel(void *p, size_t n1, size_t n2)
 //
 // P_LoadVertexes
 //
-void P_LoadVertexes(int lump)
+static void P_LoadVertexes(int lump)
 {
     const mapvertex_t   *data;
     int                 i;
@@ -320,7 +320,7 @@ void P_LoadVertexes(int lump)
 //
 // P_LoadSegs
 //
-void P_LoadSegs(int lump)
+static void P_LoadSegs(int lump)
 {
     const mapseg_t  *data;
     int             i;
@@ -637,7 +637,7 @@ static void P_LoadSegs_V4(int lump)
 //
 // P_LoadSubsectors
 //
-void P_LoadSubsectors(int lump)
+static void P_LoadSubsectors(int lump)
 {
     const mapsubsector_t    *data;
     int                     i;
@@ -682,7 +682,7 @@ static void P_LoadSubsectors_V4(int lump)
 //
 // P_LoadSectors
 //
-void P_LoadSectors(int lump)
+static void P_LoadSectors(int lump)
 {
     const byte  *data;
     int         i;
@@ -1123,7 +1123,7 @@ static void P_LoadZNodes(int lump)
 //
 // P_LoadThings
 //
-void P_LoadThings(int lump)
+static void P_LoadThings(int lump)
 {
     const mapthing_t    *data = (const mapthing_t *)W_CacheLumpNum(lump);
     int                 i;
@@ -1304,7 +1304,7 @@ static void P_LoadLineDefs(int lump)
 }
 
 // killough 4/4/98: delay using sidedefs until they are loaded
-static void P_LoadLineDefs2(int lump)
+static void P_LoadLineDefs2(void)
 {
     int     i = numlines;
     line_t  *ld = lines;
@@ -1718,7 +1718,7 @@ static void P_CreateBlockMap(void)
 // killough 3/30/98: Rewritten to remove blockmap limit,
 // though current algorithm is brute-force and non-optimal.
 //
-void P_LoadBlockMap(int lump)
+static void P_LoadBlockMap(int lump)
 {
     int count;
     int lumplen;
@@ -1774,7 +1774,7 @@ void P_LoadBlockMap(int lump)
 //
 // reject overrun emulation
 //
-void RejectOverrun(int rejectlump, const byte **rejectmatrix, int totallines)
+static void RejectOverrun(int rejectlump, const byte **rejectmatrix)
 {
     unsigned int    required = (numsectors * numsectors + 7) / 8;
     unsigned int    length = W_LumpLength(rejectlump);
@@ -1796,7 +1796,7 @@ void RejectOverrun(int rejectlump, const byte **rejectmatrix, int totallines)
 //
 // P_LoadReject - load the reject table
 //
-static void P_LoadReject(int lumpnum, int totallines)
+static void P_LoadReject(int lumpnum)
 {
     // dump any old cached reject lump, then cache the new one
     if (rejectlump != -1)
@@ -1806,7 +1806,7 @@ static void P_LoadReject(int lumpnum, int totallines)
     rejectmatrix = W_CacheLumpNum(rejectlump);
 
     // e6y: check for overflow
-    RejectOverrun(rejectlump, &rejectmatrix, totallines);
+    RejectOverrun(rejectlump, &rejectmatrix);
 }
 
 //
@@ -1828,8 +1828,7 @@ static void P_AddLineToSector(line_t *li, sector_t *sector)
     M_AddToBox(bbox, li->v2->x, li->v2->y);
 }
 
-// modified to return totallines (needed by P_LoadReject)
-static int P_GroupLines(void)
+static void P_GroupLines(void)
 {
     line_t      *li;
     sector_t    *sector;
@@ -1919,8 +1918,6 @@ static int P_GroupLines(void)
         block = (block < 0 ? 0 : block);
         sector->blockbox[BOXLEFT] = block;
     }
-
-    return total;       // this value is needed by the reject overrun emulation code
 }
 
 //
@@ -2038,17 +2035,17 @@ static void P_CalcSegsLength(void)
     }
 }
 
-char        mapnum[6];
+static char mapnum[6];
 char        maptitle[256];
 char        mapnumandtitle[512];
 char        automaptitle[512];
 
-extern char **mapnames[];
-extern char **mapnames2[];
-extern char **mapnames2_bfg[];
-extern char **mapnamesp[];
-extern char **mapnamest[];
-extern char **mapnamesn[];
+extern char **mapnames[45];
+extern char **mapnames2[32];
+extern char **mapnames2_bfg[33];
+extern char **mapnamesp[32];
+extern char **mapnamest[32];
+extern char **mapnamesn[9];
 
 extern int  dehcount;
 
@@ -2319,7 +2316,7 @@ void P_SetupLevel(int ep, int map)
     P_LoadSideDefs(lumpnum + ML_SIDEDEFS);
     P_LoadLineDefs(lumpnum + ML_LINEDEFS);
     P_LoadSideDefs2(lumpnum + ML_SIDEDEFS);
-    P_LoadLineDefs2(lumpnum + ML_LINEDEFS);
+    P_LoadLineDefs2();
 
     if (!samelevel)
         P_LoadBlockMap(lumpnum + ML_BLOCKMAP);
@@ -2341,9 +2338,8 @@ void P_SetupLevel(int ep, int map)
         P_LoadSegs(lumpnum + ML_SEGS);
     }
 
-    // reject loading and underflow padding separated out into new function
-    // P_GroupLines modified to return a number the underflow padding needs
-    P_LoadReject(lumpnum, P_GroupLines());
+    P_GroupLines();
+    P_LoadReject(lumpnum);
 
     P_RemoveSlimeTrails();
 
@@ -2378,8 +2374,8 @@ void P_SetupLevel(int ep, int map)
         S_ParseMusInfo(lumpname);
 }
 
-int liquidlumps;
-int noliquidlumps;
+static int  liquidlumps;
+static int  noliquidlumps;
 
 static void InitMapInfo(void)
 {
@@ -2611,8 +2607,9 @@ static void InitMapInfo(void)
     SC_Close();
     mapcount = mapmax;
 
-    C_Output("Parsed the <b>%sMAPINFO</b> lump in %s <b>%s</b>.", (RMAPINFO >= 0 ? "R" : ""),
-        (lumpinfo[MAPINFO]->wadfile->type == IWAD ? "IWAD" : "PWAD"), lumpinfo[MAPINFO]->wadfile->path);
+    C_Output("Parsed %s lines in the <b>%sMAPINFO</b> lump in %s <b>%s</b>.", commify(sc_Line),
+        (RMAPINFO >= 0 ? "R" : ""), (lumpinfo[MAPINFO]->wadfile->type == IWAD ? "IWAD" : "PWAD"),
+        lumpinfo[MAPINFO]->wadfile->path);
 }
 
 static int QualifyMap(int map)

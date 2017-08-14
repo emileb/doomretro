@@ -63,7 +63,7 @@ typedef enum dirtype_e
     NUMDIRS
 } dirtype_t;
 
-dirtype_t opposite[] =
+static dirtype_t opposite[] =
 {
     DI_WEST,
     DI_SOUTHWEST,
@@ -76,7 +76,7 @@ dirtype_t opposite[] =
     DI_NODIR
 };
 
-dirtype_t diags[] =
+static dirtype_t diags[] =
 {
     DI_NORTHWEST,
     DI_NORTHEAST,
@@ -154,7 +154,7 @@ static void P_RecursiveSound(sector_t *sec, int soundblocks, mobj_t *soundtarget
 void P_NoiseAlert(mobj_t *target, mobj_t *emmiter)
 {
     // [BH] don't alert if notarget is enabled
-    if (players[0].cheats & CF_NOTARGET)
+    if (target && target->player && (players[0].cheats & CF_NOTARGET))
         return;
 
     validcount++;
@@ -347,8 +347,8 @@ static int P_IsUnderDamage(mobj_t *actor)
 // Move in the current direction,
 // returns false if the move is blocked.
 //
-fixed_t xspeed[8] = { FRACUNIT, 47000, 0, -47000, -FRACUNIT, -47000, 0, 47000 };
-fixed_t yspeed[8] = { 0, 47000, FRACUNIT, 47000, 0, -47000, -FRACUNIT, -47000 };
+static const fixed_t    xspeed[8] = { FRACUNIT, 47000, 0, -47000, -FRACUNIT, -47000, 0, 47000 };
+static const fixed_t    yspeed[8] = { 0, 47000, FRACUNIT, 47000, 0, -47000, -FRACUNIT, -47000 };
 
 // 1/11/98 killough: Limit removed on special lines crossed
 extern line_t   **spechit;
@@ -696,7 +696,8 @@ static fixed_t P_AvoidDropoff(mobj_t *actor)
 
     floorz = actor->z;                                          // remember floor height
 
-    dropoff_deltax = dropoff_deltay = 0;
+    dropoff_deltax = 0;
+    dropoff_deltay = 0;
 
     // check lines
     validcount++;
@@ -1310,11 +1311,11 @@ void A_SkelFist(mobj_t *actor, player_t *player, pspdef_t *psp)
 // PIT_VileCheck
 // Detect a corpse that could be raised.
 //
-mobj_t  *corpsehit;
-fixed_t viletryx;
-fixed_t viletryy;
+static mobj_t   *corpsehit;
+static fixed_t  viletryx;
+static fixed_t  viletryy;
 
-dboolean PIT_VileCheck(mobj_t *thing)
+static dboolean PIT_VileCheck(mobj_t *thing)
 {
     int         maxdist;
     dboolean    check;
@@ -1336,7 +1337,8 @@ dboolean PIT_VileCheck(mobj_t *thing)
         return true;    // not actually touching
 
     corpsehit = thing;
-    corpsehit->momx = corpsehit->momy = 0;
+    corpsehit->momx = 0;
+    corpsehit->momy = 0;
 
     // [BH] fix potential of corpse being resurrected as a "ghost"
     height = corpsehit->height;
@@ -1672,7 +1674,7 @@ void A_Stop(mobj_t *actor, player_t *player, pspdef_t *psp)
 // A_PainShootSkull
 // Spawn a lost soul and launch it at the target
 //
-void A_PainShootSkull(mobj_t *actor, angle_t angle)
+static void A_PainShootSkull(mobj_t *actor, angle_t angle)
 {
     mobj_t  *newmobj;
     angle_t an = angle >> ANGLETOFINESHIFT;
@@ -1689,8 +1691,7 @@ void A_PainShootSkull(mobj_t *actor, angle_t angle)
     if (P_CheckLineSide(actor, x, y))
         return;
 
-    newmobj = P_SpawnMobj(x , y, z, MT_SKULL);
-
+    newmobj = P_SpawnMobj(x, y, z, MT_SKULL);
     newmobj->flags &= ~MF_COUNTKILL;
 
     // killough 8/29/98: add to appropriate thread
@@ -1701,13 +1702,17 @@ void A_PainShootSkull(mobj_t *actor, angle_t angle)
         // ceiling of its new sector, or below the floor. If so, kill it.
         || newmobj->z > newmobj->subsector->sector->ceilingheight - newmobj->height
         || newmobj->z < newmobj->subsector->sector->floorheight)
-        P_DamageMobj(newmobj, actor, actor, 10000, true);
-    else
     {
-        P_SetTarget(&newmobj->target, actor->target);
-        P_SetMobjState(newmobj, S_SKULL_ATK2);  // [BH] put in attack state
-        A_SkullAttack(newmobj, NULL, NULL);
+        // kill it immediately
+        P_DamageMobj(newmobj, actor, actor, 10000, true);
+        return;
     }
+
+    // [BH] put in attack state
+    P_SetMobjState(newmobj, S_SKULL_ATK2);
+
+    P_SetTarget(&newmobj->target, actor->target);
+    A_SkullAttack(newmobj, NULL, NULL);
 }
 
 //
@@ -1739,7 +1744,7 @@ void A_Scream(mobj_t *actor, player_t *player, pspdef_t *psp)
 
     switch (actor->info->deathsound)
     {
-        case 0:
+        case sfx_None:
             return;
 
         case sfx_podth1:
@@ -1993,7 +1998,7 @@ void A_BabyMetal(mobj_t *actor, player_t *player, pspdef_t *psp)
 
 // [jeff] remove limit on braintargets
 //  and fix http://doomwiki.org/wiki/Spawn_cubes_miss_east_and_west_targets
-unsigned int    braintargeted;
+static unsigned int braintargeted;
 
 void A_BrainAwake(mobj_t *actor, player_t *player, pspdef_t *psp)
 {
@@ -2055,18 +2060,18 @@ static mobj_t *A_NextBrainTarget(void)
 
         if (mo->type == MT_BOSSTARGET)
         {
-            if (count++ == braintargeted) // This one the one that we want?
+            if (count++ == braintargeted)   // This one the one that we want?
             {
-                braintargeted++;        // Yes.
+                braintargeted++;            // Yes.
                 return mo;
             }
 
-            if (!found)                 // Remember first one in case we wrap.
+            if (!found)                     // Remember first one in case we wrap.
                 found = mo;
         }
     }
 
-    braintargeted = 1;                  // Start again.
+    braintargeted = 1;                      // Start again.
     return found;
 }
 
@@ -2086,9 +2091,7 @@ void A_BrainSpit(mobj_t *actor, player_t *player, pspdef_t *psp)
         return;
 
     // shoot a cube at current target
-    targ = A_NextBrainTarget();
-
-    if (targ)
+    if ((targ = A_NextBrainTarget()))
     {
         // spawn brain missile
         mobj_t  *newmobj = P_SpawnMissile(actor, targ, MT_SPAWNSHOT);
@@ -2199,16 +2202,7 @@ void A_SpawnSound(mobj_t *actor, player_t *player, pspdef_t *psp)
 
 void A_PlayerScream(mobj_t *actor, player_t *player, pspdef_t *psp)
 {
-    int sound = sfx_pldeth;
-
-    if (gamemode == commercial && actor->health < -50)
-    {
-        // IF THE PLAYER DIES
-        // LESS THAN -50% WITHOUT GIBBING
-        sound = sfx_pdiehi;
-    }
-
-    S_StartSound(actor, sound);
+    S_StartSound(actor, (gamemode == commercial && actor->health < -50 ? sfx_pdiehi : sfx_pldeth));
 }
 
 // killough 11/98: kill an object
@@ -2248,7 +2242,7 @@ void A_Mushroom(mobj_t *actor, player_t *player, pspdef_t *psp)
             mobj_t  target = *actor;
             mobj_t  *mo;
 
-            target.x += i << FRACBITS;                  // Aim in many directions from source
+            target.x += i << FRACBITS;                          // Aim in many directions from source
             target.y += j << FRACBITS;
             target.z += P_ApproxDistance(i, j) * misc1;         // Aim up fairly high
             mo = P_SpawnMissile(actor, &target, MT_FATSHOT);    // Launch fireball
@@ -2270,10 +2264,8 @@ void A_Spawn(mobj_t *actor, player_t *player, pspdef_t *psp)
 {
     mobjtype_t  type = (mobjtype_t)actor->state->misc1;
 
-    if (type)
+    if (type--)
     {
-        type--;
-
         // If we're in massacre mode then don't spawn anything killable.
         if (!(actor->flags2 & MF2_MASSACRE) || !(mobjinfo[type].flags & MF_COUNTKILL))
         {

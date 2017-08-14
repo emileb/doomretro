@@ -43,7 +43,6 @@ extern char     *sc_String;
 extern int      sc_Number;
 extern int      sc_Line;
 extern dboolean sc_End;
-extern dboolean sc_Crossed;
 extern dboolean sc_FileScripts;
 extern char     *sc_ScriptsDir;
 
@@ -56,7 +55,6 @@ void SC_MustGetNumber(void);
 void SC_UnGet(void);
 dboolean SC_Compare(char *text);
 int SC_MatchString(char **strings);
-int SC_MustMatchString(char **strings);
 void SC_ScriptError(char *message);
 
 #endif

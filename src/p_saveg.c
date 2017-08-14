@@ -44,13 +44,13 @@
 #include "p_local.h"
 #include "p_saveg.h"
 #include "p_tick.h"
+#include "s_sound.h"
 #include "version.h"
 #include "z_zone.h"
 
 #define SAVEGAME_EOF    0x1D
 
 FILE    *save_stream;
-int     savegamelength;
 
 extern dboolean mouselook;
 extern dboolean r_shadows_translucency;
@@ -1141,7 +1141,7 @@ void P_UnArchiveThinkers(void)
     {
         next = currentthinker->next;
 
-        if (currentthinker->function == P_MobjThinker)
+        if (currentthinker->function == P_MobjThinker || currentthinker->function == MusInfoThinker)
         {
             P_RemoveMobj((mobj_t *)currentthinker);
             P_RemoveThinkerDelayed(currentthinker);     // fix mobj leak
@@ -1190,7 +1190,7 @@ void P_UnArchiveThinkers(void)
                 P_SetThingPosition(mobj);
                 mobj->info = &mobjinfo[mobj->type];
 
-                mobj->thinker.function = P_MobjThinker;
+                mobj->thinker.function = (mobj->type == MT_MUSICSOURCE ? MusInfoThinker : P_MobjThinker);
                 mobj->colfunc = mobj->info->colfunc;
 
                 if (r_textures)

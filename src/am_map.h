@@ -49,13 +49,13 @@
 #define AM_MSGENTERED   1
 #define AM_MSGEXITED    0
 
-typedef struct mpoint_s
+typedef struct
 {
     fixed_t x, y;
 } mpoint_t;
 
 // Called by main loop.
-dboolean AM_Responder(event_t *ev);
+dboolean AM_Responder(const event_t *ev);
 
 // Called by main loop.
 void AM_Ticker(void);
@@ -65,7 +65,7 @@ void AM_Ticker(void);
 void AM_Drawer(void);
 void AM_clearFB(void);
 
-void AM_Start(dboolean mainwindow);
+void AM_Start(const dboolean mainwindow);
 
 // Called to force the automap to quit
 // if the level is completed while it is up.
@@ -77,7 +77,6 @@ void AM_getGridSize(void);
 void AM_addToPath(void);
 
 extern dboolean message_dontfuckwithme;
-extern dboolean message_external;
 
 extern int      gamepadwait;
 
@@ -92,7 +91,7 @@ extern int      pathpointnum_max;
 
 dboolean keystate(int key);
 
-typedef struct am_frame_s
+typedef struct
 {
     mpoint_t    center;
     fixed_t     sin;

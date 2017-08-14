@@ -39,8 +39,6 @@
 #if !defined(__R_THINGS_H__)
 #define __R_THINGS_H__
 
-#define NUMVISSPRITES   0x20000
-
 // Constant arrays used for psprite clipping
 //  and initializing clipping.
 extern int      negonearray[SCREENWIDTH];
@@ -63,6 +61,5 @@ void R_InitSprites(void);
 void R_ClearSprites(void);
 void R_DrawPlayerSprites(void);
 void R_DrawMasked(void);
-void R_BlastMaskedColumn(const rcolumn_t *column);
 
 #endif

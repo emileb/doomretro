@@ -72,7 +72,6 @@
 
 // Location of status bar
 #define ST_X                    0
-#define ST_X2                   104
 
 // Number of status faces.
 #define ST_NUMPAINFACES         5
@@ -346,7 +345,7 @@ static void ST_InitCheats(void)
 #define NONE        -1
 #define IDMUS_MAX   50
 
-int mus[IDMUS_MAX][6] =
+static const int mus[IDMUS_MAX][6] =
 {
     /* xy      shareware    registered   commercial   retail      bfgedition   nerve      */
     /* 00 */ { NONE,        NONE,        NONE,        NONE,       NONE,        NONE       },
@@ -683,7 +682,8 @@ dboolean ST_Responder(event_t *ev)
             }
 
             // no clipping mode cheat
-            else if (cht_CheckCheat(&cheat_noclip, ev->data2) && gamemode != commercial
+            else if (((cht_CheckCheat(&cheat_noclip, ev->data2) && gamemode != commercial)
+                     || (cht_CheckCheat(&cheat_commercial_noclip, ev->data2) && gamemode == commercial))
                      && gameskill != sk_nightmare
                      // [BH] can only enter cheat while player is alive
                      && plyr->health > 0)
@@ -691,32 +691,6 @@ dboolean ST_Responder(event_t *ev)
                 plyr->cheats ^= CF_NOCLIP;
 
                 C_Input(cheat_noclip.sequence);
-
-                HU_PlayerMessage(((plyr->cheats & CF_NOCLIP) ? s_STSTR_NCON : s_STSTR_NCOFF), false);
-
-                // [BH] always display message
-                if (!consoleactive)
-                    message_dontfuckwithme = true;
-
-                // [BH] play sound
-                S_StartSound(NULL, sfx_getpow);
-
-                if (plyr->cheats & CF_NOCLIP)
-                {
-                    stat_cheated = SafeAdd(stat_cheated, 1);
-                    players[0].cheated++;
-                }
-            }
-
-            // no clipping mode cheat
-            else if (cht_CheckCheat(&cheat_commercial_noclip, ev->data2) && gamemode == commercial
-                && gameskill != sk_nightmare
-                // [BH] can only enter cheat while player is alive
-                && plyr->health > 0)
-            {
-                plyr->cheats ^= CF_NOCLIP;
-
-                C_Input(cheat_commercial_noclip.sequence);
 
                 HU_PlayerMessage(((plyr->cheats & CF_NOCLIP) ? s_STSTR_NCON : s_STSTR_NCOFF), false);
 
@@ -1317,9 +1291,12 @@ static void ST_updateWidgets(void)
 
 void ST_Ticker(void)
 {
-    st_randomnumber = M_Random();
-    ST_updateWidgets();
-    st_oldhealth = plyr->health;
+    if (!vid_widescreen)
+    {
+        st_randomnumber = M_Random();
+        ST_updateWidgets();
+        st_oldhealth = plyr->health;
+    }
 
     // [BH] action the IDCLEV cheat after a small delay to allow its player message to display
     if (idclevtics)
@@ -1416,7 +1393,7 @@ void ST_doRefresh(void)
     ST_drawWidgets(true);
 }
 
-void ST_diffDraw(void)
+static void ST_diffDraw(void)
 {
     // update all widgets
     ST_drawWidgets(false);
@@ -1596,11 +1573,6 @@ static void ST_unloadCallback(char *lumpname, patch_t **variable)
     *variable = NULL;
 }
 
-static void ST_unloadGraphics(void)
-{
-    ST_loadUnloadGraphics(ST_unloadCallback);
-}
-
 static void ST_initData(void)
 {
     int i;
@@ -1687,7 +1659,7 @@ static void ST_createWidgets(void)
 
 static dboolean st_stopped = true;
 
-void ST_Stop(void)
+static void ST_Stop(void)
 {
     if (st_stopped)
         return;

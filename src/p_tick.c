@@ -83,8 +83,8 @@ void P_UpdateThinker(thinker_t *thinker)
     thinker_t   *th;
 
     // find the class the thinker belongs to
-    int class = (thinker->function == P_RemoveThinkerDelayed ? th_delete :
-            (thinker->function == P_MobjThinker ? th_mobj : th_misc));
+    int         class = (thinker->function == P_RemoveThinkerDelayed ? th_delete :
+                    (thinker->function == P_MobjThinker ? th_mobj : th_misc));
 
     // Remove from current thread, if in one
     if ((th = thinker->cnext))
@@ -237,10 +237,13 @@ static void P_RunThinkers(void)
 void P_Ticker(void)
 {
     // pause if in menu and at least one tic has been run
-    if (paused || menuactive || consoleactive)
+    if (paused || menuactive)
         return;
 
     P_PlayerThink(&players[0]);
+
+    if (consoleactive)
+        return;
 
     P_RunThinkers();
     P_UpdateSpecials();

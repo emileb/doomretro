@@ -105,7 +105,6 @@ void P_SetPsprite(player_t *player, int position, statenum_t stnum)
         }
 
         state = &states[stnum];
-        state->num = stnum;
         psp->state = state;
         psp->tics = state->tics;        // could be 0
 
@@ -140,7 +139,7 @@ void P_SetPsprite(player_t *player, int position, statenum_t stnum)
 // from the bottom of the screen.
 // Uses player
 //
-void P_BringUpWeapon(player_t *player)
+static void P_BringUpWeapon(player_t *player)
 {
     if (player->pendingweapon == wp_nochange)
         player->pendingweapon = player->readyweapon;
@@ -219,7 +218,7 @@ static void P_SubtractAmmo(player_t *player, int amount)
 //
 // P_FireWeapon
 //
-void P_FireWeapon(player_t *player)
+static void P_FireWeapon(player_t *player)
 {
     weapontype_t    readyweapon;
 
@@ -516,7 +515,7 @@ void A_FireBFG(mobj_t *actor, player_t *player, pspdef_t *psp)
 //
 // This code may not be used in other mods without appropriate credit given.
 // Code leeches will be telefragged.
-
+//
 void A_FireOldBFG(mobj_t *actor, player_t *player, pspdef_t *psp)
 {
     mobjtype_t  type = MT_PLASMA1;
@@ -610,7 +609,7 @@ static void P_BulletSlope(mobj_t *mo)
 //
 // P_GunShot
 //
-void P_GunShot(mobj_t *actor, dboolean accurate)
+static void P_GunShot(mobj_t *actor, dboolean accurate)
 {
     int     damage = 5 * (M_Random() % 3 + 1);
     angle_t angle = actor->angle;
@@ -814,7 +813,8 @@ void A_BFGSpray(mobj_t *actor, player_t *player, pspdef_t *psp)
     int     i;
     mobj_t  *mo = actor->target;
 
-    P_NoiseAlert(mo->player->mo, mo->player->mo);
+    if (mo->player)
+        P_NoiseAlert(mo->player->mo, mo->player->mo);
 
     // offset angles from its attack angle
     for (i = 0; i < 40; i++)
@@ -838,15 +838,19 @@ void A_BFGSpray(mobj_t *actor, player_t *player, pspdef_t *psp)
         P_DamageMobj(linetarget, mo, mo, damage, true);
     }
 
-    mo->player->shotsfired++;
-    stat_shotsfired = SafeAdd(stat_shotsfired, 1);
-
-    if (successfulshot)
+    if (mo->player)
     {
-        successfulshot = false;
-        mo->player->shotshit++;
-        stat_shotshit = SafeAdd(stat_shotshit, 1);
+        mo->player->shotsfired++;
+        stat_shotsfired = SafeAdd(stat_shotsfired, 1);
+
+        if (successfulshot)
+        {
+            mo->player->shotshit++;
+            stat_shotshit = SafeAdd(stat_shotshit, 1);
+        }
     }
+
+    successfulshot = false;
 }
 
 //

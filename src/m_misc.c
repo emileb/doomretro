@@ -48,6 +48,27 @@
 #include <pwd.h>
 #endif
 
+#if defined(__MACOSX__)
+#import <Cocoa/Cocoa.h>
+#include <dirent.h>
+#include <libgen.h>
+#include <mach-o/dyld.h>
+#include <errno.h>
+#endif
+
+#if defined(__OpenBSD__) || defined(__FreeBSD__)
+#include <sys/sysctl.h>
+#include <dirent.h>
+#include <errno.h>
+#include <libgen.h>
+#include <unistd.h>
+#elif defined(__linux__)
+#include <dirent.h>
+#include <errno.h>
+#include <libgen.h>
+#include <unistd.h>
+#endif
+
 #include "doomdef.h"
 #include "i_system.h"
 #include "m_fixed.h"
@@ -55,30 +76,54 @@
 #include "version.h"
 #include "z_zone.h"
 
-#if defined(__MACOSX__)
-#import <Cocoa/Cocoa.h>
-#include <dirent.h>
-#include <libgen.h>
-#include <mach-o/dyld.h>
-#endif
-
-#if defined(__OpenBSD__)
-#include <dirent.h>
-#include <errno.h>
-#include <libgen.h>
-#include <unistd.h>
-#endif
-
-#if defined(__linux__)
-#include <dirent.h>
-#include <errno.h>
-#include <libgen.h>
-#include <unistd.h>
-#endif
-
 #if !defined(MAX_PATH)
 #define MAX_PATH    260
 #endif
+
+struct s_commify
+{
+    char    *p[128];
+    size_t  pidx;
+};
+
+static struct s_commify *M_GetCommify(void)
+{
+    static struct s_commify *sc = NULL;
+
+    if (!sc)
+        sc = calloc(1, sizeof(struct s_commify));
+
+    return sc;
+}
+
+static void M_FreeCommifies(int shutdown)
+{
+    struct s_commify    *sc = M_GetCommify();
+
+    if (sc->pidx > 0)
+    {
+        size_t  i;
+
+        for (i = 0; i < sc->pidx; i++)
+            free(sc->p[i]);
+    }
+
+    if (shutdown)
+        free(sc);
+}
+
+static void M_AddToCommifies(char *p)
+{
+    struct s_commify    *sc = M_GetCommify();
+
+    if (sc->pidx == 128)
+    {
+        M_FreeCommifies(0);
+        sc->pidx = 0;
+    }
+
+    sc->p[sc->pidx++] = p;
+}
 
 //
 // Create a directory
@@ -130,7 +175,7 @@ long M_FileLength(FILE *handle)
 
 // Safe string copy function that works like OpenBSD's strlcpy().
 // Returns true if the string was not truncated.
-dboolean M_StringCopy(char *dest, char *src, size_t dest_size)
+dboolean M_StringCopy(char *dest, const char *src, const size_t dest_size)
 {
     if (dest_size >= 1)
     {
@@ -181,12 +226,12 @@ static char *M_StaticResourceFolder(void)
     return resourceFolder;
 }
 
-void M_FreeAppData(void)
+static void M_FreeAppData(void)
 {
     free(M_StaticAppData());
 }
 
-void M_FreeResourceFolder(void)
+static void M_FreeResourceFolder(void)
 {
     free(M_StaticResourceFolder());
 }
@@ -262,7 +307,7 @@ static char *M_StaticResourceURL(void)
 }
 #endif
 
-void M_FreeResourceURL(void)
+static void M_FreeResourceURL(void)
 {
 #if defined(__MACOSX__)
     free(M_StaticResourceURL());
@@ -310,7 +355,7 @@ static char *M_StaticPath(void)
     return path;
 }
 
-void M_FreeExecutableFolder(void)
+static void M_FreeExecutableFolder(void)
 {
     free(M_StaticPath());
 }
@@ -321,6 +366,7 @@ void M_Shutdown(void)
     M_FreeAppData();
     M_FreeResourceFolder();
     M_FreeResourceURL();
+    M_FreeCommifies(1);
 }
 
 char *M_GetExecutableFolder(void)
@@ -387,29 +433,27 @@ char *M_GetExecutableFolder(void)
     }
 
     return exe;
+#elif defined(__FreeBSD__)
+    char        *exe = M_StaticPath();
+    static int  getpath = -1;
+    size_t      len = MAX_PATH;
+    int mib[4] = { CTL_KERN, KERN_PROC, KERN_PROC_PATHNAME, -1};
+
+    if (!pathset)
+    {
+        getpath = sysctl(mib, 4, exe, &len, NULL, 0);
+        pathset = true;
+
+        if (getpath == 0)
+            M_StringCopy(exe, dirname(exe), len);
+        else
+            exe = ".";
+    }
+
+    return exe;
 #else
     return ".";
 #endif
-}
-
-//
-// M_WriteFile
-//
-dboolean M_WriteFile(char *name, void *source, int length)
-{
-    FILE    *handle = fopen(name, "wb");
-    int     count;
-
-    if (!handle)
-        return false;
-
-    count = fwrite(source, 1, length, handle);
-    fclose(handle);
-
-    if (count < length)
-        return false;
-
-    return true;
 }
 
 // Return a newly-malloced string with all the strings given as arguments
@@ -457,28 +501,6 @@ char *M_StringJoin(char *s, ...)
     return result;
 }
 
-// Returns the path to a temporary file of the given name, stored
-// inside the system temporary directory.
-//
-// The returned value must be freed with Z_Free after use.
-char *M_TempFile(char *s)
-{
-    char *tempdir;
-
-#if defined(_WIN32)
-    // Check the TEMP environment variable to find the location.
-    tempdir = getenv("TEMP");
-
-    if (!tempdir)
-        tempdir = ".";
-#else
-    // In Unix, just use /tmp.
-    tempdir = "/tmp";
-#endif
-
-    return M_StringJoin(tempdir, DIR_SEPARATOR_S, s, NULL);
-}
-
 dboolean M_StrToInt(const char *str, unsigned int *result)
 {
     return (sscanf(str, " 0x%2x", result) == 1 || sscanf(str, " 0X%2x", result) == 1
@@ -509,7 +531,7 @@ char *M_StrCaseStr(char *haystack, char *needle)
     return NULL;
 }
 
-char *stristr(char *ch1, char *ch2)
+static char *stristr(char *ch1, char *ch2)
 {
     char    *chN1 = strdup(ch1);
     char    *chN2 = strdup(ch2);
@@ -572,13 +594,13 @@ dboolean M_StringCompare(const char *str1, const char *str2)
 }
 
 // Returns true if 's' begins with the specified prefix.
-dboolean M_StringStartsWith(char *s, char *prefix)
+dboolean M_StringStartsWith(const char *s, const char *prefix)
 {
     return (strlen(s) > strlen(prefix) && !strncasecmp(s, prefix, strlen(prefix)));
 }
 
 // Returns true if 's' ends with the specified suffix.
-dboolean M_StringEndsWith(char *s, char *suffix)
+dboolean M_StringEndsWith(const char *s, const char *suffix)
 {
     return (strlen(s) >= strlen(suffix) && M_StringCompare(s + strlen(s) - strlen(suffix), suffix));
 }
@@ -654,17 +676,14 @@ char *uppercase(const char *str)
     return newstr;
 }
 
-char *lowercase(const char *str)
+char *lowercase(char *str)
 {
-    char    *newstr;
     char    *p;
 
-    p = newstr = strdup(str);
+    for (p = str; *p; p++)
+        *p = tolower(*p);
 
-    while ((*p = tolower(*p)))
-        p++;
-
-    return newstr;
+    return str;
 }
 
 char *titlecase(const char *str)
@@ -713,6 +732,7 @@ char *formatsize(const char *str)
 char *commify(int64_t value)
 {
     char    result[64];
+    char    *p;
 
     M_snprintf(result, sizeof(result), "%lli", value);
 
@@ -741,7 +761,9 @@ char *commify(int64_t value)
         while (1);
     }
 
-    return strdup(result);
+    p = strdup(result);
+    M_AddToCommifies(p);
+    return p;
 }
 
 char *uncommify(const char *input)
@@ -761,6 +783,7 @@ char *uncommify(const char *input)
         *p2 = '\0';
     }
 
+    M_AddToCommifies(p);
     return p;
 }
 

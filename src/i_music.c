@@ -50,6 +50,9 @@
 #define CHANNELS    2
 #define SAMPLECOUNT 512
 
+dboolean        midimusictype;
+dboolean        musmusictype;
+
 static dboolean music_initialized;
 
 // If this is true, this module initialized SDL sound and has the
@@ -58,8 +61,6 @@ static dboolean sdl_was_initialized;
 
 static int      current_music_volume;
 static int      paused_midi_volume;
-
-musictype_t     musictype;
 
 #if defined(_WIN32)
 static dboolean haveMidiServer;
@@ -186,7 +187,7 @@ void I_PauseSong(void)
     }
 #endif
 
-    if (musictype != MUSTYPE_MIDI)
+    if (!midimusictype)
         Mix_PauseMusic();
     else
     {
@@ -208,7 +209,7 @@ void I_ResumeSong(void)
     }
 #endif
 
-    if (musictype != MUSTYPE_MIDI)
+    if (!midimusictype)
         Mix_ResumeMusic();
     else
         Mix_VolumeMusic(paused_midi_volume);
@@ -255,30 +256,23 @@ void *I_RegisterSong(void *data, int size)
         return NULL;
     else
     {
-        dboolean    isMIDI = false;
-        dboolean    isMUS = false;
         Mix_Music   *music = NULL;
         SDL_RWops   *rwops;
 
-        musictype = MUSTYPE_NONE;
+        midimusictype = false;
+        musmusictype = false;
 
         // Check for MIDI or MUS format first:
         if (size >= 14)
         {
             if (!memcmp(data, "MThd", 4))                       // Is it a MIDI?
-            {
-                musictype = MUSTYPE_MIDI;
-                isMIDI = true;
-            }
+                midimusictype = true;
             else if (mmuscheckformat((byte *)data, size))       // Is it a MUS?
-            {
-                musictype = MUSTYPE_MUS;
-                isMUS = true;
-            }
+                musmusictype = true;
         }
 
         // If it's a MUS, convert it to MIDI now
-        if (isMUS)
+        if (musmusictype)
         {
             MIDI    mididata;
             UBYTE   *mid;
@@ -294,12 +288,12 @@ void *I_RegisterSong(void *data, int size)
 
             data = mid;
             size = midlen;
-            isMIDI = true;              // now it's a MIDI
+            midimusictype = true;   // now it's a MIDI
         }
 
 #if defined(_WIN32)
         // Check for option to invoke RPC server if isMIDI
-        if (isMIDI && haveMidiServer)
+        if (midimusictype && haveMidiServer)
         {
             if (!haveMidiClient)
                 if (!(haveMidiClient = I_MidiRPCInitClient()))
@@ -308,26 +302,13 @@ void *I_RegisterSong(void *data, int size)
             if (haveMidiClient && I_MidiRPCRegisterSong(data, size))
             {
                 serverMidiPlaying = true;
-                return NULL;    // server will play this song
+                return NULL;        // server will play this song
             }
         }
 #endif
 
         if ((rwops = SDL_RWFromMem(data, size)))
-        {
-            if ((music = Mix_LoadMUSType_RW(rwops, MUS_MID, SDL_FALSE)))
-                musictype = MUSTYPE_MIDI;
-            else if ((music = Mix_LoadMUSType_RW(rwops, MUS_OGG, SDL_FALSE)))
-                musictype = MUSTYPE_OGG;
-            else if ((music = Mix_LoadMUSType_RW(rwops, MUS_MP3, SDL_FALSE)))
-                musictype = MUSTYPE_MP3;
-            else if ((music = Mix_LoadMUSType_RW(rwops, MUS_WAV, SDL_FALSE)))
-                musictype = MUSTYPE_WAV;
-            else if ((music = Mix_LoadMUSType_RW(rwops, MUS_FLAC, SDL_FALSE)))
-                musictype = MUSTYPE_FLAC;
-            else if ((music = Mix_LoadMUSType_RW(rwops, MUS_MOD, SDL_FALSE)))
-                musictype = MUSTYPE_MOD;
-        }
+            music = Mix_LoadMUS_RW(rwops, SDL_FALSE);
 
         return music;
     }

@@ -49,6 +49,7 @@
 #define SIL_BOTH        3
 
 #define MAXDRAWSEGS     256
+#define MAXOPENINGS     16384
 
 //
 // INTERNAL MAP TYPES
@@ -63,8 +64,6 @@
 typedef struct vertex_s
 {
     fixed_t             x, y;
-    angle_t             viewangle;      // e6y: precalculated angle for clipping
-    int                 angletime;      // e6y: recalculation time for view angle
 } vertex_t;
 
 // Forward of LineDefs, for Sectors.
@@ -261,13 +260,22 @@ typedef struct line_s
     // if == validcount, already checked
     int                 validcount;
 
-    // thinker_t for reversible actions
-    void                *specialdata;
-
     int                 tranlump;       // killough 4/11/98: translucency filter, -1 == none
 
     int                 nexttag;
     int                 firsttag;
+
+
+    int                 r_validcount;   // cph: if == gametic, r_flags already done
+
+    enum r_flags_e
+    {                                   // cph:
+        RF_TOP_TILE = 1,                // Upper texture needs tiling
+        RF_MID_TILE = 2,                // Mid texture needs tiling
+        RF_BOT_TILE = 4,                // Lower texture needs tiling
+        RF_IGNORE   = 8,                // Renderer can skip this line
+        RF_CLOSED   = 16                // Line blocks view
+    } r_flags;
 
     // sound origin for switches/buttons
     degenmobj_t         soundorg;
@@ -275,7 +283,7 @@ typedef struct line_s
 
 #define BOOMLINESPECIALS    142
 
-typedef enum linespecial_e
+enum
 {
     NoSpecial                                                      =   0,
     DR_Door_OpenWaitClose_AlsoMonsters                             =   1,
@@ -553,9 +561,9 @@ typedef enum linespecial_e
     // Extended line specials from MBF
     TransferSkyTextureToTaggedSectors                              = 271,
     TransferSkyTextureToTaggedSectors_Flipped                      = 272
-} linespecial_e;
+};
 
-typedef enum sectorspecial_e
+enum
 {
     Normal                                              =  0,
     LightBlinks_Randomly                                =  1,
@@ -575,9 +583,9 @@ typedef enum sectorspecial_e
     LightFlickers_Randomly                              = 17,
 
     UNKNOWNSECTORSPECIAL
-} sectorspecial_e;
+};
 
-typedef enum thingtype_e
+enum
 {
     Nothing                                            =     0,
     Player1Start                                       =     1,
@@ -704,7 +712,7 @@ typedef enum thingtype_e
     Cacodemon                                          =  3005,
     LostSoul                                           =  3006,
     MusicSource                                        = 14164
-} thingtype_t;
+};
 
 //
 // A SubSector.
@@ -847,7 +855,7 @@ typedef struct drawseg_s
 // Patches are used for sprites and all masked pictures,
 // and we compose textures from the TEXTURE1/2 lists
 // of patches.
-typedef struct patch_ts
+typedef struct patch_s
 {
     short               width;          // bounding box size
     short               height;
@@ -898,10 +906,10 @@ typedef struct vissprite_s
     // foot clipping
     fixed_t             footclip;
 
-    fixed_t             blood;
-
     // killough 3/27/98: height sector for underwater/fake ceiling support
     int                 heightsec;
+
+    int                 shadowpos;
 } vissprite_t;
 
 typedef struct bloodsplatvissprite_s
@@ -984,8 +992,6 @@ typedef struct visplane_s
     unsigned short      bottom[SCREENWIDTH];
 
     unsigned short      pad4;
-
-    sector_t            *sector;        // [BH] Support animated liquid sectors
 } visplane_t;
 
 #endif

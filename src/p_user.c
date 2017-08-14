@@ -68,7 +68,7 @@ static dboolean onground;
 // P_Thrust
 // Moves the given origin along a given angle.
 //
-void P_Thrust(player_t *player, angle_t angle, fixed_t move)
+static void P_Thrust(player_t *player, angle_t angle, fixed_t move)
 {
     player->mo->momx += FixedMul(move, finecosine[angle >>= ANGLETOFINESHIFT]);
     player->mo->momy += FixedMul(move, finesine[angle]);
@@ -138,6 +138,7 @@ void P_CalcHeight(player_t *player)
             if (!player->deltaviewheight)
                 player->deltaviewheight = 1;
         }
+
         player->viewz = mo->z + player->viewheight + bob;
     }
     else
@@ -149,7 +150,7 @@ void P_CalcHeight(player_t *player)
         const struct msecnode_s *seclist;
 
         for (seclist = mo->touching_sectorlist; seclist; seclist = seclist->m_tnext)
-            if (!seclist->m_sector->isliquid || seclist->m_sector->heightsec != -1)
+            if (!seclist->m_sector->isliquid)
             {
                 liquid = false;
                 break;
@@ -162,7 +163,7 @@ void P_CalcHeight(player_t *player)
                 player->viewz += animatedliquiddiff;
                 return;
             }
-            else if (r_liquid_lowerview)
+            else if (r_liquid_lowerview && !P_IsSelfReferencingSector(mo->subsector->sector))
                 player->viewz -= FOOTCLIPSIZE;
         }
     }
@@ -181,7 +182,6 @@ static void P_MovePlayer(player_t *player)
     char        sidemove = cmd->sidemove;
 
     mo->angle += cmd->angleturn << FRACBITS;
-    onground = (mo->z <= mo->floorz || (mo->flags2 & MF2_ONMOBJ));
 
     // killough 10/98:
     //
@@ -189,12 +189,13 @@ static void P_MovePlayer(player_t *player)
     // anomalies. The thrust applied to bobbing is always the same strength on
     // ice, because the player still "works just as hard" to move, while the
     // thrust applied to the movement varies with 'movefactor'.
-    if (forwardmove | sidemove)                 // killough 10/98
+    if (forwardmove | sidemove)                                                 // killough 10/98
     {
-        if (onground)                           // killough 8/9/98
+        if ((onground = (mo->z <= mo->floorz || (mo->flags2 & MF2_ONMOBJ))))    // killough 8/9/98
         {
-            int friction;
-            int movefactor = P_GetMoveFactor(mo, &friction);
+            int     friction;
+            int     movefactor = P_GetMoveFactor(mo, &friction);
+            angle_t angle = mo->angle;
 
             // killough 11/98:
             // On sludge, make bobbing depend on efficiency.
@@ -203,14 +204,14 @@ static void P_MovePlayer(player_t *player)
 
             if (forwardmove)
             {
-                P_Bob(player, mo->angle, forwardmove * bobfactor);
-                P_Thrust(player, mo->angle, forwardmove * movefactor);
+                P_Bob(player, angle, forwardmove * bobfactor);
+                P_Thrust(player, angle, forwardmove * movefactor);
             }
 
             if (sidemove)
             {
-                P_Bob(player, mo->angle - ANG90, sidemove * bobfactor);
-                P_Thrust(player, mo->angle - ANG90, sidemove * movefactor);
+                P_Bob(player, (angle -= ANG90), sidemove * bobfactor);
+                P_Thrust(player, angle, sidemove * movefactor);
             }
         }
 
@@ -232,6 +233,7 @@ static void P_MovePlayer(player_t *player)
     }
 }
 
+//
 // P_ReduceDamageCount
 //
 static void P_ReduceDamageCount(player_t *player)
@@ -309,9 +311,6 @@ static void P_DeathThink(player_t *player)
     if (player->bonuscount)
         player->bonuscount--;
 
-    if (consoleheight)
-        return;
-
     if (((player->cmd.buttons & BT_USE) || ((player->cmd.buttons & BT_ATTACK) && !player->damagecount
         && count > TICRATE * 2) || keystate[SDL_SCANCODE_RETURN] || keystate[SDL_SCANCODE_KP_ENTER]))
     {
@@ -376,6 +375,12 @@ void P_PlayerThink(player_t *player)
     mobj_t                  *mo = player->mo;
     const struct msecnode_s *seclist;
     static int              motionblur;
+
+    if (player->bonuscount)
+        player->bonuscount--;
+
+    if (consoleactive)
+        return;
 
     // [AM] Assume we can interpolate at the beginning of the tic.
     mo->interp = true;
@@ -553,9 +558,6 @@ void P_PlayerThink(player_t *player)
         player->powers[pw_ironfeet]--;
 
     P_ReduceDamageCount(player);
-
-    if (player->bonuscount)
-        player->bonuscount--;
 
     // Handling colormaps.
     if (player->powers[pw_invulnerability] > STARTFLASHING || (player->powers[pw_invulnerability] & 8))

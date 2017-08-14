@@ -39,30 +39,30 @@
 #if !defined(__M_CONFIG_H__)
 #define __M_CONFIG_H__
 
-typedef enum r_blood_values_e
+enum
 {
     r_blood_none,
     r_blood_red,
     r_blood_all
-} r_blood_values_t;
+};
 
-typedef enum r_messagescale_values_e
+enum
 {
     r_messagescale_small,
     r_messagescale_big
-} r_messagescale_values_t;
+};
 
-typedef enum r_detail_values_e
+enum
 {
     r_detail_low,
     r_detail_high
-} r_detail_values_t;
+};
 
-typedef enum units_values_e
+enum
 {
     units_imperial,
     units_metric
-} units_values_t;
+};
 
 #define alwaysrun_default                       false
 
@@ -418,6 +418,8 @@ typedef enum units_values_e
 
 #define weaponrecoil_default                    false
 
+#define wipe_default                            true
+
 #define GAMEPADALWAYSRUN_DEFAULT                0
 #define GAMEPADAUTOMAP_DEFAULT                  GAMEPAD_BACK
 #define GAMEPADAUTOMAPCLEARMARK_DEFAULT         0
@@ -517,7 +519,8 @@ typedef enum valuealias_type_e
     UNITSVALUEALIAS,
     CAPVALUEALIAS,
     SKYVALUEALIAS,
-    SCALEVALUEALIAS
+    SCALEVALUEALIAS,
+    FACEBACKVALUEALIAS
 } valuealias_type_t;
 
 typedef struct default_s

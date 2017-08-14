@@ -77,7 +77,6 @@ short           gamepadrightdeadzone;
 dboolean        vibrate;
 int             damagevibrationtics;
 int             weaponvibrationtics;
-int             currentmotorspeed;
 int             idlemotorspeed;
 int             restoremotorspeed;
 
@@ -88,11 +87,10 @@ extern dboolean menuactive;
 extern dboolean message_clearable;
 
 #if defined(_WIN32)
-HMODULE         pXInputDLL;
+static HMODULE  pXInputDLL;
 #endif
 
-void (*gamepadfunc)(void);
-void (*gamepadthumbsfunc)(short, short, short, short);
+static void (*gamepadthumbsfunc)(short, short, short, short);
 
 void I_InitGamepad(void)
 {
@@ -277,6 +275,8 @@ void I_PollDirectInputGamepad(void)
 void XInputVibration(int motorspeed)
 {
 #if defined(_WIN32)
+    static int  currentmotorspeed;
+
     motorspeed = MIN(motorspeed, 65535);
 
     if (motorspeed > currentmotorspeed || motorspeed == idlemotorspeed)

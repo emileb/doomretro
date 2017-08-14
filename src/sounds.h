@@ -39,8 +39,10 @@
 #if !defined(__SOUNDS_H__)
 #define __SOUNDS_H__
 
+#include "doomtype.h"
+
 // so that the individual game logic and sound driver code agree
-#define NORM_PITCH      127
+#define NORM_PITCH  127
 
 //
 // SoundFX struct.
@@ -107,24 +109,13 @@ extern musicinfo_t  S_music[];
 
 extern musicinfo_t  *mus_playing;
 
-typedef enum musictype_e
-{
-    MUSTYPE_NONE,
-    MUSTYPE_MUS,
-    MUSTYPE_MIDI,
-    MUSTYPE_OGG,
-    MUSTYPE_MP3,
-    MUSTYPE_WAV,
-    MUSTYPE_FLAC,
-    MUSTYPE_MOD
-} musictype_t;
-
-extern musictype_t  musictype;
+extern dboolean     midimusictype;
+extern dboolean     musmusictype;
 
 //
 // Identifiers for all music in game.
 //
-typedef enum musicenum_e
+enum
 {
     mus_None,
     mus_e1m1,
@@ -195,12 +186,12 @@ typedef enum musicenum_e
     mus_dm2ttl,
     mus_dm2int,
     NUMMUSIC
-} musicenum_t;
+};
 
 //
 // Identifiers for all sfx in game.
 //
-typedef enum sfxenum_e
+enum
 {
     sfx_None,
     sfx_pistol,
@@ -322,6 +313,6 @@ typedef enum sfxenum_e
     sfx_secret,
 
     NUMSFX
-} sfxenum_t;
+};
 
 #endif

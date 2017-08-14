@@ -57,16 +57,14 @@
 //
 
 // killough 4/17/98: make firstcolormaplump, lastcolormaplump external
-int         firstcolormaplump;
-int         lastcolormaplump;
+static int  firstcolormaplump;
 
 int         firstflat;
-int         lastflat;
+static int  lastflat;
 int         numflats;
 
 int         firstspritelump;
 int         lastspritelump;
-int         numspritelumps;
 
 dboolean    notranslucency;
 dboolean    telefragonmap30;
@@ -166,23 +164,11 @@ static byte greenonly3[256] =
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
 };
 
-static byte whiteonly[256] =
-{
-    0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-};
-
 #define DOOM1AND2   0
 #define DOOM1ONLY   1
 #define DOOM2ONLY   2
 
-static struct fullbright_s
+static struct
 {
     char    texture[9];
     int     game;
@@ -238,7 +224,7 @@ byte *R_GetTextureColumn(const rpatch_t *texpatch, int col)
 // Initializes the texture list
 //  with the textures from the world map.
 //
-void R_InitTextures(void)
+static void R_InitTextures(void)
 {
     const maptexture_t  *mtexture;
     texture_t           *texture;
@@ -404,7 +390,7 @@ void R_InitTextures(void)
 //
 // R_InitFlats
 //
-void R_InitFlats(void)
+static void R_InitFlats(void)
 {
     int i;
 
@@ -425,9 +411,10 @@ void R_InitFlats(void)
 //  so the sprite does not need to be cached completely
 //  just for having the header info ready during rendering.
 //
-void R_InitSpriteLumps(void)
+static void R_InitSpriteLumps(void)
 {
     int i;
+    int numspritelumps;
 
     firstspritelump = W_GetNumForName("S_START") + 1;
     lastspritelump = W_GetNumForName("S_END") - 1;
@@ -542,7 +529,7 @@ int FindNearestColor(byte *palette, int red, int green, int blue);
 
 byte grays[256];
 
-void R_InitColormaps(void)
+static void R_InitColormaps(void)
 {
     dboolean    COLORMAP = (W_CheckMultipleLumps("COLORMAP") > 1);
     int         i;
@@ -553,8 +540,7 @@ void R_InitColormaps(void)
     if (W_CheckNumForName("C_START") >= 0 && W_CheckNumForName("C_END") >= 0)
     {
         firstcolormaplump = W_GetNumForName("C_START");
-        lastcolormaplump = W_GetNumForName("C_END");
-        numcolormaps = lastcolormaplump - firstcolormaplump;
+        numcolormaps = W_GetNumForName("C_END") - firstcolormaplump;
 
         colormaps = Z_Malloc(sizeof(*colormaps) * numcolormaps, PU_STATIC, NULL);
 

@@ -70,21 +70,21 @@ static hu_textline_t    w_title;
 dboolean                message_on;
 dboolean                message_dontfuckwithme;
 dboolean                message_clearable;
-dboolean                message_external;
+static dboolean         message_external;
 static dboolean         message_nottobefuckedwith;
 
 dboolean                idbehold;
 dboolean                s_STSTR_BEHOLD2;
 
 static hu_stext_t       w_message;
-int                     message_counter;
+static int              message_counter;
 
 int M_StringWidth(char *string);
 
 static dboolean         headsupactive;
 
 byte                    *tempscreen;
-int                     hudnumoffset;
+static int              hudnumoffset;
 
 static patch_t          *minuspatch;
 static patch_t          *healthpatch;
@@ -150,9 +150,9 @@ static struct keypic_s
     { "RSKUA0", "RSKUB0", NULL }
 };
 
-void HU_AltInit(void);
+static void HU_AltInit(void);
 
-patch_t *HU_LoadHUDAmmoPatch(int ammopicnum)
+static patch_t *HU_LoadHUDAmmoPatch(int ammopicnum)
 {
     int lump;
 
@@ -163,7 +163,7 @@ patch_t *HU_LoadHUDAmmoPatch(int ammopicnum)
         return NULL;
 }
 
-patch_t *HU_LoadHUDKeyPatch(int keypicnum)
+static patch_t *HU_LoadHUDKeyPatch(int keypicnum)
 {
     int lump;
 
@@ -266,7 +266,7 @@ void HU_Init(void)
     HU_SetTranslucency();
 }
 
-void HU_Stop(void)
+static void HU_Stop(void)
 {
     headsupactive = false;
 }
@@ -584,19 +584,19 @@ static void HU_DrawHUD(void)
 #define WHITE           4
 #define LIGHTGRAY       86
 #define GRAY            92
-#define DARKGRAY        104
+#define DARKGRAY        102
 #define GREEN           114
 #define RED             180
 #define BLUE            200
 #define YELLOW          231
 
-typedef struct altkeypic_s
+typedef struct
 {
     int     color;
     patch_t *patch;
 } altkeypic_t;
 
-altkeypic_t altkeypics[NUMCARDS] =
+static altkeypic_t altkeypics[NUMCARDS] =
 {
     { BLUE   },
     { YELLOW },
@@ -628,7 +628,7 @@ static int      green;
 static int      red;
 static int      yellow;
 
-void HU_AltInit(void)
+static void HU_AltInit(void)
 {
     int     i;
     char    buffer[9];
@@ -775,7 +775,8 @@ static void HU_DrawAltHUD(void)
     int color1 = color2 + (color2 == green ? coloroffset : 0);
     int keys = 0;
     int i = 0;
-    int power = 0;
+    int powerup = 0;
+    int powerupbar = 0;
     int max;
 
     DrawAltHUDNumber(ALTHUD_LEFT_X + 35 - AltHUDNumberWidth(ABS(health)), ALTHUD_Y + 12, health);
@@ -894,36 +895,41 @@ static void HU_DrawAltHUD(void)
         }
     }
 
-    if (plr->powers[pw_invulnerability] > 0)
+    if ((powerup = plr->powers[pw_invulnerability]))
     {
-        power = plr->powers[pw_invulnerability];
         max = INVULNTICS;
+        powerupbar = (powerup == -1 ? max : powerup);
     }
 
-    if (plr->powers[pw_invisibility] > 0 && (!power || plr->powers[pw_invisibility] < power))
+    if ((powerup = plr->powers[pw_invisibility]) && (!powerupbar || (powerup >= 0 && powerup < powerupbar)))
     {
-        power = plr->powers[pw_invisibility];
         max = INVISTICS;
+        powerupbar = (powerup == -1 ? max : powerup);
     }
 
-    if (plr->powers[pw_ironfeet] > 0 && (!power || plr->powers[pw_ironfeet] < power))
+    if ((powerup = plr->powers[pw_ironfeet]) && (!powerupbar || (powerup >= 0 && powerup < powerupbar)))
     {
-        power = plr->powers[pw_ironfeet];
         max = IRONTICS;
+        powerupbar = (powerup == -1 ? max : powerup);
     }
 
-    if (plr->powers[pw_infrared] > 0 && (!power || plr->powers[pw_infrared] < power))
+    if ((powerup = plr->powers[pw_infrared]) && (!powerupbar || (powerup >= 0 && powerup < powerupbar)))
     {
-        power = plr->powers[pw_infrared];
         max = INFRATICS;
+        powerupbar = (powerup == -1 ? max : powerup);
     }
 
-    if (power > STARTFLASHING || (power & 8))
+    if ((powerup = plr->powers[pw_strength]) && plr->readyweapon == wp_fist && !powerupbar)
+    {
+        max = STARTFLASHING + 1;
+        powerupbar = STARTFLASHING + 1;
+    }
+
+    if (powerupbar > STARTFLASHING || (powerupbar & 8))
     {
         fillrectfunc(0, ALTHUD_RIGHT_X, ALTHUD_Y + 26, 101, 2, darkgray);
-        fillrectfunc(0, ALTHUD_RIGHT_X, ALTHUD_Y + 26, power * 101 / max, 2, gray);
+        fillrectfunc(0, ALTHUD_RIGHT_X, ALTHUD_Y + 26, powerupbar * 101 / max, 2, gray);
     }
-
 }
 
 void HU_DrawDisk(void)

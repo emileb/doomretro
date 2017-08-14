@@ -95,14 +95,16 @@ int                 viewangletox[FINEANGLES / 2];
 // from clipangle to -clipangle.
 angle_t             xtoviewangle[SCREENWIDTH + 1];
 
+fixed_t             finesine[5 * FINEANGLES / 4];
 fixed_t             *finecosine = &finesine[FINEANGLES / 4];
+angle_t             tantoangle[SLOPERANGE + 1];
 
 // killough 3/20/98: Support dynamic colormaps, e.g. deep water
 // killough 4/4/98: support dynamic number of them as well
 int                 numcolormaps = 1;
-lighttable_t        *(*c_scalelight)[LIGHTLEVELS][MAXLIGHTSCALE];
-lighttable_t        *(*c_zlight)[LIGHTLEVELS][MAXLIGHTZ];
-lighttable_t        *(*c_psprscalelight)[OLDLIGHTLEVELS][OLDMAXLIGHTSCALE];
+static lighttable_t *(*c_scalelight)[LIGHTLEVELS][MAXLIGHTSCALE];
+static lighttable_t *(*c_zlight)[LIGHTLEVELS][MAXLIGHTZ];
+static lighttable_t *(*c_psprscalelight)[OLDLIGHTLEVELS][OLDMAXLIGHTSCALE];
 lighttable_t        *(*scalelight)[MAXLIGHTSCALE];
 lighttable_t        *(*psprscalelight)[OLDMAXLIGHTSCALE];
 lighttable_t        *(*zlight)[MAXLIGHTZ];
@@ -139,59 +141,24 @@ extern dboolean     weaponrecoil;
 //
 int R_PointOnSide(fixed_t x, fixed_t y, const node_t *node)
 {
-    fixed_t nx = node->x;
-    fixed_t ny = node->y;
-    fixed_t ndx = node->dx;
-    fixed_t ndy = node->dy;
-
-    if (!ndx)
-        return (x <= nx ? ndy > 0 : ndy < 0);
-
-    if (!ndy)
-        return (y <= ny ? ndx < 0 : ndx > 0);
-
-    x -= nx;
-    y -= ny;
-
-    // Try to quickly decide by looking at sign bits.
-    if ((ndy ^ ndx ^ x ^ y) < 0)
-        return ((ndy ^ x) < 0);     // (left is negative)
-
-    return (FixedMul(y, ndx >> FRACBITS) >= FixedMul(ndy >> FRACBITS, x));
+    return ((int32_t)(((int64_t)(y - node->y) * node->dx + (int64_t)(node->x - x) * node->dy) >> 32) > 0);
 }
 
 int R_PointOnSegSide(fixed_t x, fixed_t y, seg_t *line)
 {
-    fixed_t lx = line->v1->x;
-    fixed_t ly = line->v1->y;
-    fixed_t ldx = line->v2->x - lx;
-    fixed_t ldy = line->v2->y - ly;
-
-    if (!ldx)
-        return (x <= lx ? ldy > 0 : ldy < 0);
-
-    if (!ldy)
-        return (y <= ly ? ldx < 0 : ldx > 0);
-
-    x -= lx;
-    y -= ly;
-
-    // Try to quickly decide by looking at sign bits.
-    if ((ldy ^ ldx ^ x ^ y) < 0)
-        return ((ldy ^ x) < 0);     // (left is negative)
-
-    return (FixedMul(y, ldx >> FRACBITS) >= FixedMul(ldy >> FRACBITS, x));
+    return ((int32_t)(((int64_t)(line->v2->x - line->v1->x) * (y - line->v1->y)
+        - (int64_t)(line->v2->y - line->v1->y) * (x - line->v1->x)) >> 32) > 0);
 }
 
-int SlopeDiv(unsigned int num, unsigned int den)
+static int SlopeDiv(unsigned int num, unsigned int den)
 {
-    uint64_t    ans;
+    unsigned int ans;
 
     if (den < 512)
-        return SLOPERANGE;
+        return (ANG45 - 1);
 
-    ans = ((uint64_t)num << 3) / (den >> 8);
-    return (int)(ans <= SLOPERANGE ? ans : SLOPERANGE);
+    ans = (num << 3) / (den >> 8);
+    return (ans <= SLOPERANGE ? tantoangle[ans] : (ANG45 - 1));
 }
 
 //
@@ -219,11 +186,11 @@ angle_t R_PointToAngle2(fixed_t x1, fixed_t y1, fixed_t x, fixed_t y)
     if (x >= 0)
     {
         if (y >= 0)
-            return (x > y ? tantoangle[SlopeDiv(y, x)] : ANG90 - 1 - tantoangle[SlopeDiv(x, y)]);
+            return (x > y ? SlopeDiv(y, x) : ANG90 - 1 - SlopeDiv(x, y));
         else
         {
             y = -y;
-            return (x > y ? -(int)tantoangle[SlopeDiv(y, x)] : ANG270 + tantoangle[SlopeDiv(x, y)]);
+            return (x > y ? -SlopeDiv(y, x) : ANG270 + SlopeDiv(x, y));
         }
     }
     else
@@ -231,11 +198,11 @@ angle_t R_PointToAngle2(fixed_t x1, fixed_t y1, fixed_t x, fixed_t y)
         x = -x;
 
         if (y >= 0)
-            return (x > y ? ANG180 - 1 - tantoangle[SlopeDiv(y, x)] : ANG90 + tantoangle[SlopeDiv(x, y)]);
+            return (x > y ? ANG180 - 1 - SlopeDiv(y, x) : ANG90 + SlopeDiv(x, y));
         else
         {
             y = -y;
-            return (x > y ? ANG180 + tantoangle[SlopeDiv(y, x)] : ANG270 - 1 - tantoangle[SlopeDiv(x, y)]);
+            return (x > y ? ANG180 + SlopeDiv(y, x) : ANG270 - 1 - SlopeDiv(x, y));
         }
     }
 }
@@ -327,13 +294,13 @@ static void R_InitPointToAngle(void)
 
     // slope (tangent) to angle lookup
     for (i = 0; i <= SLOPERANGE; i++)
-        tantoangle[i] = (long)(0xFFFFFFFF * atan((double)i / SLOPERANGE) / (M_PI * 2));
+        tantoangle[i] = (angle_t)(0xFFFFFFFF * atan2((double)i, (double)SLOPERANGE) / (M_PI * 2));
 }
 
 //
 // R_InitTextureMapping
 //
-void R_InitTextureMapping(void)
+static void R_InitTextureMapping(void)
 {
     int i;
     int x;
@@ -389,7 +356,7 @@ void R_InitTextureMapping(void)
 //
 #define DISTMAP 2
 
-void R_InitLightTables(void)
+static void R_InitLightTables(void)
 {
     int i;
 
@@ -425,7 +392,7 @@ void R_InitLightTables(void)
 // The change will take effect next refresh.
 //
 dboolean    setsizeneeded;
-int         setblocks;
+static int  setblocks;
 
 void R_SetViewSize(int blocks)
 {
@@ -667,6 +634,7 @@ void R_InitColumnFunctions(void)
 //
 void R_Init(void)
 {
+    R_InitClipSegs();
     R_InitData();
     R_InitPointToAngle();
     R_InitTables();
@@ -700,7 +668,7 @@ subsector_t *R_PointInSubsector(fixed_t x, fixed_t y)
 //
 // R_SetupFrame
 //
-void R_SetupFrame(player_t *player)
+static void R_SetupFrame(player_t *player)
 {
     int     cm = 0;
     mobj_t  *mo = player->mo;
@@ -736,7 +704,7 @@ void R_SetupFrame(player_t *player)
         {
             pitch = (player->oldlookdir + (int)((player->lookdir - player->oldlookdir)
                 * FIXED2DOUBLE(fractionaltic))) / MLOOKUNIT;
-            
+
             if (weaponrecoil)
                 pitch = BETWEEN(-LOOKDIRMAX, pitch + player->oldrecoil + FixedMul(player->recoil
                     - player->oldrecoil, fractionaltic), LOOKDIRMAX);
@@ -847,11 +815,11 @@ void R_RenderPlayerView(player_t *player)
     }
     else
     {
-        if ((player->cheats & CF_NOCLIP) || freeze)
-            V_FillRect(0, viewwindowx, viewwindowy, viewwidth, viewheight, BLACK);
-        else if (r_homindicator)
+        if (r_homindicator)
             V_FillRect(0, viewwindowx, viewwindowy, viewwidth, viewheight,
-                ((gametic % 20) < 9 && !consoleactive && !menuactive && !paused ? RED : BLACK));
+                ((activetic % 20) < 9 ? RED : BLACK));
+        else if ((player->cheats & CF_NOCLIP) || freeze)
+            V_FillRect(0, viewwindowx, viewwindowy, viewwidth, viewheight, BLACK);
 
         R_RenderBSPNode(numnodes - 1);  // head node is the last node output
         R_DrawPlanes();

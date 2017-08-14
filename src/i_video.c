@@ -93,10 +93,10 @@ dboolean            vid_widescreen = vid_widescreen_default;
 char                *vid_windowposition = vid_windowposition_default;
 char                *vid_windowsize = vid_windowsize_default;
 
-dboolean            manuallypositioning;
+static dboolean     manuallypositioning;
 
 SDL_Window          *window;
-int                 windowid;
+static int          windowid;
 SDL_Renderer        *renderer;
 static SDL_Texture  *texture;
 static SDL_Texture  *texture_upscaled;
@@ -108,15 +108,15 @@ static byte         *playpal;
 
 byte                *mapscreen;
 SDL_Window          *mapwindow;
-static SDL_Renderer *maprenderer;
+SDL_Renderer        *maprenderer;
 static SDL_Texture  *maptexture;
 static SDL_Surface  *mapsurface;
 static SDL_Surface  *mapbuffer;
 static SDL_Palette  *mappalette;
 
-dboolean            nearestlinear;
-int                 upscaledwidth;
-int                 upscaledheight;
+static dboolean     nearestlinear;
+static int          upscaledwidth;
+static int          upscaledheight;
 
 dboolean            software;
 
@@ -134,8 +134,8 @@ static int buttons[MAX_MOUSE_BUTTONS + 1] =
 };
 
 // Fullscreen width and height
-int                 screenwidth;
-int                 screenheight;
+static int          screenwidth;
+static int          screenheight;
 
 // Window width and height
 int                 windowwidth;
@@ -176,9 +176,6 @@ float               r_gamma = r_gamma_default;
 
 static SDL_Rect     src_rect = { 0, 0, 0, 0 };
 static SDL_Rect     map_rect = { 0, 0, 0, 0 };
-
-void                (*blitfunc)(void);
-void                (*mapblitfunc)(void);
 
 int                 fps;
 int                 minfps = INT_MAX;
@@ -319,7 +316,7 @@ dboolean keystate(int key)
     return keystate[TranslateKey2(key)];
 }
 
-void I_CapFPS(int fps)
+static void I_CapFPS(int fps)
 {
 #if defined(_WIN32)
     if (CapFPSTimer)
@@ -716,9 +713,9 @@ static void GetUpscaledTextureSize(int width, int height)
     upscaledheight = MIN(height / SCREENHEIGHT + !!(height % SCREENHEIGHT), MAXUPSCALEHEIGHT);
 }
 
-Uint32  starttime;
-int     frames = -1;
-Uint32  currenttime;
+Uint32         starttime;
+int            frames = -1;
+static Uint32  currenttime;
 
 static void CalculateFPS(void)
 {

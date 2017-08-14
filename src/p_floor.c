@@ -58,14 +58,14 @@ result_e T_MovePlane(sector_t *sector, fixed_t speed, fixed_t dest, dboolean cru
     fixed_t lastpos;
     fixed_t destheight;
 
+    sector->oldfloorheight = sector->floorheight;
+    sector->oldceilingheight = sector->ceilingheight;
     sector->oldgametic = gametic;
 
     switch (floorOrCeiling)
     {
         case 0:
             // FLOOR
-            sector->oldfloorheight = sector->floorheight;
-
             switch (direction)
             {
                 case -1:
@@ -129,8 +129,6 @@ result_e T_MovePlane(sector_t *sector, fixed_t speed, fixed_t dest, dboolean cru
 
         case 1:
             // CEILING
-            sector->oldceilingheight = sector->ceilingheight;
-
             switch (direction)
             {
                 case -1:
@@ -192,8 +190,10 @@ result_e T_MovePlane(sector_t *sector, fixed_t speed, fixed_t dest, dboolean cru
 
                     break;
             }
+
             break;
     }
+
     return ok;
 }
 
@@ -673,7 +673,7 @@ dboolean EV_BuildStairs(line_t *line, stair_e type)
         int         height;
         int         texture;
 
-        // ALREADY MOVING?  IF SO, KEEP GOING...
+        // ALREADY MOVING? IF SO, KEEP GOING...
         if (P_SectorActive(floor_special, sec))
             continue;
 
@@ -704,8 +704,6 @@ dboolean EV_BuildStairs(line_t *line, stair_e type)
         floor->speed = speed;
         height = sec->floorheight + stairsize;
         floor->floordestheight = height;
-        floor->newspecial = 0;
-        floor->texture = 0;
         floor->crush = crushing;
         floor->type = buildStair;
         floor->stopsound = (sec->floorheight != floor->floordestheight);
@@ -725,23 +723,15 @@ dboolean EV_BuildStairs(line_t *line, stair_e type)
             {
                 line_t      *line = sec->lines[i];
                 sector_t    *tsec;
-                int         newsecnum;
 
                 if (!(line->flags & ML_TWOSIDED))
                     continue;
 
-                tsec = line->frontsector;
-                newsecnum = tsec - sectors;
-
-                if (secnum != newsecnum)
+                if (secnum != line->frontsector - sectors)
                     continue;
 
-                tsec = line->backsector;
-
-                if (!tsec)
+                if (!(tsec = line->backsector))
                     continue;
-
-                newsecnum = tsec - sectors;
 
                 if (tsec->floorpic != texture)
                     continue;
@@ -752,7 +742,7 @@ dboolean EV_BuildStairs(line_t *line, stair_e type)
                     continue;
 
                 sec = tsec;
-                secnum = newsecnum;
+                secnum = tsec - sectors;
                 floor = Z_Calloc(1, sizeof(*floor), PU_LEVSPEC, NULL);
                 P_AddThinker(&floor->thinker);
 

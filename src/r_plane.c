@@ -56,7 +56,6 @@ visplane_t          *ceilingplane;
 #define visplane_hash(picnum, lightlevel, height) (((unsigned int)(picnum) * 3 + (unsigned int)(lightlevel) \
             + (unsigned int)(height) * 7) & (MAXVISPLANES - 1))
 
-size_t             maxopenings;
 int                *openings;                       // dropoff overflow
 int                *lastopening;                    // dropoff overflow
 
@@ -79,12 +78,7 @@ static fixed_t      xoffs, yoffs;                   // killough 2/28/98: flat of
 fixed_t             *yslope;
 fixed_t             yslopes[LOOKDIRS][SCREENHEIGHT];
 
-fixed_t             cachedheight[SCREENHEIGHT];
-fixed_t             cacheddistance[SCREENHEIGHT];
-fixed_t             cachedxstep[SCREENHEIGHT];
-fixed_t             cachedystep[SCREENHEIGHT];
-
-int                 skycolor;
+static fixed_t      cachedheight[SCREENHEIGHT];
 
 dboolean            r_liquid_swirl = r_liquid_swirl_default;
 
@@ -102,8 +96,11 @@ extern dboolean     canmouselook;
 //
 static void R_MapPlane(int y, int x1, int x2)
 {
-    fixed_t distance;
-    int     dx;
+    static fixed_t  cacheddistance[SCREENHEIGHT];
+    static fixed_t  cachedxstep[SCREENHEIGHT];
+    static fixed_t  cachedystep[SCREENHEIGHT];
+    fixed_t         distance;
+    int             dx;
 
     if (centery == y)
         return;
@@ -168,7 +165,7 @@ void R_ClearPlanes(void)
 }
 
 // New function, by Lee Killough
-static visplane_t *new_visplane(unsigned hash)
+static visplane_t *new_visplane(unsigned int hash)
 {
     visplane_t  *check = freetail;
 
@@ -269,7 +266,6 @@ visplane_t *R_CheckPlane(visplane_t *pl, int start, int stop)
         new_pl->height = pl->height;
         new_pl->picnum = pl->picnum;
         new_pl->lightlevel = pl->lightlevel;
-        new_pl->sector = pl->sector;
         new_pl->xoffs = pl->xoffs;      // killough 2/28/98
         new_pl->yoffs = pl->yoffs;
         pl = new_pl;
@@ -330,9 +326,6 @@ static void R_MakeSpans(visplane_t *pl)
 // 1 cycle per 32 units (2 in 64)
 #define SWIRLFACTOR2    (8192 / 32)
 
-static byte *normalflat;
-static byte distortedflat[4096];
-
 //
 // R_DistortedFlat
 //
@@ -344,6 +337,8 @@ static byte *R_DistortedFlat(int flatnum)
     static int  lastflat = -1;
     static int  swirltic = -1;
     static int  offset[4096];
+    static byte *normalflat;
+    static byte distortedflat[4096];
     int         i;
     int         leveltic = activetic;
 
@@ -354,7 +349,7 @@ static byte *R_DistortedFlat(int flatnum)
     lastflat = flatnum;
 
     // built this tic?
-    if (leveltic != swirltic && (!consoleactive || swirltic == -1) && !menuactive && !paused)
+    if (leveltic != swirltic && (!consoleactive || swirltic == -1) && !menuactive && !paused && !freeze)
     {
         int x, y;
 
@@ -377,7 +372,7 @@ static byte *R_DistortedFlat(int flatnum)
                 offset[(y << 6) + x] = ((y1 & 63) << 6) + (x1 & 63);
             }
 
-        swirltic = gametic;
+        swirltic = activetic;
     }
 
     normalflat = W_CacheLumpNum(firstflat + flatnum);
@@ -411,7 +406,7 @@ void R_DrawPlanes(void)
                     int             x;
                     int             texture;
                     int             offset;
-                    angle_t         flip;
+                    angle_t         flip = 0;
                     const rpatch_t  *tex_patch;
 
                     // killough 10/98: allow skies to come from sidedefs.
@@ -457,7 +452,6 @@ void R_DrawPlanes(void)
                         texture = skytexture;                   // Default texture
                         dc_texheight = textureheight[texture] >> FRACBITS;
                         dc_texturemid = skytexturemid;
-                        flip = 0;                               // DOOM flips it
                     }
 
                     dc_colormap = (fixedcolormap ? fixedcolormap : fullcolormap);
@@ -484,7 +478,7 @@ void R_DrawPlanes(void)
                 else
                 {
                     // regular flat
-                    if (isliquid[picnum] && r_liquid_swirl && !freeze)
+                    if (isliquid[picnum] && r_liquid_swirl)
                     {
                         ds_source = R_DistortedFlat(picnum);
                         R_MakeSpans(pl);

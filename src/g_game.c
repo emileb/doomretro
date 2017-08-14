@@ -65,16 +65,13 @@
 #include "wi_stuff.h"
 #include "z_zone.h"
 
-void G_DoReborn(void);
+static void G_DoReborn(void);
 
-void G_DoLoadLevel(void);
-void G_DoNewGame(void);
-void G_DoCompleted(void);
-void G_DoWorldDone(void);
-void G_DoSaveGame(void);
-
-// Game state the last time G_Ticker was called.
-gamestate_t     oldgamestate;
+static void G_DoLoadLevel(void);
+static void G_DoNewGame(void);
+static void G_DoCompleted(void);
+static void G_DoWorldDone(void);
+static void G_DoSaveGame(void);
 
 gameaction_t    gameaction;
 gamestate_t     gamestate = GS_TITLESCREEN;
@@ -83,32 +80,9 @@ skill_t         pendinggameskill;
 int             gameepisode;
 int             gamemap;
 
-char **episodes[] =
-{
-    &s_M_EPISODE1,
-    &s_M_EPISODE2,
-    &s_M_EPISODE3,
-    &s_M_EPISODE4
-};
-
-char **expansions[] =
-{
-    &s_M_EXPANSION1,
-    &s_M_EXPANSION2
-};
-
-char **skilllevels[] =
-{
-    &s_M_SKILLLEVEL1,
-    &s_M_SKILLLEVEL2,
-    &s_M_SKILLLEVEL3,
-    &s_M_SKILLLEVEL4,
-    &s_M_SKILLLEVEL5
-};
-
 dboolean        paused;
 dboolean        sendpause;              // send a pause event next tic
-dboolean        sendsave;               // send a save event next tic
+static dboolean sendsave;               // send a save event next tic
 
 dboolean        viewactive;
 
@@ -117,7 +91,6 @@ player_t        players[MAXPLAYERS];
 int             gametic;
 int             activetic;
 int             gametime;
-int             levelstarttic;          // gametic at level start
 int             totalkills;             // for intermission
 int             totalitems;
 int             totalsecret;
@@ -137,10 +110,10 @@ dboolean        autoload = autoload_default;
 #define SIDEMOVE0       0x18
 #define SIDEMOVE1       0x28
 
-fixed_t         forwardmove[2] = { FORWARDMOVE0, FORWARDMOVE1 };
-fixed_t         sidemove[2] = { SIDEMOVE0, SIDEMOVE1 };
-fixed_t         angleturn[3] = { 640, 1280, 320 };      // + slow turn
-fixed_t         gamepadangleturn[2] = { 640, 960 };
+static fixed_t  forwardmove[2] = { FORWARDMOVE0, FORWARDMOVE1 };
+static fixed_t  sidemove[2] = { SIDEMOVE0, SIDEMOVE1 };
+static fixed_t  angleturn[3] = { 640, 1280, 320 };      // + slow turn
+static fixed_t  gamepadangleturn[2] = { 640, 960 };
 
 #define NUMWEAPONKEYS   7
 
@@ -166,7 +139,7 @@ static int *gamepadweapons[] =
     &gamepadweapon7
 };
 
-struct weapons_s
+static struct
 {
     weapontype_t    prev;
     weapontype_t    next;
@@ -186,7 +159,7 @@ struct weapons_s
 
 #define SLOWTURNTICS    6
 
-dboolean        gamekeydown[NUMKEYS];
+static dboolean gamekeydown[NUMKEYS];
 static int      turnheld;                       // for accelerative turning
 
 static dboolean mousearray[MAX_MOUSE_BUTTONS + 1];
@@ -194,8 +167,8 @@ static dboolean *mousebuttons = &mousearray[1]; // allow [-1]
 
 dboolean        skipaction;
 
-int             mousex;
-int             mousey;
+static int      mousex;
+static int      mousey;
 
 dboolean        m_doubleclick_use = m_doubleclick_use_default;
 dboolean        m_invertyaxis = m_invertyaxis_default;
@@ -570,7 +543,7 @@ static void G_ResetPlayer(player_t *player)
 //
 // G_DoLoadLevel
 //
-void G_DoLoadLevel(void)
+static void G_DoLoadLevel(void)
 {
     int         ep;
     int         map = (gameepisode - 1) * 10 + gamemap;
@@ -581,8 +554,6 @@ void G_DoLoadLevel(void)
 
     R_InitSkyMap();
     R_InitColumnFunctions();
-
-    levelstarttic = gametic;                    // for time calculation
 
     if (timer)
         countdown = timer * 60 * TICRATE;
@@ -706,7 +677,7 @@ dboolean G_Responder(event_t *ev)
     // any other key pops up menu if on title screen
     if (gameaction == ga_nothing && gamestate == GS_TITLESCREEN)
     {
-        if (!menuactive && !consoleheight
+        if (!menuactive && !consoleactive
             && ((ev->type == ev_keydown
                  && ev->data1 != KEY_PAUSE
                  && ev->data1 != KEY_SHIFT
@@ -924,8 +895,11 @@ static char savename[256];
 //
 void G_Ticker(void)
 {
-    ticcmd_t    *cmd;
-    player_t    *player = &players[0];
+    ticcmd_t            *cmd;
+    player_t            *player = &players[0];
+
+    // Game state the last time G_Ticker was called.
+    static gamestate_t  oldgamestate;
 
     // do player reborn if needed
     if (player->playerstate == PST_REBORN)
@@ -1102,7 +1076,7 @@ void G_Ticker(void)
 // G_PlayerFinishLevel
 // Can when a player completes a level.
 //
-void G_PlayerFinishLevel(void)
+static void G_PlayerFinishLevel(void)
 {
     player_t    *player = &players[0];
 
@@ -1159,7 +1133,7 @@ void G_PlayerReborn(void)
 //
 // G_DoReborn
 //
-void G_DoReborn(void)
+static void G_DoReborn(void)
 {
     gameaction = (quickSaveSlot >= 0 && autoload && !pistolstart ? ga_autoloadgame : ga_loadlevel);
 }
@@ -1191,7 +1165,7 @@ int cpars[33] =
 };
 
 // [BH] No Rest For The Living Par Times
-int npars[9] =
+static const int npars[9] =
 {
      75, 105, 120, 105, 210, 105, 165, 105, 135
 };
@@ -1199,7 +1173,7 @@ int npars[9] =
 //
 // G_DoCompleted
 //
-dboolean    secretexit;
+static dboolean secretexit;
 
 void G_ExitLevel(void)
 {
@@ -1220,7 +1194,7 @@ extern menu_t   EpiDef;
 
 void ST_doRefresh(void);
 
-void G_DoCompleted(void)
+static void G_DoCompleted(void)
 {
     int         map = (gameepisode - 1) * 10 + gamemap;
     int         nextmap = P_GetMapNext(map);
@@ -1469,7 +1443,7 @@ void G_WorldDone(void)
         gameaction = ga_victory;
 }
 
-void G_DoWorldDone(void)
+static void G_DoWorldDone(void)
 {
     gamestate = GS_LEVEL;
     gamemap = wminfo.next + 1;
@@ -1581,7 +1555,7 @@ void G_SaveGame(int slot, char *description, char *name)
     drawdisk = true;
 }
 
-void G_DoSaveGame(void)
+static void G_DoSaveGame(void)
 {
     char    *temp_savegame_file = P_TempSaveGameFile();
     char    *savegame_file = (consoleactive ? savename : P_SaveGameFile(savegameslot));
@@ -1642,9 +1616,9 @@ void G_DoSaveGame(void)
     drawdisk = false;
 }
 
-skill_t d_skill;
-int     d_episode;
-int     d_map;
+static skill_t  d_skill;
+static int      d_episode;
+static int      d_map;
 
 void G_DeferredInitNew(skill_t skill, int ep, int map)
 {
@@ -1681,7 +1655,7 @@ void G_DeferredLoadLevel(skill_t skill, int ep, int map)
             player->powers[i] = 0;
 }
 
-void G_DoNewGame(void)
+static void G_DoNewGame(void)
 {
     I_SetPalette(W_CacheLumpName("PLAYPAL"));
 

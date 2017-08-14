@@ -76,7 +76,7 @@ int species_infighting;
 int maxammo[NUMAMMO] = { 200, 50, 300, 50 };
 int clipammo[NUMAMMO] = { 10, 4, 20, 1 };
 
-char *weapondescription[] =
+static const char *weapondescription[] =
 {
     "fist",
     "pistol",
@@ -166,7 +166,7 @@ static void P_AddAmmo(player_t *player, ammotype_t ammo, int num)
 // not the individual count (0= 1/2 clip).
 // Returns the amount of ammo given to the player
 //
-int P_GiveAmmo(player_t *player, ammotype_t ammo, int num, dboolean stat)
+static int P_GiveAmmo(player_t *player, ammotype_t ammo, int num, dboolean stat)
 {
     int oldammo;
 
@@ -306,14 +306,14 @@ dboolean P_GiveFullAmmo(player_t *player, dboolean stat)
 //
 void P_AddBonus(player_t *player, int amount)
 {
-    player->bonuscount = MIN(player->bonuscount + amount, 3 * TICRATE);
+    player->bonuscount = MIN(player->bonuscount + amount, TICRATE);
 }
 
 //
 // P_GiveWeapon
 // The weapon name may have a MF_DROPPED flag ORed in.
 //
-dboolean P_GiveWeapon(player_t *player, weapontype_t weapon, dboolean dropped, dboolean stat)
+static dboolean P_GiveWeapon(player_t *player, weapontype_t weapon, dboolean dropped, dboolean stat)
 {
     dboolean    gaveammo = false;
     dboolean    gaveweapon = false;
@@ -1297,7 +1297,6 @@ void P_KillMobj(mobj_t *target, mobj_t *inflicter, mobj_t *source)
 
     if (target->player)
     {
-        // count environment kills against you
         target->flags &= ~MF_SOLID;
         target->player->playerstate = PST_DEAD;
         P_DropWeapon(target->player);
@@ -1328,21 +1327,27 @@ void P_KillMobj(mobj_t *target, mobj_t *inflicter, mobj_t *source)
 
     if (con_obituaries && source && source != target && !hacx)
     {
+        char *name = (*info->name1 ? info->name1 : "monster");
+
         if (inflicter && inflicter->type == MT_BARREL && type != MT_BARREL)
-            C_Obituary("%s %s was %s by an exploding barrel.", (isvowel(info->name1[0]) ? "An" : "A"),
-                info->name1, (gibbed ? "gibbed" : "killed"));
+            C_Obituary("%s %s was %s by an exploding barrel.", (isvowel(name[0]) ? "An" : "A"), name,
+                (gibbed ? "gibbed" : "killed"));
         else if (source->player)
             C_Obituary("%s %s %s%s with %s %s.", titlecase(playername), (type == MT_BARREL ? "exploded" :
-                (gibbed ? "gibbed" : "killed")), (target->player ? "" : (isvowel(info->name1[0]) ? "an " :
-                "a ")), (target->player ? (M_StringCompare(playername, playername_default) ? "yourself" :
-                "themselves") : info->name1), (M_StringCompare(playername, playername_default) ? "your" :
-                "their"), weapondescription[source->player->readyweapon]);
+                (gibbed ? "gibbed" : "killed")), (target->player ? "" : (isvowel(name[0]) ? "an " : "a ")),
+                (target->player ? (M_StringCompare(playername, playername_default) ? "yourself" :
+                "themselves") : name), (M_StringCompare(playername, playername_default) ? "your" : "their"),
+                weapondescription[source->player->readyweapon]);
         else
-            C_Obituary("%s %s %s %s%s.", (isvowel(source->info->name1[0]) ? "An" : "A"), source->info->name1,
-                (type == MT_BARREL ? "exploded" : (gibbed ? "gibbed" : "killed")),  (target->player ? "" :
-                (source->type == target->type ? "another " : (isvowel(info->name1[0]) ? "an " : "a "))),
+        {
+            char *sourcename = (*source->info->name1 ? source->info->name1 : "monster");
+
+            C_Obituary("%s %s %s %s%s.", (isvowel(sourcename[0]) ? "An" : "A"), sourcename,
+                (type == MT_BARREL ? "exploded" : (gibbed ? "gibbed" : "killed")), (target->player ? "" :
+                (source->type == target->type ? "another " : (isvowel(name[0]) ? "an " : "a "))),
                 (target->player ? (M_StringCompare(playername, playername_default) ? playername :
-                titlecase(playername)) : info->name1));
+                titlecase(playername)) : name));
+        }
     }
 
     // Drop stuff.
@@ -1584,11 +1589,9 @@ void P_DamageMobj(mobj_t *target, mobj_t *inflicter, mobj_t *source, int damage,
         }
     }
 
-    if (M_Random() < info->painchance)
+    if (M_Random() < info->painchance && !(target->flags & MF_SKULLFLY))
     {
         target->flags |= MF_JUSTHIT;                            // fight back!
-
-        target->flags &= ~MF_SKULLFLY;
 
         P_SetMobjState(target, info->painstate);
     }
