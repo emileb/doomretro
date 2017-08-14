@@ -92,7 +92,11 @@ static char     *messageString;
 static int      messageLastMenuActive;
 
 // timed message = no input from user
+#ifdef __ANDROID__
+dboolean messageNeedsInput; //Make global
+#else
 static dboolean messageNeedsInput;
+#endif
 
 static void (*messageRoutine)(int response);
 

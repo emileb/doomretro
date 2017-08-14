@@ -335,17 +335,19 @@ void I_UpdateAndroid(void)
 	}
 }
 
+// From g_game.c
+#define FORWARDMOVE0    0x19
+#define FORWARDMOVE1    0x32
 
-extern fixed_t forwardmove[2];
-extern fixed_t sidemove[2];
-extern fixed_t angleturn[3];     // + slow turn
+#define SIDEMOVE0       0x18
+#define SIDEMOVE1       0x28
 
 static int mlooky = 0;
 //Called from the game
 void G_AndroidBuildTiccmd(ticcmd_t *cmd)
 {
-	cmd->forwardmove  += forwardmove_android * forwardmove[1];
-	cmd->sidemove  += sidemove_android   * sidemove[1];
+	cmd->forwardmove  += forwardmove_android * FORWARDMOVE1;
+	cmd->sidemove  += sidemove_android   *  SIDEMOVE1;
 
 	switch(look_pitch_mode)
 	{
