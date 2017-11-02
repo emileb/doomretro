@@ -69,7 +69,7 @@
 #define MAXUPSCALEHEIGHT    (1200 / ORIGINALHEIGHT)
 
 #define I_SDLError(func)    I_Error("The call to "func"() failed in %s on line %i of %s with the error:\n" \
-                            "\"%s\".", __FUNCTION__, (__LINE__ - 1), leafname(__FILE__), SDL_GetError())
+                            "\"%s\".", __FUNCTION__, __LINE__ - 1, leafname(__FILE__), SDL_GetError())
 
 #if !defined(SDL_VIDEO_RENDER_D3D11)
 #define SDL_VIDEO_RENDER_D3D11  0
@@ -90,7 +90,7 @@ char                *vid_screenresolution = vid_screenresolution_default;
 dboolean            vid_showfps = vid_showfps_default;
 dboolean            vid_vsync = vid_vsync_default;
 dboolean            vid_widescreen = vid_widescreen_default;
-char                *vid_windowposition = vid_windowposition_default;
+char                *vid_windowpos = vid_windowpos_default;
 char                *vid_windowsize = vid_windowsize_default;
 
 static dboolean     manuallypositioning;
@@ -110,6 +110,7 @@ byte                *mapscreen;
 SDL_Window          *mapwindow;
 SDL_Renderer        *maprenderer;
 static SDL_Texture  *maptexture;
+static SDL_Texture  *maptexture_upscaled;
 static SDL_Surface  *mapsurface;
 static SDL_Surface  *mapbuffer;
 static SDL_Palette  *mappalette;
@@ -118,7 +119,7 @@ static dboolean     nearestlinear;
 static int          upscaledwidth;
 static int          upscaledheight;
 
-dboolean            software;
+static dboolean     software;
 
 static int          displayindex;
 static int          am_displayindex;
@@ -128,7 +129,7 @@ static SDL_Rect     displays[MAXDISPLAYS];
 // Bit mask of mouse button state
 static unsigned int mousebuttonstate;
 
-static int buttons[MAX_MOUSE_BUTTONS + 1] =
+static const int buttons[MAX_MOUSE_BUTTONS + 1] =
 {
     0x0000, 0x0001, 0x0004, 0x0002, 0x0008, 0x0010, 0x0020, 0x0040, 0x0080
 };
@@ -157,7 +158,7 @@ static dboolean     keys[UCHAR_MAX];
 
 static byte         gammatable[GAMMALEVELS][256];
 
-float gammalevels[GAMMALEVELS] =
+const float gammalevels[GAMMALEVELS] =
 {
     // Darker
     0.50f, 0.55f, 0.60f, 0.65f, 0.70f, 0.75f, 0.80f, 0.85f, 0.90f, 0.95f,
@@ -201,11 +202,7 @@ int                 m_threshold = m_threshold_default;
 static dboolean     capslock;
 dboolean            alwaysrun = alwaysrun_default;
 
-extern dboolean     am_external;
-extern int          r_shake_damage;
-
 extern int          st_palette;
-extern dboolean     togglingvanilla;
 extern int          windowborderwidth;
 extern int          windowborderheight;
 
@@ -237,7 +234,7 @@ static void SetShowCursor(dboolean show)
     SDL_GetRelativeMouseState(NULL, NULL);
 }
 
-static int translatekey[] =
+static const int translatekey[] =
 {
     0, 0, 0, 0, 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r',
     's', 't', 'u', 'v', 'w', 'x', 'y', 'z', '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', KEY_ENTER,
@@ -316,7 +313,7 @@ dboolean keystate(int key)
     return keystate[TranslateKey2(key)];
 }
 
-static void I_CapFPS(int fps)
+void I_CapFPS(int fps)
 {
 #if defined(_WIN32)
     if (CapFPSTimer)
@@ -435,7 +432,7 @@ static void I_GetEvent(void)
 
     while (SDL_PollEvent(Event))
     {
-        event_t         event;
+        event_t event;
 
 #if !defined(_WIN32)
         static dboolean enterdown;
@@ -578,7 +575,7 @@ static void I_GetEvent(void)
                         case SDL_WINDOWEVENT_FOCUS_LOST:
                             windowfocused = false;
 
-                            if (gamestate == GS_LEVEL && !paused && !togglingvanilla)
+                            if (gamestate == GS_LEVEL && !paused)
                             {
                                 blurred = false;
 
@@ -621,7 +618,7 @@ static void I_GetEvent(void)
                                 windowx = Event->window.data1;
                                 windowy = Event->window.data2;
                                 M_snprintf(pos, sizeof(pos), "(%i,%i)", windowx, windowy);
-                                vid_windowposition = strdup(pos);
+                                vid_windowpos = strdup(pos);
 
                                 if ((vid_display = SDL_GetWindowDisplayIndex(window) + 1) < 1)
                                     I_SDLError("SDL_GetWindowDisplayIndex");
@@ -892,26 +889,57 @@ static void I_Blit_NearestLinear_ShowFPS_Shake(void)
     SDL_RenderPresent(renderer);
 }
 
-void I_UpdateBlitFunc(dboolean shake)
-{
-    if (shake && !software)
-        blitfunc = (vid_showfps ? (nearestlinear ? I_Blit_NearestLinear_ShowFPS_Shake :
-            I_Blit_ShowFPS_Shake) : (nearestlinear ? I_Blit_NearestLinear_Shake : I_Blit_Shake));
-    else
-        blitfunc = (vid_showfps ? (nearestlinear ? I_Blit_NearestLinear_ShowFPS : I_Blit_ShowFPS) :
-            (nearestlinear ? I_Blit_NearestLinear : I_Blit));
-}
-
 void I_Blit_Automap(void)
 {
     SDL_LowerBlit(mapsurface, &map_rect, mapbuffer, &map_rect);
     SDL_UpdateTexture(maptexture, &map_rect, mapbuffer->pixels, SCREENWIDTH * 4);
     SDL_RenderClear(maprenderer);
     SDL_RenderCopy(maprenderer, maptexture, &map_rect, NULL);
+
+#if defined(_WIN32)
+    if (CapFPSEvent)
+        WaitForSingleObject(CapFPSEvent, 1000);
+#endif
+
+    SDL_RenderPresent(maprenderer);
+}
+
+void I_Blit_Automap_NearestLinear(void)
+{
+    UpdateGrab();
+
+    SDL_LowerBlit(mapsurface, &map_rect, mapbuffer, &map_rect);
+    SDL_UpdateTexture(maptexture, &map_rect, mapbuffer->pixels, SCREENWIDTH * 4);
+    SDL_RenderClear(maprenderer);
+    SDL_SetRenderTarget(maprenderer, maptexture_upscaled);
+    SDL_RenderCopy(maprenderer, maptexture, &map_rect, NULL);
+    SDL_SetRenderTarget(maprenderer, NULL);
+    SDL_RenderCopy(maprenderer, maptexture_upscaled, NULL, NULL);
+
+#if defined(_WIN32)
+    if (CapFPSEvent)
+        WaitForSingleObject(CapFPSEvent, 1000);
+#endif
+
     SDL_RenderPresent(maprenderer);
 }
 
 static void nullfunc(void) {}
+
+void I_UpdateBlitFunc(dboolean shake)
+{
+    dboolean    override = (vid_fullscreen && !(displayheight % ORIGINALHEIGHT));
+
+    if (shake && !software)
+        blitfunc = (vid_showfps ? (nearestlinear && !override ? I_Blit_NearestLinear_ShowFPS_Shake :
+            I_Blit_ShowFPS_Shake) : (nearestlinear && !override ? I_Blit_NearestLinear_Shake : I_Blit_Shake));
+    else
+        blitfunc = (vid_showfps ? (nearestlinear && !override ? I_Blit_NearestLinear_ShowFPS : I_Blit_ShowFPS) :
+            (nearestlinear && !override ? I_Blit_NearestLinear : I_Blit));
+
+    mapblitfunc = (mapwindow ? (nearestlinear && !override ? I_Blit_Automap_NearestLinear : I_Blit_Automap) :
+        nullfunc);
+}
 
 //
 // I_ReadScreen
@@ -926,9 +954,7 @@ void I_ReadScreen(byte *screen)
 //
 void I_SetPalette(byte *playpal)
 {
-    int i;
-
-    for (i = 0; i < 256; i++)
+    for (int i = 0; i < 256; i++)
     {
         colors[i].r = gammatable[gammaindex][*playpal++];
         colors[i].g = gammatable[gammaindex][*playpal++];
@@ -958,11 +984,9 @@ static void I_RestoreFocus(void)
 
 static void GetDisplays(void)
 {
-    int i;
-
     numdisplays = MIN(SDL_GetNumVideoDisplays(), MAXDISPLAYS);
 
-    for (i = 0; i < numdisplays; i++)
+    for (int i = 0; i < numdisplays; i++)
         if (SDL_GetDisplayBounds(i, &displays[i]) < 0)
             I_SDLError("SDL_GetDisplayBounds");
 }
@@ -971,6 +995,7 @@ void I_CreateExternalAutomap(dboolean output)
 {
     Uint32  rmask, gmask, bmask, amask;
     int     bpp;
+    int     flags = SDL_RENDERER_TARGETTEXTURE;
 
     mapscreen = *screens;
     mapblitfunc = nullfunc;
@@ -996,7 +1021,10 @@ void I_CreateExternalAutomap(dboolean output)
         SDL_WINDOWPOS_UNDEFINED_DISPLAY(am_displayindex), 0, 0, SDL_WINDOW_FULLSCREEN_DESKTOP)))
         I_SDLError("SDL_CreateWindow");
 
-    if (!(maprenderer = SDL_CreateRenderer(mapwindow, -1, SDL_RENDERER_TARGETTEXTURE)))
+    if (vid_vsync)
+        flags |= SDL_RENDERER_PRESENTVSYNC;
+
+    if (!(maprenderer = SDL_CreateRenderer(mapwindow, -1, flags)))
         I_SDLError("SDL_CreateRenderer");
 
     if (SDL_RenderSetLogicalSize(maprenderer, SCREENWIDTH, SCREENHEIGHT) < 0)
@@ -1005,11 +1033,9 @@ void I_CreateExternalAutomap(dboolean output)
     if (!(mapsurface = SDL_CreateRGBSurface(0, SCREENWIDTH, SCREENHEIGHT, 8, 0, 0, 0, 0)))
         I_SDLError("SDL_CreateRGBSurface");
 
-    if (SDL_PixelFormatEnumToMasks(SDL_GetWindowPixelFormat(mapwindow), &bpp, &rmask, &gmask, &bmask,
-        &amask))
+    if (SDL_PixelFormatEnumToMasks(SDL_GetWindowPixelFormat(mapwindow), &bpp, &rmask, &gmask, &bmask, &amask))
     {
-        if (!(mapbuffer = SDL_CreateRGBSurface(0, SCREENWIDTH, SCREENHEIGHT, 32, rmask, gmask, bmask,
-            amask)))
+        if (!(mapbuffer = SDL_CreateRGBSurface(0, SCREENWIDTH, SCREENHEIGHT, 32, rmask, gmask, bmask, amask)))
             I_SDLError("SDL_CreateRGBSurface");
     }
     else if (!(mapbuffer = SDL_CreateRGBSurface(0, SCREENWIDTH, SCREENHEIGHT, 32, 0, 0, 0, 0)))
@@ -1017,13 +1043,28 @@ void I_CreateExternalAutomap(dboolean output)
 
     SDL_FillRect(mapbuffer, NULL, 0);
 
+
 #ifdef __ANDROID__
-    if (!(maptexture = SDL_CreateTexture(maprenderer, SDL_PIXELFORMAT_RGBA8888,
+    if (!(maptexture = SDL_CreateTexture(maprenderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_STREAMING,
+        SCREENWIDTH, SCREENHEIGHT)))
 #else
-    if (!(maptexture = SDL_CreateTexture(maprenderer, SDL_PIXELFORMAT_ARGB8888,
+    if (!(maptexture = SDL_CreateTexture(maprenderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING,
+        SCREENWIDTH, SCREENHEIGHT)))
 #endif
-        SDL_TEXTUREACCESS_STREAMING, SCREENWIDTH, SCREENHEIGHT)))
         I_SDLError("SDL_CreateTexture");
+
+    if (nearestlinear)
+    {
+        SDL_SetHintWithPriority(SDL_HINT_RENDER_SCALE_QUALITY, vid_scalefilter_linear, SDL_HINT_OVERRIDE);
+
+        if (!(maptexture_upscaled = SDL_CreateTexture(maprenderer, SDL_PIXELFORMAT_ARGB8888,
+            SDL_TEXTUREACCESS_TARGET, upscaledwidth * SCREENWIDTH, upscaledheight * SCREENHEIGHT)))
+            I_SDLError("SDL_CreateTexture");
+
+        mapblitfunc = I_Blit_Automap_NearestLinear;
+    }
+    else
+        mapblitfunc = I_Blit_Automap;
 
     if (!(mappalette = SDL_AllocPalette(256)))
         I_SDLError("SDL_AllocPalette");
@@ -1035,7 +1076,6 @@ void I_CreateExternalAutomap(dboolean output)
         I_SDLError("SDL_SetPaletteColors");
 
     mapscreen = mapsurface->pixels;
-    mapblitfunc = I_Blit_Automap;
     map_rect.w = SCREENWIDTH;
     map_rect.h = SCREENHEIGHT - SBARHEIGHT;
 
@@ -1059,6 +1099,7 @@ void I_DestroyExternalAutomap(void)
     SDL_FreeSurface(mapsurface);
     SDL_FreeSurface(mapbuffer);
     SDL_DestroyTexture(maptexture);
+    SDL_DestroyTexture(maptexture_upscaled);
     SDL_DestroyRenderer(maprenderer);
     SDL_DestroyWindow(mapwindow);
     mapwindow = NULL;
@@ -1071,17 +1112,17 @@ void GetWindowPosition(void)
     int x = 0;
     int y = 0;
 
-    if (M_StringCompare(vid_windowposition, vid_windowposition_centered)
-        || M_StringCompare(vid_windowposition, vid_windowposition_centred))
+    if (M_StringCompare(vid_windowpos, vid_windowpos_centered)
+        || M_StringCompare(vid_windowpos, vid_windowpos_centred))
     {
         windowx = 0;
         windowy = 0;
     }
-    else if (sscanf(vid_windowposition, "(%10i,%10i)", &x, &y) != 2)
+    else if (sscanf(vid_windowpos, "(%10i,%10i)", &x, &y) != 2)
     {
         windowx = 0;
         windowy = 0;
-        vid_windowposition = vid_windowposition_centered;
+        vid_windowpos = vid_windowpos_centered;
         M_SaveCVARs();
     }
     else
@@ -1095,18 +1136,10 @@ void GetWindowPosition(void)
 
 void GetWindowSize(void)
 {
-    int     width = -1;
-    int     height = -1;
-    char    *pvid_windowsize = strdup(vid_windowsize);
-    char    *left = strtok(pvid_windowsize, "x");
-    char    *right = strtok(NULL, "x");
+    int width = -1;
+    int height = -1;
 
-    if (!right)
-        right = "";
-
-    sscanf(left, "%10i", &width);
-    sscanf(right, "%10i", &height);
-    free(pvid_windowsize);
+    sscanf(vid_windowsize, "%10ix%10i", &width, &height);
 
     if (width < ORIGINALWIDTH + windowborderwidth || height < ORIGINALWIDTH * 3 / 4 + windowborderheight)
     {
@@ -1128,9 +1161,8 @@ void GetWindowSize(void)
 static dboolean ValidScreenMode(int width, int height)
 {
     const int   modes = SDL_GetNumDisplayModes(displayindex);
-    int         i;
 
-    for (i = 0; i < modes; i++)
+    for (int i = 0; i < modes; i++)
     {
         SDL_DisplayMode mode;
 
@@ -1152,18 +1184,10 @@ void GetScreenResolution(void)
     }
     else
     {
-        int     width = -1;
-        int     height = -1;
-        char    *pvid_screenresolution = strdup(vid_screenresolution);
-        char    *left = strtok(pvid_screenresolution, "x");
-        char    *right = strtok(NULL, "x");
+        int width = -1;
+        int height = -1;
 
-        if (!right)
-            right = "";
-
-        sscanf(left, "%10i", &width);
-        sscanf(right, "%10i", &height);
-        free(pvid_screenresolution);
+        sscanf(vid_screenresolution, "%10ix%10i", &width, &height);
 
         if (width >= 0 && height >= 0 && ValidScreenMode(width, height))
         {
@@ -1180,7 +1204,7 @@ void GetScreenResolution(void)
     }
 }
 
-static resolution_t resolutions[] =
+static const resolution_t resolutions[] =
 {
     {  960,  640, "DVGA",   "3:2"   }, {  960,  720, "",       "4:3"   }, { 1024,  640, "",       "16:10" },
     { 1024,  768, "XGA",    "4:3"   }, { 1136,  640, "",       "16:9"  }, { 1152,  720, "",       "3:2"   },
@@ -1338,7 +1362,7 @@ static void SetVideoMode(dboolean output)
 #endif
             if (!(window = SDL_CreateWindow(PACKAGE_NAME, SDL_WINDOWPOS_UNDEFINED_DISPLAY(displayindex),
                 SDL_WINDOWPOS_UNDEFINED_DISPLAY(displayindex), 0, 0,
-                (SDL_WINDOW_FULLSCREEN_DESKTOP | SDL_WINDOW_RESIZABLE))))
+                (SDL_WINDOW_FULLSCREEN_DESKTOP | SDL_WINDOW_RESIZABLE | SDL_WINDOW_OPENGL))))
                 I_SDLError("SDL_CreateWindow");
 
             if (output)
@@ -1355,7 +1379,7 @@ static void SetVideoMode(dboolean output)
 
             if(!(window = SDL_CreateWindow(PACKAGE_NAME, SDL_WINDOWPOS_UNDEFINED_DISPLAY(displayindex),
                 SDL_WINDOWPOS_UNDEFINED_DISPLAY(displayindex), width, height,
-                (SDL_WINDOW_FULLSCREEN | SDL_WINDOW_RESIZABLE))))
+                (SDL_WINDOW_FULLSCREEN | SDL_WINDOW_RESIZABLE | SDL_WINDOW_OPENGL))))
                 I_SDLError("SDL_CreateWindow");
 
             if (output)
@@ -1505,8 +1529,8 @@ static void SetVideoMode(dboolean output)
         {
             if (nearestlinear)
             {
-                C_Output("The %i\xD7%i screen is scaled up to %s\xD7%s using nearest-neighbor "
-                    "interpolation.", SCREENWIDTH, SCREENHEIGHT, commify(upscaledwidth * SCREENWIDTH),
+                C_Output("The %i\xD7%i screen is scaled up to %s\xD7%s using nearest-neighbor interpolation.",
+                    SCREENWIDTH, SCREENHEIGHT, commify(upscaledwidth * SCREENWIDTH),
                     commify(upscaledheight * SCREENHEIGHT));
                 C_Output("It is then scaled down to %s\xD7%s using linear filtering.",
                     commify(height * 4 / 3), commify(height));
@@ -1515,8 +1539,8 @@ static void SetVideoMode(dboolean output)
                 C_Output("The %i\xD7%i screen is scaled up to %s\xD7%s using linear filtering.",
                     SCREENWIDTH, SCREENHEIGHT, commify(height * 4 / 3), commify(height));
             else
-                C_Output("The %i\xD7%i screen is scaled up to %s\xD7%s using nearest-neighbor "
-                    "interpolation.", SCREENWIDTH, SCREENHEIGHT, commify(height * 4 / 3), commify(height));
+                C_Output("The %i\xD7%i screen is scaled up to %s\xD7%s using nearest-neighbor interpolation.",
+                    SCREENWIDTH, SCREENHEIGHT, commify(height * 4 / 3), commify(height));
         }
 
         I_CapFPS(0);
@@ -1586,13 +1610,15 @@ static void SetVideoMode(dboolean output)
         else
         {
             static char text[128];
+            int         len;
 
             M_snprintf(text, sizeof(text), "The gamma correction level is %.2f.", r_gamma);
+            len = (int)strlen(text);
 
-            if (text[strlen(text) - 2] == '0' && text[strlen(text) - 3] == '0')
+            if (text[len - 2] == '0' && text[len - 3] == '0')
             {
-                text[strlen(text) - 2] = '.';
-                text[strlen(text) - 1] = '\0';
+                text[len - 2] = '.';
+                text[len - 1] = '\0';
             }
 
             C_Output(text);
@@ -1711,12 +1737,15 @@ void I_ToggleFullscreen(void)
     {
         menuactive = false;
         C_ShowConsole();
-        C_Warning("Unable to switch to %s mode.", (fullscreen ? "fullscreen" : "windowed"));
+        C_Warning("Unable to switch to %s.", (fullscreen ? "fullscreen" : "a window"));
         return;
     }
 
     vid_fullscreen = fullscreen;
     M_SaveCVARs();
+
+    if (nearestlinear)
+        I_UpdateBlitFunc(viewplayer && !!viewplayer->damagecount);
 
     if (vid_fullscreen)
         C_StrCVAROutput(stringize(vid_fullscreen), "on");
@@ -1740,24 +1769,17 @@ void I_ToggleFullscreen(void)
 
 static void I_InitGammaTables(void)
 {
-    int i;
-
-    for (i = 0; i < GAMMALEVELS; i++)
-    {
-        int j;
-
-        for (j = 0; j < 256; j++)
+    for (int i = 0; i < GAMMALEVELS; i++)
+        for (int j = 0; j < 256; j++)
             gammatable[i][j] = (byte)(pow(j / 255.0, 1.0 / gammalevels[i]) * 255.0 + 0.5);
-    }
 }
 
 void I_SetGamma(float value)
 {
     gammaindex = 0;
 
-    while (gammaindex < GAMMALEVELS)
-        if (gammalevels[gammaindex++] == value)
-            break;
+    while (gammaindex < GAMMALEVELS && gammalevels[gammaindex] != value)
+        gammaindex++;
 
     if (gammaindex == GAMMALEVELS)
     {
@@ -1775,7 +1797,7 @@ void I_InitKeyboard(void)
 #if defined(_WIN32)
         capslock = !!(GetKeyState(VK_CAPITAL) & 0x0001);
 
-        if ((alwaysrun && !capslock) || (!alwaysrun && capslock))
+        if (alwaysrun != capslock)
         {
             keybd_event(VK_CAPITAL, 0x45, KEYEVENTF_EXTENDEDKEY, (uintptr_t)0);
             keybd_event(VK_CAPITAL, 0x45, (KEYEVENTF_EXTENDEDKEY | KEYEVENTF_KEYUP), (uintptr_t)0);
@@ -1802,13 +1824,12 @@ void I_InitGraphics(void)
     SDL_VERSION(&compiled);
 
     if (linked.major != compiled.major || linked.minor != compiled.minor)
-        I_Error("The wrong version of sdl2.dll was found. "PACKAGE_NAME" requires v%i.%i.%i, not v%i.%i.%i.",
-            compiled.major, compiled.minor, compiled.patch, linked.major, linked.minor, linked.patch);
+        I_Error("The wrong version of %s was found. %s requires v%i.%i.%i.",
+            SDL_FILENAME, PACKAGE_NAME, compiled.major, compiled.minor, compiled.patch);
 
     if (linked.patch != compiled.patch)
-        C_Warning("The wrong version of sdl2.dll was found. <i>"PACKAGE_NAME"</i> requires v%i.%i.%i, not "
-            "v%i.%i.%i.", compiled.major, compiled.minor, compiled.patch, linked.major, linked.minor,
-            linked.patch);
+        C_Warning("The wrong version of <b>%s</b> was found. <i>%s</i> requires v%i.%i.%i.",
+            SDL_FILENAME, PACKAGE_NAME, compiled.major, compiled.minor, compiled.patch);
 
     SDL_DisableScreenSaver();
 
@@ -1849,6 +1870,9 @@ void I_InitGraphics(void)
 
     SetVideoMode(true);
 
+    if (vid_fullscreen)
+        SetShowCursor(false);
+
     mapscreen = Z_Malloc(SCREENWIDTH * SCREENHEIGHT, PU_STATIC, NULL);
     I_CreateExternalAutomap(true);
 
@@ -1860,10 +1884,8 @@ void I_InitGraphics(void)
 
     SDL_SetWindowTitle(window, PACKAGE_NAME);
 
-    blitfunc = (nearestlinear ? I_Blit_NearestLinear : I_Blit);
+    I_UpdateBlitFunc(false);
     blitfunc();
 
     while (SDL_PollEvent(&dummy));
-
-    UpdateGrab();
 }

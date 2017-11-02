@@ -39,14 +39,15 @@
 #include "d_event.h"
 #include "doomstat.h"
 #include "i_gamepad.h"
+#include "m_config.h"
 #include "m_menu.h"
 #include "m_random.h"
 #include "p_local.h"
 #include "p_tick.h"
 #include "s_sound.h"
 
-#define LOWERSPEED              6 * FRACUNIT
-#define RAISESPEED              6 * FRACUNIT
+#define LOWERSPEED              (6 * FRACUNIT)
+#define RAISESPEED              (6 * FRACUNIT)
 
 #define CHAINSAWIDLEMOTORSPEED  15000
 #define MAXMOTORSPEED           65535
@@ -55,8 +56,8 @@ dboolean        centerweapon = centerweapon_default;
 dboolean        weaponrecoil = weaponrecoil_default;
 int             weaponbob = weaponbob_default;
 
-unsigned int    stat_shotsfired;
-unsigned int    stat_shotshit;
+unsigned int    stat_shotsfired = 0;
+unsigned int    stat_shotshit = 0;
 
 dboolean        successfulshot;
 dboolean        skippsprinterp;
@@ -75,7 +76,6 @@ static const int recoilvalues[] = {
 
 extern dboolean canmouselook;
 extern dboolean hitwall;
-extern int      stillbob;
 extern dboolean usemouselook;
 
 void P_CheckMissileSpawn(mobj_t *th);
@@ -89,7 +89,7 @@ void A_Recoil(player_t *player, weapontype_t weapon)
 //
 // P_SetPsprite
 //
-void P_SetPsprite(player_t *player, int position, statenum_t stnum)
+void P_SetPsprite(player_t *player, size_t position, statenum_t stnum)
 {
     pspdef_t    *psp = &player->psprites[position];
 
@@ -218,7 +218,7 @@ static void P_SubtractAmmo(player_t *player, int amount)
 //
 // P_FireWeapon
 //
-static void P_FireWeapon(player_t *player)
+void P_FireWeapon(player_t *player)
 {
     weapontype_t    readyweapon;
 
@@ -659,8 +659,6 @@ void A_FirePistol(mobj_t *actor, player_t *player, pspdef_t *psp)
 //
 void A_FireShotgun(mobj_t *actor, player_t *player, pspdef_t *psp)
 {
-    int i;
-
     P_NoiseAlert(player->mo, player->mo);
 
     S_StartSound(actor, sfx_shotgn);
@@ -674,7 +672,7 @@ void A_FireShotgun(mobj_t *actor, player_t *player, pspdef_t *psp)
 
     successfulshot = false;
 
-    for (i = 0; i < 7; i++)
+    for (int i = 0; i < 7; i++)
         P_GunShot(actor, false);
 
     A_Recoil(player, wp_shotgun);
@@ -698,8 +696,6 @@ void A_FireShotgun(mobj_t *actor, player_t *player, pspdef_t *psp)
 //
 void A_FireShotgun2(mobj_t *actor, player_t *player, pspdef_t *psp)
 {
-    int i;
-
     P_NoiseAlert(player->mo, player->mo);
 
     S_StartSound(actor, sfx_dshtgn);
@@ -713,7 +709,7 @@ void A_FireShotgun2(mobj_t *actor, player_t *player, pspdef_t *psp)
 
     successfulshot = false;
 
-    for (i = 0; i < 20; i++)
+    for (int i = 0; i < 20; i++)
     {
         int     damage = 5 * (M_Random() % 3 + 1);
         angle_t angle = actor->angle + ((M_Random() - M_Random()) << ANGLETOFINESHIFT);
@@ -810,20 +806,17 @@ void A_Light2(mobj_t *actor, player_t *player, pspdef_t *psp)
 //
 void A_BFGSpray(mobj_t *actor, player_t *player, pspdef_t *psp)
 {
-    int     i;
     mobj_t  *mo = actor->target;
 
     if (mo->player)
         P_NoiseAlert(mo->player->mo, mo->player->mo);
 
     // offset angles from its attack angle
-    for (i = 0; i < 40; i++)
+    for (int i = 0; i < 40; i++)
     {
-        int     j;
-        int     damage = 0;
-        angle_t an = actor->angle - ANG90 / 2 + ANG90 / 40 * i;
+        int damage = 0;
 
-        P_AimLineAttack(mo, an, 16 * 64 * FRACUNIT);
+        P_AimLineAttack(mo, actor->angle - ANG90 / 2 + ANG90 / 40 * i, 16 * 64 * FRACUNIT);
 
         if (!linetarget)
             continue;
@@ -832,7 +825,7 @@ void A_BFGSpray(mobj_t *actor, player_t *player, pspdef_t *psp)
 
         P_SpawnMobj(linetarget->x, linetarget->y, linetarget->z + (linetarget->height >> 2), MT_EXTRABFG);
 
-        for (j = 0; j < 15; j++)
+        for (int j = 0; j < 15; j++)
             damage += (M_Random() & 7) + 1;
 
         P_DamageMobj(linetarget, mo, mo, damage, true);
@@ -883,12 +876,11 @@ void P_SetupPsprites(player_t *player)
 //
 void P_MovePsprites(player_t *player)
 {
-    int         i;
     pspdef_t    *psp = player->psprites;
     pspdef_t    *weapon = &psp[ps_weapon];
     pspdef_t    *flash = &psp[ps_flash];
 
-    for (i = 0; i < NUMPSPRITES; i++, psp++)
+    for (int i = 0; i < NUMPSPRITES; i++, psp++)
         if (psp->state && psp->tics != -1 && !--psp->tics)
             P_SetPsprite(player, i, psp->state->nextstate);
 

@@ -41,6 +41,7 @@
 #include "c_console.h"
 #include "doomstat.h"
 #include "m_argv.h"
+#include "m_config.h"
 #include "m_misc.h"
 #include "m_random.h"
 #include "p_local.h"
@@ -71,7 +72,7 @@
 
 #define TIDNUM(x)       ((int)(x->id & 0xFFFF)) // thing identifier
 
-typedef struct channel_s
+typedef struct
 {
     // sound information (if null, channel avail.)
     sfxinfo_t       *sfxinfo;
@@ -86,7 +87,7 @@ typedef struct channel_s
 } channel_t;
 
 // [crispy] "sound objects" hold the coordinates of removed map objects
-typedef struct sobj_s
+typedef struct
 {
     thinker_t       dummy;
     fixed_t         x;
@@ -182,8 +183,6 @@ void S_Init(void)
 
     if (!nosfx)
     {
-        int i;
-
         InitSfxModule();
         S_SetSfxVolume(sfxVolume * MAX_SFX_VOLUME / 31);
 
@@ -194,7 +193,7 @@ void S_Init(void)
         sobjs = Z_Malloc(s_channels * sizeof(sobj_t), PU_STATIC, NULL);
 
         // Note that sounds have not been cached (yet).
-        for (i = 1; i < NUMSFX; i++)
+        for (int i = 1; i < NUMSFX; i++)
             S_sfx[i].lumpnum = -1;
     }
 
@@ -220,14 +219,12 @@ static void S_StopChannel(int cnum)
 
     if (c->sfxinfo)
     {
-        int i;
-
         // stop the sound playing
         if (I_SoundIsPlaying(c->handle))
             I_StopSound(c->handle);
 
         // check to see if other channels are playing the sound
-        for (i = 0; i < s_channels; i++)
+        for (int i = 0; i < s_channels; i++)
             if (cnum != i && c->sfxinfo == channels[i].sfxinfo)
                 break;
 
@@ -238,12 +235,10 @@ static void S_StopChannel(int cnum)
 
 void S_StopSounds(void)
 {
-    int cnum;
-
     if (nosfx)
         return;
 
-    for (cnum = 0; cnum < s_channels; cnum++)
+    for (int cnum = 0; cnum < s_channels; cnum++)
         if (channels[cnum].sfxinfo)
             S_StopChannel(cnum);
 }
@@ -326,15 +321,13 @@ void S_Start(void)
 // original implementation idea: https://www.doomworld.com/vb/post/1585325
 void S_UnlinkSound(mobj_t *origin)
 {
-    int cnum;
-
     if (nosfx)
         return;
 
-    for (cnum = 0; cnum < s_channels; cnum++)
+    for (int cnum = 0; cnum < s_channels; cnum++)
         if (channels[cnum].sfxinfo && channels[cnum].origin == origin)
         {
-            sobj_t *const   sobj = &sobjs[cnum];
+            sobj_t  *sobj = &sobjs[cnum];
 
             sobj->x = origin->x;
             sobj->y = origin->y;
@@ -391,7 +384,7 @@ static int S_GetChannel(mobj_t *origin, sfxinfo_t *sfxinfo)
 // modifies parameters and returns 1.
 static int S_AdjustSoundParams(mobj_t *listener, mobj_t *source, int *vol, int *sep)
 {
-    fixed_t dist;
+    fixed_t dist = 0;
     fixed_t adx;
     fixed_t ady;
     angle_t angle;
@@ -407,14 +400,10 @@ static int S_AdjustSoundParams(mobj_t *listener, mobj_t *source, int *vol, int *
     ady = ABS((listener->y >> FRACBITS) - (source->y >> FRACBITS));
 
     if (ady > adx)
-    {
-        dist = adx;
-        adx = ady;
-        ady = dist;
-    }
+        SWAP(adx, ady);
 
-    dist = (adx ? FixedDiv(adx, finesine[(tantoangle[FixedDiv(ady, adx) >> DBITS]
-        + ANG90) >> ANGLETOFINESHIFT]) : 0);
+    if (adx)
+        dist = FixedDiv(adx, finesine[(tantoangle[FixedDiv(ady, adx) >> DBITS] + ANG90) >> ANGLETOFINESHIFT]);
 
     if (dist > (S_CLIPPING_DIST >> FRACBITS))
         return 0;
@@ -538,14 +527,12 @@ void S_ResumeSound(void)
 //
 void S_UpdateSounds(mobj_t *listener)
 {
-    int cnum;
-
     if (nosfx)
         return;
 
     I_UpdateSound();
 
-    for (cnum = 0; cnum < s_channels; cnum++)
+    for (int cnum = 0; cnum < s_channels; cnum++)
     {
         channel_t   *c = &channels[cnum];
         sfxinfo_t   *sfx = c->sfxinfo;
@@ -642,7 +629,8 @@ void S_ChangeMusic(int music_id, dboolean looping, dboolean cheating, dboolean m
 #endif
         {
             if (*music->name)
-                C_Warning("The D_%s music lump can't be played.", uppercase(music->name));
+                C_Warning("The <b>D_%s</b> music lump can't be played.", uppercase(music->name));
+
             return;
         }
 
@@ -723,7 +711,6 @@ void S_ParseMusInfo(char *mapid)
         SC_Open("MUSINFO");
 
         while (SC_GetString())
-        {
             if (inMap || SC_Compare(mapid))
             {
                 if (!inMap)
@@ -745,7 +732,6 @@ void S_ParseMusInfo(char *mapid)
                             musinfo.items[num] = lumpnum;
                     }
             }
-        }
 
         SC_Close();
     }
@@ -768,11 +754,11 @@ void T_MAPMusic(void)
 
     if (musinfo.tics > 0)
         musinfo.tics--;
-    else if (!musinfo.tics && musinfo.lastmapthing != musinfo.mapthing)
+    else if (musinfo.lastmapthing != musinfo.mapthing)
     {
         int arraypt = TIDNUM(musinfo.mapthing);
 
-        if (arraypt >= 0 && arraypt < MAX_MUS_ENTRIES)
+        if (arraypt < MAX_MUS_ENTRIES)
         {
             int lumpnum = musinfo.items[arraypt];
 

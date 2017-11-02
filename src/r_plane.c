@@ -38,6 +38,7 @@
 
 #include "c_console.h"
 #include "doomstat.h"
+#include "m_config.h"
 #include "p_local.h"
 #include "r_sky.h"
 #include "w_wad.h"
@@ -80,8 +81,11 @@ fixed_t             yslopes[LOOKDIRS][SCREENHEIGHT];
 
 static fixed_t      cachedheight[SCREENHEIGHT];
 
+dboolean            r_liquid_current = r_liquid_current_default;
 dboolean            r_liquid_swirl = r_liquid_swirl_default;
 
+extern fixed_t      animatedliquidxoffs;
+extern fixed_t      animatedliquidyoffs;
 extern dboolean     canmouselook;
 
 //
@@ -145,10 +149,8 @@ static void R_MapPlane(int y, int x1, int x2)
 //
 void R_ClearPlanes(void)
 {
-    int i;
-
     // opening/clipping determination
-    for (i = 0; i < viewwidth; i++)
+    for (int i = 0; i < viewwidth; i++)
     {
         floorclip[i] = viewheight;
         ceilingclip[i] = -1;
@@ -157,7 +159,7 @@ void R_ClearPlanes(void)
     // texture calculation
     memset(cachedheight, 0, sizeof(cachedheight));
 
-    for (i = 0; i < MAXVISPLANES; i++)  // new code -- killough
+    for (int i = 0; i < MAXVISPLANES; i++)  // new code -- killough
         for (*freehead = visplanes[i], visplanes[i] = NULL; *freehead;)
             freehead = &(*freehead)->next;
 
@@ -189,7 +191,7 @@ visplane_t *R_FindPlane(fixed_t height, int picnum, int lightlevel, fixed_t xoff
 
     if (picnum == skyflatnum || (picnum & PL_SKYFLAT))          // killough 10/98
     {
-        height = 0;                             // killough 7/19/98: most skies map together
+        height = 0;                                             // killough 7/19/98: most skies map together
         lightlevel = 0;
     }
 
@@ -208,8 +210,17 @@ visplane_t *R_FindPlane(fixed_t height, int picnum, int lightlevel, fixed_t xoff
     check->lightlevel = lightlevel;
     check->minx = viewwidth;
     check->maxx = -1;
-    check->xoffs = xoffs;                                      // killough 2/28/98: Save offsets
-    check->yoffs = yoffs;
+
+    if (!(picnum & PL_SKYFLAT) && isliquid[picnum] && r_liquid_current && !xoffs && !yoffs)
+    {
+        check->xoffs = animatedliquidxoffs;
+        check->yoffs = animatedliquidyoffs;
+    }
+    else
+    {
+        check->xoffs = xoffs;
+        check->yoffs = yoffs;
+    }
 
     memset(check->top, USHRT_MAX, sizeof(check->top));
 
@@ -282,8 +293,6 @@ visplane_t *R_CheckPlane(visplane_t *pl, int start, int stop)
 //
 static void R_MakeSpans(visplane_t *pl)
 {
-    int x;
-
     xoffs = pl->xoffs;
     yoffs = pl->yoffs;
     planeheight = ABS(pl->height - viewz);
@@ -293,7 +302,7 @@ static void R_MakeSpans(visplane_t *pl)
     pl->top[pl->minx - 1] = USHRT_MAX;
     pl->top[pl->maxx + 1] = USHRT_MAX;
 
-    for (x = pl->minx; x <= pl->maxx + 1; x++)
+    for (int x = pl->minx; x <= pl->maxx + 1; x++)
     {
         unsigned short  t1 = pl->top[x - 1];
         unsigned short  b1 = pl->bottom[x - 1];
@@ -339,7 +348,6 @@ static byte *R_DistortedFlat(int flatnum)
     static int  offset[4096];
     static byte *normalflat;
     static byte distortedflat[4096];
-    int         i;
     int         leveltic = activetic;
 
     // Already swirled this one?
@@ -349,14 +357,12 @@ static byte *R_DistortedFlat(int flatnum)
     lastflat = flatnum;
 
     // built this tic?
-    if (leveltic != swirltic && (!consoleactive || swirltic == -1) && !menuactive && !paused && !freeze)
+    if (leveltic != swirltic && (!consoleactive || swirltic == -1) && !menuactive && !paused)
     {
-        int x, y;
-
         leveltic *= SPEED;
 
-        for (x = 0; x < 64; x++)
-            for (y = 0; y < 64; y++)
+        for (int x = 0; x < 64; x++)
+            for (int y = 0; y < 64; y++)
             {
                 int x1, y1;
                 int sinvalue, sinvalue2;
@@ -377,7 +383,7 @@ static byte *R_DistortedFlat(int flatnum)
 
     normalflat = W_CacheLumpNum(firstflat + flatnum);
 
-    for (i = 0; i < 4096; i++)
+    for (int i = 0; i < 4096; i++)
         distortedflat[i] = normalflat[offset[i]];
 
     return distortedflat;
@@ -389,13 +395,8 @@ static byte *R_DistortedFlat(int flatnum)
 //
 void R_DrawPlanes(void)
 {
-    int i;
-
-    for (i = 0; i < MAXVISPLANES; i++)
-    {
-        visplane_t  *pl;
-
-        for (pl = visplanes[i]; pl; pl = pl->next)
+    for (int i = 0; i < MAXVISPLANES; i++)
+        for (visplane_t *pl = visplanes[i]; pl; pl = pl->next)
             if (pl->minx <= pl->maxx)
             {
                 int picnum = pl->picnum;
@@ -403,7 +404,6 @@ void R_DrawPlanes(void)
                 // sky flat
                 if (picnum == skyflatnum || (picnum & PL_SKYFLAT))
                 {
-                    int             x;
                     int             texture;
                     int             offset;
                     angle_t         flip = 0;
@@ -418,10 +418,10 @@ void R_DrawPlanes(void)
                     if (picnum & PL_SKYFLAT)
                     {
                         // Sky Linedef
-                        const line_t    *l = &lines[picnum & ~PL_SKYFLAT];
+                        const line_t    *l = lines + (picnum & ~PL_SKYFLAT);
 
                         // Sky transferred from first sidedef
-                        const side_t    *s = *l->sidenum + sides;
+                        const side_t    *s = sides + *l->sidenum;
 
                         // Texture comes from upper texture of reference sidedef
                         texture = texturetranslation[s->toptexture];
@@ -454,12 +454,12 @@ void R_DrawPlanes(void)
                         dc_texturemid = skytexturemid;
                     }
 
-                    dc_colormap = (fixedcolormap ? fixedcolormap : fullcolormap);
+                    dc_colormap = (viewplayer->fixedcolormap == INVERSECOLORMAP ? fixedcolormap : fullcolormap);
                     dc_iscale = skyiscale;
                     tex_patch = R_CacheTextureCompositePatchNum(texture);
                     offset = skycolumnoffset >> FRACBITS;
 
-                    for (x = pl->minx; x <= pl->maxx; x++)
+                    for (int x = pl->minx; x <= pl->maxx; x++)
                     {
                         dc_yl = pl->top[x];
                         dc_yh = pl->bottom[x];
@@ -493,5 +493,4 @@ void R_DrawPlanes(void)
                     }
                 }
             }
-    }
 }

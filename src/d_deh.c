@@ -42,6 +42,7 @@
 #include "d_deh.h"
 #include "doomstat.h"
 #include "dstrings.h"
+#include "i_system.h"
 #include "m_cheat.h"
 #include "m_misc.h"
 #include "p_local.h"
@@ -70,7 +71,7 @@ dboolean         dehacked;
 // killough 10/98: emulate IO whether input really comes from a file or not
 
 // haleyjd: got rid of macros for MSVC
-static char *dehfgets(char *buf, size_t n, DEHFILE *fp)
+static char *dehfgets(char *buf, int n, DEHFILE *fp)
 {
     if (!fp->lump)                              // If this is a real file,
         return fgets(buf, n, fp->f);            // return regular fgets
@@ -1623,10 +1624,12 @@ static const char *deh_state[] =
 static const char *deh_sfxinfo[] =
 {
     "Offset",           // pointer to a name string, changed in text
-    "Zero/One",         // .singularity (int, one at a time flag)
+    "Zero/One",          // .singularity (int, one at a time flag)
     "Value",            // .priority
     "Zero 1",           // .link (sfxinfo_t*) referenced sound if linked
+    "Zero 2",           // .pitch
     "Zero 3",           // .volume
+    "Zero 4",           // .data (SAMPLE*) sound data
     "Neg. One 1",       // .usefulness
     "Neg. One 2"        // .lumpnum
 };
@@ -1908,9 +1911,8 @@ dboolean CheckPackageWADVersion(void)
     DEHFILE infile;
     DEHFILE *filein = &infile;
     char    inbuffer[32];
-    int     i;
 
-    for (i = 0; i < numlumps; i++)
+    for (int i = 0; i < numlumps; i++)
         if (!strncasecmp(lumpinfo[i]->name, "VERSION", 7))
         {
             infile.size = W_LumpLength(i);
@@ -2256,7 +2258,7 @@ static void deh_procThing(DEHFILE *fpin, char *line)
                     // Use OR logic instead of addition, to allow repetition
                     for (; (strval = strtok(strval, ",+| \t\f\r")); strval = NULL)
                     {
-                        size_t  iy;
+                        int iy;
 
                         for (iy = 0; iy < DEH_MOBJFLAGMAX; iy++)
                         {
@@ -2264,7 +2266,7 @@ static void deh_procThing(DEHFILE *fpin, char *line)
                                 continue;
 
                             if (devparm)
-                                C_Output("ORed value 0x%08lx %s.", deh_mobjflags[iy].value, strval);
+                                C_Output("ORed value 0x%08lX %s.", deh_mobjflags[iy].value, strval);
 
                             value |= deh_mobjflags[iy].value;
 
@@ -2305,7 +2307,7 @@ static void deh_procThing(DEHFILE *fpin, char *line)
 
                     for (; (strval = strtok(strval, ",+| \t\f\r")); strval = NULL)
                     {
-                        size_t  iy;
+                        int iy;
 
                         for (iy = 0; iy < DEH_MOBJFLAG2MAX; iy++)
                         {
@@ -2313,7 +2315,7 @@ static void deh_procThing(DEHFILE *fpin, char *line)
                                 continue;
 
                             if (devparm)
-                                C_Output("ORed value 0x%08lx %s.", deh_mobjflags2[iy].value, strval);
+                                C_Output("ORed value 0x%08lX %s.", deh_mobjflags2[iy].value, strval);
 
                             value |= deh_mobjflags[iy].value;
                             break;
@@ -2578,19 +2580,23 @@ static void deh_procSounds(DEHFILE *fpin, char *line)
         }
 
         if (M_StringCompare(key, deh_sfxinfo[0]))           // Offset
-            /* nop */;                          // we don't know what this is, I don't think
+            /* nop */;
         else if (M_StringCompare(key, deh_sfxinfo[1]))      // Zero/One
             S_sfx[indexnum].singularity = value;
         else if (M_StringCompare(key, deh_sfxinfo[2]))      // Value
             S_sfx[indexnum].priority = value;
         else if (M_StringCompare(key, deh_sfxinfo[3]))      // Zero 1
-            S_sfx[indexnum].link = (sfxinfo_t *)value;
-        else if (M_StringCompare(key, deh_sfxinfo[4]))      // Zero 3
-            S_sfx[indexnum].volume = value;
-        else if (M_StringCompare(key, deh_sfxinfo[5]))      // Neg. One 1
             /* nop */;
-        else if (M_StringCompare(key, deh_sfxinfo[6]))      // Neg. One 2
-            S_sfx[indexnum].lumpnum = value;
+        else if (M_StringCompare(key, deh_sfxinfo[4]))      // Zero 2
+            /* nop */;
+        else if (M_StringCompare(key, deh_sfxinfo[5]))      // Zero 3
+            S_sfx[indexnum].volume = value;
+        else if (M_StringCompare(key, deh_sfxinfo[6]))      // Zero 4
+            /* nop */;
+        else  if (M_StringCompare(key, deh_sfxinfo[7]))     // Neg. One 1
+            /* nop */;
+        else if (M_StringCompare(key, deh_sfxinfo[8]))      // Neg. One 2
+             S_sfx[indexnum].lumpnum = value;
         else if (devparm)
             C_Warning("Invalid sound string index for \"%s\"", key);
     }
@@ -2629,17 +2635,17 @@ static void deh_procAmmo(DEHFILE *fpin, char *line)
         lfstrip(inbuffer);
 
         if (!*inbuffer)
-            break;                                              // killough 11/98
+            break;                                          // killough 11/98
 
-        if (!deh_GetData(inbuffer, key, &value, NULL))          // returns TRUE if ok
+        if (!deh_GetData(inbuffer, key, &value, NULL))      // returns TRUE if ok
         {
             C_Warning("Bad data pair in \"%s\".", inbuffer);
             continue;
         }
 
-        if (M_StringCompare(key, deh_ammo[0]))                      // Max ammo
+        if (M_StringCompare(key, deh_ammo[0]))              // Max ammo
             maxammo[indexnum] = value;
-        else if (M_StringCompare(key, deh_ammo[1]))                 // Per ammo
+        else if (M_StringCompare(key, deh_ammo[1]))         // Per ammo
             clipammo[indexnum] = value;
         else
             C_Warning("Invalid ammo string index for \"%s\".", key);
@@ -3304,7 +3310,7 @@ static void deh_procText(DEHFILE *fpin, char *line)
             C_Output("Checking text area through strings for \"%.12s%s\" from = %i to = %i", inbuffer,
             (strlen(inbuffer) > 12 ? "..." : ""), fromlen, tolen);
 
-        if ((size_t)fromlen <= strlen(inbuffer))
+        if (fromlen <= (int)strlen(inbuffer))
         {
             line2 = strdup(&inbuffer[fromlen]);
             inbuffer[fromlen] = '\0';
@@ -3342,7 +3348,6 @@ static void deh_procStrings(DEHFILE *fpin, char *line)
     static int  maxstrlen = 128;        // maximum string length, bumped 128 at a time as needed
                                         // holds the final result of the string after concatenation
     static char *holdstring;
-    dboolean    found = false;          // looking for string continuation
 
     if (devparm)
         C_Output("Processing extended string substitution");
@@ -3357,6 +3362,8 @@ static void deh_procStrings(DEHFILE *fpin, char *line)
     // the continuations of C1TEXT etc.
     while (!dehfeof(fpin) && *inbuffer)
     {
+        int len;
+
         if (!dehfgets(inbuffer, sizeof(inbuffer), fpin))
             break;
 
@@ -3375,16 +3382,17 @@ static void deh_procStrings(DEHFILE *fpin, char *line)
                 continue;
             }
 
-        while (strlen(holdstring) + strlen(inbuffer) > (unsigned int)maxstrlen)
+        len = (int)strlen(inbuffer);
+
+        while (strlen(holdstring) + len > (unsigned int)maxstrlen)
         {
             // killough 11/98: allocate enough the first time
-            maxstrlen += strlen(holdstring) + strlen(inbuffer) - maxstrlen;
+            maxstrlen += (int)strlen(holdstring) + len - maxstrlen;
 
             if (devparm)
-                C_Output("* increased buffer from to %i for buffer size %i", maxstrlen,
-                (int)strlen(inbuffer));
+                C_Output("* increased buffer from to %i for buffer size %i", maxstrlen, len);
 
-            holdstring = Z_Realloc(holdstring, maxstrlen * sizeof(*holdstring));
+            holdstring = I_Realloc(holdstring, maxstrlen * sizeof(*holdstring));
         }
 
         // concatenate the whole buffer if continuation or the value if first
@@ -3405,11 +3413,7 @@ static void deh_procStrings(DEHFILE *fpin, char *line)
         if (*holdstring)        // didn't have a backslash, trap above would catch that
         {
             // go process the current string
-            found = deh_procStringSub(key, NULL, trimwhitespace(holdstring));
-
-            if (!found)
-                C_Warning("Invalid string key \"%s\". Substitution skipped.", key);
-
+            deh_procStringSub(key, NULL, trimwhitespace(holdstring));
             *holdstring = '\0';  // empty string for the next one
         }
     }
@@ -3493,7 +3497,7 @@ static dboolean deh_procStringSub(char *key, char *lookfor, char *newstring)
     }
 
     if (!found && !hacx)
-        C_Warning("Couldn't find \"%s\".", (key ? key : lookfor));
+        C_Warning("The <b>%s</b> string can't be found.", (key ? key : lookfor));
 
     return found;
 }

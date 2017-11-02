@@ -74,7 +74,6 @@ button_t    buttonlist[MAXBUTTONS];
 //
 void P_InitSwitchList(void)
 {
-    int             i;
     int             index = 0;
     int             episode = (gamemode == registered || gamemode == retail ? 2 :
                         (gamemode == commercial ? 3 : 1));
@@ -84,10 +83,10 @@ void P_InitSwitchList(void)
     // jff 3/23/98 read the switch table from a predefined lump
     alphSwitchList = (switchlist_t *)W_CacheLumpNum(lump);
 
-    for (i = 0;; i++)
+    for (int i = 0; ; i++)
     {
         if (index + 1 >= max_numswitches)
-            switchlist = Z_Realloc(switchlist, sizeof(*switchlist) * (max_numswitches = (max_numswitches ?
+            switchlist = I_Realloc(switchlist, sizeof(*switchlist) * (max_numswitches = (max_numswitches ?
                 max_numswitches * 2 : 8)));
 
         if (SHORT(alphSwitchList[i].episode) <= episode)    // jff 5/11/98 endianness
@@ -101,11 +100,11 @@ void P_InitSwitchList(void)
             // Ignore switches referencing unknown texture names, instead of exiting.
             // Warn if either one is missing, but only add if both are valid.
             if ((texture1 = R_CheckTextureNumForName(alphSwitchList[i].name1)) == -1)
-                C_Warning("Switch %i in SWITCHES lump has an unknown texture of %s.", i,
+                C_Warning("Switch %i in the <b>SWITCHES</b> lump has an unknown texture of <b>%s</b>.", i,
                     alphSwitchList[i].name1);
 
             if ((texture2 = R_CheckTextureNumForName(alphSwitchList[i].name2)) == -1)
-                C_Warning("Switch %i in SWITCHES lump has an unknown texture of %s.", i,
+                C_Warning("Switch %i in the <b>SWITCHES</b> lump has an unknown texture of <b>%s</b>.", i,
                     alphSwitchList[i].name2);
 
             if (texture1 != -1 && texture2 != -1)
@@ -125,14 +124,12 @@ void P_InitSwitchList(void)
 //
 void P_StartButton(line_t *line, bwhere_e w, int texture, int time)
 {
-    int i;
-
     // See if button is already pressed
-    for (i = 0; i < MAXBUTTONS; i++)
+    for (int i = 0; i < MAXBUTTONS; i++)
         if (buttonlist[i].btimer && buttonlist[i].line == line)
             return;
 
-    for (i = 0; i < MAXBUTTONS; i++)
+    for (int i = 0; i < MAXBUTTONS; i++)
         if (!buttonlist[i].btimer)
         {
             buttonlist[i].line = line;
@@ -280,15 +277,13 @@ dboolean P_UseSpecialLine(mobj_t *thing, line_t *line, int side)
             switch ((line->special & TriggerType) >> TriggerTypeShift)
             {
                 case PushOnce:
-                    if (!side && linefunc(line))
+                    if (linefunc(line))
                         line->special = 0;
 
                     return true;
 
                 case PushMany:
-                    if (!side)
-                        linefunc(line);
-
+                    linefunc(line);
                     return true;
 
                 case SwitchOnce:

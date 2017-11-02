@@ -77,7 +77,7 @@ dboolean EV_DoGenFloor(line_t *line)
         if (!(sec = line->backsector))
             return rtn;
 
-        secnum = sec - sectors;
+        secnum = sec->id;
         manual = true;
         goto manual_floor;
     }
@@ -85,7 +85,7 @@ dboolean EV_DoGenFloor(line_t *line)
     // if not manual do all sectors tagged the same as the line
     while ((secnum = P_FindSectorFromLineTag(line, secnum)) >= 0)
     {
-        sec = &sectors[secnum];
+        sec = sectors + secnum;
 
 manual_floor:
         // Do not start another function if floor already moving
@@ -167,13 +167,11 @@ manual_floor:
                 break;
 
             case Fby24:
-                floor->floordestheight = floor->sector->floorheight
-                    + floor->direction * 24 * FRACUNIT;
+                floor->floordestheight = floor->sector->floorheight + floor->direction * 24 * FRACUNIT;
                 break;
 
             case Fby32:
-                floor->floordestheight = floor->sector->floorheight
-                    + floor->direction * 32 * FRACUNIT;
+                floor->floordestheight = floor->sector->floorheight + floor->direction * 32 * FRACUNIT;
                 break;
         }
 
@@ -278,7 +276,7 @@ dboolean EV_DoGenCeiling(line_t *line)
         if (!(sec = line->backsector))
             return rtn;
 
-        secnum = sec - sectors;
+        secnum = sec->id;
         manual = true;
         goto manual_ceiling;
     }
@@ -286,7 +284,7 @@ dboolean EV_DoGenCeiling(line_t *line)
     // if not manual do all sectors tagged the same as the line
     while ((secnum = P_FindSectorFromLineTag(line, secnum)) >= 0)
     {
-        sec = &sectors[secnum];
+        sec = sectors + secnum;
 
 manual_ceiling:
         // Do not start another function if ceiling already moving
@@ -389,11 +387,9 @@ manual_ceiling:
         {
             if (ChgM)   // if a numeric model change
             {
-                sector_t    *sec;
-
                 // jff 5/23/98 find model with floor at target height if target is a floor type
-                sec = (Targ == CtoHnF || Targ == CtoF ? P_FindModelFloorSector(targheight, secnum) :
-                    P_FindModelCeilingSector(targheight, secnum));
+                sector_t    *sec = (Targ == CtoHnF || Targ == CtoF ? P_FindModelFloorSector(targheight, secnum) :
+                                P_FindModelCeilingSector(targheight, secnum));
 
                 if (sec)
                 {
@@ -482,7 +478,7 @@ dboolean EV_DoGenLift(line_t *line)
         if (!(sec = line->backsector))
             return rtn;
 
-        secnum = sec - sectors;
+        secnum = sec->id;
         manual = true;
         goto manual_lift;
     }
@@ -490,7 +486,7 @@ dboolean EV_DoGenLift(line_t *line)
     // if not manual do all sectors tagged the same as the line
     while ((secnum = P_FindSectorFromLineTag(line, secnum)) >= 0)
     {
-        sec = &sectors[secnum];
+        sec = sectors + secnum;
 
 manual_lift:
         // Do not start another function if floor already moving
@@ -509,7 +505,6 @@ manual_lift:
         plat->sector = sec;
         plat->sector->floordata = plat;
         plat->thinker.function = T_PlatRaise;
-        plat->crush = false;
         plat->tag = line->tag;
         plat->type = genLift;
         plat->high = sec->floorheight;
@@ -519,11 +514,7 @@ manual_lift:
         switch (Targ)
         {
             case F2LnF:
-                plat->low = P_FindLowestFloorSurrounding(sec);
-
-                if (plat->low > sec->floorheight)
-                    plat->low = sec->floorheight;
-
+                plat->low = MIN(P_FindLowestFloorSurrounding(sec), sec->floorheight);
                 break;
 
             case F2NnF:
@@ -531,25 +522,13 @@ manual_lift:
                 break;
 
             case F2LnC:
-                plat->low = P_FindLowestCeilingSurrounding(sec);
-
-                if (plat->low > sec->floorheight)
-                    plat->low = sec->floorheight;
-
+                plat->low = MIN(P_FindLowestCeilingSurrounding(sec), sec->floorheight);
                 break;
 
             case LnF2HnF:
                 plat->type = genPerpetual;
-                plat->low = P_FindLowestFloorSurrounding(sec);
-
-                if (plat->low > sec->floorheight)
-                    plat->low = sec->floorheight;
-
-                plat->high = P_FindHighestFloorSurrounding(sec);
-
-                if (plat->high < sec->floorheight)
-                    plat->high = sec->floorheight;
-
+                plat->low = MIN(P_FindLowestFloorSurrounding(sec), sec->floorheight);
+                plat->high = MAX(P_FindHighestFloorSurrounding(sec), sec->floorheight);
                 plat->status = M_Random() & 1;
                 break;
         }
@@ -600,6 +579,7 @@ manual_lift:
         if (manual)
             return rtn;
     }
+
     return rtn;
 }
 
@@ -616,7 +596,6 @@ dboolean EV_DoGenStairs(line_t *line)
     int             secnum = -1;
     int             osecnum;        // jff 3/4/98 preserve loop index
     int             height;
-    int             i;
     int             newsecnum;
     int             texture;
     dboolean        okay;
@@ -642,7 +621,7 @@ dboolean EV_DoGenStairs(line_t *line)
         if (!(sec = line->backsector))
             return rtn;
 
-        secnum = sec - sectors;
+        secnum = sec->id;
         manual = true;
         goto manual_stair;
     }
@@ -650,7 +629,7 @@ dboolean EV_DoGenStairs(line_t *line)
     // if not manual do all sectors tagged the same as the line
     while ((secnum = P_FindSectorFromLineTag(line, secnum)) >= 0)
     {
-        sec = &sectors[secnum];
+        sec = sectors + secnum;
 
 manual_stair:
         // Do not start another function if floor already moving
@@ -735,19 +714,19 @@ manual_stair:
         {
             okay = false;
 
-            for (i = 0; i < sec->linecount; i++)
+            for (int i = 0; i < sec->linecount; i++)
             {
                 if (!((sec->lines[i])->backsector))
                     continue;
 
                 tsec = (sec->lines[i])->frontsector;
-                newsecnum = tsec - sectors;
+                newsecnum = tsec->id;
 
                 if (secnum != newsecnum)
                     continue;
 
                 tsec = (sec->lines[i])->backsector;
-                newsecnum = tsec - sectors;
+                newsecnum = tsec->id;
 
                 if (!Igno && tsec->floorpic != texture)
                     continue;
@@ -781,7 +760,6 @@ manual_stair:
                 floor->sector = sec;
                 floor->speed = speed;
                 floor->floordestheight = height;
-                floor->crush = false;
                 floor->type = genBuildStair;    // jff 3/31/98 do not leave uninited
 
                 okay = true;
@@ -835,7 +813,7 @@ dboolean EV_DoGenCrusher(line_t *line)
         if (!(sec = line->backsector))
             return rtn;
 
-        secnum = sec - sectors;
+        secnum = sec->id;
         manual = true;
         goto manual_crusher;
     }
@@ -843,7 +821,7 @@ dboolean EV_DoGenCrusher(line_t *line)
     // if not manual do all sectors tagged the same as the line
     while ((secnum = P_FindSectorFromLineTag(line, secnum)) >= 0)
     {
-        sec = &sectors[secnum];
+        sec = sectors + secnum;
 
 manual_crusher:
         // Do not start another function if ceiling already moving
@@ -929,7 +907,7 @@ dboolean EV_DoGenLockedDoor(line_t *line)
         if (!(sec = line->backsector))
             return rtn;
 
-        secnum = sec - sectors;
+        secnum = sec->id;
         manual = true;
         goto manual_locked;
     }
@@ -937,7 +915,7 @@ dboolean EV_DoGenLockedDoor(line_t *line)
     // if not manual do all sectors tagged the same as the line
     while ((secnum = P_FindSectorFromLineTag(line, secnum)) >= 0)
     {
-        sec = &sectors[secnum];
+        sec = sectors + secnum;
 
 manual_locked:
         // Do not start another function if ceiling already moving
@@ -964,7 +942,8 @@ manual_locked:
         door->direction = 1;
 
         // killough 10/98: implement gradual lighting
-        door->lighttag = ((line->special & 6) == 6 && line->special > GenLockedBase ? line->tag : 0);
+        if ((line->special & 6) == 6 && line->special > GenLockedBase)
+            door->lighttag = line->tag;
 
         // setup speed of door motion
         switch (Sped)
@@ -1031,7 +1010,7 @@ dboolean EV_DoGenDoor(line_t *line)
         if (!(sec = line->backsector))
             return rtn;
 
-        secnum = sec - sectors;
+        secnum = sec->id;
         manual = true;
         goto manual_door;
     }
@@ -1039,7 +1018,7 @@ dboolean EV_DoGenDoor(line_t *line)
     // if not manual do all sectors tagged the same as the line
     while ((secnum = P_FindSectorFromLineTag(line, secnum)) >= 0)
     {
-        sec = &sectors[secnum];
+        sec = sectors + secnum;
 
 manual_door:
         // Do not start another function if ceiling already moving
@@ -1105,7 +1084,8 @@ manual_door:
         door->line = line;      // jff 1/31/98 remember line that triggered us
 
         // killough 10/98: implement gradual lighting
-        door->lighttag = ((line->special & 6) == 6 && line->special > GenLockedBase ? line->tag : 0);
+        if ((line->special & 6) == 6 && line->special > GenLockedBase)
+            door->lighttag = line->tag;
 
         // set kind of door, whether it opens then close, opens, closes etc.
         // assign target heights accordingly

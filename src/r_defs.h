@@ -43,13 +43,13 @@
 
 // Silhouette, needed for clipping Segs (mainly)
 // and sprites representing things.
-#define SIL_NONE        0
-#define SIL_BOTTOM      1
-#define SIL_TOP         2
-#define SIL_BOTH        3
+#define SIL_NONE    0
+#define SIL_BOTTOM  1
+#define SIL_TOP     2
+#define SIL_BOTH    3
 
-#define MAXDRAWSEGS     256
-#define MAXOPENINGS     16384
+#define MAXDRAWSEGS 256
+#define MAXOPENINGS 16384
 
 //
 // INTERNAL MAP TYPES
@@ -61,13 +61,10 @@
 // Note: transformed values not buffered locally,
 //  like some DOOM-alikes ("wt", "WebView") did.
 //
-typedef struct vertex_s
+typedef struct
 {
     fixed_t             x, y;
 } vertex_t;
-
-// Forward of LineDefs, for Sectors.
-struct line_s;
 
 // Each sector has a degenmobj_t in its center
 //  for sound origin purposes.
@@ -75,7 +72,7 @@ struct line_s;
 //  moving objects (doppler), because
 //  position is prolly just buffered, not
 //  updated.
-typedef struct degenmobj_s
+typedef struct
 {
     thinker_t           thinker;        // not used for anything
     fixed_t             x, y, z;
@@ -87,6 +84,8 @@ typedef struct degenmobj_s
 //
 typedef struct sector_s
 {
+    int                 id;
+
     fixed_t             floorheight;
     fixed_t             ceilingheight;
     int                 nexttag;
@@ -157,15 +156,15 @@ typedef struct sector_s
     fixed_t             ceiling_xoffs, ceiling_yoffs;
 
     // killough 4/11/98: support for lightlevels coming from another sector
-    int                 floorlightsec;
-    int                 ceilinglightsec;
+    struct sector_s     *floorlightsec;
+    struct sector_s     *ceilinglightsec;
 
     short               floorpic;
     short               ceilingpic;
     short               lightlevel;
 
     // killough 3/7/98: support flat heights drawn at another sector's heights
-    int                 heightsec;      // other sector, or -1 if no other sector
+    struct sector_s     *heightsec;     // other sector, or NULL if no other sector
 
     // killough 4/4/98: dynamic colormaps
     int                 bottommap;
@@ -192,7 +191,7 @@ typedef struct sector_s
 //
 // The SideDef.
 //
-typedef struct side_s
+typedef struct
 {
     // add this to the calculated texture column
     fixed_t             textureoffset;
@@ -218,7 +217,7 @@ typedef struct side_s
 //
 // Move clipping aid for LineDefs.
 //
-typedef enum slopetype_e
+typedef enum
 {
     ST_HORIZONTAL,
     ST_VERTICAL,
@@ -228,6 +227,8 @@ typedef enum slopetype_e
 
 typedef struct line_s
 {
+    int                 id;
+
     // Vertices, from v1 to v2.
     vertex_t            *v1;
     vertex_t            *v2;
@@ -265,10 +266,9 @@ typedef struct line_s
     int                 nexttag;
     int                 firsttag;
 
-
     int                 r_validcount;   // cph: if == gametic, r_flags already done
 
-    enum r_flags_e
+    enum
     {                                   // cph:
         RF_TOP_TILE = 1,                // Upper texture needs tiling
         RF_MID_TILE = 2,                // Mid texture needs tiling
@@ -758,7 +758,7 @@ typedef struct msecnode_s
 //
 // The LineSeg.
 //
-typedef struct seg_s
+typedef struct
 {
     vertex_t            *v1;
     vertex_t            *v2;
@@ -784,7 +784,7 @@ typedef struct seg_s
 //
 // BSP node.
 //
-typedef struct node_s
+typedef struct
 {
     // Partition line.
     fixed_t             x, y;
@@ -802,7 +802,7 @@ typedef struct node_s
 #endif
 
 // posts are runs of non masked source pixels
-typedef struct post_s
+typedef struct
 {
     byte               topdelta;        // -1 is the last post in a column
     byte               length;          // length data bytes follows
@@ -826,7 +826,7 @@ typedef post_t column_t;
 // Could even use more than 32 levels.
 typedef byte lighttable_t;
 
-typedef struct drawseg_s
+typedef struct
 {
     seg_t               *curline;
     int                 x1;
@@ -835,6 +835,9 @@ typedef struct drawseg_s
     fixed_t             scale1;
     fixed_t             scale2;
     fixed_t             scalestep;
+
+    fixed_t             minscale;
+    fixed_t             maxscale;
 
     // 0=none, 1=bottom, 2=top, 3=both
     int                 silhouette;
@@ -855,7 +858,7 @@ typedef struct drawseg_s
 // Patches are used for sprites and all masked pictures,
 // and we compose textures from the TEXTURE1/2 lists
 // of patches.
-typedef struct patch_s
+typedef struct
 {
     short               width;          // bounding box size
     short               height;
@@ -872,7 +875,7 @@ typedef struct patch_s
 // A vissprite_t is a thing
 //  that will be drawn during a refresh.
 // I.e. a sprite object that is partly visible.
-typedef struct vissprite_s
+typedef struct
 {
     int                 x1;
     int                 x2;
@@ -899,7 +902,7 @@ typedef struct vissprite_s
     //  maxbright frames as well
     lighttable_t        *colormap;
 
-    struct mobj_s       *mobj;
+    mobj_t              *mobj;
 
     void                (*colfunc)(void);
 
@@ -907,12 +910,12 @@ typedef struct vissprite_s
     fixed_t             footclip;
 
     // killough 3/27/98: height sector for underwater/fake ceiling support
-    int                 heightsec;
+    sector_t            *heightsec;
 
     int                 shadowpos;
 } vissprite_t;
 
-typedef struct bloodsplatvissprite_s
+typedef struct
 {
     int                 x1;
     int                 x2;
@@ -942,7 +945,7 @@ typedef struct bloodsplatvissprite_s
 // Some sprites will only have one picture used
 // for all views: NNNNF0
 //
-typedef struct spriteframe_s
+typedef struct
 {
     // If false use 0 for any position.
     // Note: as eight entries are available,
@@ -960,7 +963,7 @@ typedef struct spriteframe_s
 // A sprite definition:
 //  a number of animation frames.
 //
-typedef struct spritedef_s
+typedef struct
 {
     int                 numframes;
     spriteframe_t       *spriteframes;

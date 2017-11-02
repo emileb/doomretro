@@ -60,15 +60,19 @@ dboolean AM_Responder(const event_t *ev);
 // Called by main loop.
 void AM_Ticker(void);
 
-// Called by main loop,
-// called instead of view drawer if automap active.
+// Called by main loop, called instead of view drawer if automap active.
 void AM_Drawer(void);
 void AM_clearFB(void);
 
 void AM_Start(const dboolean mainwindow);
+void AM_clearMarks(void);
+void AM_toggleFollowMode(void);
+void AM_toggleGrid(void);
+void AM_addMark(void);
+void AM_toggleRotateMode(void);
+void AM_toggleMaxZoom(void);
 
-// Called to force the automap to quit
-// if the level is completed while it is up.
+// Called to force the automap to quit if the level is completed while it is up.
 void AM_Stop(void);
 
 void AM_Init(void);
@@ -84,7 +88,6 @@ extern mpoint_t *markpoints;
 extern int      markpointnum;
 extern int      markpointnum_max;
 
-extern dboolean am_path;
 extern mpoint_t *pathpoints;
 extern int      pathpointnum;
 extern int      pathpointnum_max;

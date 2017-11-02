@@ -39,14 +39,12 @@
 #include "d_deh.h"
 #include "doomstat.h"
 #include "hu_stuff.h"
+#include "m_config.h"
 #include "m_misc.h"
 #include "p_local.h"
 #include "p_tick.h"
 #include "s_sound.h"
 #include "z_zone.h"
-
-extern dboolean r_hud;
-extern char     *playername;
 
 static void T_GradualLightingToDoor(vldoor_t *door)
 {
@@ -129,7 +127,7 @@ void T_VerticalDoor(vldoor_t *door)
         case -1:
             // DOWN
             res = T_MovePlane(door->sector, door->speed, door->sector->floorheight, false, 1,
-                door->direction);
+                door->direction, false);
 
             // killough 10/98: implement gradual lighting effects
             // [BH] enhanced to apply effects to all doors
@@ -192,7 +190,7 @@ void T_VerticalDoor(vldoor_t *door)
 
         case 1:
             // UP
-            res = T_MovePlane(door->sector, door->speed, door->topheight, false, 1, door->direction);
+            res = T_MovePlane(door->sector, door->speed, door->topheight, false, 1, door->direction, false);
 
             // killough 10/98: implement gradual lighting effects
             // [BH] enhanced to apply effects to all doors
@@ -383,13 +381,12 @@ dboolean EV_DoDoor(line_t *line, vldoor_e type)
 {
     int         secnum = -1;
     dboolean    rtn = false;
-    int         i;
     sector_t    *sec;
     vldoor_t    *door;
 
     while ((secnum = P_FindSectorFromLineTag(line, secnum)) >= 0)
     {
-        sec = &sectors[secnum];
+        sec = sectors + secnum;
 
         if (P_SectorActive(ceiling_special, sec))
             continue;
@@ -406,9 +403,8 @@ dboolean EV_DoDoor(line_t *line, vldoor_e type)
         door->topwait = VDOORWAIT;
         door->speed = VDOORSPEED;
         door->line = line;      // jff 1/31/98 remember line that triggered us
-        door->lighttag = 0;
 
-        for (i = 0; i < door->sector->linecount; i++)
+        for (int i = 0; i < door->sector->linecount; i++)
             door->sector->lines[i]->flags &= ~ML_SECRET;
 
         switch (type)
@@ -484,7 +480,6 @@ void EV_VerticalDoor(line_t *line, mobj_t *thing)
     static char buffer[1024];
     sector_t    *sec;
     vldoor_t    *door;
-    int         i;
 
     switch (line->special)
     {
@@ -755,7 +750,7 @@ void EV_VerticalDoor(line_t *line, mobj_t *thing)
     door->topheight = P_FindLowestCeilingSurrounding(sec) - 4 * FRACUNIT;
 
     // [BH] door is no longer secret
-    for (i = 0; i < sec->linecount; i++)
+    for (int i = 0; i < sec->linecount; i++)
         sec->lines[i]->flags &= ~ML_SECRET;
 }
 

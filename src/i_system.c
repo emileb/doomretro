@@ -53,7 +53,6 @@ void I_ShutdownWindows32(void);
 #include "s_sound.h"
 #include "version.h"
 
-extern dboolean vid_widescreen;
 extern dboolean returntowidescreen;
 
 #if defined(_WIN32)
@@ -84,7 +83,7 @@ void I_PrintWindowsVersion(void)
             BOOL    Wow64Process = FALSE;
 
             pIsWow64Process(GetCurrentProcess(), &Wow64Process);
-            strcpy(bits, (Wow64Process ? " (64-bit)" : " (32-bit)"));
+            strcpy(bits, (Wow64Process || sizeof(intptr_t) == 8 ? " (64-bit)" : " (32-bit)"));
         }
 
         ZeroMemory(&info, sizeof(OSVERSIONINFOEXW));
@@ -218,8 +217,6 @@ void I_Quit(dboolean shutdown)
 
         M_SaveCVARs();
 
-        M_Shutdown();
-
         I_ShutdownGraphics();
         I_ShutdownKeyboard();
         I_ShutdownGamepad();
@@ -236,7 +233,7 @@ void I_Quit(dboolean shutdown)
 
 void I_WaitVBL(int count)
 {
-    I_Sleep((count * 1000) / 70);
+    I_Sleep(count * 1000 / 70);
 }
 
 
@@ -295,4 +292,19 @@ void I_Error(char *error, ...)
     SDL_Quit();
 
     exit(-1);
+}
+
+//
+// I_Realloc
+//
+void *I_Realloc(void *ptr, size_t size)
+{
+    void    *newp = realloc(ptr, size);
+
+    if (!newp && size)
+        I_Error("I_Realloc: Failure trying to reallocate %i bytes", size);
+    else
+        ptr = newp;
+
+    return ptr;
 }

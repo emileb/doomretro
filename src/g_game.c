@@ -36,6 +36,8 @@
 ========================================================================
 */
 
+#include <time.h>
+
 #if defined(_WIN32)
 #include <Windows.h>
 #endif
@@ -50,6 +52,7 @@
 #include "i_gamepad.h"
 #include "i_system.h"
 #include "i_timer.h"
+#include "m_config.h"
 #include "m_menu.h"
 #include "m_misc.h"
 #include "m_random.h"
@@ -76,7 +79,7 @@ static void G_DoSaveGame(void);
 gameaction_t    gameaction;
 gamestate_t     gamestate = GS_TITLESCREEN;
 skill_t         gameskill;
-skill_t         pendinggameskill;
+int             pendinggameskill;
 int             gameepisode;
 int             gamemap;
 
@@ -104,16 +107,10 @@ dboolean        autoload = autoload_default;
 
 #define MAXPLMOVE       forwardmove[1]
 
-#define FORWARDMOVE0    0x19
-#define FORWARDMOVE1    0x32
-
-#define SIDEMOVE0       0x18
-#define SIDEMOVE1       0x28
-
-static fixed_t  forwardmove[2] = { FORWARDMOVE0, FORWARDMOVE1 };
-static fixed_t  sidemove[2] = { SIDEMOVE0, SIDEMOVE1 };
-static fixed_t  angleturn[3] = { 640, 1280, 320 };      // + slow turn
-static fixed_t  gamepadangleturn[2] = { 640, 960 };
+fixed_t  forwardmove[2] = { FORWARDMOVE0, FORWARDMOVE1 };
+fixed_t  sidemove[2] = { SIDEMOVE0, SIDEMOVE1 };
+fixed_t  angleturn[3] = { 640, 1280, 320 };      // + slow turn
+fixed_t  gamepadangleturn[2] = { 640, 960 };
 
 #define NUMWEAPONKEYS   7
 
@@ -159,11 +156,13 @@ static struct
 
 #define SLOWTURNTICS    6
 
-static dboolean gamekeydown[NUMKEYS];
+dboolean        gamekeydown[NUMKEYS];
+char            keyactionlist[NUMKEYS][255];
 static int      turnheld;                       // for accelerative turning
 
 static dboolean mousearray[MAX_MOUSE_BUTTONS + 1];
-static dboolean *mousebuttons = &mousearray[1]; // allow [-1]
+dboolean        *mousebuttons = &mousearray[1]; // allow [-1]
+char            mouseactionlist[MAX_MOUSE_BUTTONS + 2][255];
 
 dboolean        skipaction;
 
@@ -189,19 +188,15 @@ static char     savedescription[SAVESTRINGSIZE];
 
 gameaction_t    loadaction = ga_nothing;
 
-unsigned int    stat_mapscompleted;
+unsigned int    stat_mapscompleted = 0;
 
-extern dboolean alwaysrun;
-extern dboolean explosiontics;
+extern dboolean barreltics;
 extern int      st_palette;
 extern int      pagetic;
 extern dboolean transferredsky;
 
 extern int      timer;
 extern int      countdown;
-
-extern int      r_skycolor;
-extern dboolean r_textures;
 
 void G_RemoveChoppers(void)
 {
@@ -218,7 +213,7 @@ void G_RemoveChoppers(void)
     oldweaponsowned[wp_chainsaw] = player->chainsawbeforechoppers;
 }
 
-static void G_NextWeapon(void)
+void G_NextWeapon(void)
 {
     player_t        *player = &players[0];
     weapontype_t    pendingweapon = player->pendingweapon;
@@ -244,7 +239,7 @@ static void G_NextWeapon(void)
         S_StartSound(NULL, sfx_getpow);
 }
 
-static void G_PrevWeapon(void)
+void G_PrevWeapon(void)
 {
     player_t        *player = &players[0];
     weapontype_t    pendingweapon = player->pendingweapon;
@@ -327,9 +322,9 @@ void G_BuildTiccmd(ticcmd_t *cmd)
     if (usemouselook)
     {
         if (gamepadthumbRY < 0)
-            cmd->lookdir = (int)(64 * gamepadthumbRYup * gamepadsensitivity);
+            cmd->lookdir = (int)(48 * gamepadthumbRYup * gamepadsensitivity);
         else if (gamepadthumbRY > 0)
-            cmd->lookdir = (int)(64 * gamepadthumbRYdown * gamepadsensitivity);
+            cmd->lookdir = (int)(48 * gamepadthumbRYdown * gamepadsensitivity);
     }
 
     if (gamekeydown[keyboardforward] || gamekeydown[keyboardforward2] || (gamepadbuttons & gamepadforward))
@@ -372,9 +367,7 @@ void G_BuildTiccmd(ticcmd_t *cmd)
 
     if (!idclev && !idmus)
     {
-        int i;
-
-        for (i = 0; i < NUMWEAPONKEYS; i++)
+        for (int i = 0; i < NUMWEAPONKEYS; i++)
         {
             int key = *weapon_keys[i];
 
@@ -498,8 +491,6 @@ void G_BuildTiccmd(ticcmd_t *cmd)
 
 static void G_SetInitialWeapon(player_t *player)
 {
-    int i;
-
     player->weaponowned[wp_fist] = true;
     player->weaponowned[wp_pistol] = true;
 
@@ -516,7 +507,7 @@ static void G_SetInitialWeapon(player_t *player)
         player->pendingweapon = wp_pistol;
     }
 
-    for (i = 0; i < NUMAMMO; i++)
+    for (int i = 0; i < NUMAMMO; i++)
         player->maxammo[i] = (gamemode == shareware && i == am_cell ? 0 : maxammo[i]);
 }
 
@@ -597,7 +588,7 @@ static void G_DoLoadLevel(void)
         pendinggameskill = 0;
     }
 
-    M_ClearRandom();
+    M_Seed((unsigned int)time(NULL));
 
     // initialize the msecnode_t freelist. phares 3/25/98
     // any nodes in the freelist are gone by now, cleared
@@ -739,6 +730,9 @@ dboolean G_Responder(event_t *ev)
 
     switch (ev->type)
     {
+        case ev_none:
+            return false;
+
         case ev_keydown:
             key = ev->data1;
 
@@ -764,6 +758,9 @@ dboolean G_Responder(event_t *ev)
             {
                 gamekeydown[key] = true;
 
+                if (keyactionlist[key][0])
+                    C_ExecuteInputString(keyactionlist[key]);
+
                 if (vibrate)
                 {
                     vibrate = false;
@@ -784,12 +781,13 @@ dboolean G_Responder(event_t *ev)
 
         case ev_mouse:
         {
-            int i;
-            int j;
             int mousebutton = ev->data1;
 
-            for (i = 0, j = 1; i < MAX_MOUSE_BUTTONS; i++, j <<= 1)
+            for (int i = 0, j = 1; i < MAX_MOUSE_BUTTONS; i++, j <<= 1)
                 mousebuttons[i] = mousebutton & j;
+
+            if (mouseactionlist[mousebutton][0])
+                C_ExecuteInputString(mouseactionlist[mousebutton]);
 
             if (vibrate && mousebutton)
             {
@@ -831,6 +829,9 @@ dboolean G_Responder(event_t *ev)
                         G_NextWeapon();
                     else if (mouseprevweapon == MOUSE_WHEELDOWN)
                         G_PrevWeapon();
+
+                    if (mouseactionlist[MOUSE_WHEELDOWN][0])
+                        C_ExecuteInputString(mouseactionlist[MOUSE_WHEELDOWN]);
                 }
                 else if (ev->data1 > 0)
                 {
@@ -838,6 +839,9 @@ dboolean G_Responder(event_t *ev)
                         G_NextWeapon();
                     else if (mouseprevweapon == MOUSE_WHEELUP)
                         G_PrevWeapon();
+
+                    if (mouseactionlist[MOUSE_WHEELUP][0])
+                        C_ExecuteInputString(mouseactionlist[MOUSE_WHEELUP]);
                 }
             }
 
@@ -882,6 +886,7 @@ dboolean G_Responder(event_t *ev)
 
             return true;            // eat events
     }
+
     return false;
 }
 
@@ -952,30 +957,7 @@ void G_Ticker(void)
                     D_Display();
                 }
 
-                if (V_ScreenShot())
-                {
-                    static char buffer[512];
-
-                    S_StartSound(NULL, sfx_swtchx);
-
-                    M_snprintf(buffer, sizeof(buffer), s_GSCREENSHOT, lbmname1);
-                    HU_SetPlayerMessage(buffer, false);
-                    message_dontfuckwithme = true;
-
-                    if (menuactive)
-                    {
-                        message_dontpause = true;
-                        blurred = false;
-                    }
-
-                    C_Output("<b>%s</b> saved.", lbmpath1);
-
-                    if (*lbmpath2)
-                        C_Output("<b>%s</b> saved.", lbmpath2);
-                }
-                else
-                    C_Warning("A screenshot couldn't be taken.");
-
+                G_DoScreenShot();
                 gameaction = ga_nothing;
                 break;
 
@@ -1001,7 +983,7 @@ void G_Ticker(void)
                 {
                     S_PauseSound();
 
-                    if ((gp_vibrate_damage || gp_vibrate_weapons) && vibrate)
+                    if ((gp_vibrate_barrels || gp_vibrate_damage || gp_vibrate_weapons) && vibrate)
                     {
                         restoremotorspeed = idlemotorspeed;
                         idlemotorspeed = 0;
@@ -1017,7 +999,7 @@ void G_Ticker(void)
                     S_ResumeSound();
                     S_StartSound(NULL, sfx_swtchx);
 
-                    if ((gp_vibrate_damage || gp_vibrate_weapons) && vibrate)
+                    if ((gp_vibrate_barrels || gp_vibrate_damage || gp_vibrate_weapons) && vibrate)
                     {
                         idlemotorspeed = restoremotorspeed;
                         XInputVibration(idlemotorspeed);
@@ -1127,7 +1109,7 @@ void G_PlayerReborn(void)
 
     markpointnum = 0;
     infight = false;
-    explosiontics = 0;
+    barreltics = 0;
 }
 
 //
@@ -1141,6 +1123,33 @@ static void G_DoReborn(void)
 void G_ScreenShot(void)
 {
     gameaction = ga_screenshot;
+}
+
+void G_DoScreenShot(void)
+{
+    if (V_ScreenShot())
+    {
+        static char buffer[512];
+
+        S_StartSound(NULL, sfx_swtchx);
+
+        M_snprintf(buffer, sizeof(buffer), s_GSCREENSHOT, lbmname1);
+        HU_SetPlayerMessage(buffer, false);
+        message_dontfuckwithme = true;
+
+        if (menuactive)
+        {
+            message_dontpause = true;
+            blurred = false;
+        }
+
+        C_Output("<b>%s</b> saved.", lbmpath1);
+
+        if (*lbmpath2)
+            C_Output("<b>%s</b> saved.", lbmpath2);
+    }
+    else
+        C_Warning("A screenshot couldn't be taken.");
 }
 
 // DOOM Par Times
@@ -1310,10 +1319,9 @@ static void G_DoCompleted(void)
                 case 33:
                     // [BH] return to MAP03 after secret level in BFG Edition
                     if (bfgedition)
-                    {
                         wminfo.next = 2;
-                        break;
-                    }
+
+                    break;
 
                 default:
                    wminfo.next = gamemap;
@@ -1397,7 +1405,7 @@ static void G_DoCompleted(void)
 
     stat_mapscompleted = SafeAdd(stat_mapscompleted, 1);
 
-    C_Input("exitmap");
+    C_CCMDOutput("exitmap");
 
     C_AddConsoleDivider();
 
@@ -1548,7 +1556,7 @@ void G_LoadedGameMessage(void)
 //
 void G_SaveGame(int slot, char *description, char *name)
 {
-    M_StringCopy(savename, (consoleactive ? name : ""), sizeof(savename));
+    M_StringCopy(savename, name, sizeof(savename));
     savegameslot = slot;
     M_StringCopy(savedescription, description, sizeof(savedescription));
     sendsave = true;
@@ -1564,13 +1572,12 @@ static void G_DoSaveGame(void)
     // and then rename it at the end if it was successfully written.
     // This prevents an existing savegame from being overwritten by
     // a corrupted one, or if a savegame buffer overrun occurs.
-    save_stream = fopen(temp_savegame_file, "wb");
 
-    if (!save_stream)
+    if (!(save_stream = fopen(temp_savegame_file, "wb")))
     {
         menuactive = false;
         C_ShowConsole();
-        C_Warning("%s couldn't be saved.", savename);
+        C_Warning("<b>%s</b> couldn't be saved.", savename);
     }
     else
     {
@@ -1639,7 +1646,6 @@ extern msecnode_t   *sector_list;
 
 void G_DeferredLoadLevel(skill_t skill, int ep, int map)
 {
-    int         i;
     player_t    *player = &players[0];
 
     d_skill = skill;
@@ -1650,7 +1656,7 @@ void G_DeferredLoadLevel(skill_t skill, int ep, int map)
     infight = false;
     sector_list = NULL;
 
-    for (i = 0; i < NUMPOWERS; i++)
+    for (int i = 0; i < NUMPOWERS; i++)
         if (player->powers[i] > 0)
             player->powers[i] = 0;
 }
@@ -1671,11 +1677,9 @@ static void G_DoNewGame(void)
 
 void G_SetFastMonsters(dboolean toggle)
 {
-    int i;
-
     if (toggle)
     {
-        for (i = S_SARG_RUN1; i <= S_SARG_PAIN2; i++)
+        for (int i = S_SARG_RUN1; i <= S_SARG_PAIN2; i++)
             if (states[i].tics != 1)
                 states[i].tics >>= 1;
 
@@ -1685,7 +1689,7 @@ void G_SetFastMonsters(dboolean toggle)
     }
     else
     {
-        for (i = S_SARG_RUN1; i <= S_SARG_PAIN2; i++)
+        for (int i = S_SARG_RUN1; i <= S_SARG_PAIN2; i++)
             states[i].tics <<= 1;
 
         mobjinfo[MT_BRUISERSHOT].speed = 15 * FRACUNIT;
@@ -1755,8 +1759,7 @@ void G_InitNew(skill_t skill, int ep, int map)
     gamemap = map;
     gameskill = skill;
 
-    if (!consolestrings || !M_StringCompare(console[consolestrings - 1].string, "newgame"))
-        C_Input("newgame");
+    C_CCMDOutput("newgame");
 
     G_DoLoadLevel();
 }

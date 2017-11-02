@@ -58,7 +58,7 @@ void T_PlatRaise(plat_t *plat)
     switch (plat->status)
     {
         case up:
-            res = T_MovePlane(plat->sector, plat->speed, plat->high, plat->crush, 0, 1);
+            res = T_MovePlane(plat->sector, plat->speed, plat->high, plat->crush, 0, 1, false);
 
             if (plat->type == raiseAndChange || plat->type == raiseToNearestAndChange)
                 if (!(leveltime & 7) && plat->sector->floorheight != plat->high)
@@ -105,7 +105,7 @@ void T_PlatRaise(plat_t *plat)
             break;
 
         case down:
-            res = T_MovePlane(plat->sector, plat->speed, plat->low, false, 0, -1);
+            res = T_MovePlane(plat->sector, plat->speed, plat->low, false, 0, -1, false);
 
             if (res == pastdest)
             {
@@ -179,7 +179,7 @@ dboolean EV_DoPlat(line_t *line, plattype_e type, int amount)
 
     while ((secnum = P_FindSectorFromLineTag(line, secnum)) >= 0)
     {
-        sec = &sectors[secnum];
+        sec = sectors + secnum;
 
         if (P_SectorActive(floor_special, sec))
             continue;
@@ -193,7 +193,6 @@ dboolean EV_DoPlat(line_t *line, plattype_e type, int amount)
         plat->sector = sec;
         plat->sector->floordata = plat;
         plat->thinker.function = T_PlatRaise;
-        plat->crush = false;
         plat->tag = line->tag;
         plat->low = sec->floorheight;
 
@@ -203,7 +202,6 @@ dboolean EV_DoPlat(line_t *line, plattype_e type, int amount)
                 plat->speed = PLATSPEED / 2;
                 sec->floorpic = sides[line->sidenum[0]].sector->floorpic;
                 plat->high = P_FindNextHighestFloor(sec, sec->floorheight);
-                plat->wait = 0;
                 plat->status = up;
                 sec->special = 0;
                 S_StartSectorSound(&sec->soundorg, sfx_stnmov);
@@ -213,7 +211,6 @@ dboolean EV_DoPlat(line_t *line, plattype_e type, int amount)
                 plat->speed = PLATSPEED / 2;
                 sec->floorpic = sides[line->sidenum[0]].sector->floorpic;
                 plat->high = sec->floorheight + amount * FRACUNIT;
-                plat->wait = 0;
                 plat->status = up;
                 S_StartSectorSound(&sec->soundorg, sfx_stnmov);
                 break;
@@ -280,12 +277,8 @@ dboolean EV_DoPlat(line_t *line, plattype_e type, int amount)
     }
 
     if (sec)
-    {
-        int i;
-
-        for (i = 0; i < sec->linecount; i++)
+        for (int i = 0; i < sec->linecount; i++)
             sec->lines[i]->flags &= ~ML_SECRET;
-    }
 
     return rtn;
 }
@@ -305,9 +298,7 @@ dboolean EV_DoPlat(line_t *line, plattype_e type, int amount)
 //
 void P_ActivateInStasis(int tag)
 {
-    platlist_t  *platlist;
-
-    for (platlist = activeplats; platlist; platlist = platlist->next)   // search the active plats
+    for (platlist_t *platlist = activeplats; platlist; platlist = platlist->next)   // search the active plats
     {
         plat_t  *plat = platlist->plat;                 // for one in stasis with right tag
 
@@ -329,9 +320,7 @@ void P_ActivateInStasis(int tag)
 //
 dboolean EV_StopPlat(line_t *line)
 {
-    platlist_t  *platlist;
-
-    for (platlist = activeplats; platlist; platlist = platlist->next)   // search the active plats
+    for (platlist_t *platlist = activeplats; platlist; platlist = platlist->next)   // search the active plats
     {
         plat_t  *plat = platlist->plat;                 // for one with the tag not in stasis
 

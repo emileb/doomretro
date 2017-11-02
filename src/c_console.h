@@ -61,7 +61,17 @@
 
 #define stringize(x)        #x
 
-typedef enum stringtype_e
+#if defined(_WIN32)
+#define SDL_FILENAME        "SDL2.dll"
+#define SDL_MIXER_FILENAME  "SDL2_mixer.dll"
+#define SDL_IMAGE_FILENAME  "SDL2_image.dll"
+#else
+#define SDL_FILENAME        "SDL2"
+#define SDL_MIXER_FILENAME  "SDL2_mixer"
+#define SDL_IMAGE_FILENAME  "SDL2_image"
+#endif
+
+typedef enum
 {
     inputstring,
     outputstring,
@@ -108,6 +118,7 @@ void C_Input(const char *string, ...);
 void C_IntCVAROutput(const char *cvar, const int value);
 void C_PctCVAROutput(const char *cvar, const int value);
 void C_StrCVAROutput(const char *cvar, const char *string);
+void C_CCMDOutput(const char *ccmd);
 void C_Output(const char *string, ...);
 void C_TabbedOutput(const int tabs[8], const char *string, ...);
 void C_Warning(const char *string, ...);
@@ -119,6 +130,7 @@ void C_ShowConsole(void);
 void C_HideConsole(void);
 void C_HideConsoleFast(void);
 void C_Drawer(void);
+dboolean C_ExecuteInputString(const char *input);
 dboolean C_ValidateInput(const char *input);
 dboolean C_Responder(event_t *ev);
 void C_PrintCompileDate(void);

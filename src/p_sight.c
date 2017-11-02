@@ -45,7 +45,7 @@
 
 // killough 4/19/98:
 // Convert LOS info to struct for reentrancy and efficiency of data locality
-typedef struct los_s
+typedef struct
 {
     fixed_t     sightzstart, t2x, t2y;  // eye z of looker
     divline_t   strace;                 // from t1 to t2
@@ -100,9 +100,6 @@ static fixed_t P_InterceptVector2(const divline_t *v2, const divline_t *v1)
 //
 static dboolean P_CrossSubsector(int num)
 {
-    seg_t       *seg;
-    int         count;
-    subsector_t *sub;
     sector_t    *front;
     sector_t    *back;
     fixed_t     opentop;
@@ -110,14 +107,10 @@ static dboolean P_CrossSubsector(int num)
     divline_t   divl;
     vertex_t    *v1;
     vertex_t    *v2;
+    subsector_t *sub = subsectors + num;
+    seg_t       *seg = segs + sub->firstline;
 
-    sub = &subsectors[num];
-
-    // check lines
-    count = sub->numlines;
-    seg = &segs[sub->firstline];
-
-    for (; count; seg++, count--)
+    for (int count = sub->numlines; count; seg++, count--)
     {
         line_t  *line = seg->linedef;
         fixed_t frac;
@@ -236,7 +229,7 @@ dboolean P_CheckSight(mobj_t *t1, mobj_t *t2)
 {
     const sector_t  *s1 = t1->subsector->sector;
     const sector_t  *s2 = t2->subsector->sector;
-    int             pnum = (int)(s1 - sectors) * numsectors + (int)(s2 - sectors);
+    int             pnum = s1->id * numsectors + s2->id;
 
     // First check for trivial rejection.
     // Determine subsector entries in REJECT table.
@@ -245,14 +238,14 @@ dboolean P_CheckSight(mobj_t *t1, mobj_t *t2)
         return false;
 
     // killough 4/19/98: make fake floors and ceilings block monster view
-    if ((s1->heightsec != -1 && ((t1->z + t1->height <= sectors[s1->heightsec].interpfloorheight &&
-        t2->z >= sectors[s1->heightsec].interpfloorheight)
-        || (t1->z >= sectors[s1->heightsec].interpceilingheight &&
-        t2->z + t1->height <= sectors[s1->heightsec].interpceilingheight))) || (s2->heightsec != -1 &&
-        ((t2->z + t2->height <= sectors[s2->heightsec].interpfloorheight &&
-        t1->z >= sectors[s2->heightsec].interpfloorheight)
-        || (t2->z >= sectors[s2->heightsec].interpceilingheight &&
-        t1->z + t2->height <= sectors[s2->heightsec].interpceilingheight))))
+    if ((s1->heightsec && ((t1->z + t1->height <= s1->heightsec->interpfloorheight &&
+        t2->z >= s1->heightsec->interpfloorheight)
+        || (t1->z >= s1->heightsec->interpceilingheight &&
+        t2->z + t1->height <= s1->heightsec->interpceilingheight))) || (s2->heightsec &&
+        ((t2->z + t2->height <= s2->heightsec->interpfloorheight &&
+        t1->z >= s2->heightsec->interpfloorheight)
+        || (t2->z >= s2->heightsec->interpceilingheight &&
+        t1->z + t2->height <= s2->heightsec->interpceilingheight))))
         return false;
 
     // killough 11/98: shortcut for melee situations

@@ -78,6 +78,7 @@
 #define GP_SENSITIVITY_OFFSET           0.2f
 #define GP_SENSITIVITY_FACTOR           4.0f
 
+extern int      barrelvibrationtics;
 extern int      damagevibrationtics;
 extern int      weaponvibrationtics;
 
@@ -92,12 +93,6 @@ extern int      restoremotorspeed;
 extern float    gamepadsensitivity;
 extern short    gamepadleftdeadzone;
 extern short    gamepadrightdeadzone;
-
-extern dboolean gp_invertyaxis;
-extern int      gp_sensitivity;
-extern dboolean gp_swapthumbsticks;
-extern int      gp_vibrate_damage;
-extern int      gp_vibrate_weapons;
 
 void I_InitGamepad(void);
 void I_ShutdownGamepad(void);

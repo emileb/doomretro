@@ -75,14 +75,6 @@ void __RPC_USER midl_user_free(void __RPC_FAR *p)
 // RPC Wrappers
 //
 
-//
-// CHECK_RPC_STATUS
-//
-// If either server or client initialization failed, we don't try to make any
-// RPC calls.
-//
-#define CHECK_RPC_STATUS()  if (!serverInit || !clientInit) return false
-
 // This number * 10 is the amount of time you can try to wait for.
 #define MIDIRPC_MAXTRIES        50
 
@@ -109,17 +101,14 @@ static dboolean I_MidiRPCWaitForServer(void)
 //
 dboolean I_MidiRPCRegisterSong(void *data, int size)
 {
-    CHECK_RPC_STATUS();
+    if (!serverInit || !clientInit)
+        return false;
 
     RpcTryExcept
-    {
         MidiRPC_PrepareNewSong();
         MidiRPC_AddChunk((unsigned int)size, (byte *)data);
-    }
     RpcExcept(1)
-    {
         return false;
-    }
     RpcEndExcept
 
     return true;
@@ -132,16 +121,13 @@ dboolean I_MidiRPCRegisterSong(void *data, int size)
 //
 dboolean I_MidiRPCPlaySong(dboolean looping)
 {
-    CHECK_RPC_STATUS();
+    if (!serverInit || !clientInit)
+        return false;
 
     RpcTryExcept
-    {
         MidiRPC_PlaySong(looping);
-    }
     RpcExcept(1)
-    {
         return false;
-    }
     RpcEndExcept
 
     return true;
@@ -154,16 +140,13 @@ dboolean I_MidiRPCPlaySong(dboolean looping)
 //
 dboolean I_MidiRPCStopSong(void)
 {
-    CHECK_RPC_STATUS();
+    if (!serverInit || !clientInit)
+        return false;
 
     RpcTryExcept
-    {
         MidiRPC_StopSong();
-    }
     RpcExcept(1)
-    {
         return false;
-    }
     RpcEndExcept
 
     return true;
@@ -176,16 +159,13 @@ dboolean I_MidiRPCStopSong(void)
 //
 dboolean I_MidiRPCSetVolume(int volume)
 {
-    CHECK_RPC_STATUS();
+    if (!serverInit || !clientInit)
+        return false;
 
     RpcTryExcept
-    {
         MidiRPC_ChangeVolume(volume);
-    }
     RpcExcept(1)
-    {
         return false;
-    }
     RpcEndExcept
 
     return true;
@@ -199,16 +179,13 @@ dboolean I_MidiRPCSetVolume(int volume)
 //
 dboolean I_MidiRPCPauseSong(void)
 {
-    CHECK_RPC_STATUS();
+    if (!serverInit || !clientInit)
+        return false;
 
     RpcTryExcept
-    {
         MidiRPC_PauseSong();
-    }
     RpcExcept(1)
-    {
         return false;
-    }
     RpcEndExcept
 
     return true;
@@ -221,16 +198,13 @@ dboolean I_MidiRPCPauseSong(void)
 //
 dboolean I_MidiRPCResumeSong(void)
 {
-    CHECK_RPC_STATUS();
+    if (!serverInit || !clientInit)
+        return false;
 
     RpcTryExcept
-    {
         MidiRPC_ResumeSong();
-    }
     RpcExcept(1)
-    {
         return false;
-    }
     RpcEndExcept
 
     return true;
@@ -255,7 +229,7 @@ dboolean I_MidiRPCInitServer(void)
     // Look for executable file
     if (!M_FileExists(module))
     {
-        C_Warning("%s couldn't be found.", module);
+        C_Warning("<b>%s</b> couldn't be found.", module);
         return false;
     }
 
@@ -268,7 +242,7 @@ dboolean I_MidiRPCInitServer(void)
         serverInit = true;
     }
     else
-        C_Warning("%s couldn't be initialized.", module);
+        C_Warning("<b>%s</b> couldn't be initialized.", module);
 
     return result;
 }
@@ -309,12 +283,8 @@ void I_MidiRPCClientShutDown(void)
     if (serverInit)
     {
         RpcTryExcept
-        {
             MidiRPC_StopServer();
-        }
         RpcExcept(1)
-        {
-        }
         RpcEndExcept
 
         serverInit = false;

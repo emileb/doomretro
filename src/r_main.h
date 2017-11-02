@@ -44,20 +44,20 @@
 //
 // POV related.
 //
-extern fixed_t          viewcos;
-extern fixed_t          viewsin;
+extern fixed_t  viewcos;
+extern fixed_t  viewsin;
 
-extern int              viewwindowx;
-extern int              viewwindowy;
+extern int      viewwindowx;
+extern int      viewwindowy;
 
-extern int              centerx;
-extern int              centery;
+extern int      centerx;
+extern int      centery;
 
-extern fixed_t          centerxfrac;
-extern fixed_t          centeryfrac;
-extern fixed_t          projectiony;
+extern fixed_t  centerxfrac;
+extern fixed_t  centeryfrac;
+extern fixed_t  projectiony;
 
-extern int              validcount;
+extern int      validcount;
 
 //
 // Lighting LUT.
@@ -66,32 +66,31 @@ extern int              validcount;
 //
 
 // Lighting constants.
-#define LIGHTLEVELS             128
-#define LIGHTSEGSHIFT           1
-#define LIGHTBRIGHT             2
-#define MAXLIGHTSCALE           384
-#define LIGHTSCALESHIFT         12
-#define MAXLIGHTZ               1024
-#define LIGHTZSHIFT             17
+#define LIGHTLEVELS         128
+#define LIGHTSEGSHIFT       1
+#define LIGHTBRIGHT         2
+#define MAXLIGHTSCALE       384
+#define LIGHTSCALESHIFT     12
+#define MAXLIGHTZ           1024
+#define LIGHTZSHIFT         17
 
-#define OLDLIGHTLEVELS          32
-#define OLDLIGHTSEGSHIFT        3
-#define OLDMAXLIGHTSCALE        48
-
-// killough 3/20/98: Allow colormaps to be dynamic (e.g. underwater)
-extern lighttable_t     *(*scalelight)[MAXLIGHTSCALE];
-extern lighttable_t     *(*zlight)[MAXLIGHTZ];
-extern lighttable_t     *(*psprscalelight)[OLDMAXLIGHTSCALE];
-extern lighttable_t     *fullcolormap;
-extern int              numcolormaps;   // killough 4/4/98: dynamic number of maps
-extern lighttable_t     **colormaps;
-
-extern int              extralight;
-extern lighttable_t     *fixedcolormap;
+#define OLDLIGHTLEVELS      32
+#define OLDLIGHTSEGSHIFT    3
+#define OLDMAXLIGHTSCALE    48
 
 // Number of diminishing brightness levels.
 // There a 0-31, i.e. 32 LUT in the COLORMAP lump.
-#define NUMCOLORMAPS    32
+#define NUMCOLORMAPS        32
+
+// killough 3/20/98: Allow colormaps to be dynamic (e.g. underwater)
+extern lighttable_t *(*scalelight)[MAXLIGHTSCALE];
+extern lighttable_t *(*zlight)[MAXLIGHTZ];
+extern lighttable_t *(*psprscalelight)[OLDMAXLIGHTSCALE];
+extern lighttable_t *fullcolormap;
+extern int          numcolormaps;   // killough 4/4/98: dynamic number of maps
+extern lighttable_t **colormaps;
+extern int          extralight;
+extern lighttable_t *fixedcolormap;
 
 // [AM] Fractional part of the current tic, in the half-open
 //      range of [0.0, 1.0). Used for interpolation.
@@ -133,16 +132,11 @@ void (*supershotguncolfunc)(void);
 //
 // Utility functions.
 int R_PointOnSide(fixed_t x, fixed_t y, const node_t *node);
-
 int R_PointOnSegSide(fixed_t x, fixed_t y, seg_t *line);
-
 angle_t R_PointToAngle(fixed_t x, fixed_t y);
 angle_t R_PointToAngle2(fixed_t x1, fixed_t y1, fixed_t x, fixed_t y);
 angle_t R_PointToAngleEx(fixed_t x, fixed_t y);
 angle_t R_PointToAngleEx2(fixed_t x1, fixed_t y1, fixed_t x, fixed_t y);
-
-fixed_t R_PointToDist(fixed_t x, fixed_t y);
-
 subsector_t *R_PointInSubsector(fixed_t x, fixed_t y);
 
 //

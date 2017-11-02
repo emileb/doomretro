@@ -49,7 +49,7 @@
 //
 typedef struct sfxinfo_struct sfxinfo_t;
 
-enum singularity_e
+enum
 {
     sg_none,
     sg_itemup,
@@ -84,7 +84,7 @@ struct sfxinfo_struct
 //
 // MusicInfo struct.
 //
-typedef struct musicinfo_s
+typedef struct
 {
     // up to 6-character name
     char        *name;

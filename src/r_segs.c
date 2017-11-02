@@ -36,9 +36,12 @@
 ========================================================================
 */
 
+#include <string.h>
+
 #include "doomstat.h"
+#include "i_system.h"
+#include "m_config.h"
 #include "p_local.h"
-#include "z_zone.h"
 
 static unsigned int maxdrawsegs;
 
@@ -94,16 +97,9 @@ lighttable_t        **walllights;
 static int          *maskedtexturecol;  // dropoff overflow
 
 dboolean            r_brightmaps = r_brightmaps_default;
-dboolean            r_liquid_current = r_liquid_current_default;
 
 extern int          *openings;          // dropoff overflow
 extern fixed_t      animatedliquiddiff;
-extern fixed_t      animatedliquidxoffs;
-extern fixed_t      animatedliquidyoffs;
-extern dboolean     r_dither;
-extern dboolean     r_liquid_bob;
-extern dboolean     r_textures;
-extern dboolean     r_translucency;
 extern dboolean     usebrightmaps;
 
 //
@@ -244,8 +240,6 @@ void R_RenderMaskedSegRange(drawseg_t *ds, const int x1, const int x2)
     const rpatch_t  *patch;
     sector_t        tempsec;        // killough 4/13/98
 
-    // Calculate light table.
-    // Use different light tables for horizontal / vertical.
     curline = ds->curline;
 
     if (r_textures)
@@ -259,11 +253,15 @@ void R_RenderMaskedSegRange(drawseg_t *ds, const int x1, const int x2)
     texnum = texturetranslation[curline->sidedef->midtexture];
     texheight = textureheight[texnum];
 
+    // Calculate light table.
+    // Use different light tables for horizontal/vertical.
     // killough 4/13/98: get correct lightlevel for 2s normal textures
-    walllights = GetLightTable(R_FakeFlat(frontsector, &tempsec, NULL, NULL, false)->lightlevel);
+    if (fixedcolormap)
+        dc_colormap = fixedcolormap;
+    else
+        walllights = GetLightTable(R_FakeFlat(frontsector, &tempsec, NULL, NULL, false)->lightlevel);
 
     maskedtexturecol = ds->maskedtexturecol;
-
     rw_scalestep = ds->scalestep;
     spryscale = ds->scale1 + (x1 - ds->x1) * rw_scalestep;
     mfloorclip = ds->sprbottomclip;
@@ -276,8 +274,6 @@ void R_RenderMaskedSegRange(drawseg_t *ds, const int x1, const int x2)
     else
         dc_texturemid = MIN(frontsector->interpceilingheight, backsector->interpceilingheight) - viewz
             + curline->sidedef->rowoffset;
-
-    dc_colormap = fixedcolormap;
 
     patch = R_CacheTextureCompositePatchNum(texnum);
 
@@ -325,6 +321,9 @@ static dboolean didsolidcol;
 
 static void R_RenderSegLoop(void)
 {
+    if (fixedcolormap)
+        dc_colormap = fixedcolormap;
+
     for (; rw_x < rw_stopx; rw_x++)
     {
         fixed_t texturecolumn = 0;
@@ -371,9 +370,7 @@ static void R_RenderSegLoop(void)
 
             texturecolumn = (rw_offset - FixedMul(finetangent[angle], rw_distance)) >> FRACBITS;
 
-            if (fixedcolormap)
-                dc_colormap = fixedcolormap;
-            else
+            if (!fixedcolormap)
                 dc_colormap = walllights[BETWEEN(0, rw_scale >> LIGHTSCALESHIFT, MAXLIGHTSCALE - 1)];
 
             dc_x = rw_x;
@@ -389,7 +386,6 @@ static void R_RenderSegLoop(void)
             dc_texturemid = rw_midtexturemid;
             dc_source = R_GetTextureColumn(R_CacheTextureCompositePatchNum(midtexture), texturecolumn);
             dc_texheight = midtexheight;
-            dc_sparklefix = SPARKLEFIX;
 
             // [BH] apply brightmap
             if (midtexfullbright)
@@ -422,7 +418,6 @@ static void R_RenderSegLoop(void)
                     dc_source = R_GetTextureColumn(R_CacheTextureCompositePatchNum(toptexture),
                         texturecolumn);
                     dc_texheight = toptexheight;
-                    dc_sparklefix = SPARKLEFIX;
 
                     // [BH] apply brightmap
                     if (toptexfullbright)
@@ -459,7 +454,6 @@ static void R_RenderSegLoop(void)
                     dc_source = R_GetTextureColumn(R_CacheTextureCompositePatchNum(bottomtexture),
                         texturecolumn);
                     dc_texheight = bottomtexheight;
-                    dc_sparklefix = SPARKLEFIX;
 
                     // [BH] apply brightmap
                     if (bottomtexfullbright)
@@ -530,7 +524,7 @@ void R_StoreWallRange(const int start, const int stop)
     int      worldbottom;
     int      worldhigh;
     int      worldlow;
-    
+
     linedef = curline->linedef;
 
     // mark the segment as visible for automap
@@ -545,10 +539,10 @@ void R_StoreWallRange(const int start, const int stop)
     // killough 1/98 -- fix 2s line HOM
     if (ds_p == drawsegs + maxdrawsegs)
     {
-        const unsigned int  pos = ds_p - drawsegs;
+        const size_t        pos = ds_p - drawsegs;
         const unsigned int  newmax = (maxdrawsegs ? 2 * maxdrawsegs : MAXDRAWSEGS);
 
-        drawsegs = Z_Realloc(drawsegs, newmax * sizeof(*drawsegs));
+        drawsegs = I_Realloc(drawsegs, newmax * sizeof(*drawsegs));
         ds_p = drawsegs + pos;
         maxdrawsegs = newmax;
     }
@@ -561,7 +555,7 @@ void R_StoreWallRange(const int start, const int stop)
     dy = ((int64_t)curline->v2->y - curline->v1->y) >> 1;
     dx1 = ((int64_t)viewx - curline->v1->x) >> 1;
     dy1 = ((int64_t)viewy - curline->v1->y) >> 1;
-    len = curline->length >> 1;
+    len = curline->length;
     rw_distance = (fixed_t)((dy * dx1 - dx * dy1) / len) << 1;
 
     ds_p->x1 = start;
@@ -578,7 +572,6 @@ void R_StoreWallRange(const int start, const int stop)
 
         if (need > maxopenings)
         {
-            drawseg_t   *ds;                    // jff 8/9/98 needed for fix from ZDoom
             const int   *oldopenings = openings;
             const int   *oldlast = lastopening;
 
@@ -586,13 +579,13 @@ void R_StoreWallRange(const int start, const int stop)
                 maxopenings = (maxopenings ? maxopenings * 2 : MAXOPENINGS);
             while (need > maxopenings);
 
-            openings = Z_Realloc(openings, maxopenings * sizeof(*openings));
+            openings = I_Realloc(openings, maxopenings * sizeof(*openings));
             lastopening = openings + pos;
 
             // jff 8/9/98 borrowed fix for openings from ZDOOM1.14
             // [RH] We also need to adjust the openings pointers that
             //    were already stored in drawsegs.
-            for (ds = drawsegs; ds < ds_p; ds++)
+            for (drawseg_t *ds = drawsegs; ds < ds_p; ds++)
             {
                 if (ds->maskedtexturecol + ds->x1 >= oldopenings && ds->maskedtexturecol + ds->x1 <= oldlast)
                     ds->maskedtexturecol = ds->maskedtexturecol - oldopenings + openings;
@@ -610,18 +603,9 @@ void R_StoreWallRange(const int start, const int stop)
     worldbottom = frontsector->interpfloorheight - viewz;
 
     // [BH] animate liquid sectors
-    if (frontsector->isliquid && !freeze)
-    {
-        if (r_liquid_bob && (frontsector->heightsec == -1
-            || viewz > sectors[frontsector->heightsec].interpfloorheight))
-            worldbottom += animatedliquiddiff;
-
-        if (r_liquid_current && frontsector->heightsec == -1)
-        {
-            frontsector->floor_xoffs = animatedliquidxoffs;
-            frontsector->floor_yoffs = animatedliquidyoffs;
-        }
-    }
+    if (r_liquid_bob && frontsector->isliquid && (!frontsector->heightsec
+        || viewz > frontsector->heightsec->interpfloorheight))
+        worldbottom += animatedliquiddiff;
 
     R_FixWiggle(frontsector);
 
@@ -632,16 +616,30 @@ void R_StoreWallRange(const int start, const int stop)
     {
         ds_p->scale2 = R_ScaleFromGlobalAngle(viewangle + xtoviewangle[stop]);
         ds_p->scalestep = rw_scalestep = (ds_p->scale2 - rw_scale) / (stop - start);
+
+        if (ds_p->scale1 < ds_p->scale2)
+        {
+            ds_p->minscale = ds_p->scale1;
+            ds_p->maxscale = ds_p->scale2;
+        }
+        else
+        {
+            ds_p->minscale = ds_p->scale2;
+            ds_p->maxscale = ds_p->scale1;
+        }
     }
     else
+    {
         ds_p->scale2 = ds_p->scale1;
+        ds_p->minscale = ds_p->scale1;
+        ds_p->maxscale = ds_p->scale1;
+    }
 
-    // calculate texture boundaries
-    //  and decide if floor / ceiling marks are needed
+    // calculate texture boundaries and decide if floor/ceiling marks are needed
     midtexture = 0;
     toptexture = 0;
     bottomtexture = 0;
-    maskedtexture = 0;
+    maskedtexture = false;
     ds_p->maskedtexturecol = NULL;
 
     if (!backsector)
@@ -649,8 +647,7 @@ void R_StoreWallRange(const int start, const int stop)
         // single sided line
         midtexture = texturetranslation[sidedef->midtexture];
         midtexheight = ((linedef->r_flags & RF_MID_TILE) ? 0 : textureheight[midtexture] >> FRACBITS);
-        midtexfullbright = (usebrightmaps && !nobrightmap[midtexture] ? texturefullbright[midtexture] :
-            NULL);
+        midtexfullbright = (usebrightmaps && !nobrightmap[midtexture] ? texturefullbright[midtexture] : NULL);
         rw_midtexturemid = ((linedef->flags & ML_DONTPEGBOTTOM) ? frontsector->interpfloorheight
             + textureheight[midtexture] - viewz : worldtop);
         rw_midtexturemid += FixedMod(sidedef->rowoffset, textureheight[midtexture]);
@@ -659,7 +656,7 @@ void R_StoreWallRange(const int start, const int stop)
         markfloor = true;
         markceiling = true;
 
-        ds_p->sprtopclip = screenheightarray;
+        ds_p->sprtopclip = viewheightarray;
         ds_p->sprbottomclip = negonearray;
         ds_p->silhouette = SIL_BOTH;
     }
@@ -670,7 +667,7 @@ void R_StoreWallRange(const int start, const int stop)
         if (linedef->r_flags & RF_CLOSED)
         {
             ds_p->sprbottomclip = negonearray;
-            ds_p->sprtopclip = screenheightarray;
+            ds_p->sprtopclip = viewheightarray;
             ds_p->silhouette = SIL_BOTH;
         }
         else
@@ -696,6 +693,14 @@ void R_StoreWallRange(const int start, const int stop)
         if (frontsector->ceilingpic == skyflatnum && backsector->ceilingpic == skyflatnum)
             worldtop = worldhigh;
 
+        // [BH] animate liquid sectors
+        if (r_liquid_bob && backsector->isliquid && backsector->interpfloorheight >= frontsector->interpfloorheight
+            && (!backsector->heightsec || viewz > backsector->heightsec->interpfloorheight))
+        {
+            liquidoffset = animatedliquiddiff;
+            worldlow += liquidoffset;
+        }
+
         markfloor = (worldlow != worldbottom
             || backsector->floorpic != frontsector->floorpic
             || backsector->lightlevel != frontsector->lightlevel
@@ -706,7 +711,7 @@ void R_StoreWallRange(const int start, const int stop)
 
             // killough 4/15/98: prevent 2s normals
             // from bleeding through deep water
-            || frontsector->heightsec != -1
+            || frontsector->heightsec
 
             // killough 4/17/98: draw floors if different light levels
             || backsector->floorlightsec != frontsector->floorlightsec);
@@ -721,7 +726,7 @@ void R_StoreWallRange(const int start, const int stop)
 
             // killough 4/15/98: prevent 2s normals
             // from bleeding through fake ceilings
-            || (frontsector->heightsec != -1 && frontsector->ceilingpic != skyflatnum)
+            || (frontsector->heightsec && frontsector->ceilingpic != skyflatnum)
 
             // killough 4/17/98: draw ceilings if different light levels
             || backsector->ceilinglightsec != frontsector->ceilinglightsec);
@@ -734,22 +739,12 @@ void R_StoreWallRange(const int start, const int stop)
             markfloor = true;
         }
 
-        // [BH] animate liquid sectors
-        if (r_liquid_bob && backsector->isliquid && !freeze
-            && backsector->interpfloorheight >= frontsector->interpfloorheight
-            && (backsector->heightsec == -1 || viewz > sectors[backsector->heightsec].interpfloorheight))
-        {
-            liquidoffset = animatedliquiddiff;
-            worldlow += liquidoffset;
-        }
-
         if (worldhigh < worldtop)
         {
             // top texture
             toptexture = texturetranslation[sidedef->toptexture];
             toptexheight = ((linedef->r_flags & RF_TOP_TILE) ? 0 : textureheight[toptexture] >> FRACBITS);
-            toptexfullbright = (usebrightmaps && !nobrightmap[toptexture] ? texturefullbright[toptexture] :
-                NULL);
+            toptexfullbright = (usebrightmaps && !nobrightmap[toptexture] ? texturefullbright[toptexture] : NULL);
             rw_toptexturemid = ((linedef->flags & ML_DONTPEGTOP) ? worldtop :
                 backsector->interpceilingheight + textureheight[toptexture] - viewz);
             rw_toptexturemid += FixedMod(sidedef->rowoffset, textureheight[toptexture]);
@@ -795,7 +790,7 @@ void R_StoreWallRange(const int start, const int stop)
     //  and doesn't need to be marked.
 
     // killough 3/7/98: add deep water check
-    if (frontsector->heightsec == -1)
+    if (!frontsector->heightsec)
     {
         if (frontsector->interpfloorheight >= viewz)
             markfloor = false;          // above view plane

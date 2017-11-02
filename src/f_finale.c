@@ -44,6 +44,7 @@
 #include "hu_stuff.h"
 #include "i_gamepad.h"
 #include "i_swap.h"
+#include "m_config.h"
 #include "m_misc.h"
 #include "m_random.h"
 #include "p_local.h"
@@ -53,7 +54,7 @@
 #include "w_wad.h"
 #include "z_zone.h"
 
-typedef enum finalestage_e
+typedef enum
 {
     F_STAGE_TEXT,
     F_STAGE_ARTSCREEN,
@@ -64,10 +65,10 @@ typedef enum finalestage_e
 static finalestage_t    finalestage;
 static int              finalecount;
 
-#define TEXTSPEED       (3 * FRACUNIT)          // original value       // phares
-#define TEXTWAIT        (250 * FRACUNIT)        // original value       // phares
-#define NEWTEXTSPEED    ((FRACUNIT + 50) / 100) // new value            // phares
-#define NEWTEXTWAIT     (1000 * FRACUNIT)       // new value            // phares
+#define TEXTSPEED       (3 * FRACUNIT)          // original value
+#define TEXTWAIT        (250 * FRACUNIT)        // original value
+#define NEWTEXTSPEED    ((FRACUNIT + 50) / 100) // new value
+#define NEWTEXTWAIT     (1000 * FRACUNIT)       // new value
 
 static char             *finaletext;
 static char             *finaleflat;
@@ -76,16 +77,12 @@ static void F_StartCast(void);
 static void F_CastTicker(void);
 static dboolean F_CastResponder(event_t *ev);
 
-void WI_checkForAccelerate(void);               // killough 3/28/98: used to
+void WI_checkForAccelerate(void);
 void A_RandomJump(mobj_t *actor, player_t *player, pspdef_t *psp);
 
 static int              midstage;               // whether we're in "mid-stage"
 
 extern int              acceleratestage;        // accelerate intermission screens
-
-extern dboolean         r_shadows;
-extern dboolean         r_shadows_translucency;
-extern dboolean         r_translucency;
 
 //
 // F_StartFinale
@@ -135,6 +132,7 @@ void F_StartFinale(void)
                     finaletext = s_E4TEXT;
                     break;
             }
+
             break;
         }
 
@@ -191,6 +189,7 @@ void F_StartFinale(void)
                         s_C6TEXT));
                     break;
             }
+
             break;
         }
 
@@ -238,8 +237,8 @@ void F_Ticker(void)
 
     if (finalestage == F_STAGE_TEXT)
     {
-        if (finalecount > FixedMul(strlen(finaletext) * FRACUNIT, TextSpeed()) + (midstage ? NEWTEXTWAIT :
-            TEXTWAIT) || (midstage && acceleratestage))
+        if (finalecount > FixedMul((fixed_t)strlen(finaletext) * FRACUNIT, TextSpeed())
+            + (midstage ? NEWTEXTWAIT : TEXTWAIT) || (midstage && acceleratestage))
         {
             if (gamemode != commercial)
             {
@@ -294,12 +293,11 @@ static void F_TextWrite(void)
     // draw some of the text onto the screen
     byte        *src;
     byte        *dest;
-    int         x, y, w;
+    int         w;
     int         count = MAX(0, FixedDiv((finalecount - 10) * FRACUNIT, TextSpeed()) >> FRACBITS);
     const char  *ch = finaletext;
     int         cx = 12;
     int         cy = 10;
-    int         i;
     char        letter;
     char        prev = ' ';
 
@@ -307,10 +305,10 @@ static void F_TextWrite(void)
     src = (byte *)W_CacheLumpName((char *)finaleflat);
     dest = screens[0];
 
-    for (y = 0; y < SCREENHEIGHT; y += 2)
-        for (x = 0; x < SCREENWIDTH / 32; x += 2)
+    for (int y = 0; y < SCREENHEIGHT; y += 2)
+        for (int x = 0; x < SCREENWIDTH / 32; x += 2)
         {
-            for (i = 0; i < 64; i++)
+            for (int i = 0; i < 64; i++)
             {
                 int     j = i * 2;
                 byte    dot = *(src + (((y / 2) & 63) << 6) + i);
@@ -390,7 +388,7 @@ static void F_TextWrite(void)
                 k++;
             }
 
-            w = strlen(smallcharset[c]) / 10 - 1;
+            w = (int)strlen(smallcharset[c]) / 10 - 1;
             M_DrawSmallChar(cx + 1, cy + 1, c, true);
         }
 
@@ -404,7 +402,7 @@ static void F_TextWrite(void)
 // Casting by id Software.
 //   in order of appearance
 //
-typedef struct castinfo_s
+typedef struct
 {
     char        **name;
     mobjtype_t  type;
@@ -445,8 +443,6 @@ static dboolean castattacking;
 
 dboolean        firstevent;
 
-extern char *playername;
-
 //
 // F_StartCast
 //
@@ -477,7 +473,7 @@ static void F_StartCast(void)
 static void F_CastTicker(void)
 {
     if (--casttics > 0)
-        return;                         // not time to change state yet
+        return;                 // not time to change state yet
 
     if (caststate->tics == -1 || caststate->nextstate == S_NULL)
     {
@@ -502,7 +498,7 @@ static void F_CastTicker(void)
 
         // just advance to next state in animation
         if (!castdeath && caststate == &states[S_PLAY_ATK1])
-            goto stopattack;            // Oh, gross hack!
+            goto stopattack;    // Oh, gross hack!
 
         if (caststate->action == A_RandomJump && M_Random() < caststate->misc2)
             st = caststate->misc1;
@@ -636,11 +632,7 @@ stopattack:
     {
         if (caststate->action == A_RandomJump)
         {
-            if (M_Random() < caststate->misc2)
-                caststate = &states[caststate->misc1];
-            else
-                caststate = &states[caststate->nextstate];
-
+            caststate = &states[(M_Random() < caststate->misc2 ? caststate->misc1 : caststate->nextstate)];
             casttics = caststate->tics;
         }
 
@@ -709,7 +701,7 @@ static dboolean F_CastResponder(event_t *ev)
     castdeath = true;
 
     if (r_corpses_mirrored && type != MT_CHAINGUY && type != MT_CYBORG)
-        castdeathflip = rand() & 1;
+        castdeathflip = M_Random() & 1;
 
     caststate = &states[mobjinfo[type].deathstate];
     casttics = caststate->tics;
@@ -739,14 +731,12 @@ static void F_CastPrint(char *text)
 
     while (ch)
     {
-        c = *ch++;
-
-        if (!c)
+        if (!(c = *ch++))
             break;
 
         c = toupper(c) - HU_FONTSTART;
 
-        if (c < 0 || c > HU_FONTSIZE)
+        if (c < 0 || c >= HU_FONTSIZE)
         {
             width += 4;
             continue;
@@ -761,14 +751,12 @@ static void F_CastPrint(char *text)
 
     while (ch)
     {
-        c = *ch++;
-
-        if (!c)
+        if (!(c = *ch++))
             break;
 
         c = toupper(c) - HU_FONTSTART;
 
-        if (c < 0 || c > HU_FONTSIZE)
+        if (c < 0 || c >= HU_FONTSIZE)
         {
             cx += 4;
             continue;
@@ -807,9 +795,7 @@ static void F_CastDrawer(void)
 
     lump = sprframe->lump[rot];
     flip = !!(sprframe->flip & (1 << rot));
-
     patch = W_CacheLumpNum(lump + firstspritelump);
-
     patch->topoffset = spritetopoffset[lump] >> FRACBITS;
 
     if (type == MT_SKULL)
@@ -899,9 +885,7 @@ static void F_DrawPatchCol(int x, patch_t *patch, int col, fixed_t fracstep)
 //
 static void F_BunnyScroll(void)
 {
-    int             scrolled = BETWEEN(0, ORIGINALWIDTH - ((signed int)finalecount - 230) / 2,
-                        ORIGINALWIDTH);
-    int             x;
+    int             scrolled = BETWEEN(0, ORIGINALWIDTH - (finalecount - 230) / 2, ORIGINALWIDTH);
     patch_t         *p1 = W_CacheLumpName("PFUB2");
     patch_t         *p2 = W_CacheLumpName("PFUB1");
     char            name[10];
@@ -911,7 +895,7 @@ static void F_BunnyScroll(void)
     const fixed_t   xscale = (ORIGINALWIDTH << FRACBITS) / SCREENWIDTH;
     fixed_t         frac = 0;
 
-    for (x = 0; x < ORIGINALWIDTH; x++)
+    for (int x = 0; x < ORIGINALWIDTH; x++)
     {
         do
         {
@@ -927,8 +911,7 @@ static void F_BunnyScroll(void)
 
     if (finalecount < 1130)
         return;
-
-    if (finalecount < 1180)
+    else if (finalecount < 1180)
     {
         V_DrawPatchWithShadow((ORIGINALWIDTH - 13 * 8) / 2 + 1, (ORIGINALHEIGHT - 8 * 8) / 2 + 1,
             W_CacheLumpName("END0"), false);
@@ -936,18 +919,13 @@ static void F_BunnyScroll(void)
         return;
     }
 
-    stage = (finalecount - 1180) / 5;
-
-    if (stage > 6)
-        stage = 6;
-
-    if (stage > laststage)
+    if ((stage = MIN((finalecount - 1180) / 5, 6)) > laststage)
     {
         S_StartSound(NULL, sfx_pistol);
         laststage = stage;
     }
 
-    M_snprintf(name, 10, "END%i", stage);
+    M_snprintf(name, sizeof(name), "END%i", stage);
     V_DrawPatchWithShadow((ORIGINALWIDTH - 13 * 8) / 2 + 1, (ORIGINALHEIGHT - 8 * 8) / 2 + 1,
         W_CacheLumpName(name), false);
 }

@@ -44,6 +44,8 @@
 #include "g_game.h"
 #include "hu_stuff.h"
 #include "i_swap.h"
+#include "m_cheat.h"
+#include "m_config.h"
 #include "m_menu.h"
 #include "m_misc.h"
 #include "m_random.h"
@@ -62,49 +64,49 @@
 
 // Palette indices.
 // For damage/bonus red-/gold-shifts
-#define STARTREDPALS            1
-#define STARTBONUSPALS          9
-#define NUMREDPALS              8
-#define NUMBONUSPALS            4
+#define STARTREDPALS        1
+#define STARTBONUSPALS      9
+#define NUMREDPALS          8
+#define NUMBONUSPALS        4
 
 // Radiation suit, green shift.
-#define RADIATIONPAL            13
+#define RADIATIONPAL        13
 
 // Location of status bar
-#define ST_X                    0
+#define ST_X                0
 
 // Number of status faces.
-#define ST_NUMPAINFACES         5
-#define ST_NUMSTRAIGHTFACES     3
-#define ST_NUMTURNFACES         2
-#define ST_NUMSPECIALFACES      3
+#define ST_NUMPAINFACES     5
+#define ST_NUMSTRAIGHTFACES 3
+#define ST_NUMTURNFACES     2
+#define ST_NUMSPECIALFACES  3
 
-#define ST_FACESTRIDE           (ST_NUMSTRAIGHTFACES + ST_NUMTURNFACES + ST_NUMSPECIALFACES)
+#define ST_FACESTRIDE       (ST_NUMSTRAIGHTFACES + ST_NUMTURNFACES + ST_NUMSPECIALFACES)
 
-#define ST_NUMEXTRAFACES        2
+#define ST_NUMEXTRAFACES    2
 
-#define ST_NUMFACES             (ST_FACESTRIDE * ST_NUMPAINFACES + ST_NUMEXTRAFACES)
+#define ST_NUMFACES         (ST_FACESTRIDE * ST_NUMPAINFACES + ST_NUMEXTRAFACES)
 
-#define ST_TURNOFFSET           (ST_NUMSTRAIGHTFACES)
-#define ST_OUCHOFFSET           (ST_TURNOFFSET + ST_NUMTURNFACES)
-#define ST_EVILGRINOFFSET       (ST_OUCHOFFSET + 1)
-#define ST_RAMPAGEOFFSET        (ST_EVILGRINOFFSET + 1)
-#define ST_GODFACE              (ST_NUMPAINFACES * ST_FACESTRIDE)
-#define ST_DEADFACE             (ST_GODFACE + 1)
+#define ST_TURNOFFSET       ST_NUMSTRAIGHTFACES
+#define ST_OUCHOFFSET       (ST_TURNOFFSET + ST_NUMTURNFACES)
+#define ST_EVILGRINOFFSET   (ST_OUCHOFFSET + 1)
+#define ST_RAMPAGEOFFSET    (ST_EVILGRINOFFSET + 1)
+#define ST_GODFACE          (ST_NUMPAINFACES * ST_FACESTRIDE)
+#define ST_DEADFACE         (ST_GODFACE + 1)
 
-#define ST_FACESX               (chex ? 144 : 143)
-#define ST_FACESY               168
+#define ST_FACESX           (143 + chex)
+#define ST_FACESY           168
 
-#define ST_FACEBACKX            (143 * SCREENSCALE)
-#define ST_FACEBACKY            (168 * SCREENSCALE)
-#define ST_FACEBACKWIDTH        (34 * SCREENSCALE)
-#define ST_FACEBACKHEIGHT       (32 * SCREENSCALE)
+#define ST_FACEBACKX        (143 * SCREENSCALE)
+#define ST_FACEBACKY        (168 * SCREENSCALE)
+#define ST_FACEBACKWIDTH    (34 * SCREENSCALE)
+#define ST_FACEBACKHEIGHT   (32 * SCREENSCALE)
 
-#define ST_EVILGRINCOUNT        (2 * TICRATE)
-#define ST_TURNCOUNT            (1 * TICRATE)
-#define ST_RAMPAGEDELAY         (2 * TICRATE)
+#define ST_EVILGRINCOUNT    (2 * TICRATE)
+#define ST_TURNCOUNT        (1 * TICRATE)
+#define ST_RAMPAGEDELAY     (2 * TICRATE)
 
-#define ST_MUCHPAIN             20
+#define ST_MUCHPAIN         20
 
 // Location and size of statistics,
 //  justified according to widget type.
@@ -405,8 +407,6 @@ static const int mus[IDMUS_MAX][6] =
 //
 static int ST_calcPainOffset(void);
 
-extern int  r_detail;
-
 static void ST_refreshBackground(void)
 {
     if (st_statusbaron)
@@ -447,8 +447,6 @@ dboolean ST_Responder(event_t *ev)
     {
         if (!menuactive && !paused)     // [BH] no cheats when in menu or paused
         {
-            int i;
-
             if (!*consolecheat && cht_CheckCheat(&cheat_mus, ev->data2) && !nomusic && musicVolume)
                 idmus = true;
 
@@ -466,7 +464,7 @@ dboolean ST_Responder(event_t *ev)
                     // [BH] remember player's current health,
                     //  and only set to 100% if less than 100%
                     oldhealth = plyr->health;
-                    P_GiveBody(plyr, 100, false);
+                    P_GiveBody(plyr, god_health, false);
 
                     C_Input(cheat_god.sequence);
 
@@ -690,7 +688,7 @@ dboolean ST_Responder(event_t *ev)
             {
                 plyr->cheats ^= CF_NOCLIP;
 
-                C_Input(cheat_noclip.sequence);
+                C_Input(gamemode == commercial ? cheat_commercial_noclip.sequence : cheat_noclip.sequence);
 
                 HU_PlayerMessage(((plyr->cheats & CF_NOCLIP) ? s_STSTR_NCON : s_STSTR_NCOFF), false);
 
@@ -709,7 +707,7 @@ dboolean ST_Responder(event_t *ev)
             }
 
             // 'behold?' power-up cheats
-            for (i = 0; i < 6; i++)
+            for (int i = 0; i < 6; i++)
             {
                 if (cht_CheckCheat(&cheat_powerup[i], ev->data2) && gameskill != sk_nightmare
                     // [BH] can only enter cheat while player is alive
@@ -808,7 +806,7 @@ dboolean ST_Responder(event_t *ev)
                     cheat_noclip.chars_read = 0;
                     cheat_commercial_noclip.chars_read = 0;
 
-                    for (i = 0; i < 7; i++)
+                    for (int i = 0; i < 7; i++)
                         cheat_powerup[i].chars_read = 0;
 
                     cheat_choppers.chars_read = 0;
@@ -1173,10 +1171,9 @@ static void ST_updateFaceWidget(void)
                     // whether left or right
                     diffang = plyr->mo->angle - badguyangle;
                     i = (diffang <= ANG180);
-                }       // confusing, ain't it?
+                }
 
                 st_facecount = ST_TURNCOUNT;
-                st_faceindex = ST_calcPainOffset();
 
                 if (diffang < ANG45)
                 {
@@ -1268,14 +1265,13 @@ static void ST_updateFaceWidget(void)
 static void ST_updateWidgets(void)
 {
     static int largeammo = 1994; // means "n/a"
-    int        i;
     ammotype_t ammo = weaponinfo[plyr->readyweapon].ammo;
 
     w_ready.num = (ammo == am_noammo || plyr->health <= 0 ? &largeammo : &plyr->ammo[ammo]);
     w_ready.data = plyr->readyweapon;
 
     // update keycard multiple widgets
-    for (i = 0; i < 3; i++)
+    for (int i = 0; i < 3; i++)
     {
         keyboxes[i] = (plyr->cards[i] > 0 ? i : -1);
 
@@ -1347,11 +1343,9 @@ static void ST_doPaletteStuff(void)
 
 static void ST_drawWidgets(dboolean refresh)
 {
-    int i;
-
     STlib_updateNum(&w_ready);
 
-    for (i = 0; i < 4; i++)
+    for (int i = 0; i < 4; i++)
     {
         STlib_updateNum(&w_ammo[i]);
         STlib_updateNum(&w_maxammo[i]);
@@ -1370,7 +1364,7 @@ static void ST_drawWidgets(dboolean refresh)
     //  changes:
     //    arms 3 highlighted when player has super shotgun but no shotgun
     //    arms 6 and 7 not visible in shareware
-    for (i = 0; i < armsnum; i++)
+    for (int i = 0; i < armsnum; i++)
         STlib_updateArmsIcon(&w_arms[i], refresh, i);
 
     if (facebackcolor != facebackcolor_default)
@@ -1378,7 +1372,7 @@ static void ST_drawWidgets(dboolean refresh)
 
     STlib_updateMultIcon(&w_faces, refresh);
 
-    for (i = 0; i < 3; i++)
+    for (int i = 0; i < 3; i++)
         STlib_updateMultIcon(&w_keyboxes[i], refresh);
 }
 
@@ -1422,18 +1416,15 @@ typedef void (*load_callback_t)(char *lumpname, patch_t **variable);
 
 static void ST_loadUnloadGraphics(load_callback_t callback)
 {
-    int     i;
-    int     j;
     int     facenum;
-
     char    namebuf[9];
 
     // Load the numbers, tall and short
-    for (i = 0; i < 10; i++)
+    for (int i = 0; i < 10; i++)
     {
-        M_snprintf(namebuf, 9, "STTNUM%i", i);
+        M_snprintf(namebuf, sizeof(namebuf), "STTNUM%i", i);
         callback(namebuf, &tallnum[i]);
-        M_snprintf(namebuf, 9, "STYSNUM%i", i);
+        M_snprintf(namebuf, sizeof(namebuf), "STYSNUM%i", i);
         callback(namebuf, &shortnum[i]);
     }
 
@@ -1443,9 +1434,9 @@ static void ST_loadUnloadGraphics(load_callback_t callback)
     emptytallpercent = V_EmptyPatch(tallpercent);
 
     // key cards
-    for (i = 0; i < NUMCARDS; i++)
+    for (int i = 0; i < NUMCARDS; i++)
     {
-        M_snprintf(namebuf, 9, "STKEYS%i", i);
+        M_snprintf(namebuf, sizeof(namebuf), "STKEYS%i", i);
         callback(namebuf, &keys[i]);
     }
 
@@ -1460,9 +1451,9 @@ static void ST_loadUnloadGraphics(load_callback_t callback)
 
     // arms ownership widgets
     // [BH] now manually drawn
-    for (i = 0; i < 6; i++)
+    for (int i = 0; i < 6; i++)
     {
-        M_snprintf(namebuf, 9, "STGNUM%i", i + 2);
+        M_snprintf(namebuf, sizeof(namebuf), "STGNUM%i", i + 2);
 
         // gray #
         callback(namebuf, &arms[i][0]);
@@ -1483,23 +1474,23 @@ static void ST_loadUnloadGraphics(load_callback_t callback)
     // face states
     facenum = 0;
 
-    for (i = 0; i < ST_NUMPAINFACES; i++)
+    for (int i = 0; i < ST_NUMPAINFACES; i++)
     {
-        for (j = 0; j < ST_NUMSTRAIGHTFACES; j++)
+        for (int j = 0; j < ST_NUMSTRAIGHTFACES; j++)
         {
-            M_snprintf(namebuf, 9, "STFST%i%i", i, j);
+            M_snprintf(namebuf, sizeof(namebuf), "STFST%i%i", i, j);
             callback(namebuf, &faces[facenum++]);
         }
 
-        M_snprintf(namebuf, 9, "STFTR%i0", i);          // turn right
+        M_snprintf(namebuf, sizeof(namebuf), "STFTR%i0", i);          // turn right
         callback(namebuf, &faces[facenum++]);
-        M_snprintf(namebuf, 9, "STFTL%i0", i);          // turn left
+        M_snprintf(namebuf, sizeof(namebuf), "STFTL%i0", i);          // turn left
         callback(namebuf, &faces[facenum++]);
-        M_snprintf(namebuf, 9, "STFOUCH%i", i);         // ouch!
+        M_snprintf(namebuf, sizeof(namebuf), "STFOUCH%i", i);         // ouch!
         callback(namebuf, &faces[facenum++]);
-        M_snprintf(namebuf, 9, "STFEVL%i", i);          // evil grin ;)
+        M_snprintf(namebuf, sizeof(namebuf), "STFEVL%i", i);          // evil grin ;)
         callback(namebuf, &faces[facenum++]);
-        M_snprintf(namebuf, 9, "STFKILL%i", i);         // pissed off
+        M_snprintf(namebuf, sizeof(namebuf), "STFKILL%i", i);         // pissed off
         callback(namebuf, &faces[facenum++]);
     }
 
@@ -1567,16 +1558,8 @@ static void ST_loadData(void)
     ST_loadGraphics();
 }
 
-static void ST_unloadCallback(char *lumpname, patch_t **variable)
-{
-    W_UnlockLumpName(lumpname);
-    *variable = NULL;
-}
-
 static void ST_initData(void)
 {
-    int i;
-
     st_firsttime = true;
     plyr = &players[0];
 
@@ -1587,17 +1570,15 @@ static void ST_initData(void)
 
     st_oldhealth = -1;
 
-    for (i = 0; i < NUMWEAPONS; i++)
+    for (int i = 0; i < NUMWEAPONS; i++)
         oldweaponsowned[i] = plyr->weaponowned[i];
 
-    for (i = 0; i < 3; i++)
+    for (int i = 0; i < 3; i++)
         keyboxes[i] = -1;
 }
 
 static void ST_createWidgets(void)
 {
-    int i;
-
     // ready weapon ammo
     STlib_initNum(&w_ready, ST_AMMOX, ST_AMMOY + (STBAR != 2 && !BTSX), tallnum,
         &plyr->ammo[weaponinfo[plyr->readyweapon].ammo], &st_statusbaron, ST_AMMOWIDTH);
@@ -1617,7 +1598,7 @@ static void ST_createWidgets(void)
     // weapons owned
     armsnum = (gamemode == shareware ? 4 : 6);
 
-    for (i = 0; i < armsnum; i++)
+    for (int i = 0; i < armsnum; i++)
         STlib_initMultIcon(&w_arms[i], ST_ARMSX + (i % 3) * ST_ARMSXSPACE, ST_ARMSY + i / 3 * ST_ARMSYSPACE,
             arms[i], (i == 1 ? &plyr->shotguns : &plyr->weaponowned[i + 1]), &st_statusbaron);
 
@@ -1681,14 +1662,12 @@ void ST_Start(void)
 
 void ST_Init(void)
 {
-    int i;
-
     ST_loadData();
     screens[4] = Z_Malloc(ST_WIDTH * SBARHEIGHT, PU_STATIC, NULL);
 
     // [BH] fix evil grin being displayed when picking up first item after
     // loading save game or entering IDFA/IDKFA cheat
-    for (i = 0; i < NUMWEAPONS; i++)
+    for (int i = 0; i < NUMWEAPONS; i++)
         oldweaponsowned[i] = false;
 
     ST_InitCheats();

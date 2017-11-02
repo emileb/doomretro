@@ -38,7 +38,9 @@
 
 #include "c_console.h"
 #include "doomstat.h"
+#include "g_game.h"
 #include "i_gamepad.h"
+#include "m_config.h"
 #include "p_local.h"
 #include "s_sound.h"
 
@@ -47,7 +49,6 @@
 
 extern fixed_t  animatedliquiddiff;
 extern dboolean canmouselook;
-extern dboolean r_liquid_bob;
 extern dboolean skipaction;
 extern dboolean usemouselook;
 
@@ -100,19 +101,15 @@ void P_CalcHeight(player_t *player)
 
     if (player->playerstate == PST_LIVE)
     {
-        fixed_t bob = 0;
-
         // Regular movement bobbing
         // (needs to be calculated for gun swing
         // even if not on ground)
         fixed_t momx = player->momx;
         fixed_t momy = player->momy;
+        fixed_t bob = ((momx | momy) ? (FixedMul(momx, momx) + FixedMul(momy, momy)) >> 2 : 0);
 
-        bob = (FixedMul(momx, momx) + FixedMul(momy, momy)) >> 2;
-        player->bob = (bob ? MAX(MIN(bob, MAXBOB) * movebob / 100, MAXBOB * stillbob / 400) :
-            MAXBOB * stillbob / 400);
-
-        bob = FixedMul(player->bob / 2, finesine[(FINEANGLES / 20 * leveltime) & FINEMASK]);
+        bob = FixedMul((bob ? MAX(MIN(bob, MAXBOB) * movebob / 100, MAXBOB * stillbob / 400) :
+            MAXBOB * stillbob / 400) / 2, finesine[(FINEANGLES / 20 * leveltime) & FINEMASK]);
 
         // move viewheight
         player->viewheight += player->deltaviewheight;
@@ -146,10 +143,9 @@ void P_CalcHeight(player_t *player)
 
     if (mo->flags2 & MF2_FEETARECLIPPED)
     {
-        dboolean                liquid = true;
-        const struct msecnode_s *seclist;
+        dboolean    liquid = true;
 
-        for (seclist = mo->touching_sectorlist; seclist; seclist = seclist->m_tnext)
+        for (const struct msecnode_s *seclist = mo->touching_sectorlist; seclist; seclist = seclist->m_tnext)
             if (!seclist->m_sector->isliquid)
             {
                 liquid = false;
@@ -158,13 +154,19 @@ void P_CalcHeight(player_t *player)
 
         if (liquid)
         {
-            if (player->playerstate == PST_DEAD && r_liquid_bob)
+            if (player->playerstate == PST_DEAD)
             {
-                player->viewz += animatedliquiddiff;
-                return;
+                if (r_liquid_bob)
+                    player->viewz += animatedliquiddiff;
             }
-            else if (r_liquid_lowerview && !P_IsSelfReferencingSector(mo->subsector->sector))
-                player->viewz -= FOOTCLIPSIZE;
+            else if (r_liquid_lowerview)
+            {
+                sector_t    *sector = mo->subsector->sector;
+
+                if (!P_IsSelfReferencingSector(sector) && (!sector->heightsec
+                    || mo->z + player->viewheight - FOOTCLIPSIZE >= sector->heightsec->floorheight))
+                    player->viewz -= FOOTCLIPSIZE;
+            }
         }
     }
 
@@ -174,7 +176,7 @@ void P_CalcHeight(player_t *player)
 //
 // P_MovePlayer
 //
-static void P_MovePlayer(player_t *player)
+void P_MovePlayer(player_t *player)
 {
     ticcmd_t    *cmd = &player->cmd;
     mobj_t      *mo = player->mo;
@@ -200,7 +202,7 @@ static void P_MovePlayer(player_t *player)
             // killough 11/98:
             // On sludge, make bobbing depend on efficiency.
             // On ice, make it depend on effort.
-            int bobfactor = (friction < ORIG_FRICTION ? movefactor : ORIG_FRICTION_FACTOR);
+            int     bobfactor = (friction < ORIG_FRICTION ? movefactor : ORIG_FRICTION_FACTOR);
 
             if (forwardmove)
             {
@@ -226,8 +228,9 @@ static void P_MovePlayer(player_t *player)
     {
         if (player->lookdir > 0)
             player->lookdir -= 16 * MLOOKUNIT;
-        else if (player->lookdir < 0)
+        else
             player->lookdir += 16 * MLOOKUNIT;
+
         if (ABS(player->lookdir) < 16 * MLOOKUNIT)
             player->lookdir = 0;
     }
@@ -256,7 +259,6 @@ static void P_DeathThink(player_t *player)
     static dboolean facingkiller;
     mobj_t          *mo = player->mo;
     mobj_t          *attacker = player->attacker;
-    const Uint8     *keystate = SDL_GetKeyboardState(NULL);
 
     weaponvibrationtics = 1;
     idlemotorspeed = 0;
@@ -311,8 +313,11 @@ static void P_DeathThink(player_t *player)
     if (player->bonuscount)
         player->bonuscount--;
 
+    if (consoleactive)
+        return;
+
     if (((player->cmd.buttons & BT_USE) || ((player->cmd.buttons & BT_ATTACK) && !player->damagecount
-        && count > TICRATE * 2) || keystate[SDL_SCANCODE_RETURN] || keystate[SDL_SCANCODE_KP_ENTER]))
+        && count > TICRATE * 2) || gamekeydown[KEY_ENTER]))
     {
         count = 0;
         damagevibrationtics = 1;
@@ -366,15 +371,70 @@ void P_ResurrectPlayer(player_t *player, int health)
     C_HideConsole();
 }
 
+void P_ChangeWeapon(player_t *player, weapontype_t newweapon)
+{
+    if (newweapon == wp_fist)
+    {
+        if (player->readyweapon == wp_fist)
+        {
+            if (player->weaponowned[wp_chainsaw])
+            {
+                newweapon = wp_chainsaw;
+                player->fistorchainsaw = wp_chainsaw;
+            }
+        }
+        else if (player->readyweapon == wp_chainsaw)
+        {
+            if (player->powers[pw_strength])
+                player->fistorchainsaw = wp_fist;
+            else
+                newweapon = wp_nochange;
+        }
+        else
+            newweapon = player->fistorchainsaw;
+    }
+
+    // Don't switch to a weapon without any or enough ammo.
+    else if (((newweapon == wp_pistol || newweapon == wp_chaingun) && !player->ammo[am_clip])
+        || (newweapon == wp_shotgun && !player->ammo[am_shell])
+        || (newweapon == wp_missile && !player->ammo[am_misl])
+        || (newweapon == wp_plasma && !player->ammo[am_cell])
+        || (newweapon == wp_bfg && player->ammo[am_cell] < bfgcells && bfgcells == BFGCELLS))
+        newweapon = wp_nochange;
+
+    // Select the preferred shotgun.
+    else if (newweapon == wp_shotgun)
+    {
+        if ((!player->weaponowned[wp_shotgun] || player->readyweapon == wp_shotgun)
+            && player->weaponowned[wp_supershotgun] && player->ammo[am_shell] >= 2)
+            player->preferredshotgun = wp_supershotgun;
+        else if (player->readyweapon == wp_supershotgun
+            || (player->preferredshotgun == wp_supershotgun && player->ammo[am_shell] == 1))
+            player->preferredshotgun = wp_shotgun;
+
+        newweapon = player->preferredshotgun;
+    }
+
+    if (newweapon != wp_nochange && newweapon != player->readyweapon && player->weaponowned[newweapon])
+    {
+        player->pendingweapon = newweapon;
+
+        if (newweapon == wp_fist && player->powers[pw_strength])
+            S_StartSound(NULL, sfx_getpow);
+
+        if ((player->cheats & CF_CHOPPERS) && newweapon != wp_chainsaw)
+            G_RemoveChoppers();
+    }
+}
+
 //
 // P_PlayerThink
 //
 void P_PlayerThink(player_t *player)
 {
-    ticcmd_t                *cmd = &player->cmd;
-    mobj_t                  *mo = player->mo;
-    const struct msecnode_s *seclist;
-    static int              motionblur;
+    ticcmd_t    *cmd = &player->cmd;
+    mobj_t      *mo = player->mo;
+    static int  motionblur;
 
     if (player->bonuscount)
         player->bonuscount--;
@@ -383,7 +443,7 @@ void P_PlayerThink(player_t *player)
         return;
 
     // [AM] Assume we can interpolate at the beginning of the tic.
-    mo->interp = true;
+    mo->interpolate = true;
 
     // [AM] Store starting position for player interpolation.
     mo->oldx = mo->x;
@@ -458,7 +518,7 @@ void P_PlayerThink(player_t *player)
 
     // [BH] Check all sectors player is touching are special
     if (!freeze)
-        for (seclist = mo->touching_sectorlist; seclist; seclist = seclist->m_tnext)
+        for (const struct msecnode_s *seclist = mo->touching_sectorlist; seclist; seclist = seclist->m_tnext)
             if (seclist->m_sector->special && mo->z == seclist->m_sector->interpfloorheight)
             {
                 P_PlayerInSpecialSector(player);
@@ -472,61 +532,7 @@ void P_PlayerThink(player_t *player)
         cmd->buttons = 0;
 
     if ((cmd->buttons & BT_CHANGE) && (!automapactive || am_followmode))
-    {
-        // The actual changing of the weapon is done when the weapon psprite can do it
-        //  (read: not in the middle of an attack).
-        weapontype_t    newweapon = (cmd->buttons & BT_WEAPONMASK) >> BT_WEAPONSHIFT;
-
-        if (newweapon == wp_fist)
-        {
-            if (player->readyweapon == wp_fist)
-            {
-                if (player->weaponowned[wp_chainsaw])
-                    newweapon = player->fistorchainsaw = wp_chainsaw;
-            }
-            else if (player->readyweapon == wp_chainsaw)
-            {
-                if (player->powers[pw_strength])
-                    player->fistorchainsaw = wp_fist;
-                else
-                    newweapon = wp_nochange;
-            }
-            else
-                newweapon = player->fistorchainsaw;
-        }
-
-        // Don't switch to a weapon without any or enough ammo.
-        else if (((newweapon == wp_pistol || newweapon == wp_chaingun) && !player->ammo[am_clip])
-            || (newweapon == wp_shotgun && !player->ammo[am_shell])
-            || (newweapon == wp_missile && !player->ammo[am_misl])
-            || (newweapon == wp_plasma && !player->ammo[am_cell])
-            || (newweapon == wp_bfg && player->ammo[am_cell] < bfgcells && bfgcells == BFGCELLS))
-            newweapon = wp_nochange;
-
-        // Select the preferred shotgun.
-        else if (newweapon == wp_shotgun)
-        {
-            if ((!player->weaponowned[wp_shotgun] || player->readyweapon == wp_shotgun)
-                && player->weaponowned[wp_supershotgun] && player->ammo[am_shell] >= 2)
-                player->preferredshotgun = wp_supershotgun;
-            else if (player->readyweapon == wp_supershotgun
-                || (player->preferredshotgun == wp_supershotgun && player->ammo[am_shell] == 1))
-                player->preferredshotgun = wp_shotgun;
-
-            newweapon = player->preferredshotgun;
-        }
-
-        if (newweapon != wp_nochange && newweapon != player->readyweapon && player->weaponowned[newweapon])
-        {
-            player->pendingweapon = newweapon;
-
-            if (newweapon == wp_fist && player->powers[pw_strength])
-                S_StartSound(NULL, sfx_getpow);
-
-            if ((player->cheats & CF_CHOPPERS) && newweapon != wp_chainsaw)
-                G_RemoveChoppers();
-        }
-    }
+        P_ChangeWeapon(player, (cmd->buttons & BT_WEAPONMASK) >> BT_WEAPONSHIFT);
 
     // check for use
     if (cmd->buttons & BT_USE)

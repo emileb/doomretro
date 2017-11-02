@@ -43,8 +43,8 @@
 #include "r_patch.h"
 #include "r_state.h"
 
-#define LOOKDIRMAX      89
-#define LOOKDIRS        (LOOKDIRMAX * 2 + 1)
+#define LOOKDIRMAX  89
+#define LOOKDIRS    (LOOKDIRMAX * 2 + 1)
 
 #if defined(_MSC_VER) || defined(__GNUC__)
 #pragma pack(push, 1)
@@ -58,7 +58,7 @@
 // into the rectangular texture space using origin
 // and possibly other attributes.
 //
-typedef struct mappatch_s
+typedef struct
 {
     short           originx;
     short           originy;
@@ -72,7 +72,7 @@ typedef struct mappatch_s
 // A DOOM wall texture is a list of patches
 // which are to be combined in a predefined order.
 //
-typedef struct maptexture_s
+typedef struct
 {
     char            name[8];
     int             masked;
@@ -90,7 +90,7 @@ typedef struct maptexture_s
 // A single patch from a texture definition,
 //  basically a rectangular area within
 //  the texture rectangle.
-typedef struct texpatch_s
+typedef struct
 {
     // Block origin (always UL),
     // which has already accounted
@@ -104,7 +104,7 @@ typedef struct texpatch_s
 //  which is composed of one or more mappatch_t structures
 //  that arrange graphic patches.
 
-typedef struct texture_s
+typedef struct
 {
     // Keep name for switch changing, etc.
     char            name[8];
@@ -119,8 +119,7 @@ typedef struct texture_s
 
     unsigned int    widthmask;
 
-    // All the patches[patchcount]
-    //  are drawn back to front into the cached texture.
+    // All the patches[patchcount] are drawn back to front into the cached texture.
     short           patchcount;
     texpatch_t      patches[1];
 } texture_t;
@@ -133,8 +132,7 @@ void R_InitData(void);
 void R_PrecacheLevel(void);
 
 // Retrieval.
-// Floor/ceiling opaque texture tiles,
-// lookup by name. For animation?
+// Floor/ceiling opaque texture tiles, lookup by name. For animation?
 int R_FlatNumForName(char *name);
 int R_CheckFlatNumForName(char *name);
 

@@ -46,12 +46,12 @@
 
 #define GAMMALEVELS             31
 
-typedef struct resolution_s
+typedef struct
 {
-    int         width;
-    int         height;
-    char        *acronym;
-    char        *aspectratio;
+    int     width;
+    int     height;
+    char    *acronym;
+    char    *aspectratio;
 } resolution_t;
 
 void I_InitKeyboard(void);
@@ -62,6 +62,7 @@ void I_InitKeyboard(void);
 void I_InitGraphics(void);
 void I_RestartGraphics(void);
 void I_ShutdownGraphics(void);
+void I_CapFPS(int fps);
 
 void GetWindowPosition(void);
 void GetWindowSize(void);
@@ -92,7 +93,6 @@ void I_SetGamma(float value);
 
 extern dboolean     sendpause;
 extern dboolean     quitting;
-extern int          r_screensize;
 
 extern int          keydown;
 
@@ -102,8 +102,7 @@ extern dboolean     idbehold;
 extern dboolean     message_clearable;
 
 extern int          gammaindex;
-extern float        r_gamma;
-extern float        gammalevels[GAMMALEVELS];
+extern const float  gammalevels[GAMMALEVELS];
 
 extern dboolean     blurred;
 extern dboolean     splashscreen;
@@ -111,10 +110,6 @@ extern dboolean     noinput;
 
 void (*blitfunc)(void);
 void (*mapblitfunc)(void);
-
-extern dboolean     vid_fullscreen;
-extern int          vid_motionblur;
-extern dboolean     vid_showfps;
 
 extern int          windowx;
 extern int          windowy;

@@ -59,7 +59,6 @@ extern byte             *dc_colormask;
 extern int              dc_baseclip;
 extern int              dc_floorclip;
 extern int              dc_ceilingclip;
-extern int              dc_sparklefix;
 
 // first pixel in a column
 extern byte             *dc_source;
@@ -81,13 +80,11 @@ extern byte             *tinttabgreen33;
 extern byte             *tinttabblue25;
 
 // The span blitting interface.
-// Hook in assembler or system specific BLT
-//  here.
+// Hook in assembler or system specific BLT here.
 void R_DrawColumn(void);
 void R_DrawColorColumn(void);
 void R_DrawWallColumn(void);
 void R_DrawFullbrightWallColumn(void);
-void R_DrawSkyColumn(void);
 void R_DrawFlippedSkyColumn(void);
 void R_DrawSkyColorColumn(void);
 void R_DrawTranslucentColumn(void);
@@ -131,22 +128,22 @@ void R_DrawTranslatedColumn(void);
 
 void R_VideoErase(unsigned int ofs, int count);
 
-extern int              ds_y;
-extern int              ds_x1;
-extern int              ds_x2;
+extern int          ds_y;
+extern int          ds_x1;
+extern int          ds_x2;
 
-extern lighttable_t     *ds_colormap;
+extern lighttable_t *ds_colormap;
 
-extern fixed_t          ds_xfrac;
-extern fixed_t          ds_yfrac;
-extern fixed_t          ds_xstep;
-extern fixed_t          ds_ystep;
+extern fixed_t      ds_xfrac;
+extern fixed_t      ds_yfrac;
+extern fixed_t      ds_xstep;
+extern fixed_t      ds_ystep;
 
 // start of a 64*64 tile image
-extern byte             *ds_source;
+extern byte         *ds_source;
 
-extern byte             *translationtables;
-extern byte             *dc_translation;
+extern byte         *translationtables;
+extern byte         *dc_translation;
 
 // Span blitting for rows, floor/ceiling.
 // No Spectre effect needed.

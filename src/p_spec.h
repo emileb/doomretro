@@ -40,7 +40,7 @@
 #define __P_SPEC_H__
 
 // jff 2/23/98 identify the special classes that can share sectors
-typedef enum special_e
+typedef enum
 {
     floor_special,
     ceiling_special,
@@ -106,7 +106,7 @@ sector_t *P_FindModelCeilingSector(fixed_t ceildestheight, int secnum); // jff 0
 int P_FindSectorFromLineTag(const line_t *line, int start);
 int P_FindLineFromLineTag(const line_t *line, int start);
 
-int P_FindMinSurroundingLight(sector_t *sector, int min);
+int P_FindMinSurroundingLight(sector_t *sec, int min);
 
 dboolean P_CanUnlockGenDoor(line_t *line, player_t *player);
 
@@ -221,10 +221,10 @@ typedef struct
 } button_t;
 
 // 4 players, 4 buttons each at once, max.
-#define MAXBUTTONS              32
+#define MAXBUTTONS  32
 
 // 1 second, in ticks.
-#define BUTTONTIME              35
+#define BUTTONTIME  35
 
 extern button_t buttonlist[MAXBUTTONS];
 
@@ -235,7 +235,7 @@ void P_InitSwitchList(void);
 //
 // P_PLATS
 //
-typedef enum plat_e
+typedef enum
 {
     up,
     down,
@@ -287,8 +287,8 @@ typedef struct platlist_s
     struct platlist_s  *next, **prev;
 } platlist_t;
 
-#define PLATWAIT       3
-#define PLATSPEED      FRACUNIT
+#define PLATWAIT    3
+#define PLATSPEED   FRACUNIT
 
 extern platlist_t      *activeplats;
 
@@ -305,7 +305,7 @@ void P_ActivateInStasis(int tag);
 //
 // P_DOORS
 //
-typedef enum vldoor_e
+typedef enum
 {
     doorNormal,
     doorClose30ThenOpen,
@@ -352,8 +352,8 @@ typedef struct
     int         lighttag;
 } vldoor_t;
 
-#define VDOORSPEED              FRACUNIT * 2
-#define VDOORWAIT               150
+#define VDOORSPEED  (FRACUNIT * 2)
+#define VDOORWAIT   150
 
 void EV_VerticalDoor(line_t *line, mobj_t *thing);
 
@@ -369,7 +369,7 @@ void P_SpawnDoorRaiseIn5Mins(sector_t *sec);
 //
 // P_CEILING
 //
-typedef enum ceiling_e
+typedef enum
 {
     lowerToFloor,
     raiseToHighest,
@@ -418,7 +418,8 @@ typedef struct
 typedef struct ceilinglist_s
 {
     ceiling_t                   *ceiling;
-    struct ceilinglist_s        *next, **prev;
+    struct ceilinglist_s        *next;
+    struct ceilinglist_s        **prev;
 } ceilinglist_t;
 
 #define CEILSPEED               FRACUNIT
@@ -437,7 +438,7 @@ dboolean P_ActivateInStasisCeiling(line_t *line);
 //
 // P_FLOOR
 //
-typedef enum floor_e
+typedef enum
 {
     // lower floor to highest surrounding floor
     lowerFloor,
@@ -493,14 +494,14 @@ typedef enum floor_e
     genBuildStair
 } floor_e;
 
-typedef enum elevator_e
+typedef enum
 {
     elevateUp,
     elevateDown,
     elevateCurrent
 } elevator_e;
 
-typedef enum stair_e
+typedef enum
 {
     build8,     // slowly build by 8
     turbo16     // quickly build by 16
@@ -531,10 +532,10 @@ typedef struct
     fixed_t     speed;
 } elevator_t;
 
-#define ELEVATORSPEED           (FRACUNIT * 4)
-#define FLOORSPEED              FRACUNIT
+#define ELEVATORSPEED   (FRACUNIT * 4)
+#define FLOORSPEED      FRACUNIT
 
-typedef enum result_e
+typedef enum
 {
     ok,
     crushed,
@@ -542,7 +543,7 @@ typedef enum result_e
 } result_e;
 
 result_e T_MovePlane(sector_t *sector, fixed_t speed, fixed_t dest, dboolean crush, int floorOrCeiling,
-    int direction);
+    int direction, dboolean elevator);
 dboolean EV_BuildStairs(line_t *line, stair_e type);
 dboolean EV_DoFloor(line_t *line, floor_e floortype);
 dboolean EV_DoChange(line_t *line, change_e changetype);
@@ -560,13 +561,13 @@ typedef struct
     fixed_t     last_height;    // Last known height of control sector
     fixed_t     vdx, vdy;       // Accumulated velocity if accelerative
     int         accel;          // Whether it's accelerative
+
     enum
     {
         sc_side,
         sc_floor,
         sc_ceiling,
-        sc_carry,
-        sc_carry_ceiling        // killough 4/11/98: carry objects hanging on ceilings
+        sc_carry
     } type;                     // Type of scroll effect
 } scroll_t;
 
@@ -608,14 +609,11 @@ dboolean EV_SilentLineTeleport(line_t *line, int side, mobj_t *thing, dboolean r
 
 // jff 3/14/98 add bits and shifts for generalized sector types
 
-#define DAMAGE_MASK     0x60
-#define DAMAGE_SHIFT    5
-#define SECRET_MASK     0x80
-#define SECRET_SHIFT    7
-#define FRICTION_MASK   0x100
-#define FRICTION_SHIFT  8
-#define PUSH_MASK       0x200
-#define PUSH_SHIFT      9
+#define DAMAGE_MASK             0x60
+#define DAMAGE_SHIFT               5
+#define SECRET_MASK             0x80
+#define FRICTION_MASK          0x100
+#define PUSH_MASK              0x200
 
 // jff 02/04/98 Define masks, shifts, for fields in
 // generalized linedef types
@@ -628,7 +626,7 @@ dboolean EV_SilentLineTeleport(line_t *line, int side, mobj_t *thing, dboolean r
 #define GenCrusherBase        0x2F80
 
 #define TriggerType           0x0007
-#define TriggerTypeShift      0
+#define TriggerTypeShift           0
 
 // define masks and shifts for the floor type fields
 #define FloorCrush            0x1000
@@ -823,17 +821,11 @@ enum
 };
 
 dboolean EV_DoGenFloor(line_t *line);
-
 dboolean EV_DoGenCeiling(line_t *line);
-
 dboolean EV_DoGenLift(line_t *line);
-
 dboolean EV_DoGenStairs(line_t *line);
-
 dboolean EV_DoGenCrusher(line_t *line);
-
 dboolean EV_DoGenDoor(line_t *line);
-
 dboolean EV_DoGenLockedDoor(line_t *line);
 
 #endif

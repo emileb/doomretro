@@ -42,167 +42,15 @@
 #include "c_cmds.h"
 #include "c_console.h"
 #include "doomstat.h"
+#include "g_game.h"
 #include "i_gamepad.h"
+#include "m_config.h"
+#include "m_fixed.h"
 #include "m_misc.h"
 #include "p_local.h"
 #include "version.h"
 
 static dboolean     cvarsloaded;
-
-extern dboolean     alwaysrun;
-extern int          am_allmapcdwallcolor;
-extern int          am_allmapfdwallcolor;
-extern int          am_allmapwallcolor;
-extern int          am_backcolor;
-extern int          am_cdwallcolor;
-extern int          am_crosshaircolor;
-extern dboolean     am_external;
-extern int          am_fdwallcolor;
-extern dboolean     am_grid;
-extern int          am_gridcolor;
-extern char         *am_gridsize;
-extern int          am_markcolor;
-extern dboolean     am_path;
-extern int          am_pathcolor;
-extern int          am_playercolor;
-extern dboolean     am_rotatemode;
-extern int          am_teleportercolor;
-extern int          am_thingcolor;
-extern int          am_tswallcolor;
-extern int          am_wallcolor;
-extern dboolean     autoload;
-extern dboolean     centerweapon;
-extern dboolean     con_obituaries;
-extern dboolean     con_timestamps;
-extern int          episode;
-extern int          expansion;
-extern int          facebackcolor;
-extern float        gp_deadzone_left;
-extern float        gp_deadzone_right;
-extern dboolean     gp_invertyaxis;
-extern int          gp_sensitivity;
-extern dboolean     gp_swapthumbsticks;
-extern int          gp_vibrate_damage;
-extern int          gp_vibrate_weapons;
-extern char         *iwadfolder;
-extern float        m_acceleration;
-extern dboolean     m_doubleclick_use;
-extern dboolean     m_invertyaxis;
-extern dboolean     m_novertical;
-extern int          m_sensitivity;
-extern int          m_threshold;
-extern dboolean     messages;
-extern dboolean     mouselook;
-extern int          movebob;
-extern char         *playername;
-extern dboolean     r_althud;
-extern int          r_berserkintensity;
-extern int          r_blood;
-extern int          r_bloodsplats_max;
-extern dboolean     r_bloodsplats_translucency;
-extern dboolean     r_brightmaps;
-extern dboolean     r_corpses_color;
-extern dboolean     r_corpses_mirrored;
-extern dboolean     r_corpses_moreblood;
-extern dboolean     r_corpses_nudge;
-extern dboolean     r_corpses_slide;
-extern dboolean     r_corpses_smearblood;
-extern int          r_detail;
-extern dboolean     r_diskicon;
-extern dboolean     r_dither;
-extern dboolean     r_fixmaperrors;
-extern dboolean     r_fixspriteoffsets;
-extern dboolean     r_floatbob;
-extern float        r_gamma;
-extern dboolean     r_homindicator;
-extern dboolean     r_hud;
-extern dboolean     r_hud_translucency;
-extern dboolean     r_liquid_bob;
-extern dboolean     r_liquid_clipsprites;
-extern dboolean     r_liquid_current;
-extern dboolean     r_liquid_lowerview;
-extern dboolean     r_liquid_swirl;
-extern char         *r_lowpixelsize;
-extern int          r_messagescale;
-extern dboolean     r_mirroredweapons;
-extern dboolean     r_playersprites;
-extern dboolean     r_rockettrails;
-extern dboolean     r_shadows;
-extern dboolean     r_shadows_translucency;
-extern dboolean     r_shake_barrels;
-extern int          r_shake_damage;
-extern int          r_skycolor;
-extern dboolean     r_textures;
-extern dboolean     r_translucency;
-extern int          s_channels;
-extern int          s_musicvolume;
-extern dboolean     s_randommusic;
-extern dboolean     s_randompitch;
-extern int          s_sfxvolume;
-extern int          savegame;
-extern int          skilllevel;
-extern int          stillbob;
-extern unsigned int stat_barrelsexploded;
-extern unsigned int stat_cheated;
-extern unsigned int stat_damageinflicted;
-extern unsigned int stat_damagereceived;
-extern unsigned int stat_deaths;
-extern unsigned int stat_distancetraveled;
-extern unsigned int stat_itemspickedup;
-extern unsigned int stat_itemspickedup_ammo_bullets;
-extern unsigned int stat_itemspickedup_ammo_cells;
-extern unsigned int stat_itemspickedup_ammo_rockets;
-extern unsigned int stat_itemspickedup_ammo_shells;
-extern unsigned int stat_itemspickedup_armor;
-extern unsigned int stat_itemspickedup_health;
-extern unsigned int stat_mapscompleted;
-extern unsigned int stat_monsterskilled;
-extern unsigned int stat_monsterskilled_arachnotrons;
-extern unsigned int stat_monsterskilled_archviles;
-extern unsigned int stat_monsterskilled_baronsofhell;
-extern unsigned int stat_monsterskilled_cacodemons;
-extern unsigned int stat_monsterskilled_cyberdemons;
-extern unsigned int stat_monsterskilled_demons;
-extern unsigned int stat_monsterskilled_heavyweapondudes;
-extern unsigned int stat_monsterskilled_hellknights;
-extern unsigned int stat_monsterskilled_imps;
-extern unsigned int stat_monsterskilled_lostsouls;
-extern unsigned int stat_monsterskilled_mancubi;
-extern unsigned int stat_monsterskilled_painelementals;
-extern unsigned int stat_monsterskilled_revenants;
-extern unsigned int stat_monsterskilled_shotgunguys;
-extern unsigned int stat_monsterskilled_spectres;
-extern unsigned int stat_monsterskilled_spidermasterminds;
-extern unsigned int stat_monsterskilled_zombiemen;
-extern unsigned int stat_runs;
-extern unsigned int stat_secretsrevealed;
-extern unsigned int stat_shotsfired;
-extern unsigned int stat_shotshit;
-extern unsigned int stat_time;
-extern int          units;
-extern int          turbo;
-extern char         *version;
-extern int          vid_capfps;
-extern int          vid_display;
-#if !defined(_WIN32)
-extern char         *vid_driver;
-#endif
-extern dboolean     vid_fullscreen;
-extern int          vid_motionblur;
-extern dboolean     vid_pillarboxes;
-extern char         *vid_scaleapi;
-extern char         *vid_scalefilter;
-extern char         *vid_screenresolution;
-extern dboolean     vid_vsync;
-extern dboolean     vid_widescreen;
-extern char         *vid_windowposition;
-extern char         *vid_windowsize;
-#if defined(_WIN32)
-extern char         *wad;
-#endif
-extern int          weaponbob;
-extern dboolean     weaponrecoil;
-extern dboolean     wipe;
 
 extern char         *packageconfig;
 extern dboolean     returntowidescreen;
@@ -255,6 +103,7 @@ static default_t cvars[] =
     CONFIG_VARIABLE_INT          (gp_invertyaxis,                                    BOOLVALUEALIAS    ),
     CONFIG_VARIABLE_INT          (gp_sensitivity,                                    NOVALUEALIAS      ),
     CONFIG_VARIABLE_INT          (gp_swapthumbsticks,                                BOOLVALUEALIAS    ),
+    CONFIG_VARIABLE_INT_PERCENT  (gp_vibrate_barrels,                                NOVALUEALIAS      ),
     CONFIG_VARIABLE_INT_PERCENT  (gp_vibrate_damage,                                 NOVALUEALIAS      ),
     CONFIG_VARIABLE_INT_PERCENT  (gp_vibrate_weapons,                                NOVALUEALIAS      ),
     CONFIG_VARIABLE_STRING       (iwadfolder,                                        NOVALUEALIAS      ),
@@ -296,6 +145,7 @@ static default_t cvars[] =
     CONFIG_VARIABLE_INT          (r_liquid_lowerview,                                BOOLVALUEALIAS    ),
     CONFIG_VARIABLE_INT          (r_liquid_swirl,                                    BOOLVALUEALIAS    ),
     CONFIG_VARIABLE_OTHER        (r_lowpixelsize,                                    NOVALUEALIAS      ),
+    CONFIG_VARIABLE_OTHER        (r_messagepos,                                      NOVALUEALIAS      ),
     CONFIG_VARIABLE_INT          (r_messagescale,                                    SCALEVALUEALIAS   ),
     CONFIG_VARIABLE_INT          (r_mirroredweapons,                                 BOOLVALUEALIAS    ),
     CONFIG_VARIABLE_INT          (r_playersprites,                                   BOOLVALUEALIAS    ),
@@ -316,6 +166,7 @@ static default_t cvars[] =
     CONFIG_VARIABLE_INT          (savegame,                                          NOVALUEALIAS      ),
     CONFIG_VARIABLE_INT          (skilllevel,                                        NOVALUEALIAS      ),
     CONFIG_VARIABLE_INT_PERCENT  (stillbob,                                          NOVALUEALIAS      ),
+    CONFIG_VARIABLE_INT          (tossdrop,                                          BOOLVALUEALIAS    ),
     CONFIG_VARIABLE_INT_PERCENT  (turbo,                                             NOVALUEALIAS      ),
     CONFIG_VARIABLE_INT          (units,                                             UNITSVALUEALIAS   ),
     CONFIG_VARIABLE_STRING       (version,                                           NOVALUEALIAS      ),
@@ -332,7 +183,7 @@ static default_t cvars[] =
     CONFIG_VARIABLE_OTHER        (vid_screenresolution,                              NOVALUEALIAS      ),
     CONFIG_VARIABLE_INT          (vid_vsync,                                         BOOLVALUEALIAS    ),
     CONFIG_VARIABLE_INT          (vid_widescreen,                                    BOOLVALUEALIAS    ),
-    CONFIG_VARIABLE_OTHER        (vid_windowposition,                                NOVALUEALIAS      ),
+    CONFIG_VARIABLE_OTHER        (vid_windowpos,                                     NOVALUEALIAS      ),
     CONFIG_VARIABLE_OTHER        (vid_windowsize,                                    NOVALUEALIAS      ),
 #if defined(_WIN32)
     CONFIG_VARIABLE_STRING       (wad,                                               NOVALUEALIAS      ),
@@ -383,40 +234,36 @@ static default_t cvars[] =
 
 valuealias_t valuealiases[] =
 {
-    { "off",      0, BOOLVALUEALIAS   }, { "on",      1, BOOLVALUEALIAS     },
-    { "0",        0, BOOLVALUEALIAS   }, { "1",       1, BOOLVALUEALIAS     },
-    { "no",       0, BOOLVALUEALIAS   }, { "yes",     1, BOOLVALUEALIAS     },
-    { "false",    0, BOOLVALUEALIAS   }, { "true",    1, BOOLVALUEALIAS     },
-    { "low",      0, DETAILVALUEALIAS }, { "high",    1, DETAILVALUEALIAS   },
-    { "off",      1, GAMMAVALUEALIAS  }, { "none",    0, BLOODVALUEALIAS    },
-    { "red",      1, BLOODVALUEALIAS  }, { "all",     2, BLOODVALUEALIAS    },
-    { "imperial", 0, UNITSVALUEALIAS  }, { "metric",  1, UNITSVALUEALIAS    },
-    { "off",      0, CAPVALUEALIAS    }, { "none",   -1, SKYVALUEALIAS      },
-    { "off",     -1, SKYVALUEALIAS    }, { "small",   0, SCALEVALUEALIAS    },
-    { "big",      1, SCALEVALUEALIAS  }, { "off",     5, FACEBACKVALUEALIAS },
-    { "",         0, NOVALUEALIAS     }
+    { "off",      0, BOOLVALUEALIAS     }, { "on",      1, BOOLVALUEALIAS     },
+    { "0",        0, BOOLVALUEALIAS     }, { "1",       1, BOOLVALUEALIAS     },
+    { "no",       0, BOOLVALUEALIAS     }, { "yes",     1, BOOLVALUEALIAS     },
+    { "false",    0, BOOLVALUEALIAS     }, { "true",    1, BOOLVALUEALIAS     },
+    { "low",      0, DETAILVALUEALIAS   }, { "high",    1, DETAILVALUEALIAS   },
+    { "off",      1, GAMMAVALUEALIAS    }, { "none",    0, BLOODVALUEALIAS    },
+    { "red",      1, BLOODVALUEALIAS    }, { "all",     2, BLOODVALUEALIAS    },
+    { "imperial", 0, UNITSVALUEALIAS    }, { "metric",  1, UNITSVALUEALIAS    },
+    { "off",      0, CAPVALUEALIAS      }, { "none",   -1, SKYVALUEALIAS      },
+    { "off",     -1, SKYVALUEALIAS      }, { "small",   0, SCALEVALUEALIAS    },
+    { "big",      1, SCALEVALUEALIAS    }, { "none",    5, FACEBACKVALUEALIAS },
+    { "off",      5, FACEBACKVALUEALIAS }, { "",        0, NOVALUEALIAS       }
 };
 
-static void SaveBind(FILE *file, char *action, int value, controltype_t type)
+static void SaveBind(FILE *file, char *control, char *string)
 {
-    int i = 0;
+    if (strlen(control) == 1)
+        fprintf(file, "bind '%s' %s\n", (control[0] == '=' ? "+" : control), string);
+    else
+        fprintf(file, "bind %s %s\n", control, string);
+}
 
-    while (controls[i].type)
-    {
+static void SaveBindByValue(FILE *file, char *action, int value, controltype_t type)
+{
+    for (int i = 0; controls[i].type; i++)
         if (controls[i].type == type && controls[i].value == value)
         {
-            char    *control = controls[i].control;
-
-            if (strlen(control) == 1)
-                fprintf(file, "bind '%s' %s\n", (control[0] == '=' ? "+" : control), action);
-            else
-                fprintf(file, "bind %s %s\n", control, action);
-
+            SaveBind(file, controls[i].control, action);
             break;
         }
-
-        i++;
-    }
 }
 
 //
@@ -424,7 +271,6 @@ static void SaveBind(FILE *file, char *action, int value, controltype_t type)
 //
 void M_SaveCVARs(void)
 {
-    int     i;
     int     numaliases = 0;
     FILE    *file;
 
@@ -437,7 +283,7 @@ void M_SaveCVARs(void)
     if (returntowidescreen)
         vid_widescreen = true;
 
-    for (i = 0; i < arrlen(cvars); i++)
+    for (int i = 0; i < arrlen(cvars); i++)
     {
         if (!*cvars[i].name)
         {
@@ -459,21 +305,16 @@ void M_SaveCVARs(void)
         {
             case DEFAULT_INT:
             {
-                int         j = 0;
                 dboolean    flag = false;
                 int         v = *(int *)cvars[i].location;
 
-                while (*valuealiases[j].text)
-                {
+                for (int j = 0; *valuealiases[j].text; j++)
                     if (v == valuealiases[j].value && cvars[i].valuealiastype == valuealiases[j].type)
                     {
                         fputs(valuealiases[j].text, file);
                         flag = true;
                         break;
                     }
-
-                    j++;
-                }
 
                 if (!flag)
                     fputs(commify(*(int *)cvars[i].location), file);
@@ -487,21 +328,16 @@ void M_SaveCVARs(void)
 
             case DEFAULT_INT_PERCENT:
             {
-                int         j = 0;
                 dboolean    flag = false;
                 int         v = *(int *)cvars[i].location;
 
-                while (*valuealiases[j].text)
-                {
+                for (int j = 0; *valuealiases[j].text; j++)
                     if (v == valuealiases[j].value && cvars[i].valuealiastype == valuealiases[j].type)
                     {
                         fputs(valuealiases[j].text, file);
                         flag = true;
                         break;
                     }
-
-                    j++;
-                }
 
                 if (!flag)
                     fprintf(file, "%s%%", commify(*(int *)cvars[i].location));
@@ -511,21 +347,16 @@ void M_SaveCVARs(void)
 
             case DEFAULT_FLOAT:
             {
-                int         j = 0;
                 dboolean    flag = false;
                 float       v = *(float *)cvars[i].location;
 
-                while (*valuealiases[j].text)
-                {
+                for (int j = 0; *valuealiases[j].text; j++)
                     if (v == valuealiases[j].value && cvars[i].valuealiastype == valuealiases[j].type)
                     {
                         fputs(valuealiases[j].text, file);
                         flag = true;
                         break;
                     }
-
-                    j++;
-                }
 
                 if (!flag)
                     fputs(striptrailingzero(*(float *)cvars[i].location, 2), file);
@@ -535,21 +366,16 @@ void M_SaveCVARs(void)
 
             case DEFAULT_FLOAT_PERCENT:
             {
-                int         j = 0;
                 dboolean    flag = false;
                 float       v = *(float *)cvars[i].location;
 
-                while (*valuealiases[j].text)
-                {
+                for (int j = 0; *valuealiases[j].text; j++)
                     if (v == valuealiases[j].value && cvars[i].valuealiastype == valuealiases[j].type)
                     {
                         fputs(valuealiases[j].text, file);
                         flag = true;
                         break;
                     }
-
-                    j++;
-                }
 
                 if (!flag)
                     fprintf(file, "%s%%", striptrailingzero(*(float *)cvars[i].location, 1));
@@ -573,33 +399,33 @@ void M_SaveCVARs(void)
         fputs("\n", file);
     }
 
-    fputs("\n", file);
+    fputs("\n; bound controls\n", file);
 
-    fputs("; bound controls\n", file);
-
-    i = 0;
-
-    while (*actions[i].action)
+    for (int i = 0; *actions[i].action; i++)
     {
-        if (actions[i].keyboard2)
-            SaveBind(file, actions[i].action, *(int *)actions[i].keyboard2, keyboardcontrol);
-
         if (actions[i].keyboard1)
-            SaveBind(file, actions[i].action, *(int *)actions[i].keyboard1, keyboardcontrol);
+            SaveBindByValue(file, actions[i].action, *(int *)actions[i].keyboard1, keyboardcontrol);
+
+        if (actions[i].keyboard2)
+            SaveBindByValue(file, actions[i].action, *(int *)actions[i].keyboard2, keyboardcontrol);
 
         if (actions[i].mouse1)
-            SaveBind(file, actions[i].action, *(int *)actions[i].mouse1, mousecontrol);
-
-        if (actions[i].gamepad2)
-            SaveBind(file, actions[i].action, *(int *)actions[i].gamepad2, gamepadcontrol);
+            SaveBindByValue(file, actions[i].action, *(int *)actions[i].mouse1, mousecontrol);
 
         if (actions[i].gamepad1)
-            SaveBind(file, actions[i].action, *(int *)actions[i].gamepad1, gamepadcontrol);
+            SaveBindByValue(file, actions[i].action, *(int *)actions[i].gamepad1, gamepadcontrol);
 
-        i++;
+        if (actions[i].gamepad2)
+            SaveBindByValue(file, actions[i].action, *(int *)actions[i].gamepad2, gamepadcontrol);
     }
 
-    for (i = 0; i < MAXALIASES; i++)
+    for (int i = 0; controls[i].type; i++)
+        if (controls[i].type == keyboardcontrol && keyactionlist[controls[i].value][0])
+            SaveBind(file, controls[i].control, keyactionlist[controls[i].value]);
+        else if (controls[i].type == mousecontrol && mouseactionlist[controls[i].value][0])
+            SaveBind(file, controls[i].control, mouseactionlist[controls[i].value]);
+
+    for (int i = 0; i < MAXALIASES; i++)
         if (*aliases[i].name)
             numaliases++;
 
@@ -607,7 +433,7 @@ void M_SaveCVARs(void)
     {
         fputs("\n; aliases\n", file);
 
-        for (i = 0; i < MAXALIASES; i++)
+        for (int i = 0; i < MAXALIASES; i++)
             if (*aliases[i].name)
                 fprintf(file, "alias %s \"%s\"\n", aliases[i].name, aliases[i].string);
     }
@@ -622,15 +448,10 @@ void M_SaveCVARs(void)
 static int ParseIntParameter(char *strparm, int valuealiastype)
 {
     int parm = 0;
-    int i = 0;
 
-    while (*valuealiases[i].text)
-    {
+    for (int i = 0; *valuealiases[i].text; i++)
         if (M_StringCompare(strparm, valuealiases[i].text) && valuealiastype == valuealiases[i].type)
             return valuealiases[i].value;
-
-        i++;
-    }
 
     sscanf(strparm, "%10i", &parm);
 
@@ -640,15 +461,9 @@ static int ParseIntParameter(char *strparm, int valuealiastype)
 // Parses float values in the configuration file
 static float ParseFloatParameter(char *strparm, int valuealiastype)
 {
-    int i = 0;
-
-    while (*valuealiases[i].text)
-    {
+    for (int i = 0; *valuealiases[i].text; i++)
         if (M_StringCompare(strparm, valuealiases[i].text) && valuealiastype == valuealiases[i].type)
             return (float)valuealiases[i].value;
-
-        i++;
-    }
 
     return (float)atof(strparm);
 }
@@ -728,7 +543,6 @@ static void M_CheckCVARs(void)
         con_timestamps = con_timestamps_default;
 
     episode = BETWEEN(episode_min, episode, episode_max - (gamemode == registered));
-
     expansion = BETWEEN(expansion_min, expansion, expansion_max);
 
     if (facebackcolor < facebackcolor_min || facebackcolor > facebackcolor_max)
@@ -736,7 +550,6 @@ static void M_CheckCVARs(void)
 
     gp_deadzone_left = BETWEENF(gp_deadzone_left_min, gp_deadzone_left, gp_deadzone_left_max);
     I_SetGamepadLeftDeadZone(gp_deadzone_left);
-
     gp_deadzone_right = BETWEENF(gp_deadzone_right_min, gp_deadzone_right, gp_deadzone_right_max);
     I_SetGamepadRightDeadZone(gp_deadzone_right);
 
@@ -749,8 +562,8 @@ static void M_CheckCVARs(void)
     if (gp_swapthumbsticks != false && gp_swapthumbsticks != true)
         gp_swapthumbsticks = gp_swapthumbsticks_default;
 
+    gp_vibrate_barrels = BETWEEN(gp_vibrate_barrels_min, gp_vibrate_barrels, gp_vibrate_barrels_max);
     gp_vibrate_damage = BETWEEN(gp_vibrate_damage_min, gp_vibrate_damage, gp_vibrate_damage_max);
-
     gp_vibrate_weapons = BETWEEN(gp_vibrate_weapons_min, gp_vibrate_damage, gp_vibrate_weapons_max);
 
     if (m_doubleclick_use != false && m_doubleclick_use != true)
@@ -889,7 +702,6 @@ static void M_CheckCVARs(void)
         r_translucency = r_translucency_default;
 
     s_channels = BETWEEN(s_channels_min, s_channels, s_channels_max);
-
     s_musicvolume = BETWEEN(s_musicvolume_min, s_musicvolume, s_musicvolume_max);
     musicVolume = (s_musicvolume * 31 + 50) / 100;
 
@@ -901,12 +713,12 @@ static void M_CheckCVARs(void)
 
     s_sfxvolume = BETWEEN(s_sfxvolume_min, s_sfxvolume, s_sfxvolume_max);
     sfxVolume = (s_sfxvolume * 31 + 50) / 100;
-
     savegame = BETWEEN(savegame_min, savegame, savegame_max);
-
     skilllevel = BETWEEN(skilllevel_min, skilllevel, skilllevel_max);
-
     stillbob = BETWEEN(stillbob_min, stillbob, stillbob_max);
+
+    if (tossdrop != false && tossdrop != true)
+        tossdrop = tossdrop_default;
 
     turbo = BETWEEN(turbo_min, turbo, turbo_max);
 
@@ -914,7 +726,6 @@ static void M_CheckCVARs(void)
         units = units_default;
 
     version = version_default;
-
     vid_capfps = (vid_capfps < vid_capfps_min ? 0 : BETWEEN(vid_capfps_min, vid_capfps, vid_capfps_max));
 
     if (vid_fullscreen != false && vid_fullscreen != true)
@@ -967,7 +778,6 @@ void bind_cmd_func2(char *cmd, char *parms);
 //
 void M_LoadCVARs(char *filename)
 {
-    int     i;
     int     count = 0;
 
     // read the file in, overriding any set defaults
@@ -982,10 +792,35 @@ void M_LoadCVARs(char *filename)
         return;
     }
 
-    for (i = 0; i < MAXALIASES; i++)
+    for (int i = 0; i < MAXALIASES; i++)
     {
         aliases[i].name[0] = '\0';
         aliases[i].string[0] = '\0';
+    }
+
+    // Clear all default controls before reading them from config file
+    if (!togglingvanilla && M_StringCompare(filename, packageconfig))
+    {
+        for (int i = 0; *actions[i].action; i++)
+        {
+            if (actions[i].keyboard1)
+                *(int *)actions[i].keyboard1 = 0;
+
+            if (actions[i].keyboard2)
+                *(int *)actions[i].keyboard2 = 0;
+
+            if (actions[i].mouse1)
+                *(int *)actions[i].mouse1 = -1;
+
+            if (actions[i].gamepad1)
+                *(int *)actions[i].gamepad1 = 0;
+
+            if (actions[i].gamepad2)
+                *(int *)actions[i].gamepad2 = 0;
+        }
+
+        for (int i = 0; i < NUMKEYS; i++)
+            keyactionlist[i][0] = '\0';
     }
 
     while (!feof(file))
@@ -1015,17 +850,17 @@ void M_LoadCVARs(char *filename)
         }
 
         // Strip off trailing non-printable characters (\r characters from DOS text files)
-        while (strlen(value) > 0 && !isprint((unsigned char)value[strlen(value) - 1]))
+        while (value[0] != '\0' && !isprint((unsigned char)value[strlen(value) - 1]))
             value[strlen(value) - 1] = '\0';
 
         if (togglingvanilla)
         {
-            C_ValidateInput(M_StringJoin(cvar, " ", value, NULL));
+            C_ValidateInput(M_StringJoin(cvar, " ", uncommify(value), NULL));
             continue;
         }
 
         // Find the setting in the list
-        for (i = 0; i < arrlen(cvars); i++)
+        for (int i = 0; i < arrlen(cvars); i++)
         {
             char    *s;
 
@@ -1044,35 +879,35 @@ void M_LoadCVARs(char *filename)
                     break;
 
                 case DEFAULT_INT:
-                    M_StringCopy(value, uncommify(value), 256);
+                    M_StringCopy(value, uncommify(value), sizeof(value));
                     *(int *)cvars[i].location = ParseIntParameter(value, cvars[i].valuealiastype);
                     break;
 
                 case DEFAULT_INT_UNSIGNED:
-                    M_StringCopy(value, uncommify(value), 256);
+                    M_StringCopy(value, uncommify(value), sizeof(value));
                     sscanf(value, "%10u", (unsigned int *)cvars[i].location);
                     break;
 
                 case DEFAULT_INT_PERCENT:
-                    M_StringCopy(value, uncommify(value), 256);
+                    M_StringCopy(value, uncommify(value), sizeof(value));
                     s = strdup(value);
 
-                    if (strlen(s) >= 1 && s[strlen(s) - 1] == '%')
+                    if (s[0] != '\0' && s[strlen(s) - 1] == '%')
                         s[strlen(s) - 1] = '\0';
 
                     *(int *)cvars[i].location = ParseIntParameter(s, cvars[i].valuealiastype);
                     break;
 
                 case DEFAULT_FLOAT:
-                    M_StringCopy(value, uncommify(value), 256);
+                    M_StringCopy(value, uncommify(value), sizeof(value));
                     *(float *)cvars[i].location = ParseFloatParameter(value, cvars[i].valuealiastype);
                     break;
 
                 case DEFAULT_FLOAT_PERCENT:
-                    M_StringCopy(value, uncommify(value), 256);
+                    M_StringCopy(value, uncommify(value), sizeof(value));
                     s = strdup(value);
 
-                    if (strlen(s) >= 1 && s[strlen(s) - 1] == '%')
+                    if (s[0] != '\0' && s[strlen(s) - 1] == '%')
                         s[strlen(s) - 1] = '\0';
 
                     *(float *)cvars[i].location = ParseFloatParameter(s, cvars[i].valuealiastype);

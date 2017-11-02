@@ -47,31 +47,30 @@
 
 // Screen 0 is the screen updated by I_Update screen.
 // Screen 1 is an extra buffer.
-extern byte     *screens[5];
+extern byte *screens[5];
 
-extern byte     *tinttab20;
-extern byte     *tinttab25;
-extern byte     *tinttab33;
-extern byte     *tinttab40;
-extern byte     *tinttab50;
-extern byte     *tinttab60;
-extern byte     *tinttab66;
-extern byte     *tinttab75;
-extern byte     *tinttabred;
+extern byte *tinttab20;
+extern byte *tinttab25;
+extern byte *tinttab33;
+extern byte *tinttab40;
+extern byte *tinttab50;
+extern byte *tinttab60;
+extern byte *tinttab66;
+extern byte *tinttab75;
+extern byte *tinttabred;
 
 // Allocates buffer screens, call before R_Init.
 void V_Init(void);
 
-void V_CopyRect(int srcx, int srcy, int srcscrn, int width, int height, int destx, int desty,
-    int destscrn);
+void V_CopyRect(int srcx, int srcy, int srcscrn, int width, int height, int destx, int desty, int destscrn);
 
 void V_FillRect(int scrn, int x, int y, int width, int height, int color);
 void V_FillTransRect(int scrn, int x, int y, int width, int height, int color);
 
 void V_DrawPatch(int x, int y, int scrn, patch_t *patch);
 void V_DrawBigPatch(int x, int y, int scrn, patch_t *patch);
-void V_DrawConsoleTextPatch(int x, int y, patch_t *patch, int color, int backgroundcolor,
-    dboolean italics, byte *tinttab);
+void V_DrawConsoleTextPatch(int x, int y, patch_t *patch, int color, int backgroundcolor, dboolean italics,
+    byte *tinttab);
 void V_DrawConsolePatch(int x, int y, patch_t *patch);
 void V_DrawShadowPatch(int x, int y, patch_t *patch);
 void V_DrawSolidShadowPatch(int x, int y, patch_t *patch);

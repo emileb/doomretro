@@ -56,38 +56,40 @@ static XINPUTSETSTATE pXInputSetState;
 #include "m_fixed.h"
 #include "m_misc.h"
 
-float           gp_deadzone_left = gp_deadzone_left_default;
-float           gp_deadzone_right = gp_deadzone_right_default;
-dboolean        gp_invertyaxis = gp_invertyaxis_default;
-dboolean        gp_swapthumbsticks = gp_swapthumbsticks_default;
-int             gp_vibrate_damage = gp_vibrate_damage_default;
-int             gp_vibrate_weapons = gp_vibrate_weapons_default;
+float               gp_deadzone_left = gp_deadzone_left_default;
+float               gp_deadzone_right = gp_deadzone_right_default;
+dboolean            gp_invertyaxis = gp_invertyaxis_default;
+dboolean            gp_swapthumbsticks = gp_swapthumbsticks_default;
+int                 gp_vibrate_barrels = gp_vibrate_barrels_default;
+int                 gp_vibrate_damage = gp_vibrate_damage_default;
+int                 gp_vibrate_weapons = gp_vibrate_weapons_default;
 
 static SDL_Joystick *gamepad;
 
-int             gamepadbuttons;
-short           gamepadthumbLX;
-short           gamepadthumbLY;
-short           gamepadthumbRX;
-short           gamepadthumbRY;
-float           gamepadsensitivity;
-short           gamepadleftdeadzone;
-short           gamepadrightdeadzone;
+int                 gamepadbuttons = 0;
+short               gamepadthumbLX = 0;
+short               gamepadthumbLY = 0;
+short               gamepadthumbRX = 0;
+short               gamepadthumbRY = 0;
+float               gamepadsensitivity;
+short               gamepadleftdeadzone;
+short               gamepadrightdeadzone;
 
-dboolean        vibrate;
-int             damagevibrationtics;
-int             weaponvibrationtics;
-int             idlemotorspeed;
-int             restoremotorspeed;
+dboolean            vibrate = false;
+int                 barrelvibrationtics = 0;
+int                 damagevibrationtics = 0;
+int                 weaponvibrationtics = 0;
+int                 idlemotorspeed;
+int                 restoremotorspeed;
 
-extern dboolean idclev;
-extern dboolean idmus;
-extern dboolean idbehold;
-extern dboolean menuactive;
-extern dboolean message_clearable;
+extern dboolean     idclev;
+extern dboolean     idmus;
+extern dboolean     idbehold;
+extern dboolean     menuactive;
+extern dboolean     message_clearable;
 
 #if defined(_WIN32)
-static HMODULE  pXInputDLL;
+static HMODULE      pXInputDLL;
 #endif
 
 static void (*gamepadthumbsfunc)(short, short, short, short);
@@ -107,10 +109,9 @@ void I_InitGamepad(void)
         C_Warning("Gamepad support couldn't be initialized.");
     else
     {
-        int i;
         int numgamepads = SDL_NumJoysticks();
 
-        for (i = 0; i < numgamepads; i++)
+        for (int i = 0; i < numgamepads; i++)
             if ((gamepad = SDL_JoystickOpen(i)))
                 break;
 
@@ -322,12 +323,16 @@ void I_PollXInputGamepad(void)
             | ((Gamepad.bLeftTrigger >= XINPUT_GAMEPAD_TRIGGER_THRESHOLD) << 10)
             | ((Gamepad.bRightTrigger >= XINPUT_GAMEPAD_TRIGGER_THRESHOLD) << 11));
 
-        if (damagevibrationtics)
-            if (!--damagevibrationtics && !weaponvibrationtics)
+        if (weaponvibrationtics)
+            if (!--weaponvibrationtics && !damagevibrationtics && !barrelvibrationtics)
                 XInputVibration(idlemotorspeed);
 
-        if (weaponvibrationtics)
-            if (!--weaponvibrationtics && !damagevibrationtics)
+        if (damagevibrationtics)
+            if (!--damagevibrationtics && !weaponvibrationtics && !barrelvibrationtics)
+                XInputVibration(idlemotorspeed);
+
+        if (barrelvibrationtics)
+            if (!--barrelvibrationtics && !weaponvibrationtics && !damagevibrationtics)
                 XInputVibration(idlemotorspeed);
 
         if (gamepadbuttons)

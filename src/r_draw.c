@@ -37,6 +37,8 @@
 */
 
 #include "c_console.h"
+#include "m_config.h"
+#include "m_random.h"
 #include "r_local.h"
 #include "st_stuff.h"
 #include "v_video.h"
@@ -61,7 +63,7 @@ int         fuzztable[SCREENWIDTH * SCREENHEIGHT];
 static byte *topleft0;
 static byte *topleft1;
 
-static byte redtoblue[] =
+static const byte redtoblue[] =
 {
       0,   1,   2,   3,   4,   5,   6,   7,   8,   9,  10,  11,  12,  13,  14,  15,
      16,  17,  18,  19,  20,  21,  22,  23,  24,  25,  26,  27,  28,  29,  30,  31,
@@ -81,7 +83,7 @@ static byte redtoblue[] =
     240, 241, 242, 243, 244, 245, 246, 247, 248, 249, 250, 251, 252, 253, 254, 255
 };
 
-static byte redtogreen[] =
+static const byte redtogreen[] =
 {
       0,   1,   2,   3,   4,   5,   6,   7,   8,   9,  10,  11,  12,  13,  14,  15,
      16,  17,  18,  19,  20,  21,  22,  23,  24,  25,  26,  27,  28,  29,  30,  31,
@@ -101,7 +103,7 @@ static byte redtogreen[] =
     240, 241, 242, 243, 244, 245, 246, 247, 248, 249, 250, 251, 252, 253, 254, 255
 };
 
-static byte megasphere[] =
+static const byte megasphere[] =
 {
       0,   1,   2,   3,   4,   5,   6,   7,   8, 142,  10,  11,  12,  13,  14,  15,
      16,  17,  18,  19,  20,  21,  22,  23,  24,  25,  26,  27,  28,  29,  30,  31,
@@ -138,13 +140,11 @@ byte            *dc_colormask;
 int             dc_baseclip;
 int             dc_floorclip;
 int             dc_ceilingclip;
-int             dc_sparklefix;
 
 // first pixel in a column (possibly virtual)
 byte            *dc_source;
 
 extern int      fuzzpos;
-extern int      r_skycolor;
 
 //
 // A column is a vertical slice/span from a wall texture that,
@@ -213,7 +213,7 @@ void R_DrawFuzzyShadowColumn(void)
     byte        *dest = topleft0 + dc_yl * SCREENWIDTH + dc_x;
     const byte  *translucency = tinttab25;
 
-    if ((consoleactive && !fuzztable[fuzzpos++]) || (!consoleactive && !(rand() % 4)))
+    if ((consoleactive && !fuzztable[fuzzpos++]) || (!consoleactive && !(M_Random() % 4)))
         *dest = translucency[*dest];
 
     dest += SCREENWIDTH;
@@ -225,7 +225,7 @@ void R_DrawFuzzyShadowColumn(void)
     }
 
     if (dc_floorclip == viewheight - 1 && dc_yh < dc_floorclip
-        && ((consoleactive && !fuzztable[fuzzpos++]) || (!consoleactive && !(rand() % 4))))
+        && ((consoleactive && !fuzztable[fuzzpos++]) || (!consoleactive && !(M_Random() % 4))))
         *dest = translucency[*dest];
 }
 
@@ -277,97 +277,70 @@ void R_DrawWallColumn(void)
 {
     int                 count = dc_yh - dc_yl + 1;
     byte                *dest = topleft0 + dc_yl * SCREENWIDTH + dc_x;
-    fixed_t             frac = dc_texturemid + (dc_yl - centery) * dc_iscale + dc_sparklefix;
-    const fixed_t       fracstep = dc_iscale - dc_sparklefix;
+    fixed_t             frac = dc_texturemid + (dc_yl - centery) * dc_iscale + SPARKLEFIX;
+    const fixed_t       fracstep = dc_iscale - SPARKLEFIX;
     const byte          *source = dc_source;
     const lighttable_t  *colormap = dc_colormap;
     const fixed_t       texheight = dc_texheight;
-    fixed_t             heightmask = texheight - 1;
 
-    // [SL] Properly tile textures whose heights are not a power-of-2,
-    // avoiding a tutti-frutti effect. From Eternity Engine.
-    if (texheight & heightmask)
+    if (texheight == 128)
     {
-        heightmask++;
-        heightmask <<= FRACBITS;
-
-        if (frac < 0)
-            while ((frac += heightmask) < 0);
-        else
-            while (frac >= heightmask)
-                frac -= heightmask;
-
+        while (count--)
+        {
+            *dest = colormap[source[(frac & ((127 << FRACBITS) | 0xFFFF)) >> FRACBITS]];
+            dest += SCREENWIDTH;
+            frac += fracstep;
+        }
+    }
+    else if (!texheight)
+    {
         while (count--)
         {
             *dest = colormap[source[frac >> FRACBITS]];
             dest += SCREENWIDTH;
-
-            if ((frac += fracstep) >= heightmask)
-                frac -= heightmask;
+            frac += fracstep;
         }
     }
     else
     {
-        // texture height is a power-of-2
-        // do some loop unrolling
-        while (count >= 8)
-        {
-            *dest = colormap[source[(frac >> FRACBITS) & heightmask]];
-            dest += SCREENWIDTH;
-            frac += fracstep;
-            *dest = colormap[source[(frac >> FRACBITS) & heightmask]];
-            dest += SCREENWIDTH;
-            frac += fracstep;
-            *dest = colormap[source[(frac >> FRACBITS) & heightmask]];
-            dest += SCREENWIDTH;
-            frac += fracstep;
-            *dest = colormap[source[(frac >> FRACBITS) & heightmask]];
-            dest += SCREENWIDTH;
-            frac += fracstep;
-            *dest = colormap[source[(frac >> FRACBITS) & heightmask]];
-            dest += SCREENWIDTH;
-            frac += fracstep;
-            *dest = colormap[source[(frac >> FRACBITS) & heightmask]];
-            dest += SCREENWIDTH;
-            frac += fracstep;
-            *dest = colormap[source[(frac >> FRACBITS) & heightmask]];
-            dest += SCREENWIDTH;
-            frac += fracstep;
-            *dest = colormap[source[(frac >> FRACBITS) & heightmask]];
-            dest += SCREENWIDTH;
-            frac += fracstep;
-            count -= 8;
-        }
+        fixed_t heightmask = texheight - 1;
 
-        if (count & 1)
+        if (!(texheight & heightmask))
         {
-            *dest = colormap[source[(frac >> FRACBITS) & heightmask]];
-            dest += SCREENWIDTH;
-            frac += fracstep;
-        }
+            heightmask = (heightmask << FRACBITS) | 0xFFFF;
 
-        if (count & 2)
-        {
-            *dest = colormap[source[(frac >> FRACBITS) & heightmask]];
-            dest += SCREENWIDTH;
-            frac += fracstep;
-            *dest = colormap[source[(frac >> FRACBITS) & heightmask]];
-            dest += SCREENWIDTH;
-            frac += fracstep;
-        }
+            while ((count -= 2) >= 0)
+            {
+                *dest = colormap[source[(frac & heightmask) >> FRACBITS]];
+                dest += SCREENWIDTH;
+                frac += fracstep;
+                *dest = colormap[source[(frac & heightmask) >> FRACBITS]];
+                dest += SCREENWIDTH;
+                frac += fracstep;
+            }
 
-        if (count & 4)
+            if (count & 1)
+                *dest = colormap[source[(frac & heightmask) >> FRACBITS]];
+        }
+        else
         {
-            *dest = colormap[source[(frac >> FRACBITS) & heightmask]];
-            dest += SCREENWIDTH;
-            frac += fracstep;
-            *dest = colormap[source[(frac >> FRACBITS) & heightmask]];
-            dest += SCREENWIDTH;
-            frac += fracstep;
-            *dest = colormap[source[(frac >> FRACBITS) & heightmask]];
-            dest += SCREENWIDTH;
-            frac += fracstep;
-            *dest = colormap[source[(frac >> FRACBITS) & heightmask]];
+            heightmask++;
+            heightmask <<= FRACBITS;
+
+            if (frac < 0)
+                while ((frac += heightmask) < 0);
+            else
+                while (frac >= heightmask)
+                    frac -= heightmask;
+
+            while (count--)
+            {
+                *dest = colormap[source[frac >> FRACBITS]];
+                dest += SCREENWIDTH;
+
+                if ((frac += fracstep) >= heightmask)
+                    frac -= heightmask;
+            }
         }
     }
 }
@@ -376,115 +349,80 @@ void R_DrawFullbrightWallColumn(void)
 {
     int                 count = dc_yh - dc_yl + 1;
     byte                *dest = topleft0 + dc_yl * SCREENWIDTH + dc_x;
-    fixed_t             frac = dc_texturemid + (dc_yl - centery) * dc_iscale + dc_sparklefix;
-    const fixed_t       fracstep = dc_iscale - dc_sparklefix;
+    fixed_t             frac = dc_texturemid + (dc_yl - centery) * dc_iscale + SPARKLEFIX;
+    const fixed_t       fracstep = dc_iscale - SPARKLEFIX;
     const byte          *source = dc_source;
     const byte          *colormask = dc_colormask;
     const lighttable_t  *colormap = dc_colormap;
     const fixed_t       texheight = dc_texheight;
-    fixed_t             heightmask = texheight - 1;
     byte                dot;
 
-    // [SL] Properly tile textures whose heights are not a power-of-2,
-    // avoiding a tutti-frutti effect. From Eternity Engine.
-    if (texheight & heightmask)
+    if (texheight == 128)
     {
-        heightmask++;
-        heightmask <<= FRACBITS;
-
-        if (frac < 0)
-            while ((frac += heightmask) < 0);
-        else
-            while (frac >= heightmask)
-                frac -= heightmask;
-
+        while (count--)
+        {
+            dot = source[(frac & ((127 << FRACBITS) | 0xFFFF)) >> FRACBITS];
+            *dest = (colormask[dot] ? dot : colormap[dot]);
+            dest += SCREENWIDTH;
+            frac += fracstep;
+        }
+    }
+    else if (!texheight)
+    {
         while (count--)
         {
             dot = source[frac >> FRACBITS];
             *dest = (colormask[dot] ? dot : colormap[dot]);
             dest += SCREENWIDTH;
-
-            if ((frac += fracstep) >= heightmask)
-                frac -= heightmask;
+            frac += fracstep;
         }
     }
     else
     {
-        // texture height is a power-of-2
-        // do some loop unrolling
-        while (count >= 8)
-        {
-            dot = source[(frac >> FRACBITS) & heightmask];
-            *dest = (colormask[dot] ? dot : colormap[dot]);
-            dest += SCREENWIDTH;
-            frac += fracstep;
-            dot = source[(frac >> FRACBITS) & heightmask];
-            *dest = (colormask[dot] ? dot : colormap[dot]);
-            dest += SCREENWIDTH;
-            frac += fracstep;
-            dot = source[(frac >> FRACBITS) & heightmask];
-            *dest = (colormask[dot] ? dot : colormap[dot]);
-            dest += SCREENWIDTH;
-            frac += fracstep;
-            dot = source[(frac >> FRACBITS) & heightmask];
-            *dest = (colormask[dot] ? dot : colormap[dot]);
-            dest += SCREENWIDTH;
-            frac += fracstep;
-            dot = source[(frac >> FRACBITS) & heightmask];
-            *dest = (colormask[dot] ? dot : colormap[dot]);
-            dest += SCREENWIDTH;
-            frac += fracstep;
-            dot = source[(frac >> FRACBITS) & heightmask];
-            *dest = (colormask[dot] ? dot : colormap[dot]);
-            dest += SCREENWIDTH;
-            frac += fracstep;
-            dot = source[(frac >> FRACBITS) & heightmask];
-            *dest = (colormask[dot] ? dot : colormap[dot]);
-            dest += SCREENWIDTH;
-            frac += fracstep;
-            dot = source[(frac >> FRACBITS) & heightmask];
-            *dest = (colormask[dot] ? dot : colormap[dot]);
-            dest += SCREENWIDTH;
-            frac += fracstep;
-            count -= 8;
-        }
+        fixed_t heightmask = texheight - 1;
 
-        if (count & 1)
+        if (!(texheight & heightmask))
         {
-            dot = source[(frac >> FRACBITS) & heightmask];
-            *dest = (colormask[dot] ? dot : colormap[dot]);
-            dest += SCREENWIDTH;
-            frac += fracstep;
-        }
+            heightmask = (heightmask << FRACBITS) | 0xFFFF;
 
-        if (count & 2)
-        {
-            dot = source[(frac >> FRACBITS) & heightmask];
-            *dest = (colormask[dot] ? dot : colormap[dot]);
-            dest += SCREENWIDTH;
-            frac += fracstep;
-            dot = source[(frac >> FRACBITS) & heightmask];
-            *dest = (colormask[dot] ? dot : colormap[dot]);
-            dest += SCREENWIDTH;
-            frac += fracstep;
-        }
+            while ((count -= 2) >= 0)
+            {
+                dot = source[(frac & heightmask) >> FRACBITS];
+                *dest = (colormask[dot] ? dot : colormap[dot]);
+                dest += SCREENWIDTH;
+                frac += fracstep;
+                dot = source[(frac & heightmask) >> FRACBITS];
+                *dest = (colormask[dot] ? dot : colormap[dot]);
+                dest += SCREENWIDTH;
+                frac += fracstep;
+            }
 
-        if (count & 4)
+            if (count & 1)
+            {
+                dot = source[(frac & heightmask) >> FRACBITS];
+                *dest = (colormask[dot] ? dot : colormap[dot]);
+            }
+        }
+        else
         {
-            dot = source[(frac >> FRACBITS) & heightmask];
-            *dest = (colormask[dot] ? dot : colormap[dot]);
-            dest += SCREENWIDTH;
-            frac += fracstep;
-            dot = source[(frac >> FRACBITS) & heightmask];
-            *dest = (colormask[dot] ? dot : colormap[dot]);
-            dest += SCREENWIDTH;
-            frac += fracstep;
-            dot = source[(frac >> FRACBITS) & heightmask];
-            *dest = (colormask[dot] ? dot : colormap[dot]);
-            dest += SCREENWIDTH;
-            frac += fracstep;
-            dot = source[(frac >> FRACBITS) & heightmask];
-            *dest = (colormask[dot] ? dot : colormap[dot]);
+            heightmask++;
+            heightmask <<= FRACBITS;
+
+            if (frac < 0)
+                while ((frac += heightmask) < 0);
+            else
+                while (frac >= heightmask)
+                    frac -= heightmask;
+
+            while (count--)
+            {
+                dot = source[frac >> FRACBITS];
+                *dest = (colormask[dot] ? dot : colormap[dot]);
+                dest += SCREENWIDTH;
+
+                if ((frac += fracstep) >= heightmask)
+                    frac -= heightmask;
+            }
         }
     }
 }
@@ -552,105 +490,6 @@ void R_DrawTranslucentSuperShotgunColumn(void)
     }
 
     *dest = colormap[translucency[(*dest << 8) + source[frac >> FRACBITS]]];
-}
-
-void R_DrawSkyColumn(void)
-{
-    int                 count = dc_yh - dc_yl + 1;
-    byte                *dest = topleft0 + dc_yl * SCREENWIDTH + dc_x;
-    const fixed_t       fracstep = dc_iscale;
-    fixed_t             frac = dc_texturemid + (dc_yl - centery) * fracstep;
-    const byte          *source = dc_source;
-    const lighttable_t  *colormap = dc_colormap;
-    const fixed_t       texheight = dc_texheight;
-    fixed_t             heightmask = texheight - 1;
-
-    // [SL] Properly tile textures whose heights are not a power-of-2,
-    // avoiding a tutti-frutti effect. From Eternity Engine.
-    if (texheight & heightmask)
-    {
-        heightmask++;
-        heightmask <<= FRACBITS;
-
-        if (frac < 0)
-            while ((frac += heightmask) < 0);
-        else
-            while (frac >= heightmask)
-                frac -= heightmask;
-
-        while (count--)
-        {
-            *dest = colormap[source[frac >> FRACBITS]];
-            dest += SCREENWIDTH;
-
-            if ((frac += fracstep) >= heightmask)
-                frac -= heightmask;
-        }
-    }
-    else
-    {
-        // texture height is a power-of-2
-        // do some loop unrolling
-        while (count >= 8)
-        {
-            *dest = colormap[source[(frac >> FRACBITS) & heightmask]];
-            dest += SCREENWIDTH;
-            frac += fracstep;
-            *dest = colormap[source[(frac >> FRACBITS) & heightmask]];
-            dest += SCREENWIDTH;
-            frac += fracstep;
-            *dest = colormap[source[(frac >> FRACBITS) & heightmask]];
-            dest += SCREENWIDTH;
-            frac += fracstep;
-            *dest = colormap[source[(frac >> FRACBITS) & heightmask]];
-            dest += SCREENWIDTH;
-            frac += fracstep;
-            *dest = colormap[source[(frac >> FRACBITS) & heightmask]];
-            dest += SCREENWIDTH;
-            frac += fracstep;
-            *dest = colormap[source[(frac >> FRACBITS) & heightmask]];
-            dest += SCREENWIDTH;
-            frac += fracstep;
-            *dest = colormap[source[(frac >> FRACBITS) & heightmask]];
-            dest += SCREENWIDTH;
-            frac += fracstep;
-            *dest = colormap[source[(frac >> FRACBITS) & heightmask]];
-            dest += SCREENWIDTH;
-            frac += fracstep;
-            count -= 8;
-        }
-
-        if (count & 1)
-        {
-            *dest = colormap[source[(frac >> FRACBITS) & heightmask]];
-            dest += SCREENWIDTH;
-            frac += fracstep;
-        }
-
-        if (count & 2)
-        {
-            *dest = colormap[source[(frac >> FRACBITS) & heightmask]];
-            dest += SCREENWIDTH;
-            frac += fracstep;
-            *dest = colormap[source[(frac >> FRACBITS) & heightmask]];
-            dest += SCREENWIDTH;
-            frac += fracstep;
-        }
-
-        if (count & 4)
-        {
-            *dest = colormap[source[(frac >> FRACBITS) & heightmask]];
-            dest += SCREENWIDTH;
-            frac += fracstep;
-            *dest = colormap[source[(frac >> FRACBITS) & heightmask]];
-            dest += SCREENWIDTH;
-            frac += fracstep;
-            *dest = colormap[source[(frac >> FRACBITS) & heightmask]];
-            dest += SCREENWIDTH;
-            frac += fracstep;
-            *dest = colormap[source[(frac >> FRACBITS) & heightmask]];
-        }
-    }
 }
 
 void R_DrawFlippedSkyColumn(void)
@@ -1078,7 +917,7 @@ void R_DrawTranslucentBlue25Column(void)
 //
 // Spectre/Invisibility.
 //
-#define FUZZ(a, b)  fuzzrange[rand() % (b - a + 1) + a]
+#define FUZZ(a, b)  fuzzrange[M_Random() % ((b) - (a) + 1) + a]
 #define NOFUZZ      251
 
 static const int    fuzzrange[3] = { -SCREENWIDTH, 0, SCREENWIDTH };
@@ -1094,7 +933,7 @@ void R_DrawFuzzColumn(void)
     // top
     if (!dc_yl)
         *dest = fullcolormap[6 * 256 + dest[(fuzztable[fuzzpos++] = FUZZ(1, 2))]];
-    else if (!(rand() % 4))
+    else if (!(M_Random() % 4))
         *dest = fullcolormap[12 * 256 + dest[(fuzztable[fuzzpos++] = FUZZ(0, 2))]];
 
     dest += SCREENWIDTH;
@@ -1109,7 +948,7 @@ void R_DrawFuzzColumn(void)
     // bottom
     *dest = fullcolormap[5 * 256 + dest[(fuzztable[fuzzpos++] = FUZZ(0, 1))]];
 
-    if (dc_floorclip == viewheight - 1 && dc_yh < dc_floorclip && dc_baseclip == viewheight && !(rand() % 4))
+    if (dc_floorclip == viewheight - 1 && dc_yh < dc_floorclip && dc_baseclip == viewheight && !(M_Random() % 4))
     {
         dest += SCREENWIDTH;
         *dest = fullcolormap[14 * 256 + dest[(fuzztable[fuzzpos] = FUZZ(0, 1))]];
@@ -1160,12 +999,11 @@ void R_DrawPausedFuzzColumn(void)
 
 void R_DrawFuzzColumns(void)
 {
-    int x, y;
     int w = viewwindowx + viewwidth;
     int h = (viewwindowy + viewheight) * SCREENWIDTH;
 
-    for (x = viewwindowx; x < w; x++)
-        for (y = viewwindowy * SCREENWIDTH; y < h; y += SCREENWIDTH)
+    for (int x = viewwindowx; x < w; x++)
+        for (int y = viewwindowy * SCREENWIDTH; y < h; y += SCREENWIDTH)
         {
             int     i = x + y;
             byte    *src = screens[1] + i;
@@ -1177,7 +1015,7 @@ void R_DrawFuzzColumns(void)
                 if (!y || *(src - SCREENWIDTH) == NOFUZZ)
                 {
                     // top
-                    if (!(rand() % 4))
+                    if (!(M_Random() % 4))
                         *dest = fullcolormap[12 * 256 + dest[(fuzztable[i] = FUZZ(0, 2))]];
                 }
                 else if (y == h - SCREENWIDTH)
@@ -1188,7 +1026,7 @@ void R_DrawFuzzColumns(void)
                 else if (*(src + SCREENWIDTH) == NOFUZZ)
                 {
                     // bottom of post
-                    if (!(rand() % 4))
+                    if (!(M_Random() % 4))
                         *dest = fullcolormap[12 * 256 + dest[(fuzztable[i] = FUZZ(0, 2))]];
                 }
                 else
@@ -1196,7 +1034,7 @@ void R_DrawFuzzColumns(void)
                     // middle
                     if (*(src - 1) == NOFUZZ || *(src + 1) == NOFUZZ)
                     {
-                        if (!(rand() % 4))
+                        if (!(M_Random() % 4))
                             *dest = fullcolormap[12 * 256 + dest[(fuzztable[i] = FUZZ(0, 2))]];
                     }
                     else
@@ -1208,12 +1046,11 @@ void R_DrawFuzzColumns(void)
 
 void R_DrawPausedFuzzColumns(void)
 {
-    int x, y;
     int w = viewwindowx + viewwidth;
     int h = (viewwindowy + viewheight) * SCREENWIDTH;
 
-    for (x = viewwindowx; x < w; x++)
-        for (y = viewwindowy * SCREENWIDTH; y < h; y += SCREENWIDTH)
+    for (int x = viewwindowx; x < w; x++)
+        for (int y = viewwindowy * SCREENWIDTH; y < h; y += SCREENWIDTH)
         {
             int     i = x + y;
             byte    *src = screens[1] + i;
@@ -1295,12 +1132,10 @@ void R_DrawTranslatedColumn(void)
 //
 void R_InitTranslationTables(void)
 {
-    int i;
-
     translationtables = Z_Malloc(256 * 3, PU_STATIC, NULL);
 
     // translate just the 16 green colors
-    for (i = 0; i < 256; i++)
+    for (int i = 0; i < 256; i++)
         if (i >= 0x70 && i <= 0x7F)
         {
             // map green ramp to gray, brown, red
@@ -1446,8 +1281,7 @@ void R_FillBackScreen(void)
 {
     byte    *src;
     byte    *dest;
-    int     x, y;
-    int     i;
+    int     y;
     int     width, height;
     int     windowx, windowy;
 
@@ -1457,10 +1291,10 @@ void R_FillBackScreen(void)
     src = (byte *)grnrock;
     dest = screens[1];
 
-    for (y = 0; y < SCREENHEIGHT; y += 2)
-        for (x = 0; x < SCREENWIDTH / 32; x += 2)
+    for (int y = 0; y < SCREENHEIGHT; y += 2)
+        for (int x = 0; x < SCREENWIDTH / 32; x += 2)
         {
-            for (i = 0; i < 64; i++)
+            for (int i = 0; i < 64; i++)
             {
                 int     j = i * 2;
                 byte    dot = *(src + (((y / 2) & 63) << 6) + i);
@@ -1483,10 +1317,10 @@ void R_FillBackScreen(void)
     windowx = viewwindowx / 2;
     windowy = viewwindowy / 2;
 
-    for (x = 0; x < width; x += 8)
+    for (int x = 0; x < width; x += 8)
         V_DrawPatch(windowx + x, windowy - 8, 1, brdr_t);
 
-    for (x = 0; x < width; x += 8)
+    for (int x = 0; x < width; x += 8)
         V_DrawPatch(windowx + x, windowy + height, 1, brdr_b);
 
     for (y = 0; y < height - 8; y += 8)
@@ -1529,7 +1363,6 @@ void R_DrawViewBorder(void)
     int top;
     int side;
     int ofs;
-    int i;
 
     if (scaledviewwidth == SCREENWIDTH)
         return;
@@ -1548,7 +1381,7 @@ void R_DrawViewBorder(void)
     ofs = top * SCREENWIDTH + SCREENWIDTH - side;
     side <<= 1;
 
-    for (i = 1; i < viewheight; i++)
+    for (int i = 1; i < viewheight; i++)
     {
         R_VideoErase(ofs, side);
         ofs += SCREENWIDTH;

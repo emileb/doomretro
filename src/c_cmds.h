@@ -50,7 +50,7 @@
 #define PLAYERSTATSTITLE    "STAT\tCURRENT MAP\tTOTAL"
 #define THINGLISTTITLE      "THING\tPOSITION"
 
-typedef enum controltype_e
+typedef enum
 {
     keyboardcontrol = 1,
     mousecontrol    = 2,
@@ -68,6 +68,7 @@ typedef struct
 typedef struct
 {
     char    *action;
+    void    (*func)(void);
     void    *keyboard1;
     void    *keyboard2;
     void    *mouse1;
@@ -75,14 +76,14 @@ typedef struct
     void    *gamepad2;
 } action_t;
 
-typedef enum cmdtype_e
+typedef enum
 {
     CT_CMD   = 1,
     CT_CVAR  = 2,
     CT_CHEAT = 3
 } cmdtype_t;
 
-enum cmdflag_e
+enum
 {
     CF_NONE     =   0,
     CF_BOOLEAN  =   1,
@@ -102,7 +103,7 @@ typedef struct
     char        *alternate;
     dboolean    (*func1)(char *cmd, char *parms);
     void        (*func2)(char *cmd, char *parms);
-    int         parameters;
+    dboolean    parameters;
     cmdtype_t   type;
     int         flags;
     void        *variable;
@@ -125,6 +126,7 @@ extern action_t     actions[];
 extern control_t    controls[];
 extern consolecmd_t consolecmds[];
 extern alias_t      aliases[MAXALIASES];
+extern dboolean     executingalias;
 
 dboolean C_ExecuteAlias(const char *alias);
 

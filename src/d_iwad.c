@@ -91,28 +91,28 @@ static registryvalue_t uninstall_values[] =
     {
         HKEY_LOCAL_MACHINE,
         "Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\Ultimate Doom for Windows 95",
-        "UninstallString",
+        "UninstallString"
     },
 
     // DOOM II, CD version (Depths of DOOM trilogy)
     {
         HKEY_LOCAL_MACHINE,
         "Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\Doom II for Windows 95",
-        "UninstallString",
+        "UninstallString"
     },
 
     // Final DOOM
     {
         HKEY_LOCAL_MACHINE,
         "Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\Final Doom for Windows 95",
-        "UninstallString",
+        "UninstallString"
     },
 
     // Shareware version
     {
         HKEY_LOCAL_MACHINE,
         "Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\Doom Shareware for Windows 95",
-        "UninstallString",
+        "UninstallString"
     },
 };
 
@@ -123,29 +123,36 @@ static registryvalue_t root_path_keys[] =
     {
         HKEY_LOCAL_MACHINE,
         "Software\\Activision\\DOOM Collector's Edition\\v1.0",
-        "INSTALLPATH",
-    },
-
-    // Ultimate DOOM
-    {
-        HKEY_LOCAL_MACHINE,
-        "Software\\GOG.com\\Games\\1435827232",
-        "PATH",
+        "INSTALLPATH"
     },
 
     // DOOM II
     {
         HKEY_LOCAL_MACHINE,
         "Software\\GOG.com\\Games\\1435848814",
-        "PATH",
+        "PATH"
+    },
+
+    // Doom 3: BFG Edition
+    {
+        HKEY_LOCAL_MACHINE,
+        "Software\\GOG.com\\Games\\1135892318",
+        "PATH"
     },
 
     // Final DOOM
     {
         HKEY_LOCAL_MACHINE,
         "Software\\GOG.com\\Games\\1435848742",
-        "PATH",
+        "PATH"
     },
+
+    // Ultimate DOOM
+    {
+        HKEY_LOCAL_MACHINE,
+        "Software\\GOG.com\\Games\\1435827232",
+        "PATH"
+    }
 };
 
 // Subdirectories of the above install path, where IWADs are installed.
@@ -156,7 +163,8 @@ static const char *root_path_subdirs[] =
     "Final Doom",
     "Ultimate Doom",
     "TNT",
-    "Plutonia"
+    "Plutonia",
+    "base\\wads"
 };
 
 // Location where Steam is installed
@@ -164,16 +172,16 @@ static registryvalue_t steam_install_location =
 {
     HKEY_LOCAL_MACHINE,
     "Software\\Valve\\Steam",
-    "InstallPath",
+    "InstallPath"
 };
 
 // Subdirs of the steam install directory where IWADs are found
 static const char *steam_install_subdirs[] =
 {
     "steamapps\\common\\doom 2\\base",
+    "steamapps\\common\\DOOM 3 BFG Edition\\base\\wads",
     "steamapps\\common\\final doom\\base",
-    "steamapps\\common\\ultimate doom\\base",
-    "steamapps\\common\\DOOM 3 BFG Edition\\base\\wads"
+    "steamapps\\common\\ultimate doom\\base"
 };
 
 static char *GetRegistryString(registryvalue_t *reg_val)
@@ -188,14 +196,12 @@ static char *GetRegistryString(registryvalue_t *reg_val)
         return NULL;
 
     // Find the type and length of the string, and only accept strings.
-    if (RegQueryValueEx(key, reg_val->value, NULL, &valtype, NULL, &len) == ERROR_SUCCESS
-        && valtype == REG_SZ)
+    if (RegQueryValueEx(key, reg_val->value, NULL, &valtype, NULL, &len) == ERROR_SUCCESS && valtype == REG_SZ)
     {
         // Allocate a buffer for the value and read the value
         result = malloc(len);
 
-        if (RegQueryValueEx(key, reg_val->value, NULL, &valtype, (unsigned char *)result,
-            &len) != ERROR_SUCCESS)
+        if (RegQueryValueEx(key, reg_val->value, NULL, &valtype, (unsigned char *)result, &len) != ERROR_SUCCESS)
         {
             free(result);
             result = NULL;
@@ -214,9 +220,9 @@ static char *GetRegistryString(registryvalue_t *reg_val)
 // Check for the uninstall strings from the CD versions
 static void CheckUninstallStrings(void)
 {
-    unsigned int    i;
+    int len = (int)strlen(UNINSTALLER_STRING);
 
-    for (i = 0; i < arrlen(uninstall_values); i++)
+    for (size_t i = 0; i < arrlen(uninstall_values); i++)
     {
         char    *val = GetRegistryString(&uninstall_values[i]);
         char    *unstr;
@@ -230,7 +236,7 @@ static void CheckUninstallStrings(void)
             free(val);
         else
         {
-            char    *path = unstr + strlen(UNINSTALLER_STRING);
+            char    *path = unstr + len;
 
             AddIWADDir(path);
         }
@@ -240,17 +246,14 @@ static void CheckUninstallStrings(void)
 // Check for GOG.com and DOOM: Collector's Edition
 static void CheckInstallRootPaths(void)
 {
-    size_t  i;
-
-    for (i = 0; i < arrlen(root_path_keys); i++)
+    for (size_t i = 0; i < arrlen(root_path_keys); i++)
     {
         char    *install_path = GetRegistryString(&root_path_keys[i]);
-        size_t  j;
 
         if (!install_path)
             continue;
 
-        for (j = 0; j < arrlen(root_path_subdirs); j++)
+        for (size_t j = 0; j < arrlen(root_path_subdirs); j++)
             AddIWADDir(M_StringJoin(install_path, DIR_SEPARATOR_S, root_path_subdirs[j], NULL));
 
         free(install_path);
@@ -261,12 +264,11 @@ static void CheckInstallRootPaths(void)
 static void CheckSteamEdition(void)
 {
     char    *install_path = GetRegistryString(&steam_install_location);
-    size_t  i;
 
     if (!install_path)
         return;
 
-    for (i = 0; i < arrlen(steam_install_subdirs); i++)
+    for (size_t i = 0; i < arrlen(steam_install_subdirs); i++)
         AddIWADDir(M_StringJoin(install_path, DIR_SEPARATOR_S, steam_install_subdirs[i], NULL));
 
     free(install_path);
@@ -277,12 +279,12 @@ static void CheckDOSDefaults(void)
 {
     // These are the default install directories used by the deice
     // installer program:
-    AddIWADDir("\\doom2");              // DOOM II
-    AddIWADDir("\\plutonia");           // Final DOOM
+    AddIWADDir("\\doom2");      // DOOM II
+    AddIWADDir("\\plutonia");   // Final DOOM
     AddIWADDir("\\tnt");
-    AddIWADDir("\\doom_se");            // Ultimate DOOM
-    AddIWADDir("\\doom");               // Shareware / Registered DOOM
-    AddIWADDir("\\dooms");              // Shareware versions
+    AddIWADDir("\\doom_se");    // Ultimate DOOM
+    AddIWADDir("\\doom");       // Shareware/Registered DOOM
+    AddIWADDir("\\dooms");      // Shareware versions
     AddIWADDir("\\doomsw");
 }
 
@@ -306,11 +308,8 @@ static struct
 // attempt to identify it by its name.
 void D_IdentifyIWADByName(char *name)
 {
-    size_t  i;
-    char    *p;
-
     // Trim down the name to just the filename, ignoring the path.
-    p = strrchr(name, '\\');
+    char    *p = strrchr(name, '\\');
 
     if (!p)
         p = strrchr(name, '/');
@@ -320,7 +319,7 @@ void D_IdentifyIWADByName(char *name)
 
     gamemission = none;
 
-    for (i = 0; i < arrlen(iwads); i++)
+    for (size_t i = 0; i < arrlen(iwads); i++)
     {
         char    *iwad = M_StringJoin(iwads[i].name, ".WAD", NULL);
 
@@ -355,9 +354,7 @@ static void AddDoomWADPath(void)
 
     for (;;)
     {
-        p = strchr(p, PATH_SEPARATOR);
-
-        if (p)
+        if ((p = strchr(p, PATH_SEPARATOR)))
         {
             // Break at the separator and store the right hand side
             // as another iwad dir
@@ -405,19 +402,22 @@ static void BuildIWADDirList(void)
 //
 char *D_FindWADByName(char *filename)
 {
-    int i;
+    char    *path;
 
     // Absolute path?
     if (M_FileExists(filename))
         return filename;
 
+    path = M_StringJoin(filename, ".WAD", NULL);
+
+    if (M_FileExists(path))
+        return path;
+
     BuildIWADDirList();
 
     // Search through all IWAD paths for a file with the given name.
-    for (i = 0; i < num_iwad_dirs; i++)
+    for (int i = 0; i < num_iwad_dirs; i++)
     {
-        char    *path;
-
         // As a special case, if this is in DOOMWADDIR or DOOMWADPATH,
         // the "directory" may actually refer directly to an IWAD
         // file.
@@ -429,9 +429,9 @@ char *D_FindWADByName(char *filename)
 
         if (M_FileExists(path))
             return path;
-
-        free(path);
     }
+
+    free(path);
 
     // File not found
     return NULL;
@@ -480,8 +480,6 @@ char *D_FindIWAD(void)
 //
 static char *SaveGameIWADName(void)
 {
-    size_t  i;
-
     // Find what subdirectory to use for savegames
     //
     // The directory depends on the IWAD, so that savegames for
@@ -491,9 +489,9 @@ static char *SaveGameIWADName(void)
     // This ensures that doom1.wad and doom.wad saves are stored
     // in the same place.
     if (hacx)
-        return "HACX";
+        return "hacx";
 
-    for (i = 0; i < arrlen(iwads); i++)
+    for (size_t i = 0; i < arrlen(iwads); i++)
         if (gamemission == iwads[i].mission)
             return iwads[i].name;
 
@@ -525,7 +523,6 @@ void D_SetSaveGameFolder(dboolean output)
     }
 
     M_MakeDirectory(savegamefolder);
-
     savegamefolder = M_StringJoin(savegamefolder, (*pwadfile ? pwadfile : iwad_name), DIR_SEPARATOR_S, NULL);
     M_MakeDirectory(savegamefolder);
 
@@ -554,9 +551,7 @@ void D_IdentifyVersion(void)
     // identify by its contents.
     if (gamemission == none)
     {
-        int i;
-
-        for (i = 0; i < numlumps; i++)
+        for (int i = 0; i < numlumps; i++)
         {
             if (!strncasecmp(lumpinfo[i]->name, "MAP01", 8))
             {
@@ -595,7 +590,6 @@ void D_IdentifyVersion(void)
 // Set the gamedescription string
 void D_SetGameDescription(void)
 {
-    gamedescription = malloc(64);
     gamedescription = PACKAGE_NAME;
 
     if (chex1)
@@ -630,12 +624,7 @@ void D_SetGameDescription(void)
     {
         // DOOM 2 of some kind. But which mission?
         if (FREEDOOM)
-        {
-            if (FREEDM)
-                gamedescription = s_CAPTION_FREEDM;
-            else
-                gamedescription = s_CAPTION_FREEDOOM2;
-        }
+            gamedescription = (FREEDM ? s_CAPTION_FREEDM : s_CAPTION_FREEDOOM2);
         else if (nerve)
             gamedescription = s_CAPTION_DOOM2;
         else if (W_CheckMultipleLumps("TITLEPIC") > 1)

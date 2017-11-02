@@ -39,6 +39,7 @@
 #include "c_console.h"
 #include "doomstat.h"
 #include "i_timer.h"
+#include "m_config.h"
 #include "m_random.h"
 #include "p_local.h"
 #include "r_sky.h"
@@ -97,6 +98,7 @@ angle_t             xtoviewangle[SCREENWIDTH + 1];
 
 fixed_t             finesine[5 * FINEANGLES / 4];
 fixed_t             *finecosine = &finesine[FINEANGLES / 4];
+fixed_t             finetangent[FINEANGLES / 2];
 angle_t             tantoangle[SLOPERANGE + 1];
 
 // killough 3/20/98: Support dynamic colormaps, e.g. deep water
@@ -127,11 +129,10 @@ dboolean            r_translucency = r_translucency_default;
 
 extern dboolean     canmodify;
 extern dboolean     canmouselook;
-extern int          explosiontics;
+extern int          barreltics;
 extern dboolean     transferredsky;
 extern dboolean     vanilla;
 extern lighttable_t **walllights;
-extern dboolean     weaponrecoil;
 
 //
 // R_PointOnSide
@@ -141,24 +142,24 @@ extern dboolean     weaponrecoil;
 //
 int R_PointOnSide(fixed_t x, fixed_t y, const node_t *node)
 {
-    return ((int32_t)(((int64_t)(y - node->y) * node->dx + (int64_t)(node->x - x) * node->dy) >> 32) > 0);
+    return ((int)(((int64_t)(y - node->y) * node->dx + (int64_t)(node->x - x) * node->dy) >> 32) > 0);
 }
 
 int R_PointOnSegSide(fixed_t x, fixed_t y, seg_t *line)
 {
-    return ((int32_t)(((int64_t)(line->v2->x - line->v1->x) * (y - line->v1->y)
+    return ((int)(((int64_t)(line->v2->x - line->v1->x) * (y - line->v1->y)
         - (int64_t)(line->v2->y - line->v1->y) * (x - line->v1->x)) >> 32) > 0);
 }
 
 static int SlopeDiv(unsigned int num, unsigned int den)
 {
-    unsigned int ans;
+    uint64_t    ans;
 
     if (den < 512)
         return (ANG45 - 1);
 
-    ans = (num << 3) / (den >> 8);
-    return (ans <= SLOPERANGE ? tantoangle[ans] : (ANG45 - 1));
+    ans = ((uint64_t)num << 3) / (den >> 8);
+    return (int)(ans <= SLOPERANGE ? tantoangle[ans] : (ANG45 - 1));
 }
 
 //
@@ -169,7 +170,7 @@ static int SlopeDiv(unsigned int num, unsigned int den)
 // to get a tangent (slope) value which is looked up in the
 // tantoangle[] table.
 
-// Point of view (viewx, viewy) to point (x1, y1) angle.
+// Point of view (viewx, viewy) to point (x, y) angle.
 angle_t R_PointToAngle(fixed_t x, fixed_t y)
 {
     return R_PointToAngle2(viewx, viewy, x, y);
@@ -216,10 +217,10 @@ angle_t R_PointToAngleEx(fixed_t x, fixed_t y)
 angle_t R_PointToAngleEx2(fixed_t x1, fixed_t y1, fixed_t x, fixed_t y)
 {
     // [crispy] fix overflows for very long distances
-    int64_t y_viewy = (int64_t)y - y1;
-    int64_t x_viewx = (int64_t)x - x1;
+    const int64_t   y_viewy = (int64_t)y - y1;
+    const int64_t   x_viewx = (int64_t)x - x1;
 
-    // [crispy] the worst that could happen is e.g. INT_MIN-INT_MAX = 2*INT_MIN
+    // [crispy] the worst that could happen is e.g. INT_MIN - INT_MAX = 2 * INT_MIN
     if (x_viewx < INT_MIN || x_viewx > INT_MAX || y_viewy < INT_MIN || y_viewy > INT_MAX)
     {
         // [crispy] preserving the angle by halving the distance in both directions
@@ -228,27 +229,6 @@ angle_t R_PointToAngleEx2(fixed_t x1, fixed_t y1, fixed_t x, fixed_t y)
     }
 
     return R_PointToAngle2(x1, y1, x, y);
-}
-
-fixed_t R_PointToDist(fixed_t x, fixed_t y)
-{
-    fixed_t dx = ABS(x - viewx);
-    fixed_t dy = ABS(y - viewy);
-
-    if (dy > dx)
-    {
-        fixed_t t = dx;
-
-        dx = dy;
-        dy = t;
-    }
-
-    if (!dy)
-        return dx;
-    else if (dx)
-        return FixedDiv(dx, finesine[(tantoangle[FixedDiv(dy, dx) >> DBITS] + ANG90) >> ANGLETOFINESHIFT]);
-    else
-        return 0;
 }
 
 // [AM] Interpolate between two angles.
@@ -260,15 +240,15 @@ static angle_t R_InterpolateAngle(angle_t oangle, angle_t nangle, fixed_t scale)
     {
         if (nangle - oangle < ANG270)
             return (oangle + (angle_t)((nangle - oangle) * FIXED2DOUBLE(scale)));
-        else    // Wrapped around
-            return (oangle - (angle_t)((oangle - nangle) * FIXED2DOUBLE(scale)));
+        else
+            return (oangle - (angle_t)((oangle - nangle) * FIXED2DOUBLE(scale)));   // Wrapped around
     }
-    else        // nangle < oangle
+    else
     {
         if (oangle - nangle < ANG270)
             return (oangle - (angle_t)((oangle - nangle) * FIXED2DOUBLE(scale)));
-        else    // Wrapped around
-            return (oangle + (angle_t)((nangle - oangle) * FIXED2DOUBLE(scale)));
+        else
+            return (oangle + (angle_t)((nangle - oangle) * FIXED2DOUBLE(scale)));   // Wrapped around
     }
 }
 
@@ -277,23 +257,19 @@ static angle_t R_InterpolateAngle(angle_t oangle, angle_t nangle, fixed_t scale)
 //
 static void R_InitTables(void)
 {
-    int i;
-
     // viewangle tangent table
-    for (i = 0; i < FINEANGLES / 2; i++)
-        finetangent[i] = (int)(FRACUNIT * tan((i - FINEANGLES / 4 + 0.5) * M_PI * 2 / FINEANGLES));
+    for (int i = 0; i < FINEANGLES / 2; i++)
+        finetangent[i] = (fixed_t)(FRACUNIT * tan((i - FINEANGLES / 4 + 0.5) * M_PI * 2 / FINEANGLES));
 
     // finesine table
-    for (i = 0; i < 5 * FINEANGLES / 4; i++)
-        finesine[i] = (int)(FRACUNIT * sin((i + 0.5) * M_PI * 2 / FINEANGLES));
+    for (int i = 0; i < 5 * FINEANGLES / 4; i++)
+        finesine[i] = (fixed_t)(FRACUNIT * sin((i + 0.5) * M_PI * 2 / FINEANGLES));
 }
 
 static void R_InitPointToAngle(void)
 {
-    int i;
-
     // slope (tangent) to angle lookup
-    for (i = 0; i <= SLOPERANGE; i++)
+    for (int i = 0; i <= SLOPERANGE; i++)
         tantoangle[i] = (angle_t)(0xFFFFFFFF * atan2((double)i, (double)SLOPERANGE) / (M_PI * 2));
 }
 
@@ -302,9 +278,6 @@ static void R_InitPointToAngle(void)
 //
 static void R_InitTextureMapping(void)
 {
-    int i;
-    int x;
-
     // Use tangent table to generate viewangletox:
     //  viewangletox will give the next greatest x
     //  after the view angle.
@@ -314,11 +287,11 @@ static void R_InitTextureMapping(void)
 
     // Calc focallength
     //  so FIELDOFVIEW angles covers SCREENWIDTH.
-    fixed_t focallength = FixedDiv(centerxfrac, hitan);
+    const fixed_t   focallength = FixedDiv(centerxfrac, hitan);
 
-    for (i = 0; i < FINEANGLES / 2; i++)
+    for (int i = 0; i < FINEANGLES / 2; i++)
     {
-        fixed_t tangent = finetangent[i];
+        const fixed_t   tangent = finetangent[i];
 
         if (tangent > hitan)
             viewangletox[i] = -1;
@@ -332,15 +305,17 @@ static void R_InitTextureMapping(void)
     // Scan viewangletox[] to generate xtoviewangle[]:
     //  xtoviewangle will give the smallest view angle
     //  that maps to x.
-    for (x = 0; x <= viewwidth; x++)
+    for (int x = 0; x <= viewwidth; x++)
     {
+        int i;
+
         for (i = 0; viewangletox[i] > x; i++);
 
         xtoviewangle[x] = (i << ANGLETOFINESHIFT) - ANG90;
     }
 
     // Take out the fencepost cases from viewangletox.
-    for (i = 0; i < FINEANGLES / 2; i++)
+    for (int i = 0; i < FINEANGLES / 2; i++)
         if (viewangletox[i] == -1)
             viewangletox[i] = 0;
         else if (viewangletox[i] == highend)
@@ -358,8 +333,6 @@ static void R_InitTextureMapping(void)
 
 static void R_InitLightTables(void)
 {
-    int i;
-
     // killough 4/4/98: dynamic colormaps
     c_zlight = malloc(sizeof(*c_zlight) * numcolormaps);
     c_scalelight = malloc(sizeof(*c_scalelight) * numcolormaps);
@@ -367,19 +340,17 @@ static void R_InitLightTables(void)
 
     // Calculate the light levels to use
     //  for each level / distance combination.
-    for (i = 0; i < LIGHTLEVELS; i++)
+    for (int i = 0; i < LIGHTLEVELS; i++)
     {
-        int j;
-        int startmap = ((LIGHTLEVELS - LIGHTBRIGHT - i) * 2) * NUMCOLORMAPS / LIGHTLEVELS;
+        const int   startmap = ((LIGHTLEVELS - LIGHTBRIGHT - i) * 2) * NUMCOLORMAPS / LIGHTLEVELS;
 
-        for (j = 0; j < MAXLIGHTZ; j++)
+        for (int j = 0; j < MAXLIGHTZ; j++)
         {
-            int scale = FixedDiv(SCREENWIDTH / 2 * FRACUNIT, (j + 1) << LIGHTZSHIFT);
-            int t;
-            int level = BETWEEN(0, startmap - (scale >>= LIGHTSCALESHIFT) / DISTMAP, NUMCOLORMAPS - 1) * 256;
+            const int   scale = FixedDiv(SCREENWIDTH / 2 * FRACUNIT, (j + 1) << LIGHTZSHIFT) >> LIGHTSCALESHIFT;
+            const int   level = BETWEEN(0, startmap - scale  / DISTMAP, NUMCOLORMAPS - 1) * 256;
 
             // killough 3/20/98: Initialize multiple colormaps
-            for (t = 0; t < numcolormaps; t++)
+            for (int t = 0; t < numcolormaps; t++)
                 c_zlight[t][i][j] = &colormaps[t][level];
         }
     }
@@ -405,9 +376,6 @@ void R_SetViewSize(int blocks)
 //
 void R_ExecuteSetViewSize(void)
 {
-    int i;
-    int j;
-
     setsizeneeded = false;
 
     if (setblocks == 11)
@@ -422,15 +390,12 @@ void R_ExecuteSetViewSize(void)
     }
 
     viewwidth = scaledviewwidth;
-
     centery = viewheight / 2;
     centerx = viewwidth / 2;
     centerxfrac = centerx << FRACBITS;
     centeryfrac = centery << FRACBITS;
     projectiony = ((SCREENHEIGHT * centerx * ORIGINALWIDTH) / ORIGINALHEIGHT) / SCREENWIDTH * FRACUNIT;
-
     R_InitBuffer(scaledviewwidth, viewheight);
-
     R_InitTextureMapping();
 
     // psprite scales
@@ -441,15 +406,15 @@ void R_ExecuteSetViewSize(void)
     R_InitSkyMap();
 
     // thing clipping
-    for (i = 0; i < viewwidth; i++)
-        screenheightarray[i] = viewheight;
+    for (int i = 0; i < viewwidth; i++)
+        viewheightarray[i] = viewheight;
 
     // planes
-    for (i = 0; i < viewheight; i++)
+    for (int i = 0; i < viewheight; i++)
     {
-        fixed_t num = viewwidth / 2 * FRACUNIT;
+        const fixed_t   num = viewwidth / 2 * FRACUNIT;
 
-        for (j = 0; j < LOOKDIRS; j++)
+        for (int j = 0; j < LOOKDIRS; j++)
             yslopes[j][i] = FixedDiv(num, ABS(((i - (viewheight / 2 + (j - LOOKDIRMAX) * 2
                 * (r_screensize + 3) / 10)) << FRACBITS) + FRACUNIT / 2));
     }
@@ -458,34 +423,31 @@ void R_ExecuteSetViewSize(void)
 
     // Calculate the light levels to use
     //  for each level / scale combination.
-    for (i = 0; i < LIGHTLEVELS; i++)
+    for (int i = 0; i < LIGHTLEVELS; i++)
     {
-        int startmap = ((LIGHTLEVELS - LIGHTBRIGHT - i) * 2) * NUMCOLORMAPS / LIGHTLEVELS;
+        const int   startmap = ((LIGHTLEVELS - LIGHTBRIGHT - i) * 2) * NUMCOLORMAPS / LIGHTLEVELS;
 
-        for (j = 0; j < MAXLIGHTSCALE; j++)
+        for (int j = 0; j < MAXLIGHTSCALE; j++)
         {
-            int t;
-            int level = BETWEEN(0, startmap - j * SCREENWIDTH / (viewwidth * DISTMAP), NUMCOLORMAPS - 1)
-                    * 256;
+            const int   level = BETWEEN(0, startmap - j * SCREENWIDTH / (viewwidth * DISTMAP), NUMCOLORMAPS - 1) * 256;
 
             // killough 3/20/98: initialize multiple colormaps
-            for (t = 0; t < numcolormaps; t++)     // killough 4/4/98
+            for (int t = 0; t < numcolormaps; t++)
                 c_scalelight[t][i][j] = &colormaps[t][level];
         }
     }
 
     // [BH] calculate separate light levels to use when drawing
     //  player's weapon, so it stays consistent regardless of view size
-    for (i = 0; i < OLDLIGHTLEVELS; i++)
+    for (int i = 0; i < OLDLIGHTLEVELS; i++)
     {
-        int startmap = ((OLDLIGHTLEVELS - LIGHTBRIGHT - i) * 2) * NUMCOLORMAPS / OLDLIGHTLEVELS;
+        const int   startmap = ((OLDLIGHTLEVELS - LIGHTBRIGHT - i) * 2) * NUMCOLORMAPS / OLDLIGHTLEVELS;
 
-        for (j = 0; j < OLDMAXLIGHTSCALE; j++)
+        for (int j = 0; j < OLDMAXLIGHTSCALE; j++)
         {
-            int t;
-            int level = BETWEEN(0, startmap - j / DISTMAP, NUMCOLORMAPS - 1) * 256;
+            const int   level = BETWEEN(0, startmap - j / DISTMAP, NUMCOLORMAPS - 1) * 256;
 
-            for (t = 0; t < numcolormaps; t++)
+            for (int t = 0; t < numcolormaps; t++)
                 c_psprscalelight[t][i][j] = &colormaps[t][level];
         }
     }
@@ -493,8 +455,6 @@ void R_ExecuteSetViewSize(void)
 
 void R_InitColumnFunctions(void)
 {
-    int i;
-
     if (r_textures)
     {
         basecolfunc = R_DrawColumn;
@@ -507,7 +467,7 @@ void R_InitColumnFunctions(void)
             skycolfunc = R_DrawSkyColorColumn;
         else
             skycolfunc = (canmodify && !transferredsky && (gamemode != commercial || gamemap < 21)
-                && !canmouselook ? R_DrawFlippedSkyColumn : R_DrawSkyColumn);
+                && !canmouselook ? R_DrawFlippedSkyColumn : R_DrawWallColumn);
 
         spanfunc = R_DrawSpan;
 
@@ -550,9 +510,7 @@ void R_InitColumnFunctions(void)
             supershotguncolfunc = R_DrawSuperShotgunColumn;
         }
 
-        bloodsplatcolfunc = (r_bloodsplats_translucency ? R_DrawBloodSplatColumn :
-            R_DrawSolidBloodSplatColumn);
-
+        bloodsplatcolfunc = (r_bloodsplats_translucency ? R_DrawBloodSplatColumn : R_DrawSolidBloodSplatColumn);
         redtobluecolfunc = R_DrawRedToBlueColumn;
         redtogreencolfunc = R_DrawRedToGreenColumn;
         psprcolfunc = R_DrawPlayerSpriteColumn;
@@ -588,10 +546,10 @@ void R_InitColumnFunctions(void)
         psprcolfunc = R_DrawColorColumn;
     }
 
-    for (i = 0; i < NUMMOBJTYPES; i++)
+    for (int i = 0; i < NUMMOBJTYPES; i++)
     {
         mobjinfo_t  *info = &mobjinfo[i];
-        int         flags2 = info->flags2;
+        const int   flags2 = info->flags2;
 
         if (flags2 & MF2_TRANSLUCENT)
             info->colfunc = tlcolfunc;
@@ -638,7 +596,6 @@ void R_Init(void)
     R_InitData();
     R_InitPointToAngle();
     R_InitTables();
-
     R_SetViewSize(r_screensize);
     R_InitLightTables();
     R_InitTranslationTables();
@@ -660,9 +617,13 @@ subsector_t *R_PointInSubsector(fixed_t x, fixed_t y)
     nodenum = numnodes - 1;
 
     while (!(nodenum & NF_SUBSECTOR))
-        nodenum = nodes[nodenum].children[R_PointOnSide(x, y, nodes + nodenum)];
+    {
+        node_t  *node = nodes + nodenum;
 
-    return &subsectors[nodenum & ~NF_SUBSECTOR];
+        nodenum = node->children[R_PointOnSide(x, y, node)];
+    }
+
+    return (subsectors + (nodenum & ~NF_SUBSECTOR));
 }
 
 //
@@ -676,7 +637,7 @@ static void R_SetupFrame(player_t *player)
     int     pitch = 0;
 
     viewplayer = player;
-    viewplayer->mo->flags2 |= MF2_DONTDRAW;
+    mo->flags2 |= MF2_DONTDRAW;
 
     // [AM] Interpolate the player camera if the feature is enabled.
 
@@ -690,7 +651,7 @@ static void R_SetupFrame(player_t *player)
         && leveltime > 1
         // Don't interpolate if the player did something
         // that would necessitate turning it off for a tic.
-        && mo->interp
+        && mo->interpolate
         // Don't interpolate during a paused state
         && !paused && !menuactive && !consoleactive)
     {
@@ -730,11 +691,11 @@ static void R_SetupFrame(player_t *player)
         }
     }
 
-    if (explosiontics && !consoleactive && !menuactive && !paused)
+    if (barreltics && !consoleactive && !menuactive && !paused)
     {
         viewx += M_RandomInt(-2, 2) * FRACUNIT;
         viewy += M_RandomInt(-2, 2) * FRACUNIT;
-        explosiontics--;
+        barreltics--;
     }
 
     extralight = player->extralight << 2;
@@ -750,12 +711,11 @@ static void R_SetupFrame(player_t *player)
     viewcos = finecosine[viewangle >> ANGLETOFINESHIFT];
 
     // killough 3/20/98, 4/4/98: select colormap based on player status
-    if (mo->subsector->sector->heightsec != -1)
+    if (mo->subsector->sector->heightsec)
     {
-        const sector_t  *s = mo->subsector->sector->heightsec + sectors;
+        const sector_t  *s = mo->subsector->sector->heightsec;
 
-        cm = (viewz < s->interpfloorheight ? s->bottommap : (viewz > s->interpceilingheight ? s->topmap :
-            s->midmap));
+        cm = (viewz < s->interpfloorheight ? s->bottommap : (viewz > s->interpceilingheight ? s->topmap : s->midmap));
 
         if (cm < 0 || cm > numcolormaps)
             cm = 0;
@@ -765,23 +725,20 @@ static void R_SetupFrame(player_t *player)
     zlight = c_zlight[cm];
     scalelight = c_scalelight[cm];
     psprscalelight = c_psprscalelight[cm];
-
     drawbloodsplats = (r_blood != r_blood_none && r_bloodsplats_max && !vanilla);
 
     if (player->fixedcolormap)
     {
         // killough 3/20/98: localize scalelightfixed (readability/optimization)
         static lighttable_t *scalelightfixed[MAXLIGHTSCALE];
-        int                 i;
 
         // killough 3/20/98: use fullcolormap
         fixedcolormap = fullcolormap + player->fixedcolormap * 256 * sizeof(lighttable_t);
 
         usebrightmaps = false;
-
         walllights = scalelightfixed;
 
-        for (i = 0; i < MAXLIGHTSCALE; i++)
+        for (int i = 0; i < MAXLIGHTSCALE; i++)
             scalelightfixed[i] = fixedcolormap;
     }
     else
@@ -816,8 +773,7 @@ void R_RenderPlayerView(player_t *player)
     else
     {
         if (r_homindicator)
-            V_FillRect(0, viewwindowx, viewwindowy, viewwidth, viewheight,
-                ((activetic % 20) < 9 ? RED : BLACK));
+            V_FillRect(0, viewwindowx, viewwindowy, viewwidth, viewheight, ((activetic % 20) < 9 ? RED : BLACK));
         else if ((player->cheats & CF_NOCLIP) || freeze)
             V_FillRect(0, viewwindowx, viewwindowy, viewwidth, viewheight, BLACK);
 

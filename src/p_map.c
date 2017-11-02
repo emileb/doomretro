@@ -37,20 +37,18 @@
 */
 
 #include "doomstat.h"
+#include "i_system.h"
 #include "m_bbox.h"
+#include "m_config.h"
 #include "m_random.h"
 #include "p_local.h"
 #include "s_sound.h"
 #include "z_zone.h"
 
 static mobj_t       *tmthing;
-static fixed_t      tmx;
-static fixed_t      tmy;
-static fixed_t      tmz;
-static int          pe_x;           // Pain Elemental position for Lost Soul checks // phares
-static int          pe_y;           // Pain Elemental position for Lost Soul checks // phares
-static int          ls_x;           // Lost Soul position for Lost Soul checks      // phares
-static int          ls_y;           // Lost Soul position for Lost Soul checks      // phares
+static fixed_t      tmx, tmy, tmz;
+static int          pe_x, pe_y;     // Pain Elemental position for Lost Soul checks // phares
+static int          ls_x, ls_y;     // Lost Soul position for Lost Soul checks      // phares
 
 // If "floatok" true, move would be ok
 // if within "tmfloorz - tmceilingz".
@@ -90,11 +88,8 @@ static mobj_t       *onmobj;
 
 unsigned int        stat_distancetraveled;
 
-extern dboolean     r_liquid_bob;
-extern dboolean     r_corpses_nudge;
 extern dboolean     successfulshot;
 extern dboolean     telefragonmap30;
-extern unsigned int stat_shotshit;
 
 //
 // TELEPORT MOVE
@@ -150,7 +145,6 @@ int P_GetFriction(const mobj_t *mo, int *frictionfactor)
 {
     int                 friction = ORIG_FRICTION;
     int                 movefactor = ORIG_FRICTION_FACTOR;
-    const msecnode_t    *m;
     const sector_t      *sec;
 
     // Assign the friction value to objects on the floor, non-floating,
@@ -161,10 +155,10 @@ int P_GetFriction(const mobj_t *mo, int *frictionfactor)
     // floorheight that have different frictions, use the lowest
     // friction value (muddy has precedence over icy).
     if (!(mo->flags & (MF_NOCLIP | MF_NOGRAVITY)))
-        for (m = mo->touching_sectorlist; m; m = m->m_tnext)
+        for (const msecnode_t *m = mo->touching_sectorlist; m; m = m->m_tnext)
             if (((sec = m->m_sector)->special & FRICTION_MASK) && (sec->friction < friction
                 || friction == ORIG_FRICTION) && (mo->z <= sec->floorheight
-                || (sec->heightsec != -1 && mo->z <= sectors[sec->heightsec].floorheight)))
+                || (sec->heightsec && mo->z <= sec->heightsec->floorheight)))
             {
                 friction = sec->friction;
                 movefactor = sec->movefactor;
@@ -218,7 +212,6 @@ dboolean P_TeleportMove(mobj_t *thing, fixed_t x, fixed_t y, fixed_t z, dboolean
     int         xh;
     int         yl;
     int         yh;
-    int         bx, by;
     sector_t    *newsec;
     fixed_t     radius = thing->radius;
 
@@ -255,8 +248,8 @@ dboolean P_TeleportMove(mobj_t *thing, fixed_t x, fixed_t y, fixed_t z, dboolean
     yl = (tmbbox[BOXBOTTOM] - bmaporgy - MAXRADIUS) >> MAPBLOCKSHIFT;
     yh = (tmbbox[BOXTOP] - bmaporgy + MAXRADIUS) >> MAPBLOCKSHIFT;
 
-    for (bx = xl; bx <= xh; bx++)
-        for (by = yl; by <= yh; by++)
+    for (int bx = xl; bx <= xh; bx++)
+        for (int by = yl; by <= yh; by++)
             if (!P_BlockThingsIterator(bx, by, PIT_StompThing))
                 return false;
 
@@ -272,7 +265,7 @@ dboolean P_TeleportMove(mobj_t *thing, fixed_t x, fixed_t y, fixed_t z, dboolean
     thing->y = y;
 
     // [AM] Don't interpolate mobjs that pass through teleporters
-    thing->interp = false;
+    thing->interpolate = false;
 
     P_SetThingPosition(thing);
 
@@ -403,7 +396,7 @@ static dboolean PIT_CheckLine(line_t *ld)
         if (numspechit >= spechit_max)
         {
             spechit_max = (spechit_max ? spechit_max * 2 : 8);
-            spechit = Z_Realloc(spechit, sizeof(*spechit) * spechit_max);
+            spechit = I_Realloc(spechit, sizeof(*spechit) * spechit_max);
         }
 
         spechit[numspechit++] = ld;
@@ -596,7 +589,6 @@ dboolean P_CheckLineSide(mobj_t *actor, fixed_t x, fixed_t y)
     int xh;
     int yl;
     int yh;
-    int bx, by;
 
     pe_x = actor->x;
     pe_y = actor->y;
@@ -617,8 +609,8 @@ dboolean P_CheckLineSide(mobj_t *actor, fixed_t x, fixed_t y)
 
     validcount++;               // prevents checking same line twice
 
-    for (bx = xl; bx <= xh; bx++)
-        for (by = yl; by <= yh; by++)
+    for (int bx = xl; bx <= xh; bx++)
+        for (int by = yl; by <= yh; by++)
             if (!P_BlockLinesIterator(bx, by, PIT_CrossLine))
                 return true;
 
@@ -692,7 +684,6 @@ dboolean P_CheckPosition(mobj_t *thing, fixed_t x, fixed_t y)
     int         xh;
     int         yl;
     int         yh;
-    int         bx, by;
     subsector_t *newsubsec;
     fixed_t     radius = thing->radius;
 
@@ -737,8 +728,8 @@ dboolean P_CheckPosition(mobj_t *thing, fixed_t x, fixed_t y)
     yl = (tmbbox[BOXBOTTOM] - bmaporgy - MAXRADIUS) >> MAPBLOCKSHIFT;
     yh = (tmbbox[BOXTOP] - bmaporgy + MAXRADIUS) >> MAPBLOCKSHIFT;
 
-    for (bx = xl; bx <= xh; bx++)
-        for (by = yl; by <= yh; by++)
+    for (int bx = xl; bx <= xh; bx++)
+        for (int by = yl; by <= yh; by++)
             if (!P_BlockThingsIterator(bx, by, PIT_CheckThing))
                 return false;
 
@@ -757,8 +748,8 @@ dboolean P_CheckPosition(mobj_t *thing, fixed_t x, fixed_t y)
     yl = (tmbbox[BOXBOTTOM] - bmaporgy) >> MAPBLOCKSHIFT;
     yh = (tmbbox[BOXTOP] - bmaporgy) >> MAPBLOCKSHIFT;
 
-    for (bx = xl; bx <= xh; bx++)
-        for (by = yl; by <= yh; by++)
+    for (int bx = xl; bx <= xh; bx++)
+        for (int by = yl; by <= yh; by++)
             if (!P_BlockLinesIterator(bx, by, PIT_CheckLine))
                 return false;
 
@@ -775,7 +766,6 @@ mobj_t *P_CheckOnmobj(mobj_t * thing)
     int         xh;
     int         yl;
     int         yh;
-    int         bx, by;
     subsector_t *newsubsec;
     fixed_t     x = thing->x;
     fixed_t     y = thing->y;
@@ -818,8 +808,8 @@ mobj_t *P_CheckOnmobj(mobj_t * thing)
     yl = (tmbbox[BOXBOTTOM] - bmaporgy - MAXRADIUS) >> MAPBLOCKSHIFT;
     yh = (tmbbox[BOXTOP] - bmaporgy + MAXRADIUS) >> MAPBLOCKSHIFT;
 
-    for (bx = xl; bx <= xh; bx++)
-        for (by = yl; by <= yh; by++)
+    for (int bx = xl; bx <= xh; bx++)
+        for (int by = yl; by <= yh; by++)
             if (!P_BlockThingsIterator(bx, by, PIT_CheckOnmobjZ))
             {
                 *tmthing = oldmo;
@@ -1068,15 +1058,13 @@ void P_ApplyTorque(mobj_t *mo)
     int xh = ((tmbbox[BOXRIGHT] = x + radius) - bmaporgx) >> MAPBLOCKSHIFT;
     int yl = ((tmbbox[BOXBOTTOM] = y - radius) - bmaporgy) >> MAPBLOCKSHIFT;
     int yh = ((tmbbox[BOXTOP] = y + radius) - bmaporgy) >> MAPBLOCKSHIFT;
-    int bx;
-    int by;
     int flags2 = mo->flags2;    // Remember the current state, for gear-change
 
     tmthing = mo;
     validcount++;               // prevents checking same line twice
 
-    for (bx = xl; bx <= xh; bx++)
-        for (by = yl; by <= yh; by++)
+    for (int bx = xl; bx <= xh; bx++)
+        for (int by = yl; by <= yh; by++)
             P_BlockLinesIterator(bx, by, PIT_ApplyTorque);
 
     // If any momentum, mark object as 'falling' using engine-internal flags
@@ -1874,7 +1862,6 @@ static dboolean PIT_RadiusAttack(mobj_t *thing)
 //
 void P_RadiusAttack(mobj_t *spot, mobj_t *source, int damage)
 {
-    int     x, y;
     fixed_t dist = (damage + MAXRADIUS) << FRACBITS;
     int     yh = (spot->y + dist - bmaporgy) >> MAPBLOCKSHIFT;
     int     yl = (spot->y - dist - bmaporgy) >> MAPBLOCKSHIFT;
@@ -1885,8 +1872,8 @@ void P_RadiusAttack(mobj_t *spot, mobj_t *source, int damage)
     bombsource = source;
     bombdamage = damage;
 
-    for (y = yl; y <= yh; y++)
-        for (x = xl; x <= xh; x++)
+    for (int y = yl; y <= yh; y++)
+        for (int x = xl; x <= xh; x++)
             P_BlockThingsIterator(x, y, PIT_RadiusAttack);
 }
 
@@ -1936,16 +1923,14 @@ static void PIT_ChangeSector(mobj_t *thing)
         {
             if (!(flags & MF_FUZZ))
             {
-                int radius = ((spritewidth[sprites[thing->sprite].spriteframes[0].lump[0]] >> FRACBITS) >> 1)
-                    + 12;
-                int i;
+                int radius = ((spritewidth[sprites[thing->sprite].spriteframes[0].lump[0]] >> FRACBITS) >> 1) + 12;
                 int max = M_RandomInt(50, 100) + radius;
                 int x = thing->x;
                 int y = thing->y;
                 int blood = mobjinfo[thing->blood].blood;
                 int floorz = thing->floorz;
 
-                for (i = 0; i < max; i++)
+                for (int i = 0; i < max; i++)
                 {
                     int angle = M_RandomInt(0, FINEANGLES - 1);
                     int fx = x + FixedMul(M_RandomInt(0, radius) << FRACBITS, finecosine[angle]);
@@ -1959,11 +1944,12 @@ static void PIT_ChangeSector(mobj_t *thing)
 
             thing->flags &= ~MF_SOLID;
 
-            if (r_corpses_mirrored && (rand() & 1))
+            if (r_corpses_mirrored && (M_Random() & 1))
                 thing->flags2 |= MF2_MIRRORED;
 
             thing->height = 0;
             thing->radius = 0;
+            thing->shadowoffset = 0;
 
             S_StartSound(thing, sfx_slop);
         }
@@ -1988,20 +1974,22 @@ static void PIT_ChangeSector(mobj_t *thing)
 
     if (crushchange && !(leveltime & 3))
     {
-        int i;
+        if (!(flags & MF_NOBLOOD) && thing->blood && (thing->type != MT_PLAYER
+            || (!viewplayer->powers[pw_invulnerability] && !(viewplayer->cheats & CF_GODMODE))))
+        {
+            int type = (r_blood == r_blood_all ? ((thing->flags & MF_FUZZ) ? MT_FUZZYBLOOD : thing->blood) :
+                           MT_BLOOD);
+            int z = thing->z + thing->height * 2 / 3;
 
-        for (i = 0; i < 4; i++)
-            if (!(flags & MF_NOBLOOD) && thing->blood && (thing->type != MT_PLAYER
-                || (!viewplayer->powers[pw_invulnerability] && !(viewplayer->cheats & CF_GODMODE))))
+            for (int i = 0; i < 4; i++)
             {
                 // spray blood in a random direction
-                int     type = (r_blood == r_blood_all ? ((thing->flags & MF_FUZZ) ? MT_FUZZYBLOOD :
-                                thing->blood) : MT_BLOOD);
-                mobj_t  *mo = P_SpawnMobj(thing->x, thing->y, thing->z + thing->height / 2, type);
+                mobj_t  *mo = P_SpawnMobj(thing->x, thing->y, z, type);
 
-                mo->momx = (M_Random() - M_Random()) << 12;
-                mo->momy = (M_Random() - M_Random()) << 12;
+                mo->momx = (M_Random() - M_Random()) << 11;
+                mo->momy = (M_Random() - M_Random()) << 11;
             }
+        }
 
         P_DamageMobj(thing, NULL, NULL, 10, true);
     }
@@ -2237,12 +2225,11 @@ void P_CreateSecNodeList(mobj_t *thing, fixed_t x, fixed_t y)
     int         xh;
     int         yl;
     int         yh;
-    int         bx, by;
     msecnode_t  *node = sector_list;
     mobj_t      *saved_tmthing = tmthing;
     fixed_t     saved_tmx = tmx;
     fixed_t     saved_tmy = tmy;
-    fixed_t     radius = thing->radius;
+    fixed_t     radius = thing->info->pickupradius;
 
     // First, clear out the existing m_thing fields. As each node is
     // added or verified as needed, m_thing will be set properly. When
@@ -2271,8 +2258,8 @@ void P_CreateSecNodeList(mobj_t *thing, fixed_t x, fixed_t y)
     yl = (tmbbox[BOXBOTTOM] - bmaporgy) >> MAPBLOCKSHIFT;
     yh = (tmbbox[BOXTOP] - bmaporgy) >> MAPBLOCKSHIFT;
 
-    for (bx = xl; bx <= xh; bx++)
-        for (by = yl; by <= yh; by++)
+    for (int bx = xl; bx <= xh; bx++)
+        for (int by = yl; by <= yh; by++)
             P_BlockLinesIterator(bx, by, PIT_GetSectors);
 
     // Add the sector of the (x,y) point to sector_list.

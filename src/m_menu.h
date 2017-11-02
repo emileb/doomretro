@@ -39,7 +39,7 @@
 #if !defined(__M_MENU_H__)
 #define __M_MENU_H__
 
-typedef struct menuitem_s
+typedef struct
 {
     short           status;
     char            name[10];
@@ -83,6 +83,7 @@ void M_Init(void);
 // Called by intro code to force menu up upon a keypress,
 // does nothing if menu is already up.
 void M_StartControlPanel(void);
+void M_ClearMenus(void);
 void M_ShowHelp(void);
 void M_EndingGame(void);
 void M_ChangeGamma(dboolean shift);
@@ -99,22 +100,13 @@ void M_StartMessage(char *string, void *routine, dboolean input);
 
 extern dboolean messageToPrint;
 
-extern int      r_screensize;
 extern int      gamepadmenu;
 extern dboolean nomusic;
 extern dboolean nosound;
 extern dboolean nosfx;
 extern dboolean firstevent;
 extern byte     grays[256];
-extern int      s_musicvolume;
-extern int      s_sfxvolume;
-extern dboolean vid_widescreen;
-extern dboolean r_hud;
 extern dboolean returntowidescreen;
-extern int      episode;
-extern int      expansion;
-extern int      savegame;
-extern int      skilllevel;
 extern dboolean startingnewgame;
 
 #endif

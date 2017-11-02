@@ -40,8 +40,15 @@
 #define __G_GAME_H__
 
 #include "i_video.h"
+#include "w_file.h"
 
 #define NUMKEYS 256
+
+#define FORWARDMOVE0    0x19
+#define FORWARDMOVE1    0x32
+
+#define SIDEMOVE0       0x18
+#define SIDEMOVE1       0x28
 
 //
 // GAME
@@ -76,12 +83,21 @@ void G_Ticker(void);
 dboolean G_Responder(event_t *ev);
 
 void G_ScreenShot(void);
+void G_DoScreenShot(void);
 void I_ToggleWidescreen(dboolean toggle);
 
 void G_SetMovementSpeed(int scale);
+void G_ToggleAlwaysRun(evtype_t type);
+void G_NextWeapon(void);
+void G_PrevWeapon(void);
 
+extern fixed_t  forwardmove[2];
+extern fixed_t  sidemove[2];
+extern fixed_t  angleturn[3];
+extern fixed_t  gamepadangleturn[2];
+extern dboolean gamekeydown[NUMKEYS];
+extern dboolean *mousebuttons;
 extern dboolean canmodify;
-extern dboolean flag667;
 extern dboolean message_dontpause;
 extern dboolean vibrate;
 extern dboolean gamepadpress;
@@ -89,6 +105,8 @@ extern char     lbmname1[MAX_PATH];
 extern char     lbmpath1[MAX_PATH];
 extern char     lbmpath2[MAX_PATH];
 extern char     mapnumandtitle[512];
+extern char     keyactionlist[NUMKEYS][255];
+extern char     mouseactionlist[MAX_MOUSE_BUTTONS + 2][255];
 extern int      mousewait;
 extern int      gamepadwait;
 extern int      keydown;

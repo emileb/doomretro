@@ -36,10 +36,10 @@
 ========================================================================
 */
 
+#include "i_system.h"
 #include "m_bbox.h"
 #include "p_local.h"
 #include "p_setup.h"
-#include "z_zone.h"
 
 extern msecnode_t   *sector_list;   // phares 3/16/98
 
@@ -63,9 +63,7 @@ fixed_t P_ApproxDistance(fixed_t dx, fixed_t dy)
 //
 int P_PointOnLineSide(fixed_t x, fixed_t y, line_t *line)
 {
-    return (!line->dx ? x <= line->v1->x ? line->dy > 0 : line->dy < 0 : !line->dy ?
-        y <= line->v1->y ? line->dx < 0 : line->dx > 0 : FixedMul(y - line->v1->y,
-        line->dx >> FRACBITS) >= FixedMul(line->dy >> FRACBITS, x - line->v1->x));
+    return (int)((int64_t)(y - line->v1->y) * line->dx + (int64_t)(line->v1->x - x) * line->dy >= 0);
 }
 
 //
@@ -106,9 +104,7 @@ int P_BoxOnLineSide(fixed_t *tmbox, line_t *ld)
 //
 static int P_PointOnDivlineSide(fixed_t x, fixed_t y, divline_t *line)
 {
-    return (!line->dx ? x <= line->x ? line->dy > 0 : line->dy < 0 : !line->dy ? y <= line->y ?
-        line->dx < 0 : line->dx > 0 : (line->dy ^ line->dx ^ (x -= line->x) ^ (y -= line->y)) < 0 ?
-        (line->dy ^ x) < 0 : FixedMul(y >> 8, line->dx >> 8) >= FixedMul(line->dy >> 8, x >> 8));
+    return (int)((int64_t)(y - line->y) * line->dx + (int64_t)(line->x - x) * line->dy >= 0);
 }
 
 //
@@ -375,7 +371,7 @@ dboolean P_BlockLinesIterator(int x, int y, dboolean func(line_t *))
 
         for (; *list != -1; list++)
         {
-            line_t  *ld = &lines[*list];
+            line_t  *ld = lines + *list;
 
             if (ld->validcount == validcount)
                 continue;       // line has already been checked
@@ -396,13 +392,9 @@ dboolean P_BlockLinesIterator(int x, int y, dboolean func(line_t *))
 dboolean P_BlockThingsIterator(int x, int y, dboolean func(mobj_t *))
 {
     if (!(x < 0 || y < 0 || x >= bmapwidth || y >= bmapheight))
-    {
-        mobj_t  *mobj;
-
-        for (mobj = blocklinks[y * bmapwidth + x]; mobj; mobj = mobj->bnext)
+        for (mobj_t *mobj = blocklinks[y * bmapwidth + x]; mobj; mobj = mobj->bnext)
             if (!func(mobj))
                 return false;
-    }
 
     return true;
 }
@@ -424,7 +416,7 @@ static void check_intercept(void)
     if (offset >= num_intercepts)
     {
         num_intercepts = (num_intercepts ? num_intercepts * 2 : 128);
-        intercepts = Z_Realloc(intercepts, sizeof(*intercepts) * num_intercepts);
+        intercepts = I_Realloc(intercepts, sizeof(*intercepts) * num_intercepts);
         intercept_p = intercepts + offset;
     }
 }
@@ -522,9 +514,7 @@ static dboolean PIT_AddThingIntercepts(mobj_t *thing)
     dl.dx = x2 - x1;
     dl.dy = y2 - y1;
 
-    frac = P_InterceptVector(&dlTrace, &dl);
-
-    if (frac < 0)
+    if ((frac = P_InterceptVector(&dlTrace, &dl)) < 0)
         return true;    // behind source
 
     check_intercept();  // killough
@@ -544,15 +534,14 @@ static dboolean PIT_AddThingIntercepts(mobj_t *thing)
 //
 static dboolean P_TraverseIntercepts(traverser_t func, fixed_t maxfrac)
 {
-    int         count = intercept_p - intercepts;
+    size_t      count = intercept_p - intercepts;
     intercept_t *in = NULL;
 
     while (count--)
     {
-        fixed_t     dist = INT_MAX;
-        intercept_t *scan;
+        fixed_t dist = INT_MAX;
 
-        for (scan = intercepts; scan < intercept_p; scan++)
+        for (intercept_t *scan = intercepts; scan < intercept_p; scan++)
             if (scan->frac < dist)
             {
                 dist = scan->frac;
@@ -589,7 +578,6 @@ dboolean P_PathTraverse(fixed_t x1, fixed_t y1, fixed_t x2, fixed_t y2, int flag
     int     mapx, mapy;
     int     mapx1, mapy1;
     int     mapxstep, mapystep;
-    int     count;
 
     validcount++;
     intercept_p = intercepts;
@@ -666,7 +654,7 @@ dboolean P_PathTraverse(fixed_t x1, fixed_t y1, fixed_t x2, fixed_t y2, int flag
     mapx = xt1;
     mapy = yt1;
 
-    for (count = 0; count < 64; count++)
+    for (int count = 0; count < 64; count++)
     {
         if (flags & PT_ADDLINES)
             if (!P_BlockLinesIterator(mapx, mapy, PIT_AddLineIntercepts))

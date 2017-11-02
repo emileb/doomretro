@@ -49,10 +49,11 @@ extern dboolean canmodify;
 
 static void T_GradualLightingToCeiling(ceiling_t *ceiling)
 {
-    if (ceiling->topheight - ceiling->sector->floorheight)
-        if (!P_SectorHasLightSpecial(ceiling->sector))
-            EV_LightByAdjacentSectors(ceiling->sector, FixedDiv(ceiling->sector->ceilingheight
-                - ceiling->sector->floorheight, ceiling->topheight - ceiling->sector->floorheight));
+    sector_t    *sector = ceiling->sector;
+    fixed_t     level = ceiling->topheight - sector->floorheight;
+
+    if (level && !P_SectorHasLightSpecial(sector))
+        EV_LightByAdjacentSectors(sector, FixedDiv(sector->ceilingheight - sector->floorheight, level));
 }
 
 //
@@ -74,7 +75,7 @@ void T_MoveCeiling(ceiling_t *ceiling)
         case 1:
             // UP
             res = T_MovePlane(ceiling->sector, ceiling->speed, ceiling->topheight, false, 1,
-                ceiling->direction);
+                ceiling->direction, false);
 
             if (!(leveltime & 7)
                 // [BH] don't make sound once ceiling is at its destination height
@@ -130,7 +131,7 @@ void T_MoveCeiling(ceiling_t *ceiling)
         case -1:
             // DOWN
             res = T_MovePlane(ceiling->sector, ceiling->speed, ceiling->bottomheight, ceiling->crush, 1,
-                ceiling->direction);
+                ceiling->direction, false);
 
             if (!(leveltime & 7)
                 // [BH] don't make sound once ceiling is at its destination height
@@ -203,6 +204,7 @@ void T_MoveCeiling(ceiling_t *ceiling)
                     case genSilentCrusher:
                         if (ceiling->oldspeed < CEILSPEED * 3)
                             ceiling->speed = CEILSPEED / 8;
+
                         break;
 
                     case silentCrushAndRaise:
@@ -226,7 +228,6 @@ void T_MoveCeiling(ceiling_t *ceiling)
 //
 dboolean EV_DoCeiling(line_t *line, ceiling_e type)
 {
-    int         i;
     int         secnum = -1;
     dboolean    rtn = false;
     sector_t    *sec;
@@ -246,7 +247,7 @@ dboolean EV_DoCeiling(line_t *line, ceiling_e type)
 
     while ((secnum = P_FindSectorFromLineTag(line, secnum)) >= 0)
     {
-        sec = &sectors[secnum];
+        sec = sectors + secnum;
 
         if (P_SectorActive(ceiling_special, sec))
             continue;
@@ -258,7 +259,6 @@ dboolean EV_DoCeiling(line_t *line, ceiling_e type)
         sec->ceilingdata = ceiling;
         ceiling->thinker.function = T_MoveCeiling;
         ceiling->sector = sec;
-        ceiling->crush = false;
 
         switch (type)
         {
@@ -313,7 +313,7 @@ dboolean EV_DoCeiling(line_t *line, ceiling_e type)
         P_AddActiveCeiling(ceiling);
 
         // [BH] ceiling is no longer secret
-        for (i = 0; i < sec->linecount; i++)
+        for (int i = 0; i < sec->linecount; i++)
             sec->lines[i]->flags &= ~ML_SECRET;
     }
 
@@ -376,10 +376,9 @@ void P_RemoveAllActiveCeilings(void)
 //
 dboolean P_ActivateInStasisCeiling(line_t *line)
 {
-    dboolean        result = false;
-    ceilinglist_t   *list;
+    dboolean    result = false;
 
-    for (list = activeceilings; list; list = list->next)
+    for (ceilinglist_t *list = activeceilings; list; list = list->next)
     {
         ceiling_t   *ceiling = list->ceiling;
 
@@ -400,10 +399,9 @@ dboolean P_ActivateInStasisCeiling(line_t *line)
 //
 dboolean EV_CeilingCrushStop(line_t *line)
 {
-    dboolean        result = false;
-    ceilinglist_t   *list;
+    dboolean    result = false;
 
-    for (list = activeceilings; list; list = list->next)
+    for (ceilinglist_t *list = activeceilings; list; list = list->next)
     {
         ceiling_t   *ceiling = list->ceiling;
 

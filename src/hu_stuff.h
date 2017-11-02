@@ -54,8 +54,8 @@
 
 #define HU_MSGTIMEOUT                   (4 * TICRATE)
 
-#define HUD_X                           11 * SCREENSCALE / 2
-#define HUD_Y                           311 * SCREENSCALE / 2
+#define HUD_X                           (11 * SCREENSCALE / 2)
+#define HUD_Y                           (311 * SCREENSCALE / 2)
 
 #define HUD_HEALTH_X                    HUD_X
 #define HUD_HEALTH_Y                    HUD_Y
@@ -94,6 +94,7 @@ void HU_PlayerMessage(char *message, dboolean external);
 
 void HU_ClearMessages(void);
 void HU_DrawDisk(void);
+void HU_GetMessagePosition(void);
 
 extern int      healthhighlight;
 extern int      ammohighlight;

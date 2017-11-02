@@ -39,6 +39,168 @@
 #if !defined(__M_CONFIG_H__)
 #define __M_CONFIG_H__
 
+extern dboolean     alwaysrun;
+extern int          am_allmapcdwallcolor;
+extern int          am_allmapfdwallcolor;
+extern int          am_allmapwallcolor;
+extern int          am_backcolor;
+extern int          am_cdwallcolor;
+extern int          am_crosshaircolor;
+extern dboolean     am_external;
+extern int          am_fdwallcolor;
+extern dboolean     am_followmode;
+extern dboolean     am_grid;
+extern int          am_gridcolor;
+extern char         *am_gridsize;
+extern int          am_markcolor;
+extern dboolean     am_path;
+extern int          am_pathcolor;
+extern int          am_playercolor;
+extern dboolean     am_rotatemode;
+extern int          am_teleportercolor;
+extern int          am_thingcolor;
+extern int          am_tswallcolor;
+extern int          am_wallcolor;
+extern dboolean     autoload;
+extern dboolean     centerweapon;
+extern dboolean     con_obituaries;
+extern dboolean     con_timestamps;
+extern int          episode;
+extern int          expansion;
+extern int          facebackcolor;
+extern float        gp_deadzone_left;
+extern float        gp_deadzone_right;
+extern dboolean     gp_invertyaxis;
+extern int          gp_sensitivity;
+extern dboolean     gp_swapthumbsticks;
+extern int          gp_vibrate_barrels;
+extern int          gp_vibrate_damage;
+extern int          gp_vibrate_weapons;
+extern char         *iwadfolder;
+extern float        m_acceleration;
+extern dboolean     m_doubleclick_use;
+extern dboolean     m_invertyaxis;
+extern dboolean     m_novertical;
+extern int          m_sensitivity;
+extern int          m_threshold;
+extern dboolean     messages;
+extern dboolean     mouselook;
+extern int          movebob;
+extern char         *playername;
+extern dboolean     r_althud;
+extern int          r_berserkintensity;
+extern int          r_blood;
+extern int          r_bloodsplats_max;
+extern int          r_bloodsplats_total;
+extern dboolean     r_bloodsplats_translucency;
+extern dboolean     r_brightmaps;
+extern dboolean     r_corpses_color;
+extern dboolean     r_corpses_mirrored;
+extern dboolean     r_corpses_moreblood;
+extern dboolean     r_corpses_nudge;
+extern dboolean     r_corpses_slide;
+extern dboolean     r_corpses_smearblood;
+extern int          r_detail;
+extern dboolean     r_diskicon;
+extern dboolean     r_dither;
+extern dboolean     r_fixmaperrors;
+extern dboolean     r_fixspriteoffsets;
+extern dboolean     r_floatbob;
+extern float        r_gamma;
+extern dboolean     r_homindicator;
+extern dboolean     r_hud;
+extern dboolean     r_hud_translucency;
+extern dboolean     r_liquid_bob;
+extern dboolean     r_liquid_clipsprites;
+extern dboolean     r_liquid_current;
+extern dboolean     r_liquid_lowerview;
+extern dboolean     r_liquid_swirl;
+extern char         *r_lowpixelsize;
+extern char         *r_messagepos;
+extern int          r_messagescale;
+extern dboolean     r_mirroredweapons;
+extern dboolean     r_playersprites;
+extern dboolean     r_rockettrails;
+extern int          r_screensize;
+extern dboolean     r_shadows;
+extern dboolean     r_shadows_translucency;
+extern dboolean     r_shake_barrels;
+extern int          r_shake_damage;
+extern int          r_skycolor;
+extern dboolean     r_textures;
+extern dboolean     r_translucency;
+extern int          s_channels;
+extern int          s_musicvolume;
+extern dboolean     s_randommusic;
+extern dboolean     s_randompitch;
+extern int          s_sfxvolume;
+extern int          savegame;
+extern int          skilllevel;
+extern unsigned int stat_barrelsexploded;
+extern unsigned int stat_cheated;
+extern unsigned int stat_damageinflicted;
+extern unsigned int stat_damagereceived;
+extern unsigned int stat_deaths;
+extern unsigned int stat_distancetraveled;
+extern unsigned int stat_itemspickedup;
+extern unsigned int stat_itemspickedup_ammo_bullets;
+extern unsigned int stat_itemspickedup_ammo_cells;
+extern unsigned int stat_itemspickedup_ammo_rockets;
+extern unsigned int stat_itemspickedup_ammo_shells;
+extern unsigned int stat_itemspickedup_armor;
+extern unsigned int stat_itemspickedup_health;
+extern unsigned int stat_mapscompleted;
+extern unsigned int stat_monsterskilled;
+extern unsigned int stat_monsterskilled_arachnotrons;
+extern unsigned int stat_monsterskilled_archviles;
+extern unsigned int stat_monsterskilled_baronsofhell;
+extern unsigned int stat_monsterskilled_cacodemons;
+extern unsigned int stat_monsterskilled_cyberdemons;
+extern unsigned int stat_monsterskilled_demons;
+extern unsigned int stat_monsterskilled_heavyweapondudes;
+extern unsigned int stat_monsterskilled_hellknights;
+extern unsigned int stat_monsterskilled_imps;
+extern unsigned int stat_monsterskilled_lostsouls;
+extern unsigned int stat_monsterskilled_mancubi;
+extern unsigned int stat_monsterskilled_painelementals;
+extern unsigned int stat_monsterskilled_revenants;
+extern unsigned int stat_monsterskilled_shotgunguys;
+extern unsigned int stat_monsterskilled_spectres;
+extern unsigned int stat_monsterskilled_spidermasterminds;
+extern unsigned int stat_monsterskilled_zombiemen;
+extern unsigned int stat_runs;
+extern unsigned int stat_secretsrevealed;
+extern unsigned int stat_shotsfired;
+extern unsigned int stat_shotshit;
+extern unsigned int stat_time;
+extern int          stillbob;
+extern dboolean     tossdrop;
+extern int          turbo;
+extern int          units;
+extern char         *version;
+extern int          vid_capfps;
+extern int          vid_display;
+#if !defined(_WIN32)
+extern char         *vid_driver;
+#endif
+extern dboolean     vid_fullscreen;
+extern int          vid_motionblur;
+extern dboolean     vid_pillarboxes;
+extern char         *vid_scaleapi;
+extern char         *vid_scalefilter;
+extern char         *vid_screenresolution;
+extern dboolean     vid_showfps;
+extern dboolean     vid_vsync;
+extern dboolean     vid_widescreen;
+extern char         *vid_windowpos;
+extern char         *vid_windowsize;
+#if defined(_WIN32)
+extern char         *wad;
+#endif
+extern int          weaponbob;
+extern dboolean     weaponrecoil;
+extern dboolean     wipe;
+
 enum
 {
     r_blood_none,
@@ -182,6 +344,10 @@ enum
 
 #define gp_swapthumbsticks_default              false
 
+#define gp_vibrate_barrels_min                  0
+#define gp_vibrate_barrels_default              100
+#define gp_vibrate_barrels_max                  200
+
 #define gp_vibrate_damage_min                   0
 #define gp_vibrate_damage_default               100
 #define gp_vibrate_damage_max                   200
@@ -292,6 +458,8 @@ enum
 
 #define r_lowpixelsize_default                  "2x2"
 
+#define r_messagepos_default               "(3,2)"
+
 #define r_messagescale_default                  r_messagescale_big
 
 #define r_mirroredweapons_default               false
@@ -325,7 +493,7 @@ enum
 
 #define s_channels_min                          8
 #define s_channels_default                      32
-#define s_channels_max                          256
+#define s_channels_max                          64
 
 #define s_musicvolume_min                       0
 #define s_musicvolume_default                   67
@@ -350,6 +518,8 @@ enum
 #define stillbob_min                            0
 #define stillbob_default                        0
 #define stillbob_max                            100
+
+#define tossdrop_default                        true
 
 #define turbo_min                               10
 #define turbo_default                           100
@@ -402,9 +572,9 @@ enum
 
 #define vid_widescreen_default                  false
 
-#define vid_windowposition_centered             "centered"
-#define vid_windowposition_centred              "centred"
-#define vid_windowposition_default              vid_windowposition_centered
+#define vid_windowpos_centered                  "centered"
+#define vid_windowpos_centred                   "centred"
+#define vid_windowpos_default                   vid_windowpos_centered
 
 #define vid_windowsize_default                  "768x480"
 
@@ -473,10 +643,10 @@ enum
 #define KEYSCREENSHOT_DEFAULT                   0
 #endif
 #define KEYSTRAFE_DEFAULT                       KEY_ALT
-#define KEYSTRAFELEFT_DEFAULT                   'a'
-#define KEYSTRAFELEFT2_DEFAULT                  ','
-#define KEYSTRAFERIGHT_DEFAULT                  'd'
-#define KEYSTRAFERIGHT2_DEFAULT                  '.'
+#define KEYSTRAFELEFT_DEFAULT                   ','
+#define KEYSTRAFELEFT2_DEFAULT                  'a'
+#define KEYSTRAFERIGHT_DEFAULT                  '.'
+#define KEYSTRAFERIGHT2_DEFAULT                 'd'
 #define KEYUP_DEFAULT                           KEY_UPARROW
 #define KEYUP2_DEFAULT                          'w'
 #define KEYUSE_DEFAULT                          ' '
@@ -498,7 +668,7 @@ enum
 #define MOUSERUN_DEFAULT                        -1
 #define MOUSEUSE_DEFAULT                        -1
 
-typedef enum default_type_e
+typedef enum
 {
     DEFAULT_INT,
     DEFAULT_INT_UNSIGNED,
@@ -509,7 +679,7 @@ typedef enum default_type_e
     DEFAULT_OTHER
 } default_type_t;
 
-typedef enum valuealias_type_e
+typedef enum
 {
     NOVALUEALIAS,
     BOOLVALUEALIAS,
@@ -523,7 +693,7 @@ typedef enum valuealias_type_e
     FACEBACKVALUEALIAS
 } valuealias_type_t;
 
-typedef struct default_s
+typedef struct
 {
     // Name of the variable
     char                *name;
@@ -537,7 +707,7 @@ typedef struct default_s
     valuealias_type_t   valuealiastype;
 } default_t;
 
-typedef struct valuealias_s
+typedef struct
 {
     char                *text;
     int                 value;

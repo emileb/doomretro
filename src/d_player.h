@@ -55,7 +55,7 @@
 // as commands per game tick.
 #include "d_ticcmd.h"
 
-typedef enum armortype_e
+typedef enum
 {
     NOARMOR    = 0,
     GREENARMOR = 1,
@@ -65,7 +65,7 @@ typedef enum armortype_e
 //
 // Player states.
 //
-typedef enum playerstate_e
+typedef enum
 {
     // Playing or camping.
     PST_LIVE,
@@ -115,8 +115,6 @@ typedef struct player_s
     fixed_t             viewheight;
     // Bob/squat speed.
     fixed_t             deltaviewheight;
-    // bounded/scaled total momentum.
-    fixed_t             bob;
 
     // killough 10/98: used for realistic bobbing (i.e. not simply overall speed)
     // mo->momx and mo->momy represent true momenta experienced by player.
@@ -224,7 +222,7 @@ typedef struct player_s
 // INTERMISSION
 // Structure passed e.g. to WI_Start(wb)
 //
-typedef struct wbplayerstruct_s
+typedef struct
 {
     // Player stats, kills, collected items etc.
     int                 skills;
@@ -233,7 +231,7 @@ typedef struct wbplayerstruct_s
     int                 stime;
 } wbplayerstruct_t;
 
-typedef struct wbstartstruct_s
+typedef struct
 {
     int                 epsd;           // episode # (0-2)
 

@@ -43,7 +43,9 @@
 #include "i_midirpc.h"
 #include "i_system.h"
 #include "m_argv.h"
+#include "m_config.h"
 #include "m_controls.h"
+#include "m_misc.h"
 #include "version.h"
 
 int windowborderwidth;
@@ -212,41 +214,6 @@ static void I_AccessibilityShortcutKeys(dboolean bAllowKeys)
     }
 }
 
-#if !defined(_DEBUG)
-LONG WINAPI ExceptionHandler(LPEXCEPTION_POINTERS info)
-{
-    char *msg = PACKAGE_NAME" has crashed.";
-
-    const SDL_MessageBoxButtonData buttons[] =
-    {
-        {                                       0, 0, "&Report" },
-        { SDL_MESSAGEBOX_BUTTON_RETURNKEY_DEFAULT, 1, "&OK"     }
-    };
-
-    const SDL_MessageBoxData messageboxdata =
-    {
-        SDL_MESSAGEBOX_INFORMATION,
-        NULL,
-        PACKAGE_NAME,
-        msg,
-        SDL_arraysize(buttons),
-        buttons,
-        NULL
-    };
-
-    int buttonid;
-
-    I_MidiRPCClientShutDown();
-    I_ShutdownGraphics();
-
-    if (SDL_ShowMessageBox(&messageboxdata, &buttonid) >= 0)
-        if (buttons[buttonid].buttonid == 0)
-            ShellExecute(GetActiveWindow(), "open", PACKAGE_REPORT_URL, NULL, NULL, SW_SHOWNORMAL);
-
-    return EXCEPTION_EXECUTE_HANDLER;
-}
-#endif
-
 void I_InitWindows32(void)
 {
     HINSTANCE       handle = GetModuleHandle(NULL);
@@ -259,17 +226,13 @@ void I_InitWindows32(void)
     hwnd = info.info.win.window;
 
     icon = LoadIcon(handle, "IDI_ICON1");
-    SetClassLongPtr(hwnd, GCLP_HICON, (LONG)icon);
+    SetClassLongPtr(hwnd, GCLP_HICON, (LONG_PTR)icon);
 
-    oldProc = (WNDPROC)SetWindowLongPtr(hwnd, GWLP_WNDPROC, (LONG)WndProc);
+    oldProc = (WNDPROC)SetWindowLongPtr(hwnd, GWLP_WNDPROC, (LONG_PTR)WndProc);
 
     windowborderwidth = (GetSystemMetrics(SM_CXFRAME) + GetSystemMetrics(SM_CXPADDEDBORDER)) * 2;
     windowborderheight = (GetSystemMetrics(SM_CYFRAME) + GetSystemMetrics(SM_CXPADDEDBORDER)) * 2
         + GetSystemMetrics(SM_CYCAPTION);
-
-#if !defined(_DEBUG)
-    SetUnhandledExceptionFilter(ExceptionHandler);
-#endif
 }
 
 void I_ShutdownWindows32(void)
