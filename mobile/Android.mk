@@ -9,8 +9,10 @@ LOCAL_CFLAGS :=  -DRETRO_DOOM -Wall -Wdeclaration-after-statement  -D_GNU_SOURCE
 
 
 LOCAL_C_INCLUDES :=     $(SDL_INCLUDE_PATHS)  \
+                        $(TOP_DIR) \
                         $(TOP_DIR)/MobileTouchControls \
                         $(TOP_DIR)/Clibs_OpenTouch \
+                        $(TOP_DIR)/Doom/common_interface \
                         $(LOCAL_PATH)/../mobile \
 
 ANDROID_FILES = \
@@ -25,6 +27,7 @@ LOCAL_SRC_FILES := $(ANDROID_FILES) $(FILE_LIST:$(LOCAL_PATH)%=%)
 LOCAL_LDLIBS += -llog -lz -lGLESv1_CM
 
 LOCAL_SHARED_LIBRARIES := touchcontrols SDL2 SDL2_mixer SDL2_image
+LOCAL_STATIC_LIBRARIES += license_static
 
 include $(BUILD_SHARED_LIBRARY)
 

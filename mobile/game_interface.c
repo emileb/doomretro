@@ -74,6 +74,11 @@ int PortableKeyEvent(int state, int code, int unicode){
 
 }
 
+void PortableBackButton()
+{
+    PortableKeyEvent(1, SDL_SCANCODE_ESCAPE,0 );
+    PortableKeyEvent(0, SDL_SCANCODE_ESCAPE, 0);
+}
 
 void ActionKey(int state,int key)
 {
