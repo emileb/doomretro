@@ -236,7 +236,9 @@ void I_WaitVBL(int count)
     I_Sleep(count * 1000 / 70);
 }
 
-
+#ifdef __ANDROID__
+#include "LogWritter.h"
+#endif
 
 //
 // I_Error
@@ -275,6 +277,7 @@ void I_Error(char *error, ...)
     char string[512];
     vsprintf(string, error, argptr);
     LOGI("%s",string);
+    LogWritter_Write(string);
 #endif
 
     vfprintf(stderr, error, argptr);

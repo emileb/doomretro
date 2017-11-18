@@ -236,6 +236,10 @@ void C_CCMDOutput(const char *ccmd)
         C_Input(ccmd);
 }
 
+#ifdef __ANDROID__
+#include "LogWritter.h"
+#endif
+
 void C_Output(const char *string, ...)
 {
     va_list argptr;
@@ -247,6 +251,7 @@ void C_Output(const char *string, ...)
 
 #ifdef __ANDROID__
     LOGI("%s",buffer);
+    LogWritter_Write(buffer);
 #endif
     console = I_Realloc(console, (consolestrings + 1) * sizeof(*console));
 
