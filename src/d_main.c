@@ -36,6 +36,8 @@
 ========================================================================
 */
 
+#include <time.h>
+
 #if defined(_WIN32)
 #pragma comment(lib, "winmm.lib")
 
@@ -143,6 +145,8 @@ static int          startuptimer;
 
 dboolean            realframe;
 static dboolean     error;
+
+struct tm           *gamestarttime;
 
 //
 // EVENT HANDLING
@@ -388,8 +392,13 @@ void D_Display(void)
 //
 static void D_DoomLoop(void)
 {
+    time_t  rawtime;
+
     R_ExecuteSetViewSize();
     D_StartGameLoop();
+
+    time(&rawtime);
+    gamestarttime = localtime(&rawtime);
 
     while (1)
     {
@@ -2029,7 +2038,7 @@ static void D_DoomMainSetup(void)
     }
 
     C_Output("Startup took %s seconds to complete.",
-        striptrailingzero((I_GetTimeMS() - startuptimer) / 1000.0f, 2));
+        striptrailingzero((I_GetTimeMS() - startuptimer) / 1000.0f, 1));
 
     // Ty 04/08/98 - Add 5 lines of misc. data, only if non-blank
     // The expectation is that these will be set in a .bex file

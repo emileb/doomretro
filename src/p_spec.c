@@ -790,7 +790,7 @@ dboolean P_CanUnlockGenDoor(line_t *line, player_t *player)
         case RCard:
             if (player->cards[it_redcard] <= 0 && (!skulliscard || player->cards[it_redskull] <= 0))
             {
-                if (!player->neededcardflash || player->neededcard != it_redcard)
+                if (vid_widescreen && r_hud && (!player->neededcardflash || player->neededcard != it_redcard))
                 {
                     player->neededcard = it_redcard;
                     player->neededcardflash = NEEDEDCARDFLASH;
@@ -809,7 +809,7 @@ dboolean P_CanUnlockGenDoor(line_t *line, player_t *player)
         case BCard:
             if (player->cards[it_bluecard] <= 0 && (!skulliscard || player->cards[it_blueskull] <= 0))
             {
-                if (!player->neededcardflash || player->neededcard != it_bluecard)
+                if (vid_widescreen && r_hud && (!player->neededcardflash || player->neededcard != it_bluecard))
                 {
                     player->neededcard = it_bluecard;
                     player->neededcardflash = NEEDEDCARDFLASH;
@@ -828,7 +828,7 @@ dboolean P_CanUnlockGenDoor(line_t *line, player_t *player)
         case YCard:
             if (player->cards[it_yellowcard] <= 0 && (!skulliscard || player->cards[it_yellowskull] <= 0))
             {
-                if (!player->neededcardflash || player->neededcard != it_yellowcard)
+                if (vid_widescreen && r_hud && (!player->neededcardflash || player->neededcard != it_yellowcard))
                 {
                     player->neededcard = it_yellowcard;
                     player->neededcardflash = NEEDEDCARDFLASH;
@@ -848,7 +848,7 @@ dboolean P_CanUnlockGenDoor(line_t *line, player_t *player)
         case RSkull:
             if (player->cards[it_redskull] <= 0 && (!skulliscard || player->cards[it_redcard] <= 0))
             {
-                if (!player->neededcardflash || player->neededcard != it_redskull)
+                if (vid_widescreen && r_hud && (!player->neededcardflash || player->neededcard != it_redskull))
                 {
                     player->neededcard = it_redskull;
                     player->neededcardflash = NEEDEDCARDFLASH;
@@ -867,7 +867,7 @@ dboolean P_CanUnlockGenDoor(line_t *line, player_t *player)
         case BSkull:
             if (player->cards[it_blueskull] <= 0 && (!skulliscard || player->cards[it_bluecard] <= 0))
             {
-                if (!player->neededcardflash || player->neededcard != it_blueskull)
+                if (vid_widescreen && r_hud && (!player->neededcardflash || player->neededcard != it_blueskull))
                 {
                     player->neededcard = it_blueskull;
                     player->neededcardflash = NEEDEDCARDFLASH;
@@ -886,7 +886,7 @@ dboolean P_CanUnlockGenDoor(line_t *line, player_t *player)
         case YSkull:
             if (player->cards[it_yellowskull] <= 0 && (!skulliscard || player->cards[it_yellowcard] <= 0))
             {
-                if (!player->neededcardflash || player->neededcard != it_yellowskull)
+                if (vid_widescreen && r_hud && (!player->neededcardflash || player->neededcard != it_yellowskull))
                 {
                     player->neededcard = it_yellowskull;
                     player->neededcardflash = NEEDEDCARDFLASH;
@@ -2223,6 +2223,12 @@ dboolean EV_DoDonut(line_t *line)
     return rtn;
 }
 
+void P_SetTimer(int minutes)
+{
+    timer = BETWEEN(0, minutes, 600);
+    countdown = timer * 60 * TICRATE;
+}
+
 //
 // SPECIAL SPAWNING
 //
@@ -2240,16 +2246,14 @@ void P_SpawnSpecials(void)
 
     if (p)
     {
-        timer = atoi(myargv[p + 1]);
-        M_SaveCVARs();
+        P_SetTimer(atoi(myargv[p + 1]));
         C_Output("A <b>-timer</b> parameter was found on the command-line. "
             "The time limit for each map is %i minutes.", timer);
     }
 
     if (M_CheckParm("-avg"))
     {
-        timer = 20;
-        M_SaveCVARs();
+        P_SetTimer(20);
         C_Output("An <b>-avg</b> parameter was found on the command-line. "
             "The time limit for each map is %i minutes.", timer);
     }

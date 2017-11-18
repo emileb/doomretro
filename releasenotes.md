@@ -1,24 +1,34 @@
 ### DOOM Retro v2.6
 
 * *DOOM Retro* now uses [*SDL v2.0.7*](http://libsdl.org), [*SDL_mixer v2.0.2*](http://libsdl.org/SDL_mixer) and [*SDL_image v2.0.2*](http://libsdl.org/SDL_image).
-* Optimizations have been made to further improve the overall performance and stability of *DOOM Retro*.
+* Extensive optimizations have been made to further improve the overall performance and stability of *DOOM Retro*.
+* The format of savegames has changed, breaking compatibility with previous versions of *DOOM Retro*.
 * A bug has been fixed whereby the help screen accessed using the <kbd>F1</kbd> key had a solid blue background.
 * Minor changes have been made to text that is output to the console.
 * Further improvements have been made to the console’s autocomplete feature.
+* The player’s field of view can now be changed using the new `r_fov` CVAR. This CVAR can be a value between `45` and `135`, and is `90` by default and when vanilla mode is enabled.
 * Using the `vanilla` CCMD in an alias will now work correctly.
 * Strings of commands, separated by semi-colons, can now be entered directly in the console.
 * Most actions can now be entered directly in the console.
 * The `bind` CCMD can now be used to bind a string of commands to a control. For example, to press the <kbd>V</kbd> key to enable vanilla mode without lowering the graphic detail, enter `bind 'v' "vanilla; r_detail high"` in the console.
 * A custom message can now be displayed using the new `print` CCMD.
 * A new `if` CCMD has been implemented that allows a string of commands to be executed only if a CVAR equals a certain value.
+* The player’s view is now updated immediately when on a moving platform.
+* Items dropped by monsters when they are killed are now spawned above rather than on the floor before being tossed upwards.
 * Tossing items dropped by monsters when they are killed can now be toggled on or off using the new `tossdrop` CVAR. This CVAR is `on` by default and `off` when vanilla mode is enabled.
 * The position of player messages can now be changed using the new `r_messagepos` CVAR. This CVAR is `(3,2)` by default and `(0,0)` when vanilla mode is enabled.
 * The `vid_windowposition` CVAR has been shortened to just `vid_windowpos`.
 * If they can be found, the *Final DOOM* IWADs (`plutonia.wad` and `tnt.wad`) will now automatically be loaded for certain PWADs that require them.
-* A crash will no longer occur when trying to switch between fullscreen and a window using <kbd>ALT</kbd> + <kbd>ENTER</kbd> while on the title screen.
+* Brightmaps are now applied to more wall textures in *Final DOOM: TNT - Evilution* when the `r_brightmaps` CVAR is `on`.
+* The player can now automatically use doors and switches if they are near enough by enabling the new `autouse` CVAR. This CVAR is `off` by default.
+* A crash will no longer occur when trying to switch between fullscreen and a window by pressing <kbd>ALT</kbd> + <kbd>ENTER</kbd> while on the title screen.
 * Blood splats will no longer be spawned around corpse decorations if their sprites have been changed in a PWAD.
 * Long lines are no longer truncated in files output by the `condump` CCMD.
 * A bug has been fixed whereby a corrupted player message would be displayed when trying to open a locked door in some instances.
+* The vertical position of the player’s weapon is now reset immediately when the `mouselook` CVAR is turned `off`.
+* Improvements have been made to the effect when the player is damaged and the `r_shake_damage` CVAR is `on`.
+* A time limit for each map can now be set in minutes using the new `timer` CCMD, functioning like the command-line parameter of the same name.
+* Pain elementals killed using the `kill` CCMD are now counted correctly in the stats displayed by the `playerstats` CCMD.
 
 ---
 

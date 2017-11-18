@@ -80,15 +80,17 @@ typedef enum
     warningstring,
     playermessagestring,
     obituarystring,
+    headerstring,
     STRINGTYPES
 } stringtype_t;
 
 typedef struct
 {
     char            string[1024];
+    unsigned int    count;
     stringtype_t    type;
     int             tabs[8];
-    char            timestamp[9];
+    unsigned int    tics;
 } console_t;
 
 extern console_t    *console;
@@ -98,6 +100,7 @@ extern int          consoleheight;
 extern int          consoledirection;
 
 extern int          consolestrings;
+extern int          consolestrings_max;
 
 extern char         consolecheat[255];
 extern char         consolecheatparm[3];
@@ -121,6 +124,7 @@ void C_StrCVAROutput(const char *cvar, const char *string);
 void C_CCMDOutput(const char *ccmd);
 void C_Output(const char *string, ...);
 void C_TabbedOutput(const int tabs[8], const char *string, ...);
+void C_Header(const int tabs[8], const char *string, ...);
 void C_Warning(const char *string, ...);
 void C_PlayerMessage(const char *string, ...);
 void C_Obituary(const char *string, ...);
@@ -137,5 +141,6 @@ void C_PrintCompileDate(void);
 void C_PrintSDLVersions(void);
 void C_StripQuotes(char *string);
 void C_UpdateFPS(void);
+char *C_GetTimeStamp(unsigned int value);
 
 #endif

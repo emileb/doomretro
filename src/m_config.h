@@ -62,6 +62,7 @@ extern int          am_thingcolor;
 extern int          am_tswallcolor;
 extern int          am_wallcolor;
 extern dboolean     autoload;
+extern dboolean     autouse;
 extern dboolean     centerweapon;
 extern dboolean     con_obituaries;
 extern dboolean     con_timestamps;
@@ -106,6 +107,7 @@ extern dboolean     r_dither;
 extern dboolean     r_fixmaperrors;
 extern dboolean     r_fixspriteoffsets;
 extern dboolean     r_floatbob;
+extern int          r_fov;
 extern float        r_gamma;
 extern dboolean     r_homindicator;
 extern dboolean     r_hud;
@@ -310,6 +312,8 @@ enum
 
 #define autoload_default                        true
 
+#define autouse_default                         false
+
 #define centerweapon_default                    true
 
 #define con_obituaries_default                  true
@@ -436,6 +440,10 @@ enum
 
 #define r_floatbob_default                      true
 
+#define r_fov_min                               45
+#define r_fov_default                           90
+#define r_fov_max                               135
+
 #define r_gamma_min                             gammalevels[0]
 #define r_gamma_default                         0.75f
 #define r_gamma_max                             gammalevels[GAMMALEVELS - 1]
@@ -458,7 +466,7 @@ enum
 
 #define r_lowpixelsize_default                  "2x2"
 
-#define r_messagepos_default               "(3,2)"
+#define r_messagepos_default                    "(3,2)"
 
 #define r_messagescale_default                  r_messagescale_big
 

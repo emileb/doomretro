@@ -25,7 +25,7 @@
   General Public License for more details.
 
   You should have received a copy of the GNU General Public License
-  along with DOOM Retro. If not, see http://www.gnu.org/licenses/.
+  along with DOOM Retro. If not, see <https://www.gnu.org/licenses/>.
 
   DOOM is a registered trademark of id Software LLC, a ZeniMax Media
   company, in the US and/or other countries and is used without
@@ -38,6 +38,7 @@
 
 #include <ctype.h>
 #include <float.h>
+#include <stdio.h>
 
 #if defined(_WIN32)
 #include <Windows.h>
@@ -87,6 +88,7 @@
 #define SAVECMDFORMAT       "<i>filename</i><b>.save</b>"
 #define SPAWNCMDFORMAT      "<i>monster</i>|<i>item</i>"
 #define TELEPORTCMDFORMAT   "<i>x</i> <i>y</i>"
+#define TIMERCMDFORMAT      "<i>minutes</i>"
 #define UNBINDCMDFORMAT     "<i>control</i>"
 
 #define PENDINGCHANGE       "This change won't be effective until the next map."
@@ -114,6 +116,7 @@ dboolean            togglingvanilla = false;
 
 char                *version = version_default;
 
+extern dboolean     setsizeneeded;
 extern dboolean     usemouselook;
 extern char         *packageconfig;
 extern int          st_palette;
@@ -299,6 +302,7 @@ static dboolean spawn_cmd_func1(char *cmd, char *parms);
 static void spawn_cmd_func2(char *cmd, char *parms);
 static void teleport_cmd_func2(char *cmd, char *parms);
 static void thinglist_cmd_func2(char *cmd, char *parms);
+static void timer_cmd_func2(char *cmd, char *parms);
 static void unbind_cmd_func2(char *cmd, char *parms);
 static void vanilla_cmd_func2(char *cmd, char *parms);
 
@@ -334,6 +338,7 @@ static dboolean r_detail_cvar_func1(char *cmd, char *parms);
 static void r_detail_cvar_func2(char *cmd, char *parms);
 static void r_dither_cvar_func2(char *cmd, char *parms);
 static void r_fixmaperrors_cvar_func2(char *cmd, char *parms);
+static void r_fov_cvar_func2(char *cmd, char *parms);
 static dboolean r_gamma_cvar_func1(char *cmd, char *parms);
 static void r_gamma_cvar_func2(char *cmd, char *parms);
 static void r_hud_cvar_func2(char *cmd, char *parms);
@@ -468,6 +473,8 @@ consolecmd_t consolecmds[] =
         "The player's armor."),
     CVAR_BOOL(autoload, "", bool_cvars_func1, bool_cvars_func2, BOOLVALUEALIAS,
         "Toggles automatically loading the last savegame\nafter the player dies."),
+    CVAR_BOOL(autouse, "", bool_cvars_func1, bool_cvars_func2, BOOLVALUEALIAS,
+        "Toggles automatically using a door or switch when\nthe player is near."),
     CMD(bind, "", null_func1, bind_cmd_func2, true, BINDCMDFORMAT,
         "Binds an <i>action</i> or string of <i>commands</i> to a\n<i>control</i>."),
     CMD(bindlist, "", null_func1, bindlist_cmd_func2, false, "",
@@ -640,6 +647,8 @@ consolecmd_t consolecmds[] =
         "Toggles the fixing of sprite offsets."),
     CVAR_BOOL(r_floatbob, "", bool_cvars_func1, bool_cvars_func2, BOOLVALUEALIAS,
         "Toggles some power-ups bobbing up and down."),
+    CVAR_INT(r_fov, "", int_cvars_func1, r_fov_cvar_func2, CF_NONE, NOVALUEALIAS,
+        "The player's field of view (<b>45</b> to <b>135</b>)."),
     CVAR_FLOAT(r_gamma, "", r_gamma_cvar_func1, r_gamma_cvar_func2, CF_NONE,
         "The screen's gamma correction level (<b>off</b>, or <b>0.50</b> to\n<b>2.0</b>)."),
     CVAR_BOOL(r_homindicator, "", bool_cvars_func1, bool_cvars_func2, BOOLVALUEALIAS,
@@ -699,7 +708,7 @@ consolecmd_t consolecmds[] =
     CMD(resurrect, "", resurrect_cmd_func1, resurrect_cmd_func2, false, "",
         "Resurrects the player."),
     CVAR_INT(s_channels, "", int_cvars_func1, int_cvars_func2, CF_NONE, NOVALUEALIAS,
-        "The number of sounds that can be played at the\nsame time (<b>8</b> to <b>64</b>)."),
+        "The number of sound effects that can be played at\nthe same time (<b>8</b> to <b>64</b>)."),
     CVAR_INT(s_musicvolume, "", s_volume_cvars_func1, s_volume_cvars_func2, CF_PERCENT, NOVALUEALIAS,
         "The volume of music."),
     CVAR_BOOL(s_randommusic, "", bool_cvars_func1, bool_cvars_func2, BOOLVALUEALIAS,
@@ -722,6 +731,8 @@ consolecmd_t consolecmds[] =
         "Teleports the player to (<i>x</i>,<i>y</i>) in the current map."),
     CMD(thinglist, "", game_func1, thinglist_cmd_func2, false, "",
         "Shows a list of things in the current map."),
+    CMD(timer, "", null_func1, timer_cmd_func2, true, TIMERCMDFORMAT,
+        "Sets a time limit on each map."),
     CVAR_BOOL(tossdrop, "", bool_cvars_func1, bool_cvars_func2, BOOLVALUEALIAS,
         "Toggles tossing items dropped by monsters when\nthey die."),
     CVAR_INT(turbo, "", turbo_cvar_func1, turbo_cvar_func2, CF_PERCENT, NOVALUEALIAS,
@@ -1434,7 +1445,7 @@ static void bindlist_cmd_func2(char *cmd, char *parms)
     const int   tabs[8] = { 40, 130, 0, 0, 0, 0, 0, 0 };
     int         count = 1;
 
-    C_TabbedOutput(tabs, BINDLISTTITLE);
+    C_Header(tabs, BINDLISTTITLE);
 
     for (int i = 0; *actions[i].action; i++)
     {
@@ -1478,6 +1489,7 @@ static void bindlist_cmd_func2(char *cmd, char *parms)
 static void clear_cmd_func2(char *cmd, char *parms)
 {
     consolestrings = 0;
+    consolestrings_max = 0;
     C_Output("");
 }
 
@@ -1489,7 +1501,7 @@ static void cmdlist_cmd_func2(char *cmd, char *parms)
     const int tabs[8] = { 40, 336, 0, 0, 0, 0, 0, 0 };
     int       count = 0;
 
-    C_TabbedOutput(tabs, CMDLISTTITLE);
+    C_Header(tabs, CMDLISTTITLE);
 
     for (int i = 0; *consolecmds[i].name; i++)
         if (consolecmds[i].type == CT_CMD && *consolecmds[i].description
@@ -1599,12 +1611,13 @@ static void condump_cmd_func2(char *cmd, char *parms)
                         }
                     }
 
-                    if (con_timestamps && *console[i].timestamp)
+                    if ((console[i].type == playermessagestring || console[i].type == obituarystring)
+                        && con_timestamps)
                     {
                         for (unsigned int spaces = 0; spaces < 91 - outpos; spaces++)
                             fputc(' ', file);
 
-                        fputs(console[i].timestamp, file);
+                        fputs(C_GetTimeStamp(console[i].tics), file);
                     }
 
                     fputc('\n', file);
@@ -1625,7 +1638,7 @@ static void cvarlist_cmd_func2(char *cmd, char *parms)
     const int   tabs[8] = { 40, 210, 318, 0, 0, 0, 0, 0 };
     int         count = 0;
 
-    C_TabbedOutput(tabs, CVARLISTTITLE);
+    C_Header(tabs, CVARLISTTITLE);
 
     for (int i = 0; *consolecmds[i].name; i++)
         if (consolecmds[i].type == CT_CVAR && (!*parms || wildcard(consolecmds[i].name, parms)))
@@ -1994,6 +2007,10 @@ static void help_cmd_func2(char *cmd, char *parms)
 {
 #if defined(_WIN32)
     ShellExecute(GetActiveWindow(), "open", PACKAGE_WIKI_HELP_URL, NULL, NULL, SW_SHOWNORMAL);
+//#elif defined(__linux__)
+    system("xdg-open "PACKAGE_WIKI_HELP_URL);
+#elif defined(__MACOSX__)
+    system("open "PACKAGE_WIKI_HELP_URL);
 #else
     C_HideConsoleFast();
     M_ShowHelp();
@@ -2047,7 +2064,6 @@ static void if_cmd_func2(char *cmd, char *parms)
                     float value = FLT_MIN;
 
                     sscanf(parms, "%10f", &value);
-
                     condition = (value != FLT_MIN && value == *(float *)consolecmds[i].variable);
                 }
                 else
@@ -2182,9 +2198,9 @@ static void kill_cmd_func2(char *cmd, char *parms)
             (M_StringCompare(playername, "you") ? "yourself" : "themselves"));
         buffer[0] = toupper(buffer[0]);
         C_Output(buffer);
+        C_HideConsole();
         HU_SetPlayerMessage(buffer, false);
         message_dontfuckwithme = true;
-        C_HideConsole();
     }
     else
     {
@@ -2201,7 +2217,10 @@ static void kill_cmd_func2(char *cmd, char *parms)
                 while (thing)
                 {
                     if (thing->flags2 & MF2_MONSTERMISSILE)
+                    {
+                        thing->flags2 |= MF2_MASSACRE;
                         P_ExplodeMissile(thing);
+                    }
                     else if (thing->health > 0)
                     {
                         const mobjtype_t    type = thing->type;
@@ -2210,6 +2229,8 @@ static void kill_cmd_func2(char *cmd, char *parms)
                         {
                             A_Fall(thing, NULL, NULL);
                             P_SetMobjState(thing, S_PAIN_DIE6);
+                            players[0].mobjcount[MT_PAIN]++;
+                            stat_monsterskilled_painelementals = SafeAdd(stat_monsterskilled_painelementals, 1);
                             players[0].killcount++;
                             stat_monsterskilled = SafeAdd(stat_monsterskilled, 1);
                             kills++;
@@ -2241,9 +2262,9 @@ static void kill_cmd_func2(char *cmd, char *parms)
                 M_snprintf(buffer, sizeof(buffer), "%s monster%s killed.", commify(kills),
                     (kills == 1 ? "" : "s"));
                 C_Output(buffer);
+                C_HideConsole();
                 HU_SetPlayerMessage(buffer, false);
                 message_dontfuckwithme = true;
-                C_HideConsole();
                 players[0].cheated++;
                 stat_cheated = SafeAdd(stat_cheated, 1);
                 M_SaveCVARs();
@@ -2274,9 +2295,9 @@ static void kill_cmd_func2(char *cmd, char *parms)
                 M_snprintf(buffer, sizeof(buffer), "%s missile%s exploded.", commify(kills),
                     (kills == 1 ? "" : "s"));
                 C_Output(buffer);
+                C_HideConsole();
                 HU_SetPlayerMessage(buffer, false);
                 message_dontfuckwithme = true;
-                C_HideConsole();
                 players[0].cheated++;
                 stat_cheated = SafeAdd(stat_cheated, 1);
                 M_SaveCVARs();
@@ -2303,6 +2324,8 @@ static void kill_cmd_func2(char *cmd, char *parms)
                             {
                                 A_Fall(thing, NULL, NULL);
                                 P_SetMobjState(thing, S_PAIN_DIE6);
+                                players[0].mobjcount[MT_PAIN]++;
+                                stat_monsterskilled_painelementals = SafeAdd(stat_monsterskilled_painelementals, 1);
                                 players[0].killcount++;
                                 stat_monsterskilled = SafeAdd(stat_monsterskilled, 1);
                                 kills++;
@@ -2339,9 +2362,9 @@ static void kill_cmd_func2(char *cmd, char *parms)
                     (kills == 1 ? mobjinfo[type].name1 : mobjinfo[type].plural1),
                     (type == MT_BARREL ? "exploded" : "killed"));
                 C_Output(buffer);
+                C_HideConsole();
                 HU_SetPlayerMessage(buffer, false);
                 message_dontfuckwithme = true;
-                C_HideConsole();
                 players[0].cheated++;
                 stat_cheated = SafeAdd(stat_cheated, 1);
                 M_SaveCVARs();
@@ -2668,7 +2691,7 @@ static void maplist_cmd_func2(char *cmd, char *parms)
     int         count = 0;
     char        (*maplist)[256] = malloc(numlumps * sizeof(char *));
 
-    C_TabbedOutput(tabs, MAPLISTTITLE);
+    C_Header(tabs, MAPLISTTITLE);
 
     // search through lumps for maps
     for (int i = 0; i < numlumps; i++)
@@ -2826,6 +2849,8 @@ static void maplist_cmd_func2(char *cmd, char *parms)
 static void mapstats_cmd_func2(char *cmd, char *parms)
 {
     const int   tabs[8] = { 120, 240, 0, 0, 0, 0, 0, 0 };
+
+    C_Header(tabs, MAPSTATSTITLE);
 
     C_TabbedOutput(tabs, "Title\t<b>%s</b>", mapnumandtitle);
 
@@ -3282,7 +3307,7 @@ static void C_PlayerStats_Game(void)
     const int   time2 = stat_time / TICRATE;
     player_t    *player = &players[0];
 
-    C_TabbedOutput(tabs, PLAYERSTATSTITLE);
+    C_Header(tabs, PLAYERSTATSTITLE);
 
     if ((players[0].cheats & CF_ALLMAP) || (players[0].cheats & CF_ALLMAP_THINGS))
         C_TabbedOutput(tabs, "Map explored\t<b>100%%</b>\t-");
@@ -3487,7 +3512,7 @@ static void C_PlayerStats_NoGame(void)
     const int   tabs[8] = { 160, 280, 0, 0, 0, 0, 0, 0 };
     const int   time2 = stat_time / TICRATE;
 
-    C_TabbedOutput(tabs, PLAYERSTATSTITLE);
+    C_Header(tabs, PLAYERSTATSTITLE);
 
     C_TabbedOutput(tabs, "Maps completed\t-\t<b>%s</b>", commify(stat_mapscompleted));
 
@@ -4019,7 +4044,7 @@ static void thinglist_cmd_func2(char *cmd, char *parms)
     const int   tabs[8] = { 40, 268, 0, 0, 0, 0, 0, 0 };
     int         count = 0;
 
-    C_TabbedOutput(tabs, THINGLISTTITLE);
+    C_Header(tabs, THINGLISTTITLE);
 
     for (thinker_t *th = thinkerclasscap[th_mobj].cnext; th != &thinkerclasscap[th_mobj]; th = th->cnext)
     {
@@ -4027,6 +4052,27 @@ static void thinglist_cmd_func2(char *cmd, char *parms)
 
         C_TabbedOutput(tabs, "%i.\t%s\t(%i,%i,%i)", ++count, titlecase(mobj->info->name1),
             mobj->x >> FRACBITS, mobj->y >> FRACBITS, mobj->z >> FRACBITS);
+    }
+}
+
+//
+// timer CCMD
+//
+static void timer_cmd_func2(char *cmd, char *parms)
+{
+    if (!*parms)
+    {
+        C_Output("<b>%s</b> %s", cmd, TIMERCMDFORMAT);
+        return;
+    }
+    else
+    {
+        int value = INT_MAX;
+
+        sscanf(parms, "%10i", &value);
+
+        if (value != INT_MAX)
+            P_SetTimer(value);
     }
 }
 
@@ -4613,7 +4659,7 @@ static void mouselook_cvar_func2(char *cmd, char *parms)
         R_InitSkyMap();
         R_InitColumnFunctions();
 
-        if (!usemouselook && gamestate == GS_LEVEL)
+        if (!mouselook && gamestate == GS_LEVEL)
         {
             viewplayer->lookdir = 0;
             viewplayer->oldlookdir = 0;
@@ -4637,6 +4683,9 @@ static void player_cvars_func2(char *cmd, char *parms)
 {
     player_t    *player = &players[0];
     int         value;
+
+    if (resettingall)
+        return;
 
     if (M_StringCompare(cmd, stringize(ammo)))
     {
@@ -4911,6 +4960,22 @@ static void r_fixmaperrors_cvar_func2(char *cmd, char *parms)
             C_Output("It is currently set to <b>%s</b> and its default is <b>%s</b>.",
                 C_LookupAliasFromValue(r_fixmaperrors, BOOLVALUEALIAS),
                 C_LookupAliasFromValue(r_fixmaperrors_default, BOOLVALUEALIAS));
+    }
+}
+
+//
+// r_fov CVAR
+//
+static void r_fov_cvar_func2(char *cmd, char *parms)
+{
+    const int   r_fov_old = r_fov;
+
+    int_cvars_func2(cmd, parms);
+
+    if (r_fov != r_fov_old)
+    {
+        setsizeneeded = true;
+        R_InitLightTables();
     }
 }
 

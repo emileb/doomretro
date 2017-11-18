@@ -92,6 +92,7 @@ static default_t cvars[] =
     CONFIG_VARIABLE_INT          (am_tswallcolor,                                    NOVALUEALIAS      ),
     CONFIG_VARIABLE_INT          (am_wallcolor,                                      NOVALUEALIAS      ),
     CONFIG_VARIABLE_INT          (autoload,                                          BOOLVALUEALIAS    ),
+    CONFIG_VARIABLE_INT          (autouse,                                           BOOLVALUEALIAS    ),
     CONFIG_VARIABLE_INT          (centerweapon,                                      BOOLVALUEALIAS    ),
     CONFIG_VARIABLE_INT          (con_obituaries,                                    BOOLVALUEALIAS    ),
     CONFIG_VARIABLE_INT          (con_timestamps,                                    BOOLVALUEALIAS    ),
@@ -135,6 +136,7 @@ static default_t cvars[] =
     CONFIG_VARIABLE_INT          (r_fixmaperrors,                                    BOOLVALUEALIAS    ),
     CONFIG_VARIABLE_INT          (r_fixspriteoffsets,                                BOOLVALUEALIAS    ),
     CONFIG_VARIABLE_INT          (r_floatbob,                                        BOOLVALUEALIAS    ),
+    CONFIG_VARIABLE_INT          (r_fov,                                             NOVALUEALIAS      ),
     CONFIG_VARIABLE_FLOAT        (r_gamma,                                           GAMMAVALUEALIAS   ),
     CONFIG_VARIABLE_INT          (r_homindicator,                                    BOOLVALUEALIAS    ),
     CONFIG_VARIABLE_INT          (r_hud,                                             BOOLVALUEALIAS    ),
@@ -533,6 +535,9 @@ static void M_CheckCVARs(void)
     if (autoload != false && autoload != true)
         autoload = autoload_default;
 
+    if (autouse != false && autouse != true)
+        autouse = autouse_default;
+
     if (centerweapon != false && centerweapon != true)
         centerweapon = centerweapon_default;
 
@@ -639,6 +644,9 @@ static void M_CheckCVARs(void)
 
     if (r_floatbob != false && r_floatbob != true)
         r_floatbob = r_floatbob_default;
+
+    if (r_fov < r_fov_min || r_fov > r_fov_max)
+        r_fov = r_fov_default;
 
     r_gamma = BETWEENF(r_gamma_min, r_gamma, r_gamma_max);
     I_SetGamma(r_gamma);

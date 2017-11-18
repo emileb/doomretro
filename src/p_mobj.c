@@ -76,6 +76,7 @@ static fixed_t floatbobdiffs[64] =
 };
 
 extern fixed_t      animatedliquiddiffs[64];
+extern int          deathcount;
 extern msecnode_t   *sector_list;   // phares 3/16/98
 extern dboolean     usemouselook;
 
@@ -536,7 +537,7 @@ static void PlayerLandedOnThing(mobj_t *mo)
 void P_MobjThinker(mobj_t *mobj)
 {
     int         flags = mobj->flags;
-    int         flags2;
+    int         flags2 = mobj->flags2;
     player_t    *player = mobj->player;
     sector_t    *sector = mobj->subsector->sector;
 
@@ -568,8 +569,6 @@ void P_MobjThinker(mobj_t *mobj)
     // [BH] don't clip sprite if no longer in liquid
     if (!sector->isliquid)
         mobj->flags2 &= ~MF2_FEETARECLIPPED;
-
-    flags2 = mobj->flags2;
 
     // [BH] bob objects in liquid
     if ((flags2 & MF2_FEETARECLIPPED) && !(flags2 & MF2_NOLIQUIDBOB) && mobj->z <= sector->floorheight
@@ -668,7 +667,6 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
     mobjinfo_t  *info = &mobjinfo[type];
     sector_t    *sector;
     static int  prevx, prevy, prevz;
-    static int  prevbob;
     int         height = (z == ONCEILINGZ && type != MT_KEEN && info->projectilepassheight ?
                     info->projectilepassheight : info->height);
 
@@ -678,7 +676,6 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
     mobj->y = y;
     mobj->radius = info->radius;
     mobj->height = height;
-    mobj->projectilepassheight = info->projectilepassheight;
     mobj->flags = info->flags;
     mobj->flags2 = info->flags2;
     mobj->health = info->spawnhealth;
@@ -732,7 +729,12 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
     mobj->ceilingz = sector->interpceilingheight;
 
     // [BH] initialize bobbing things
-    mobj->floatbob = prevbob = (x == prevx && y == prevy && z == prevz ? prevbob : M_Random());
+    if (!(mobj->flags2 & MF2_NOLIQUIDBOB))
+    {
+        static int  prevbob;
+
+        mobj->floatbob = prevbob = (x == prevx && y == prevy && z == prevz ? prevbob : M_Random());
+    }
 
     mobj->z = (z == ONFLOORZ ? mobj->floorz : (z == ONCEILINGZ ? mobj->ceilingz - height :
         BETWEEN(mobj->floorz, z, mobj->ceilingz - height)));
@@ -742,7 +744,7 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
     mobj->oldz = mobj->z;
     mobj->oldangle = mobj->angle;
 
-    mobj->thinker.function = (mobj->type == MT_MUSICSOURCE ? MusInfoThinker : P_MobjThinker);
+    mobj->thinker.function = (type == MT_MUSICSOURCE ? MusInfoThinker : P_MobjThinker);
     P_AddThinker(&mobj->thinker);
 
     if (!(mobj->flags2 & MF2_NOFOOTCLIP) && sector->isliquid && !sector->heightsec)
@@ -929,6 +931,8 @@ static void P_SpawnPlayer(const mapthing_t *mthing)
     p->momx = 0;
     p->momy = 0;
     p->lookdir = 0;
+
+    deathcount = 0;
 
     // setup gun psprite
     P_SetupPsprites(p);

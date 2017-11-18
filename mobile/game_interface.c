@@ -388,7 +388,7 @@ void G_AndroidBuildTiccmd(ticcmd_t *cmd)
 	switch(look_yaw_mode)
 	{
 	case LOOK_MODE_MOUSE:
-		cmd->angleturn += look_yaw_mouse * 50000;
+		cmd->angleturn += look_yaw_mouse * 80000;
 		look_yaw_mouse = 0;
 		break;
 	case LOOK_MODE_JOYSTICK:

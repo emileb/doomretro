@@ -44,8 +44,8 @@
 
 // Visplane related.
 extern int      *lastopening;
-extern int      floorclip[];
-extern int      ceilingclip[];
+extern int      floorclip[SCREENWIDTH];
+extern int      ceilingclip[SCREENWIDTH];
 extern fixed_t  *yslope;
 extern fixed_t  yslopes[LOOKDIRS][SCREENHEIGHT];
 extern dboolean markceiling;

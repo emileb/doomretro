@@ -710,15 +710,16 @@ static void GetUpscaledTextureSize(int width, int height)
     upscaledheight = MIN(height / SCREENHEIGHT + !!(height % SCREENHEIGHT), MAXUPSCALEHEIGHT);
 }
 
-Uint32         starttime;
-int            frames = -1;
-static Uint32  currenttime;
+uint64_t        performancefrequency;
+uint64_t        starttime;
+int             frames = -1;
+static uint64_t currenttime;
 
 static void CalculateFPS(void)
 {
     frames++;
 
-    if (starttime < (currenttime = SDL_GetTicks()) - 1000)
+    if (starttime < (currenttime = SDL_GetPerformanceCounter()) - performancefrequency)
     {
         if ((fps = frames))
         {
@@ -816,6 +817,7 @@ static void I_Blit_Shake(void)
     SDL_LowerBlit(surface, &src_rect, buffer, &src_rect);
     SDL_UpdateTexture(texture, &src_rect, buffer->pixels, SCREENWIDTH * 4);
     SDL_RenderClear(renderer);
+    SDL_RenderCopy(renderer, texture, &src_rect, NULL);
     SDL_RenderCopyEx(renderer, texture, &src_rect, NULL,
         M_RandomInt(-1000, 1000) / 1000.0 * r_shake_damage / 100.0, NULL, SDL_FLIP_NONE);
 
@@ -835,6 +837,7 @@ static void I_Blit_NearestLinear_Shake(void)
     SDL_UpdateTexture(texture, &src_rect, buffer->pixels, SCREENWIDTH * 4);
     SDL_RenderClear(renderer);
     SDL_SetRenderTarget(renderer, texture_upscaled);
+    SDL_RenderCopy(renderer, texture, &src_rect, NULL);
     SDL_RenderCopyEx(renderer, texture, &src_rect, NULL,
         M_RandomInt(-1000, 1000) / 1000.0 * r_shake_damage / 100.0, NULL, SDL_FLIP_NONE);
     SDL_SetRenderTarget(renderer, NULL);
@@ -856,6 +859,7 @@ static void I_Blit_ShowFPS_Shake(void)
     SDL_LowerBlit(surface, &src_rect, buffer, &src_rect);
     SDL_UpdateTexture(texture, &src_rect, buffer->pixels, SCREENWIDTH * 4);
     SDL_RenderClear(renderer);
+    SDL_RenderCopy(renderer, texture, &src_rect, NULL);
     SDL_RenderCopyEx(renderer, texture, &src_rect, NULL,
         M_RandomInt(-1000, 1000) / 1000.0 * r_shake_damage / 100.0, NULL, SDL_FLIP_NONE);
 
@@ -876,6 +880,7 @@ static void I_Blit_NearestLinear_ShowFPS_Shake(void)
     SDL_UpdateTexture(texture, &src_rect, buffer->pixels, SCREENWIDTH * 4);
     SDL_RenderClear(renderer);
     SDL_SetRenderTarget(renderer, texture_upscaled);
+    SDL_RenderCopy(renderer, texture, &src_rect, NULL);
     SDL_RenderCopyEx(renderer, texture, &src_rect, NULL,
         M_RandomInt(-1000, 1000) / 1000.0 * r_shake_damage / 100.0, NULL, SDL_FLIP_NONE);
     SDL_SetRenderTarget(renderer, NULL);
@@ -1293,7 +1298,8 @@ void I_SetMotionBlur(int percent)
 
 static void SetVideoMode(dboolean output)
 {
-    int                 flags = SDL_RENDERER_TARGETTEXTURE;
+    int                 rendererflags = SDL_RENDERER_TARGETTEXTURE;
+    int                 windowflags = SDL_WINDOW_RESIZABLE;
     int                 width, height;
     Uint32              rmask, gmask, bmask, amask;
     int                 bpp;
@@ -1320,7 +1326,7 @@ static void SetVideoMode(dboolean output)
     }
 
     if (vid_vsync)
-        flags |= SDL_RENDERER_PRESENTVSYNC;
+        rendererflags |= SDL_RENDERER_PRESENTVSYNC;
 
     if (M_StringCompare(vid_scalefilter, vid_scalefilter_nearest_linear))
         nearestlinear = true;
@@ -1345,6 +1351,9 @@ static void SetVideoMode(dboolean output)
     GetWindowSize();
     GetScreenResolution();
 
+    if (M_StringCompare(vid_scaleapi, vid_scaleapi_opengl))
+        windowflags |= SDL_WINDOW_OPENGL;
+
     if (vid_fullscreen)
     {
         char    *acronym;
@@ -1362,7 +1371,7 @@ static void SetVideoMode(dboolean output)
 #endif
             if (!(window = SDL_CreateWindow(PACKAGE_NAME, SDL_WINDOWPOS_UNDEFINED_DISPLAY(displayindex),
                 SDL_WINDOWPOS_UNDEFINED_DISPLAY(displayindex), 0, 0,
-                (SDL_WINDOW_FULLSCREEN_DESKTOP | SDL_WINDOW_RESIZABLE | SDL_WINDOW_OPENGL))))
+                (windowflags | SDL_WINDOW_FULLSCREEN_DESKTOP))))
                 I_SDLError("SDL_CreateWindow");
 
             if (output)
@@ -1379,7 +1388,7 @@ static void SetVideoMode(dboolean output)
 
             if(!(window = SDL_CreateWindow(PACKAGE_NAME, SDL_WINDOWPOS_UNDEFINED_DISPLAY(displayindex),
                 SDL_WINDOWPOS_UNDEFINED_DISPLAY(displayindex), width, height,
-                (SDL_WINDOW_FULLSCREEN | SDL_WINDOW_RESIZABLE | SDL_WINDOW_OPENGL))))
+                (windowflags | SDL_WINDOW_FULLSCREEN))))
                 I_SDLError("SDL_CreateWindow");
 
             if (output)
@@ -1403,8 +1412,7 @@ static void SetVideoMode(dboolean output)
         if (!windowx && !windowy)
         {
             if (!(window = SDL_CreateWindow(PACKAGE_NAME, SDL_WINDOWPOS_CENTERED_DISPLAY(displayindex),
-                SDL_WINDOWPOS_CENTERED_DISPLAY(displayindex), width, height,
-                (SDL_WINDOW_RESIZABLE | SDL_WINDOW_OPENGL))))
+                SDL_WINDOWPOS_CENTERED_DISPLAY(displayindex), width, height, windowflags)))
                 I_SDLError("SDL_CreateWindow");
 
             if (output)
@@ -1413,8 +1421,7 @@ static void SetVideoMode(dboolean output)
         }
         else
         {
-            if (!(window = SDL_CreateWindow(PACKAGE_NAME, windowx, windowy, width, height,
-                (SDL_WINDOW_RESIZABLE | SDL_WINDOW_OPENGL))))
+            if (!(window = SDL_CreateWindow(PACKAGE_NAME, windowx, windowy, width, height, windowflags)))
                 I_SDLError("SDL_CreateWindow");
 
             if (output)
@@ -1431,11 +1438,11 @@ static void SetVideoMode(dboolean output)
     displaycenterx = displaywidth / 2;
     displaycentery = displayheight / 2;
 
-#ifdef __ANDROID__
-    flags  = SDL_RENDERER_ACCELERATED;
-#endif
 
-    if (!(renderer = SDL_CreateRenderer(window, -1, flags)))
+#ifdef __ANDROID__
+    rendererflags  = SDL_RENDERER_ACCELERATED;
+#endif
+    if (!(renderer = SDL_CreateRenderer(window, -1, rendererflags)))
         I_SDLError("SDL_CreateRenderer");
 
 #ifndef __ANDROID__
@@ -1830,6 +1837,8 @@ void I_InitGraphics(void)
     if (linked.patch != compiled.patch)
         C_Warning("The wrong version of <b>%s</b> was found. <i>%s</i> requires v%i.%i.%i.",
             SDL_FILENAME, PACKAGE_NAME, compiled.major, compiled.minor, compiled.patch);
+
+    performancefrequency = SDL_GetPerformanceFrequency();
 
     SDL_DisableScreenSaver();
 

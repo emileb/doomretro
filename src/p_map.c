@@ -88,6 +88,7 @@ static mobj_t       *onmobj;
 
 unsigned int        stat_distancetraveled;
 
+extern dboolean     autousing;
 extern dboolean     successfulshot;
 extern dboolean     telefragonmap30;
 
@@ -143,9 +144,9 @@ static dboolean PIT_StompThing(mobj_t *thing)
 // Returns the friction associated with a particular mobj.
 int P_GetFriction(const mobj_t *mo, int *frictionfactor)
 {
-    int                 friction = ORIG_FRICTION;
-    int                 movefactor = ORIG_FRICTION_FACTOR;
-    const sector_t      *sec;
+    int             friction = ORIG_FRICTION;
+    int             movefactor = ORIG_FRICTION_FACTOR;
+    const sector_t  *sec;
 
     // Assign the friction value to objects on the floor, non-floating,
     // and clipped. Normally the object's friction value is kept at
@@ -414,7 +415,12 @@ static dboolean PIT_CheckThing(mobj_t *thing)
     dboolean    unblocking = false;
     int         flags = thing->flags;
     int         tmflags = tmthing->flags;
-    fixed_t     dist = P_ApproxDistance(thing->x - tmthing->x, thing->y - tmthing->y);
+    fixed_t     dist;
+
+    if (!(flags & (MF_SOLID | MF_SPECIAL | MF_SHOOTABLE)))
+        return true;
+
+    dist = P_ApproxDistance(thing->x - tmthing->x, thing->y - tmthing->y);
 
     // [BH] apply small amount of momentum to a corpse when a monster walks over it
     if (r_corpses_nudge && (flags & MF_CORPSE) && (tmflags & MF_SHOOTABLE) && !thing->nudge
@@ -433,9 +439,6 @@ static dboolean PIT_CheckThing(mobj_t *thing)
             thing->momy = M_RandomInt(-1, 1) * FRACUNIT / 2;
         }
     }
-
-    if (!(flags & (MF_SOLID | MF_SPECIAL | MF_SHOOTABLE)))
-        return true;
 
     // [BH] specify standard radius of 20 for pickups here as thing->radius
     // has been changed to allow better clipping
@@ -484,10 +487,8 @@ static dboolean PIT_CheckThing(mobj_t *thing)
     // missiles can hit other things
     if (tmflags & MF_MISSILE)
     {
-        int clipheight = (thing->projectilepassheight ? thing->projectilepassheight : thing->height);
-
-        // see if it went over / under
-        if (tmthing->z > thing->z + clipheight)
+        // see if it went over/under
+        if (tmthing->z > thing->z + thing->height)
             return true;        // overhead
 
         if (tmthing->z + tmthing->height < thing->z)
@@ -878,15 +879,16 @@ void P_FakeZMovement(mobj_t *mo)
 //
 dboolean P_TryMove(mobj_t *thing, fixed_t x, fixed_t y, dboolean dropoff)
 {
-    fixed_t     oldx, oldy;
-    sector_t    *newsec;
-    int         flags = thing->flags;
+    fixed_t oldx, oldy;
+    int     flags;
 
     felldown = false;           // killough 11/98
     floatok = false;
 
     if (!P_CheckPosition(thing, x, y))
         return false;           // solid wall or thing
+
+    flags = thing->flags;
 
     if (!(flags & MF_NOCLIP) && !freeze)
     {
@@ -904,7 +906,7 @@ dboolean P_TryMove(mobj_t *thing, fixed_t x, fixed_t y, dboolean dropoff)
         {
             if (!dropoff)
             {
-                if (tmfloorz - tmdropoffz > 24 * FRACUNIT)
+                if (thing->floorz - tmfloorz > 24 * FRACUNIT || thing->dropoffz - tmdropoffz > 24 * FRACUNIT)
                     return false;
             }
             else
@@ -943,10 +945,8 @@ dboolean P_TryMove(mobj_t *thing, fixed_t x, fixed_t y, dboolean dropoff)
         }
     }
 
-    newsec = thing->subsector->sector;
-
     // [BH] check if new sector is liquid and clip/unclip feet as necessary
-    if (!(thing->flags2 & MF2_NOFOOTCLIP) && newsec->isliquid)
+    if (!(thing->flags2 & MF2_NOFOOTCLIP) && thing->subsector->sector->isliquid)
         thing->flags2 |= MF2_FEETARECLIPPED;
     else
         thing->flags2 &= ~MF2_FEETARECLIPPED;
@@ -1002,12 +1002,7 @@ static dboolean PIT_ApplyTorque(line_t *ld)
             fixed_t y = ABS(ld->dy);
 
             if (y > x)
-            {
-                fixed_t t = x;
-
-                x = y;
-                y = t;
-            }
+                SWAP(x, y);
 
             y = finesine[(tantoangle[FixedDiv(y, x) >> DBITS] + ANG90) >> ANGLETOFINESHIFT];
 
@@ -1122,6 +1117,10 @@ static dboolean P_ThingHeightClip(mobj_t *thing)
     {
         // walking monsters rise and fall with the floor
         thing->z = thing->floorz;
+
+        // [BH] immediately update player's view
+        if (thing->player)
+            P_CalcHeight(viewplayer);
 
         // killough 11/98: Possibly upset balance of objects hanging off ledges
         if ((flags2 & MF2_FALLING) && thing->gear >= MAXGEAR)
@@ -1627,7 +1626,7 @@ static dboolean PTR_ShootTraverse(intercept_t *in)
                 P_SpawnBlood(x, y, z, shootangle, la_damage, th);
             else
             {
-                player_t *player = &players[0];
+                player_t    *player = &players[0];
 
                 if (!player->powers[pw_invulnerability] && !(player->cheats & CF_GODMODE))
                     P_SpawnBlood(x, y, z + FRACUNIT * M_RandomInt(4, 16), shootangle, la_damage, th);
@@ -1709,13 +1708,23 @@ static dboolean PTR_UseTraverse(intercept_t *in)
     int     side = 0;
     line_t  *line = in->d.line;
 
+    if (autousing)
+    {
+        sector_t    *backsector = line->backsector;
+
+        if (backsector && backsector->ceilingdata
+            && backsector->interpfloorheight != backsector->interpceilingheight)
+            return false;
+    }
+
     if (!line->special)
     {
         P_LineOpening(line);
 
         if (openrange <= 0)
         {
-            S_StartSound(usething, sfx_noway);
+            if (!autousing)
+                S_StartSound(usething, sfx_noway);
 
             // can't use through a wall
             return false;
@@ -1777,7 +1786,8 @@ void P_UseLines(player_t *player)
     // This added test makes the "oof" sound work on 2s lines -- killough:
     if (P_PathTraverse(x1, y1, x2, y2, PT_ADDLINES, PTR_UseTraverse))
         if (!P_PathTraverse(x1, y1, x2, y2, PT_ADDLINES, PTR_NoWayTraverse))
-            S_StartSound(usething, sfx_noway);
+            if (!autousing)
+                S_StartSound(usething, sfx_noway);
 }
 
 //

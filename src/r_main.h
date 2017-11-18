@@ -55,7 +55,7 @@ extern int      centery;
 
 extern fixed_t  centerxfrac;
 extern fixed_t  centeryfrac;
-extern fixed_t  projectiony;
+extern fixed_t  projection;
 
 extern int      validcount;
 
@@ -94,7 +94,7 @@ extern lighttable_t *fixedcolormap;
 
 // [AM] Fractional part of the current tic, in the half-open
 //      range of [0.0, 1.0). Used for interpolation.
-extern fixed_t          fractionaltic;
+extern fixed_t      fractionaltic;
 
 //
 // Function pointers to switch refresh/drawing functions.
@@ -151,6 +151,8 @@ void R_Init(void);
 
 // Called by M_Responder.
 void R_SetViewSize(int blocks);
+
+void R_InitLightTables(void);
 void R_InitColumnFunctions(void);
 
 #endif

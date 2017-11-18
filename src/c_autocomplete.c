@@ -25,7 +25,7 @@
   General Public License for more details.
 
   You should have received a copy of the GNU General Public License
-  along with DOOM Retro. If not, see http://www.gnu.org/licenses/.
+  along with DOOM Retro. If not, see <https://www.gnu.org/licenses/>.
 
   DOOM is a registered trademark of id Software LLC, a ZeniMax Media
   company, in the US and/or other countries and is used without
@@ -359,6 +359,9 @@ char autocompletelist[][255] =
     "autoload off",
     "autoload on",
     "+automap",
+    "autouse ",
+    "autouse off",
+    "autouse on",
     "+back",
     "bind ",
     "bind ''' +alwaysrun",
@@ -6723,6 +6726,7 @@ char autocompletelist[][255] =
     "r_floatbob ",
     "r_floatbob off",
     "r_floatbob on",
+    "r_fov ",
     "r_gamma ",
     "r_gamma off",
     "r_homindicator ",
@@ -6876,6 +6880,7 @@ char autocompletelist[][255] =
     "reset r_fixmaperrors",
     "reset r_fixspriteoffsets",
     "reset r_floatbob",
+    "reset r_fov",
     "reset r_gamma",
     "reset r_homindicator",
     "reset r_hud",

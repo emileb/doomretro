@@ -84,8 +84,8 @@ void P_WriteSaveGameEOF(void);
 
 // Persistent storage/archiving.
 // These are the load / save game routines.
-void P_ArchivePlayers(void);
-void P_UnArchivePlayers(void);
+void P_ArchivePlayer(void);
+void P_UnArchivePlayer(void);
 void P_ArchiveWorld(void);
 void P_UnArchiveWorld(void);
 void P_ArchiveThinkers(void);
@@ -95,8 +95,6 @@ void P_UnArchiveSpecials(void);
 void P_ArchiveMap(void);
 void P_UnArchiveMap(void);
 
-uintptr_t P_ThinkerToIndex(thinker_t *thinker);
-thinker_t *P_IndexToThinker(uintptr_t index);
 void P_RestoreTargets(void);
 
 extern FILE *save_stream;

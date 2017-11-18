@@ -78,6 +78,8 @@ static fixed_t      xoffs, yoffs;                   // killough 2/28/98: flat of
 
 fixed_t             *yslope;
 fixed_t             yslopes[LOOKDIRS][SCREENHEIGHT];
+fixed_t             basexscale;
+fixed_t             baseyscale;
 
 static fixed_t      cachedheight[SCREENHEIGHT];
 
@@ -104,23 +106,14 @@ static void R_MapPlane(int y, int x1, int x2)
     static fixed_t  cachedxstep[SCREENHEIGHT];
     static fixed_t  cachedystep[SCREENHEIGHT];
     fixed_t         distance;
-    int             dx;
-
-    if (centery == y)
-        return;
+    int             dx = x1 - centerx;
 
     if (planeheight != cachedheight[y])
     {
-        int dy = ABS(centery - y);
-
-        distance = FixedMul(planeheight, yslope[y]);
-        ds_xstep = FixedMul(viewsin, planeheight) / dy;
-        ds_ystep = FixedMul(viewcos, planeheight) / dy;
-
         cachedheight[y] = planeheight;
-        cacheddistance[y] = distance;
-        cachedxstep[y] = ds_xstep;
-        cachedystep[y] = ds_ystep;
+        distance = cacheddistance[y] = FixedMul(planeheight, yslope[y]);
+        ds_xstep = cachedxstep[y] = FixedMul(distance, basexscale);
+        ds_ystep = cachedystep[y] = FixedMul(distance, baseyscale);
     }
     else
     {
@@ -129,7 +122,6 @@ static void R_MapPlane(int y, int x1, int x2)
         ds_ystep = cachedystep[y];
     }
 
-    dx = x1 - centerx;
     ds_xfrac = viewx + xoffs + FixedMul(viewcos, distance) + dx * ds_xstep;
     ds_yfrac = -viewy + yoffs - FixedMul(viewsin, distance) + dx * ds_ystep;
 
@@ -164,6 +156,10 @@ void R_ClearPlanes(void)
             freehead = &(*freehead)->next;
 
     lastopening = openings;
+
+    // scale will be unit scale at SCREENWIDTH/2 distance
+    basexscale = FixedDiv(viewsin, projection);
+    baseyscale = FixedDiv(viewcos, projection);
 }
 
 // New function, by Lee Killough

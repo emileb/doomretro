@@ -48,9 +48,6 @@
 #define BLACK       0
 #define RED         176
 
-// Fineangles in the SCREENWIDTH wide window.
-#define FIELDOFVIEW 2048
-
 // increment every time a check is made
 int                 validcount = 1;
 
@@ -63,7 +60,9 @@ int                 centery;
 
 fixed_t             centerxfrac;
 fixed_t             centeryfrac;
-fixed_t             projectiony;
+fixed_t             projection;
+
+fixed_t             fovscale = FRACUNIT;
 
 fixed_t             viewx;
 fixed_t             viewy;
@@ -120,6 +119,7 @@ dboolean            drawbloodsplats;
 
 dboolean            r_bloodsplats_translucency = r_bloodsplats_translucency_default;
 dboolean            r_dither = r_dither_default;
+int                 r_fov = r_fov_default;
 dboolean            r_homindicator = r_homindicator_default;
 dboolean            r_shadows_translucency = r_shadows_translucency_default;
 dboolean            r_shake_barrels = r_shake_barrels_default;
@@ -281,34 +281,30 @@ static void R_InitTextureMapping(void)
     // Use tangent table to generate viewangletox:
     //  viewangletox will give the next greatest x
     //  after the view angle.
-    const fixed_t   hitan = finetangent[FINEANGLES / 4 + FIELDOFVIEW / 2];
-    const fixed_t   lotan = finetangent[FINEANGLES / 4 - FIELDOFVIEW / 2];
-    const int       highend = viewwidth + 1;
+    const fixed_t   limit = finetangent[FINEANGLES / 4 + (r_fov * FINEANGLES / 360) / 2];
 
     // Calc focallength
-    //  so FIELDOFVIEW angles covers SCREENWIDTH.
-    const fixed_t   focallength = FixedDiv(centerxfrac, hitan);
+    //  so field of view angles covers SCREENWIDTH.
+    const fixed_t   focallength = FixedDiv(centerxfrac, limit);
 
     for (int i = 0; i < FINEANGLES / 2; i++)
     {
         const fixed_t   tangent = finetangent[i];
 
-        if (tangent > hitan)
+        if (tangent > limit)
             viewangletox[i] = -1;
-        else if (tangent < lotan)
-            viewangletox[i] = highend;
+        else if (tangent < -limit)
+            viewangletox[i] = viewwidth + 1;
         else
             viewangletox[i] = BETWEEN(-1, (centerxfrac - FixedMul(tangent, focallength)
-                + FRACUNIT - 1) >> FRACBITS, highend);
+                + FRACUNIT - 1) >> FRACBITS, viewwidth + 1);
     }
 
     // Scan viewangletox[] to generate xtoviewangle[]:
     //  xtoviewangle will give the smallest view angle
     //  that maps to x.
-    for (int x = 0; x <= viewwidth; x++)
+    for (int i, x = 0; x <= viewwidth; x++)
     {
-        int i;
-
         for (i = 0; viewangletox[i] > x; i++);
 
         xtoviewangle[x] = (i << ANGLETOFINESHIFT) - ANG90;
@@ -318,7 +314,7 @@ static void R_InitTextureMapping(void)
     for (int i = 0; i < FINEANGLES / 2; i++)
         if (viewangletox[i] == -1)
             viewangletox[i] = 0;
-        else if (viewangletox[i] == highend)
+        else if (viewangletox[i] == viewwidth + 1)
             viewangletox[i]--;
 
     clipangle = xtoviewangle[0];
@@ -331,12 +327,16 @@ static void R_InitTextureMapping(void)
 //
 #define DISTMAP 2
 
-static void R_InitLightTables(void)
+void R_InitLightTables(void)
 {
-    // killough 4/4/98: dynamic colormaps
-    c_zlight = malloc(sizeof(*c_zlight) * numcolormaps);
-    c_scalelight = malloc(sizeof(*c_scalelight) * numcolormaps);
-    c_psprscalelight = malloc(sizeof(*c_psprscalelight) * numcolormaps);
+    int width = FixedMul(SCREENWIDTH, FixedDiv(FRACUNIT, finetangent[FINEANGLES / 4 + (r_fov * FINEANGLES / 360) / 2])) + 1;
+
+    if (!c_zlight)
+    {
+        c_zlight = malloc(sizeof(*c_zlight) * numcolormaps);
+        c_scalelight = malloc(sizeof(*c_scalelight) * numcolormaps);
+        c_psprscalelight = malloc(sizeof(*c_psprscalelight) * numcolormaps);
+    }
 
     // Calculate the light levels to use
     //  for each level / distance combination.
@@ -346,8 +346,8 @@ static void R_InitLightTables(void)
 
         for (int j = 0; j < MAXLIGHTZ; j++)
         {
-            const int   scale = FixedDiv(SCREENWIDTH / 2 * FRACUNIT, (j + 1) << LIGHTZSHIFT) >> LIGHTSCALESHIFT;
-            const int   level = BETWEEN(0, startmap - scale  / DISTMAP, NUMCOLORMAPS - 1) * 256;
+            const int   scale = FixedDiv(width / 2 * FRACUNIT, (j + 1) << LIGHTZSHIFT) >> LIGHTSCALESHIFT;
+            const int   level = BETWEEN(0, startmap - scale / DISTMAP, NUMCOLORMAPS - 1) * 256;
 
             // killough 3/20/98: Initialize multiple colormaps
             for (int t = 0; t < numcolormaps; t++)
@@ -390,18 +390,20 @@ void R_ExecuteSetViewSize(void)
     }
 
     viewwidth = scaledviewwidth;
-    centery = viewheight / 2;
+
     centerx = viewwidth / 2;
+    centery = viewheight / 2;
     centerxfrac = centerx << FRACBITS;
     centeryfrac = centery << FRACBITS;
-    projectiony = ((SCREENHEIGHT * centerx * ORIGINALWIDTH) / ORIGINALHEIGHT) / SCREENWIDTH * FRACUNIT;
+    fovscale = finetangent[FINEANGLES / 4 + (r_fov * FINEANGLES / 360) / 2];
+    projection = FixedDiv(centerxfrac, fovscale);
+
     R_InitBuffer(scaledviewwidth, viewheight);
     R_InitTextureMapping();
 
     // psprite scales
-    pspritexscale = (centerx << FRACBITS) / (ORIGINALWIDTH / 2);
-    pspriteyscale = (((SCREENHEIGHT * viewwidth) / SCREENWIDTH) << FRACBITS) / ORIGINALHEIGHT;
-    pspriteiscale = FixedDiv(FRACUNIT, pspritexscale);
+    pspritescale = FixedDiv(viewwidth, ORIGINALWIDTH);
+    pspriteiscale = FixedDiv(FRACUNIT, pspritescale);
 
     R_InitSkyMap();
 
@@ -412,7 +414,7 @@ void R_ExecuteSetViewSize(void)
     // planes
     for (int i = 0; i < viewheight; i++)
     {
-        const fixed_t   num = viewwidth / 2 * FRACUNIT;
+        const fixed_t   num = FixedMul(FixedDiv(FRACUNIT, fovscale), viewwidth * (FRACUNIT / 2));
 
         for (int j = 0; j < LOOKDIRS; j++)
             yslopes[j][i] = FixedDiv(num, ABS(((i - (viewheight / 2 + (j - LOOKDIRMAX) * 2
@@ -467,7 +469,7 @@ void R_InitColumnFunctions(void)
             skycolfunc = R_DrawSkyColorColumn;
         else
             skycolfunc = (canmodify && !transferredsky && (gamemode != commercial || gamemap < 21)
-                && !canmouselook ? R_DrawFlippedSkyColumn : R_DrawWallColumn);
+                && !canmouselook ? R_DrawFlippedSkyColumn : R_DrawSkyColumn);
 
         spanfunc = R_DrawSpan;
 

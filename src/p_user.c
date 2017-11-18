@@ -47,6 +47,8 @@
 #define DEADLOOKDIR     128
 #define DEADLOOKDIRINC  24
 
+int             deathcount;
+
 extern fixed_t  animatedliquiddiff;
 extern dboolean canmouselook;
 extern dboolean skipaction;
@@ -58,11 +60,13 @@ void G_RemoveChoppers(void);
 // Movement
 //
 
+dboolean        autouse = autouse_default;
 int             movebob = movebob_default;
 dboolean        r_liquid_lowerview = r_liquid_lowerview_default;
 int             r_shake_damage = r_shake_damage_default;
 int             stillbob = stillbob_default;
 
+dboolean        autousing = false;
 static dboolean onground;
 
 //
@@ -221,8 +225,7 @@ void P_MovePlayer(player_t *player)
             P_SetMobjState(mo, S_PLAY_RUN1);
     }
 
-    player->lookdir = BETWEEN(-LOOKDIRMAX * MLOOKUNIT, player->lookdir + cmd->lookdir,
-        LOOKDIRMAX * MLOOKUNIT);
+    player->lookdir = BETWEEN(-LOOKDIRMAX * MLOOKUNIT, player->lookdir + cmd->lookdir, LOOKDIRMAX * MLOOKUNIT);
 
     if (player->lookdir && !usemouselook)
     {
@@ -255,7 +258,6 @@ static void P_ReduceDamageCount(player_t *player)
 //
 static void P_DeathThink(player_t *player)
 {
-    static int      count;
     static dboolean facingkiller;
     mobj_t          *mo = player->mo;
     mobj_t          *attacker = player->attacker;
@@ -317,16 +319,16 @@ static void P_DeathThink(player_t *player)
         return;
 
     if (((player->cmd.buttons & BT_USE) || ((player->cmd.buttons & BT_ATTACK) && !player->damagecount
-        && count > TICRATE * 2) || gamekeydown[KEY_ENTER]))
+        && deathcount > TICRATE * 2) || gamekeydown[KEY_ENTER]))
     {
-        count = 0;
+        deathcount = 0;
         damagevibrationtics = 1;
         player->playerstate = PST_REBORN;
         facingkiller = false;
         skipaction = true;
     }
     else
-        count++;
+        deathcount++;
 }
 
 //
@@ -533,6 +535,13 @@ void P_PlayerThink(player_t *player)
 
     if ((cmd->buttons & BT_CHANGE) && (!automapactive || am_followmode))
         P_ChangeWeapon(player, (cmd->buttons & BT_WEAPONMASK) >> BT_WEAPONSHIFT);
+
+    if (autouse && !(leveltime % TICRATE))
+    {
+        autousing = true;
+        P_UseLines(player);
+        autousing = false;
+    }
 
     // check for use
     if (cmd->buttons & BT_USE)

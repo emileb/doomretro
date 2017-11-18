@@ -195,6 +195,38 @@ static void saveg_write_mapthing_t(mapthing_t *str)
     saveg_write16(str->options);
 }
 
+static uintptr_t P_ThingToIndex(mobj_t *thing)
+{
+    uintptr_t   i = 0;
+
+    if (!thing)
+        return 0;
+
+    for (thinker_t *th = thinkerclasscap[th_mobj].cnext; th != &thinkerclasscap[th_mobj]; th = th->cnext)
+    {
+        i++;
+
+        if ((mobj_t *)th == thing)
+            return i;
+    }
+
+    return 0;
+}
+
+static mobj_t *P_IndexToThing(uintptr_t index)
+{
+    uintptr_t   i = 0;
+
+    if (!index)
+        return NULL;
+
+    for (thinker_t *th = thinkerclasscap[th_mobj].cnext; th != &thinkerclasscap[th_mobj]; th = th->cnext)
+        if (++i == index)
+            return (mobj_t *)th;
+
+    return NULL;
+}
+
 //
 // mobj_t
 //
@@ -203,25 +235,18 @@ static void saveg_read_mobj_t(mobj_t *str)
     str->x = saveg_read32();
     str->y = saveg_read32();
     str->z = saveg_read32();
-    str->snext = (mobj_t *)saveg_readp();
-    str->sprev = (mobj_t **)saveg_readp();
     str->angle = saveg_read32();
     str->sprite = (spritenum_t)saveg_read_enum();
     str->frame = saveg_read32();
-    str->bnext = (mobj_t *)saveg_readp();
-    str->bprev = (mobj_t **)saveg_readp();
-    str->subsector = (subsector_t *)saveg_readp();
     str->floorz = saveg_read32();
     str->ceilingz = saveg_read32();
     str->dropoffz = saveg_read32();
     str->radius = saveg_read32();
     str->height = saveg_read32();
-    str->projectilepassheight = saveg_read32();
     str->momx = saveg_read32();
     str->momy = saveg_read32();
     str->momz = saveg_read32();
     str->type = (mobjtype_t)saveg_read_enum();
-    str->info = (mobjinfo_t *)saveg_readp();
     str->tics = saveg_read32();
     str->state = &states[saveg_read32()];
     str->flags = saveg_read32();
@@ -265,25 +290,18 @@ static void saveg_write_mobj_t(mobj_t *str)
     saveg_write32(str->x);
     saveg_write32(str->y);
     saveg_write32(str->z);
-    saveg_writep(str->snext);
-    saveg_writep(str->sprev);
     saveg_write32(str->angle);
     saveg_write_enum(str->sprite);
     saveg_write32(str->frame);
-    saveg_writep(str->bnext);
-    saveg_writep(str->bprev);
-    saveg_writep(str->subsector);
     saveg_write32(str->floorz);
     saveg_write32(str->ceilingz);
     saveg_write32(str->dropoffz);
     saveg_write32(str->radius);
     saveg_write32(str->height);
-    saveg_write32(str->projectilepassheight);
     saveg_write32(str->momx);
     saveg_write32(str->momy);
     saveg_write32(str->momz);
     saveg_write_enum(str->type);
-    saveg_writep(str->info);
     saveg_write32(str->tics);
     saveg_write32((int)(str->state - states));
     saveg_write32(str->flags);
@@ -291,13 +309,13 @@ static void saveg_write_mobj_t(mobj_t *str)
     saveg_write32(str->health);
     saveg_write32(str->movedir);
     saveg_write32(str->movecount);
-    saveg_writep((void *)P_ThinkerToIndex((thinker_t *)str->target));
+    saveg_writep((void *)P_ThingToIndex(str->target));
     saveg_write32(str->reactiontime);
     saveg_write32(str->threshold);
     saveg_write32(!!str->player);
     saveg_write_mapthing_t(&str->spawnpoint);
-    saveg_writep((void *)P_ThinkerToIndex((thinker_t *)str->tracer));
-    saveg_writep((void *)P_ThinkerToIndex((thinker_t *)str->lastenemy));
+    saveg_writep((void *)P_ThingToIndex(str->tracer));
+    saveg_writep((void *)P_ThingToIndex(str->lastenemy));
     saveg_write32(str->floatbob);
     saveg_write32(str->shadowoffset);
     saveg_write16(str->gear);
@@ -524,7 +542,7 @@ static void saveg_write_player_t(player_t *str)
     saveg_writep(str->message);
     saveg_write32(str->damagecount);
     saveg_write32(str->bonuscount);
-    saveg_writep(str->attacker);
+    saveg_writep((void *)P_ThingToIndex(str->attacker));
     saveg_write32(str->extralight);
     saveg_write32(str->fixedcolormap);
 
@@ -943,29 +961,22 @@ void P_WriteSaveGameEOF(void)
 }
 
 //
-// P_ArchivePlayers
+// P_ArchivePlayer
 //
-void P_ArchivePlayers(void)
+void P_ArchivePlayer(void)
 {
     saveg_write_pad();
     saveg_write_player_t(&players[0]);
 }
 
 //
-// P_UnArchivePlayers
+// P_UnArchivePlayer
 //
-void P_UnArchivePlayers(void)
+void P_UnArchivePlayer(void)
 {
     saveg_read_pad();
-
     P_InitCards(&players[0]);
-
     saveg_read_player_t(&players[0]);
-
-    // will be set when unarchiving thinker
-    players[0].mo = NULL;
-    players[0].message = NULL;
-    players[0].attacker = NULL;
 }
 
 //
@@ -973,13 +984,11 @@ void P_UnArchivePlayers(void)
 //
 void P_ArchiveWorld(void)
 {
-    int         i;
-    sector_t    *sec;
-    line_t      *li;
-    side_t      *si;
+    sector_t    *sec = sectors;
+    line_t      *li = lines;
 
     // do sectors
-    for (i = 0, sec = sectors; i < numsectors; i++, sec++)
+    for (int i = 0; i < numsectors; i++, sec++)
     {
         saveg_write16(sec->floorheight >> FRACBITS);
         saveg_write16(sec->ceilingheight >> FRACBITS);
@@ -988,10 +997,11 @@ void P_ArchiveWorld(void)
         saveg_write16(sec->lightlevel);
         saveg_write16(sec->special);
         saveg_write16(sec->tag);
+        saveg_writep((void *)P_ThingToIndex(sec->soundtarget));
     }
 
     // do lines
-    for (i = 0, li = lines; i < numlines; i++, li++)
+    for (int i = 0; i < numlines; i++, li++)
     {
         saveg_write16(li->flags);
         saveg_write16(li->special);
@@ -999,6 +1009,8 @@ void P_ArchiveWorld(void)
 
         for (int j = 0; j < 2; j++)
         {
+            side_t  *si;
+
             if (li->sidenum[j] == NO_INDEX)
                 continue;
 
@@ -1018,13 +1030,11 @@ void P_ArchiveWorld(void)
 //
 void P_UnArchiveWorld(void)
 {
-    int         i;
-    sector_t    *sec;
-    line_t      *li;
-    side_t      *si;
+    sector_t    *sec = sectors;
+    line_t      *li = lines;
 
     // do sectors
-    for (i = 0, sec = sectors; i < numsectors; i++, sec++)
+    for (int i = 0; i < numsectors; i++, sec++)
     {
         sec->floorheight = saveg_read16() << FRACBITS;
         sec->ceilingheight = saveg_read16() << FRACBITS;
@@ -1036,12 +1046,12 @@ void P_UnArchiveWorld(void)
         sec->ceilingdata = NULL;
         sec->floordata = NULL;
         sec->lightingdata = NULL;
-        sec->soundtarget = NULL;
+        sec->soundtarget = (mobj_t *)saveg_readp();
         sec->isliquid = isliquid[sec->floorpic];
     }
 
     // do lines
-    for (i = 0, li = lines; i < numlines; i++, li++)
+    for (int i = 0; i < numlines; i++, li++)
     {
         li->flags = saveg_read16();
         li->special = saveg_read16();
@@ -1049,6 +1059,8 @@ void P_UnArchiveWorld(void)
 
         for (int j = 0; j < 2; j++)
         {
+            side_t  *si;
+
             if (li->sidenum[j] == NO_INDEX)
                 continue;
 
@@ -1205,49 +1217,23 @@ void P_UnArchiveThinkers(void)
     }
 }
 
-// By Fabian Greffrath. See http://www.doomworld.com/vb/post/1294860.
-uintptr_t P_ThinkerToIndex(thinker_t *thinker)
-{
-    uintptr_t   i = 0;
-
-    if (!thinker)
-        return 0;
-
-    for (thinker_t *th = thinkerclasscap[th_mobj].cnext; th != &thinkerclasscap[th_mobj]; th = th->cnext)
-    {
-        i++;
-
-        if (th == thinker)
-            return i;
-    }
-
-    return 0;
-}
-
-thinker_t *P_IndexToThinker(uintptr_t index)
-{
-    uintptr_t   i = 0;
-
-    if (!index)
-        return NULL;
-
-    for (thinker_t *th = thinkerclasscap[th_mobj].cnext; th != &thinkerclasscap[th_mobj]; th = th->cnext)
-        if (++i == index)
-            return th;
-
-    return NULL;
-}
-
 void P_RestoreTargets(void)
 {
+    sector_t    *sec = sectors;
+
+    for (int i = 0; i < numsectors; i++, sec++)
+        P_SetNewTarget(&sec->soundtarget, P_IndexToThing((uintptr_t)sec->soundtarget));
+
     for (thinker_t *th = thinkerclasscap[th_mobj].cnext; th != &thinkerclasscap[th_mobj]; th = th->cnext)
     {
         mobj_t  *mo = (mobj_t *)th;
 
-        P_SetNewTarget(&mo->target, (mobj_t *)P_IndexToThinker((uintptr_t)mo->target));
-        P_SetNewTarget(&mo->tracer, (mobj_t *)P_IndexToThinker((uintptr_t)mo->tracer));
-        P_SetNewTarget(&mo->lastenemy, (mobj_t *)P_IndexToThinker((uintptr_t)mo->lastenemy));
+        P_SetNewTarget(&mo->target, P_IndexToThing((uintptr_t)mo->target));
+        P_SetNewTarget(&mo->tracer, P_IndexToThing((uintptr_t)mo->tracer));
+        P_SetNewTarget(&mo->lastenemy, P_IndexToThing((uintptr_t)mo->lastenemy));
     }
+
+    P_SetNewTarget(&viewplayer->attacker, P_IndexToThing((uintptr_t)viewplayer->attacker));
 }
 
 //
