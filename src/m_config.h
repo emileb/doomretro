@@ -641,8 +641,13 @@ enum
 #define KEYFIRE_DEFAULT                         KEY_CTRL
 #define KEYLEFT_DEFAULT                         KEY_LEFTARROW
 #define KEYMOUSELOOK_DEFAULT                    0
+#ifdef __ANDROID__
+#define KEYNEXTWEAPON_DEFAULT                   ']'
+#define KEYPREVWEAPON_DEFAULT                   '['
+#else
 #define KEYNEXTWEAPON_DEFAULT                   0
 #define KEYPREVWEAPON_DEFAULT                   0
+#endif
 #define KEYRIGHT_DEFAULT                        KEY_RIGHTARROW
 #define KEYRUN_DEFAULT                          KEY_SHIFT
 #if defined(_WIN32)

@@ -2723,7 +2723,9 @@ dboolean M_Responder(event_t *ev)
             functionkey = 0;
             return false;
         }
-
+#ifdef __ANDROID__ // Need to reset this once got input
+        messageNeedsInput = false;
+#endif
         keydown = key;
         menuactive = messageLastMenuActive;
         messageToPrint = false;
