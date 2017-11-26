@@ -74,7 +74,7 @@
 #define CONSOLESCROLLBARX       (CONSOLEWIDTH - CONSOLETEXTX - CONSOLESCROLLBARWIDTH)
 #define CONSOLESCROLLBARY       (CONSOLETEXTY + 1)
 
-#define CONSOLETEXTPIXELWIDTH   (CONSOLEWIDTH - CONSOLETEXTX * 3 - CONSOLESCROLLBARWIDTH + 3 + !scrollbardrawn * 8)
+#define CONSOLETEXTPIXELWIDTH   (CONSOLEWIDTH - CONSOLETEXTX * 2 - (scrollbardrawn ? CONSOLESCROLLBARWIDTH + CONSOLETEXTX : 0))
 
 #define CONSOLEINPUTPIXELWIDTH  (CONSOLEWIDTH - CONSOLETEXTX - brandwidth - 2)
 
@@ -773,8 +773,7 @@ static void C_DrawConsoleText(int x, int y, char *text, const int color1, const 
             italics = true;
             i += 2;
         }
-        else if (letter == '<' && text[i + 1] == '/' && text[i + 2] == 'i' && text[i + 3] == '>'
-            && formatting)
+        else if (letter == '<' && text[i + 1] == '/' && text[i + 2] == 'i' && text[i + 3] == '>' && formatting)
         {
             italics = false;
             i += 3;
@@ -821,11 +820,17 @@ static void C_DrawConsoleText(int x, int y, char *text, const int color1, const 
     }
 
     if (truncate < len)
-        for (int i = 0; i < 3; i++)
+    {
+        V_DrawConsoleTextPatch(x, y, dot, lastcolor1, color2, false, tinttab);
+        x += SHORT(dot->width);
+        V_DrawConsoleTextPatch(x, y, dot, lastcolor1, color2, false, tinttab);
+
+        if (text[truncate - 1] != '.')
         {
-            V_DrawConsoleTextPatch(x, y, dot, lastcolor1, color2, false, tinttab);
             x += SHORT(dot->width);
+            V_DrawConsoleTextPatch(x, y, dot, lastcolor1, color2, false, tinttab);
         }
+    }
 }
 
 static void C_DrawOverlayText(int x, int y, const char *text, const int color)
@@ -856,19 +861,19 @@ char *C_GetTimeStamp(unsigned int tics)
     int         minutes = gamestarttime->tm_min;
     int         seconds = gamestarttime->tm_sec;
 
-    if ((seconds += ((tics /= TICRATE) % 3600) % 60) > 60)
+    if ((seconds += ((tics /= TICRATE) % 3600) % 60) >= 60)
     {
         minutes += seconds / 60;
         seconds %= 60;
     }
 
-    if ((minutes += (tics % 3600) / 60) > 60)
+    if ((minutes += (tics % 3600) / 60) >= 60)
     {
         hours += minutes / 60;
         minutes %= 60;
     }
 
-    if ((hours += tics / 3600) > 24)
+    if ((hours += tics / 3600) >= 24)
         hours %= 24;
 
     M_snprintf(buffer, 9, "%02i:%02i:%02i", hours, minutes, seconds);
@@ -924,7 +929,7 @@ void C_Drawer(void)
 
         const int consoledown[] =
         {
-            14,  28,  42,  56,  70,  84,  98, 112, 126, 140, 150, 152,
+             14,  28,  42,  56,  70,  84,  98, 112, 126, 140, 150, 152,
             154, 156, 158, 160, 161, 162, 163, 164, 165, 166, 167, 168
         };
 
@@ -1065,8 +1070,8 @@ void C_Drawer(void)
             lefttext[i] = consoleinput[i];
 
         lefttext[i] = '\0';
-        C_DrawConsoleText(x, CONSOLEHEIGHT - 17, lefttext, consoleinputcolor, NOBACKGROUNDCOLOR,
-            NOBOLDCOLOR, NULL, notabs, false, true);
+        C_DrawConsoleText(x, CONSOLEHEIGHT - 17, lefttext, consoleinputcolor, NOBACKGROUNDCOLOR, NOBOLDCOLOR,
+            NULL, notabs, false, true);
         x += C_TextWidth(lefttext, false, true);
 
         // draw any selected text to left of caret
@@ -1188,8 +1193,7 @@ dboolean C_ValidateInput(const char *input)
                     M_StringCopy(cmd, input, sizeof(cmd));
                     cmd[length - 2] = '\0';
 
-                    if ((M_StringCompare(cmd, consolecmds[i].name)
-                        || M_StringCompare(cmd, consolecmds[i].alternate))
+                    if ((M_StringCompare(cmd, consolecmds[i].name) || M_StringCompare(cmd, consolecmds[i].alternate))
                         && length == strlen(cmd) + 2
                         && consolecmds[i].func1(consolecmds[i].name, consolecheatparm))
                     {
@@ -1200,8 +1204,7 @@ dboolean C_ValidateInput(const char *input)
                     }
                 }
             }
-            else if ((M_StringCompare(input, consolecmds[i].name)
-                || M_StringCompare(input, consolecmds[i].alternate))
+            else if ((M_StringCompare(input, consolecmds[i].name) || M_StringCompare(input, consolecmds[i].alternate))
                 && consolecmds[i].func1(consolecmds[i].name, ""))
             {
                 M_StringCopy(consolecheat, input, sizeof(consolecheat));
@@ -1215,8 +1218,7 @@ dboolean C_ValidateInput(const char *input)
             sscanf(input, "%127s %127[^\n]", cmd, parms);
             C_StripQuotes(parms);
 
-            if ((M_StringCompare(cmd, consolecmds[i].name)
-                || M_StringCompare(cmd, consolecmds[i].alternate))
+            if ((M_StringCompare(cmd, consolecmds[i].name) || M_StringCompare(cmd, consolecmds[i].alternate))
                 && consolecmds[i].func1(consolecmds[i].name, parms)
                 && (consolecmds[i].parameters || !*parms))
             {
@@ -1524,6 +1526,10 @@ dboolean C_Responder(event_t *ev)
 
                         autocomplete += direction;
                         M_StringCopy(output, autocompletelist[autocomplete], sizeof(output));
+
+                        if (M_StringCompare(output, input))
+                            continue;
+
                         len2 = (int)strlen(output);
                         spaces2 = numspaces(output);
                         endspace2 = (output[len2 - 1] == ' ');
@@ -1717,7 +1723,7 @@ dboolean C_Responder(event_t *ev)
                     if ((modstate & KMOD_SHIFT) || (keyboardalwaysrun != KEY_CAPSLOCK && (modstate & KMOD_CAPS)))
                         ch = shiftxform[ch];
 
-                    if (ch >= ' ' && ch < '~' && ch != '`' && C_TextWidth(consoleinput, false, true)
+                    if (ch >= ' ' && ch <= '}' && ch != '`' && C_TextWidth(consoleinput, false, true)
                         + (ch == ' ' ? spacewidth : SHORT(consolefont[ch - CONSOLEFONTSTART]->width))
                         - (selectstart < selectend ? C_TextWidth(M_SubString(consoleinput, selectstart,
                         selectend - selectstart), false, true) : 0) <= CONSOLEINPUTPIXELWIDTH

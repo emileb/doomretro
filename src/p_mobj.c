@@ -472,8 +472,7 @@ static void P_NightmareRespawn(mobj_t *mobj)
 {
     fixed_t     x = mobj->spawnpoint.x << FRACBITS;
     fixed_t     y = mobj->spawnpoint.y << FRACBITS;
-    fixed_t     z;
-    subsector_t *ss;
+    fixed_t     z = ((mobj->flags & MF_SPAWNCEILING) ? ONCEILINGZ : ONFLOORZ);
     mobj_t      *mo;
     mapthing_t  *mthing = &mobj->spawnpoint;
 
@@ -490,23 +489,21 @@ static void P_NightmareRespawn(mobj_t *mobj)
 
     // spawn a teleport fog at old spot
     //  because of removal of the body?
-    mo = P_SpawnMobj(mobj->x, mobj->y, mobj->subsector->sector->floorheight, MT_TFOG);
+    mo = P_SpawnMobj(mobj->x, mobj->y, z, MT_TFOG);
     mo->angle = mobj->angle;
 
     // initiate teleport sound
     S_StartSound(mo, sfx_telept);
 
     // spawn a teleport fog at the new spot
-    ss = R_PointInSubsector(x, y);
-
-    mo = P_SpawnMobj(x, y, ss->sector->floorheight, MT_TFOG);
-    mo->angle = ANG45 * (mthing->angle / 45);
-
-    S_StartSound(mo, sfx_telept);
+    if (x != mobj->x || y != mobj->y)
+    {
+        mo = P_SpawnMobj(x, y, z, MT_TFOG);
+        mo->angle = ANG45 * (mthing->angle / 45);
+        S_StartSound(mo, sfx_telept);
+    }
 
     // spawn the new monster
-    z = ((mobj->flags & MF_SPAWNCEILING) ? ONCEILINGZ : ONFLOORZ);
-
     // inherit attributes from deceased one
     mo = P_SpawnMobj(x, y, z, mobj->type);
     mo->spawnpoint = mobj->spawnpoint;
@@ -617,10 +614,7 @@ void P_MobjThinker(mobj_t *mobj)
     {
         // killough 9/12/98: objects fall off ledges if they are hanging off
         // slightly push off of ledge if hanging more than halfway off
-        // [RH] Be more restrictive to avoid pushing monsters/players down steps
-        if (!(flags & MF_NOGRAVITY) && !(flags2 & MF2_FLOATBOB)
-            && ((mobj->health <= 0 && mobj->z - mobj->dropoffz > 2 * FRACUNIT)
-                || ((flags & MF_COUNTKILL) && mobj->z - mobj->dropoffz > 24 * FRACUNIT)))
+        if (((flags & MF_CORPSE) || (flags & MF_DROPPED)) && mobj->z - mobj->dropoffz > 2 * FRACUNIT)
             P_ApplyTorque(mobj);
         else
         {
@@ -850,7 +844,6 @@ mobjtype_t P_FindDoomedNum(unsigned int type)
 void P_RespawnSpecials(void)
 {
     fixed_t     x, y, z;
-    subsector_t *ss;
     mobj_t      *mo;
     mapthing_t  *mthing;
     int         i;
@@ -868,21 +861,19 @@ void P_RespawnSpecials(void)
 
     mthing = &itemrespawnque[iquetail];
 
-    x = mthing->x << FRACBITS;
-    y = mthing->y << FRACBITS;
-
-    // spawn a teleport fog at the new spot
-    ss = R_PointInSubsector(x, y);
-    mo = P_SpawnMobj(x, y, ss->sector->floorheight, MT_IFOG);
-    S_StartSound(mo, sfx_itmbk);
-
     // find which type to spawn
     // killough 8/23/98: use table for faster lookup
     i = P_FindDoomedNum(mthing->type);
 
-    // spawn it
+    x = mthing->x << FRACBITS;
+    y = mthing->y << FRACBITS;
     z = ((mobjinfo[i].flags & MF_SPAWNCEILING) ? ONCEILINGZ : ONFLOORZ);
 
+    // spawn a teleport fog at the new spot
+    mo = P_SpawnMobj(x, y, z, MT_IFOG);
+    S_StartSound(mo, sfx_itmbk);
+
+    // spawn it
     mo = P_SpawnMobj(x, y, z, i);
     mo->spawnpoint = *mthing;
     mo->angle = ANG45 * (mthing->angle / 45);

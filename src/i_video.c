@@ -188,17 +188,6 @@ static UINT         CapFPSTimer;
 static HANDLE       CapFPSEvent;
 #endif
 
-// Mouse acceleration
-//
-// This emulates some of the behavior of DOS mouse drivers by increasing
-// the speed when the mouse is moved fast.
-//
-// The mouse input values are input directly to the game, but when
-// the values exceed the value of m_threshold, they are multiplied
-// by m_acceleration to increase the speed.
-float               m_acceleration = m_acceleration_default;
-int                 m_threshold = m_threshold_default;
-
 static dboolean     capslock;
 dboolean            alwaysrun = alwaysrun_default;
 
@@ -403,8 +392,8 @@ static int AccelerateMouse(int value)
     if (value < 0)
         return -AccelerateMouse(-value);
 
-    if (value > m_threshold)
-        return (int)((value - m_threshold) * m_acceleration + m_threshold);
+    if (value > 10)
+        return (value * 2 - 10);
     else
         return value;
 }
@@ -1609,8 +1598,8 @@ static void SetVideoMode(dboolean output)
         wadfile_t   *playpalwad = lumpinfo[W_CheckNumForName("PLAYPAL")]->wadfile;
         dboolean    iwad = (playpalwad->type == IWAD);
 
-        C_Output("Using %s 256-color palette from the <b>PLAYPAL</b> lump in %s <b>%s</b>.",
-            (iwad ? "the" : "a custom"), (iwad ? "IWAD" : "PWAD"), playpalwad->path);
+        C_Output("Using the 256-color palette from the <b>PLAYPAL</b> lump in %s <b>%s</b>.",
+            (iwad ? "IWAD" : "PWAD"), playpalwad->path);
 
         if (gammaindex == 10)
             C_Output("Gamma correction is off.");

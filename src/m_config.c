@@ -108,12 +108,10 @@ static default_t cvars[] =
     CONFIG_VARIABLE_INT_PERCENT  (gp_vibrate_damage,                                 NOVALUEALIAS      ),
     CONFIG_VARIABLE_INT_PERCENT  (gp_vibrate_weapons,                                NOVALUEALIAS      ),
     CONFIG_VARIABLE_STRING       (iwadfolder,                                        NOVALUEALIAS      ),
-    CONFIG_VARIABLE_FLOAT        (m_acceleration,                                    NOVALUEALIAS      ),
     CONFIG_VARIABLE_INT          (m_doubleclick_use,                                 BOOLVALUEALIAS    ),
     CONFIG_VARIABLE_INT          (m_invertyaxis,                                     BOOLVALUEALIAS    ),
     CONFIG_VARIABLE_INT          (m_novertical,                                      BOOLVALUEALIAS    ),
     CONFIG_VARIABLE_INT          (m_sensitivity,                                     NOVALUEALIAS      ),
-    CONFIG_VARIABLE_INT          (m_threshold,                                       NOVALUEALIAS      ),
     CONFIG_VARIABLE_INT          (messages,                                          BOOLVALUEALIAS    ),
     CONFIG_VARIABLE_INT          (mouselook,                                         BOOLVALUEALIAS    ),
     CONFIG_VARIABLE_INT_PERCENT  (movebob,                                           NOVALUEALIAS      ),
@@ -786,7 +784,8 @@ void bind_cmd_func2(char *cmd, char *parms);
 //
 void M_LoadCVARs(char *filename)
 {
-    int     count = 0;
+    int     cvarcount = 0;
+    int     statcount = 0;
 
     // read the file in, overriding any set defaults
     FILE    *file = fopen(filename, "r");
@@ -875,7 +874,10 @@ void M_LoadCVARs(char *filename)
             if (!M_StringCompare(cvar, cvars[i].name))
                 continue;       // not this one
 
-            count++;
+            if (M_StringStartsWith(cvar, "stat_"))
+                statcount++;
+            else
+                cvarcount++;
 
             // parameter found
             switch (cvars[i].type)
@@ -935,7 +937,7 @@ void M_LoadCVARs(char *filename)
 
     if (!togglingvanilla)
     {
-        C_Output("Loaded %i CVARs from <b>%s</b>.", count, filename);
+        C_Output("Loaded %i CVARs and %i player stats from <b>%s</b>.", cvarcount, statcount, filename);
         M_CheckCVARs();
         cvarsloaded = true;
     }
