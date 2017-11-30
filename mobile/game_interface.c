@@ -93,7 +93,8 @@ void PortableAction(int state, int action)
 
 	int key = -1;
 
-	if(( PortableGetScreenMode() == TS_MENU ) || ( PortableGetScreenMode() == TS_Y_N ))
+	if ((action >= PORT_ACT_MENU_UP && action <= PORT_ACT_MENU_ABORT) &&
+	    ( PortableGetScreenMode() == TS_MENU ) || ( PortableGetScreenMode() == TS_Y_N ))
 	{
 	    SDL_Scancode scanCode = 0;
 
@@ -177,10 +178,10 @@ void PortableAction(int state, int action)
 			key = keyboardprevweapon;
 			break;
 		case PORT_ACT_QUICKSAVE:
-			//key = key_menu_qsave;
+			PortableKeyEvent(state, SDL_SCANCODE_F6, 0);
 			break;
 		case PORT_ACT_QUICKLOAD:
-			//key = key_menu_qload;
+			PortableKeyEvent(state, SDL_SCANCODE_F9, 0);
 			break;
 		case PORT_ACT_GAMMA:
 			//key = key_menu_gamma;

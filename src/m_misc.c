@@ -255,8 +255,12 @@ char *M_GetResourceFolder(void)
 
     return (char *)resourceURL.fileSystemRepresentation;
 #else
+#ifdef __ANDROID__
+    return "./res/";
+#else
     // And on Linux, fall back to the same folder as the executable.
     return executableFolder;
+#endif
 #endif
 
 #else

@@ -1972,7 +1972,11 @@ void M_QuitDOOM(int choice)
 {
     quitting = true;
     M_snprintf(endstring, sizeof(endstring), "%s\n\n%s", M_SelectEndMessage(), (usinggamepad ? s_DOSA : s_DOSY));
+#ifndef __ANDROID__
     M_StartMessage(endstring, M_QuitResponse, true);
+#else
+    M_QuitResponse( 'y' ); // Don't bother with confirmation
+#endif
 }
 
 static void M_SliderSound(void)
