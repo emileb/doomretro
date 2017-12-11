@@ -1020,10 +1020,10 @@ void I_CreateExternalAutomap(dboolean output)
 
     if (!(maprenderer = SDL_CreateRenderer(mapwindow, -1, flags)))
         I_SDLError("SDL_CreateRenderer");
-
+#ifndef __ANDROID__
     if (SDL_RenderSetLogicalSize(maprenderer, SCREENWIDTH, SCREENHEIGHT) < 0)
         I_SDLError("SDL_RenderSetLogicalSize");
-
+#endif
     if (!(mapsurface = SDL_CreateRGBSurface(0, SCREENWIDTH, SCREENHEIGHT, 8, 0, 0, 0, 0)))
         I_SDLError("SDL_CreateRGBSurface");
 
@@ -1676,10 +1676,10 @@ void I_ToggleWidescreen(dboolean toggle)
     if (toggle)
     {
         vid_widescreen = true;
-
+#ifndef __ANDROID__
         if (SDL_RenderSetLogicalSize(renderer, SCREENWIDTH, SCREENHEIGHT) < 0)
             I_SDLError("SDL_RenderSetLogicalSize");
-
+#endif
         src_rect.h = SCREENHEIGHT - SBARHEIGHT;
     }
     else
@@ -1688,10 +1688,10 @@ void I_ToggleWidescreen(dboolean toggle)
 
         if (gamestate == GS_LEVEL)
             ST_doRefresh();
-
+#ifndef __ANDROID__
         if (SDL_RenderSetLogicalSize(renderer, SCREENWIDTH, SCREENWIDTH * 3 / 4) < 0)
             I_SDLError("SDL_RenderSetLogicalSize");
-
+#endif
         src_rect.h = SCREENHEIGHT;
     }
 

@@ -180,6 +180,9 @@ char *M_ExtractFolder(char *path)
 
 char *M_GetAppDataFolder(void)
 {
+#ifdef __ANDROID__
+    return "./doomretro/";
+#endif
     char    *executableFolder = M_GetExecutableFolder();
 
 #if defined(_WIN32)
