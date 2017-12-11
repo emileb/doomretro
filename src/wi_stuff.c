@@ -7,7 +7,7 @@
 ========================================================================
 
   Copyright © 1993-2012 id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2017 Brad Harding.
+  Copyright © 2013-2018 Brad Harding.
 
   DOOM Retro is a fork of Chocolate DOOM.
   For a list of credits, see <http://wiki.doomretro.com/credits>.
@@ -245,16 +245,11 @@ static anim_t *anims[NUMEPISODES] =
 // used to accelerate or skip a stage
 int                     acceleratestage;
 
-// wbs->pnum
-static int              me;
-
 // specifies current state
 static stateenum_t      state;
 
 // contains information passed into intermission
 static wbstartstruct_t  *wbs;
-
-static wbplayerstruct_t *plrs;  // wbs->plyr[]
 
 // used for general timing
 static int              cnt;
@@ -481,8 +476,7 @@ static void WI_drawOnLnode(int n, patch_t *c[])
             fits = true;
         else
             i++;
-    }
-    while (!fits && i != 2 && c[i]);
+    } while (!fits && i != 2 && c[i]);
 
     if (fits && i < 2)
     {
@@ -647,7 +641,7 @@ static int WI_drawNum(int x, int y, int n, int digits)
 
     // draw a minus sign if necessary
     if (neg)
-        V_DrawPatch(x -= 8, y, 0, wiminus);
+        V_DrawPatch((x -= 8), y, 0, wiminus);
 
     return x;
 }
@@ -685,8 +679,7 @@ static void WI_drawTime(int x, int y, int t)
             if (div == 60 || t / div)
                 V_DrawPatchWithShadow(x + 1, y + 1, colon, true);
 
-        }
-        while (t / div);
+        } while (t / div);
 
         if (t < 60)
             WI_drawNum(x, y, 0, 2);
@@ -815,11 +808,11 @@ static void WI_updateStats(void)
     if (acceleratestage && sp_state != 10)
     {
         acceleratestage = 0;
-        cnt_kills = (int)(plrs[me].skills * 100) / wbs->maxkills;
-        cnt_items = (int)(plrs[me].sitems * 100) / wbs->maxitems;
-        cnt_secret = (int)(plrs[me].ssecret * 100) / wbs->maxsecret;
-        cnt_time = (int)plrs[me].stime / TICRATE;
-        cnt_par = (int)wbs->partime / TICRATE;
+        cnt_kills = (wbs->skills * 100) / wbs->maxkills;
+        cnt_items = (wbs->sitems * 100) / wbs->maxitems;
+        cnt_secret = (wbs->ssecret * 100) / wbs->maxsecret;
+        cnt_time = wbs->stime / TICRATE;
+        cnt_par = wbs->partime / TICRATE;
         S_StartSound(NULL, sfx_barexp);
         sp_state = 10;
     }
@@ -831,9 +824,9 @@ static void WI_updateStats(void)
         if (!(bcnt & 3))
             S_StartSound(NULL, sfx_pistol);
 
-        if (cnt_kills >= (int)(plrs[me].skills * 100) / wbs->maxkills)
+        if (cnt_kills >= (wbs->skills * 100) / wbs->maxkills)
         {
-            cnt_kills = (int)(plrs[me].skills * 100) / wbs->maxkills;
+            cnt_kills = (wbs->skills * 100) / wbs->maxkills;
             S_StartSound(NULL, sfx_barexp);
             sp_state++;
         }
@@ -845,9 +838,9 @@ static void WI_updateStats(void)
         if (!(bcnt & 3))
             S_StartSound(NULL, sfx_pistol);
 
-        if (cnt_items >= (int)(plrs[me].sitems * 100) / wbs->maxitems)
+        if (cnt_items >= (wbs->sitems * 100) / wbs->maxitems)
         {
-            cnt_items = (int)(plrs[me].sitems * 100) / wbs->maxitems;
+            cnt_items = (wbs->sitems * 100) / wbs->maxitems;
             S_StartSound(NULL, sfx_barexp);
             sp_state++;
         }
@@ -859,9 +852,9 @@ static void WI_updateStats(void)
         if (!(bcnt & 3))
             S_StartSound(NULL, sfx_pistol);
 
-        if (cnt_secret >= (int)(plrs[me].ssecret * 100) / wbs->maxsecret)
+        if (cnt_secret >= (wbs->ssecret * 100) / wbs->maxsecret)
         {
-            cnt_secret = (int)(plrs[me].ssecret * 100) / wbs->maxsecret;
+            cnt_secret = (wbs->ssecret * 100) / wbs->maxsecret;
             S_StartSound(NULL, sfx_barexp);
             sp_state++;
         }
@@ -875,8 +868,8 @@ static void WI_updateStats(void)
 
         cnt_time += 3;
 
-        if (cnt_time >= (int)(plrs[me].stime) / TICRATE)
-            cnt_time = (int)(plrs[me].stime) / TICRATE;
+        if (cnt_time >= wbs->stime / TICRATE)
+            cnt_time = wbs->stime / TICRATE;
 
         cnt_par += 3;
 
@@ -885,19 +878,17 @@ static void WI_updateStats(void)
         // the game should play explosion sound immediately after
         // the counter will reach level time instead of par time
         if (modifiedgame && play_early_explosion)
-        {
-            if (cnt_time >= (int)(plrs[me].stime) / TICRATE)
+            if (cnt_time >= wbs->stime / TICRATE)
             {
                 S_StartSound(NULL, sfx_barexp);
                 play_early_explosion = false;   // do not play it twice or more
             }
-        }
 
-        if (cnt_par >= (int)wbs->partime / TICRATE)
+        if (cnt_par >= wbs->partime / TICRATE)
         {
-            cnt_par = (int)wbs->partime / TICRATE;
+            cnt_par = wbs->partime / TICRATE;
 
-            if (cnt_time >= (int)(plrs[me].stime) / TICRATE)
+            if (cnt_time >= wbs->stime / TICRATE)
             {
                 // e6y: do not play explosion sound if it was already played
                 if (!modifiedgame)
@@ -976,29 +967,28 @@ void WI_checkForAccelerate(void)
 {
     if (!menuactive && !paused && !consoleactive)
     {
-        player_t    *player = &players[0];
         const Uint8 *keystate = SDL_GetKeyboardState(NULL);
 
-        if ((player->cmd.buttons & BT_ATTACK) || keystate[SDL_SCANCODE_RETURN]
+        if ((viewplayer->cmd.buttons & BT_ATTACK) || keystate[SDL_SCANCODE_RETURN]
             || keystate[SDL_SCANCODE_KP_ENTER])
         {
-            if (!player->attackdown)
+            if (!viewplayer->attackdown)
                 acceleratestage = 1;
 
-            player->attackdown = true;
+            viewplayer->attackdown = true;
         }
         else
-            player->attackdown = false;
+            viewplayer->attackdown = false;
 
-        if (player->cmd.buttons & BT_USE)
+        if (viewplayer->cmd.buttons & BT_USE)
         {
-            if (!player->usedown)
+            if (!viewplayer->usedown)
                 acceleratestage = 1;
 
-            player->usedown = true;
+            viewplayer->usedown = true;
         }
         else
-            player->usedown = false;
+            viewplayer->usedown = false;
     }
 }
 
@@ -1206,8 +1196,6 @@ static void WI_initVariables(wbstartstruct_t *wbstartstruct)
     acceleratestage = 0;
     cnt = 0;
     bcnt = 0;
-    me = wbs->pnum;
-    plrs = wbs->plyr;
 
     if (!wbs->maxkills)
         wbs->maxkills = 1;

@@ -7,7 +7,7 @@
 ========================================================================
 
   Copyright © 1993-2012 id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2017 Brad Harding.
+  Copyright © 2013-2018 Brad Harding.
 
   DOOM Retro is a fork of Chocolate DOOM.
   For a list of credits, see <http://wiki.doomretro.com/credits>.
@@ -433,9 +433,7 @@ void W_Init(void)
     }
 
     // set up caching
-    cachelump = calloc(sizeof(*cachelump), numlumps);
-
-    if (!cachelump)
+    if (!(cachelump = calloc(sizeof(*cachelump), numlumps)))
         I_Error ("W_Init: Couldn't allocate lumpcache");
 }
 

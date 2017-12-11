@@ -7,7 +7,7 @@
 ========================================================================
 
   Copyright © 1993-2012 id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2017 Brad Harding.
+  Copyright © 2013-2018 Brad Harding.
 
   DOOM Retro is a fork of Chocolate DOOM.
   For a list of credits, see <http://wiki.doomretro.com/credits>.
@@ -236,8 +236,10 @@ void C_StrCVAROutput(const char *cvar, const char *string)
 
 void C_CCMDOutput(const char *ccmd)
 {
-    if (!consolestrings || !M_StringCompare(console[consolestrings - 1].string, ccmd))
-        C_Input(ccmd);
+    if (consolestrings && M_StringStartsWith(console[consolestrings - 1].string, ccmd))
+        consolestrings--;
+
+    C_Input(ccmd);
 }
 
 #ifdef __ANDROID__
@@ -885,7 +887,7 @@ static void C_DrawTimeStamp(int x, int y, unsigned int tics)
     static char buffer[9];
 
     M_StringCopy(buffer, C_GetTimeStamp(tics), 9);
-    y -= (CONSOLEHEIGHT - consoleheight);
+    y -= CONSOLEHEIGHT - consoleheight;
 
     for (int i = 0; i < 8; i++)
     {

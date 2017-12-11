@@ -7,7 +7,7 @@
 ========================================================================
 
   Copyright © 1993-2012 id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2017 Brad Harding.
+  Copyright © 2013-2018 Brad Harding.
 
   DOOM Retro is a fork of Chocolate DOOM.
   For a list of credits, see <http://wiki.doomretro.com/credits>.
@@ -5861,6 +5861,11 @@ char autocompletelist[][255] =
     "if autoload off then ",
     "if autoload on ",
     "if autoload on then ",
+    "if autouse ",
+    "if autouse off ",
+    "if autouse off then ",
+    "if autouse on ",
+    "if autouse on then ",
     "if centerweapon ",
     "if centerweapon off ",
     "if centerweapon off then ",
@@ -5953,6 +5958,11 @@ char autocompletelist[][255] =
     "if gp_vibrate_damage ",
     "if gp_vibrate_weapons ",
     "if health ",
+    "if infighting ",
+    "if infighting off ",
+    "if infighting off then ",
+    "if infighting on ",
+    "if infighting on then ",
     "if iwadfolder ",
     "if m_doubleclick_use ",
     "if m_doubleclick_use off ",
@@ -6087,6 +6097,7 @@ char autocompletelist[][255] =
     "if r_floatbob off then ",
     "if r_floatbob on ",
     "if r_floatbob on then ",
+    "if r_fov ",
     "if r_gamma ",
     "if r_gamma off ",
     "if r_gamma off then ",
@@ -6345,6 +6356,9 @@ char autocompletelist[][255] =
     "if wipe off then ",
     "if wipe on ",
     "if wipe on then ",
+    "infighting ",
+    "infighting off",
+    "infighting on",
     "iwadfolder ",
     "kill ",
     "kill all",
@@ -6846,6 +6860,7 @@ char autocompletelist[][255] =
     "reset gp_vibrate_damage",
     "reset gp_vibrate_weapons",
     "reset health",
+    "reset infighting",
     "reset iwadfolder",
     "reset m_doubleclick_use",
     "reset m_invertyaxis",
@@ -7233,7 +7248,5 @@ char autocompletelist[][255] =
     "wipe ",
     "wipe off",
     "wipe on",
-    "+zoomin",
-    "+zoomout",
     ""
 };

@@ -7,7 +7,7 @@
 ========================================================================
 
   Copyright © 1993-2012 id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2017 Brad Harding.
+  Copyright © 2013-2018 Brad Harding.
 
   DOOM Retro is a fork of Chocolate DOOM.
   For a list of credits, see <http://wiki.doomretro.com/credits>.
@@ -45,52 +45,52 @@
 #include "s_sound.h"
 #include "z_zone.h"
 
-static mobj_t       *tmthing;
-static fixed_t      tmx, tmy, tmz;
-static int          pe_x, pe_y;     // Pain Elemental position for Lost Soul checks // phares
-static int          ls_x, ls_y;     // Lost Soul position for Lost Soul checks      // phares
+static mobj_t   *tmthing;
+static fixed_t  tmx, tmy, tmz;
+static int      pe_x, pe_y;     // Pain Elemental position for Lost Soul checks // phares
+static int      ls_x, ls_y;     // Lost Soul position for Lost Soul checks      // phares
 
 // If "floatok" true, move would be ok
 // if within "tmfloorz - tmceilingz".
-dboolean            floatok;
+dboolean        floatok;
 
 // killough 11/98: if "felldown" true, object was pushed down ledge
-dboolean            felldown;
+dboolean        felldown;
 
-fixed_t             tmbbox[4];
-fixed_t             tmfloorz;
-fixed_t             tmceilingz;
-static fixed_t      tmdropoffz;
+fixed_t         tmbbox[4];
+fixed_t         tmfloorz;
+fixed_t         tmceilingz;
+static fixed_t  tmdropoffz;
 
 // keep track of the line that lowers the ceiling,
 // so missiles don't explode against sky hack walls
-line_t              *ceilingline;
-line_t              *blockline;     // killough 8/11/98: blocking linedef
-static line_t       *floorline;     // killough 8/1/98: Highest touched floor
-static int          tmunstuck;      // killough 8/1/98: whether to allow unsticking
+line_t          *ceilingline;
+line_t          *blockline;     // killough 8/11/98: blocking linedef
+static line_t   *floorline;     // killough 8/1/98: Highest touched floor
+static int      tmunstuck;      // killough 8/1/98: whether to allow unsticking
 
 // keep track of special lines as they are hit,
 // but don't process them until the move is proven valid
 
 // 1/11/98 killough: removed limit on special lines crossed
-line_t              **spechit;
-static int          spechit_max;
-int                 numspechit;
+line_t          **spechit;
+static int      spechit_max;
+int             numspechit;
 
-static angle_t      shootangle;     // [BH] angle of blood and puffs for automap
+static angle_t  shootangle;     // [BH] angle of blood and puffs for automap
 
 // Temporary holder for thing_sectorlist threads
-msecnode_t          *sector_list;   // phares 3/16/98
+msecnode_t      *sector_list;   // phares 3/16/98
 
-dboolean            infight;
+dboolean        infight;
 
-static mobj_t       *onmobj;
+static mobj_t   *onmobj;
 
-unsigned int        stat_distancetraveled;
+unsigned int    stat_distancetraveled;
 
-extern dboolean     autousing;
-extern dboolean     successfulshot;
-extern dboolean     telefragonmap30;
+extern dboolean autousing;
+extern dboolean successfulshot;
+extern dboolean telefragonmap30;
 
 //
 // TELEPORT MOVE
@@ -415,30 +415,25 @@ static dboolean PIT_CheckThing(mobj_t *thing)
     dboolean    unblocking = false;
     int         flags = thing->flags;
     int         tmflags = tmthing->flags;
-    fixed_t     dist;
-
-    if (!(flags & (MF_SOLID | MF_SPECIAL | MF_SHOOTABLE)))
-        return true;
-
-    dist = P_ApproxDistance(thing->x - tmthing->x, thing->y - tmthing->y);
+    fixed_t     dist = P_ApproxDistance(thing->x - tmthing->x, thing->y - tmthing->y);
 
     // [BH] apply small amount of momentum to a corpse when a monster walks over it
     if (r_corpses_nudge && (flags & MF_CORPSE) && (tmflags & MF_SHOOTABLE) && !thing->nudge
         && dist < 16 * FRACUNIT && thing->z == tmthing->z)
     {
         thing->nudge = TICRATE;
+        thing->momx = M_RandomInt(-1, 1) * FRACUNIT;
+        thing->momy = M_RandomInt(-1, 1) * FRACUNIT;
 
-        if (thing->flags2 & MF2_FEETARECLIPPED)
+        if (!(thing->flags2 & MF2_FEETARECLIPPED))
         {
-            thing->momx = M_RandomInt(-1, 1) * FRACUNIT;
-            thing->momy = M_RandomInt(-1, 1) * FRACUNIT;
-        }
-        else
-        {
-            thing->momx = M_RandomInt(-1, 1) * FRACUNIT / 2;
-            thing->momy = M_RandomInt(-1, 1) * FRACUNIT / 2;
+            thing->momx /= 2;
+            thing->momy /= 2;
         }
     }
+
+    if (!(flags & (MF_SOLID | MF_SPECIAL | MF_SHOOTABLE)))
+        return true;
 
     // [BH] specify standard radius of 20 for pickups here as thing->radius
     // has been changed to allow better clipping
@@ -517,14 +512,14 @@ static dboolean PIT_CheckThing(mobj_t *thing)
         {
             if (tmthing->type == MT_PLASMA)
             {
-                players[0].shotshit++;
+                viewplayer->shotshit++;
                 stat_shotshit = SafeAdd(stat_shotshit, 1);
             }
             else if (tmthing->type == MT_ROCKET)
             {
                 if (tmthing->nudge == 1)
                 {
-                    players[0].shotshit++;
+                    viewplayer->shotshit++;
                     stat_shotshit = SafeAdd(stat_shotshit, 1);
                 }
 
@@ -1120,7 +1115,7 @@ static dboolean P_ThingHeightClip(mobj_t *thing)
 
         // [BH] immediately update player's view
         if (thing->player)
-            P_CalcHeight(viewplayer);
+            P_CalcHeight();
 
         // killough 11/98: Possibly upset balance of objects hanging off ledges
         if ((flags2 & MF2_FALLING) && thing->gear >= MAXGEAR)
@@ -1377,8 +1372,7 @@ void P_SlideMove(mobj_t *mo)
             if (ABS(mo->player->momy) > ABS(tmymove))
                 mo->player->momy = tmymove;
         }
-    }  // killough 3/15/98: Allow objects to drop off ledges:
-    while (!P_TryMove(mo, mo->x + tmxmove, mo->y + tmymove, true));
+    } while (!P_TryMove(mo, mo->x + tmxmove, mo->y + tmymove, true));
 }
 
 //
@@ -1624,13 +1618,8 @@ static dboolean PTR_ShootTraverse(intercept_t *in)
         {
             if (type != MT_PLAYER)
                 P_SpawnBlood(x, y, z, shootangle, la_damage, th);
-            else
-            {
-                player_t    *player = &players[0];
-
-                if (!player->powers[pw_invulnerability] && !(player->cheats & CF_GODMODE))
-                    P_SpawnBlood(x, y, z + FRACUNIT * M_RandomInt(4, 16), shootangle, la_damage, th);
-            }
+            else if (!viewplayer->powers[pw_invulnerability] && !(viewplayer->cheats & CF_GODMODE))
+                P_SpawnBlood(x, y, z + FRACUNIT * M_RandomInt(4, 16), shootangle, la_damage, th);
         }
     }
 
@@ -1765,7 +1754,7 @@ static dboolean PTR_NoWayTraverse(intercept_t *in)
 // P_UseLines
 // Looks for special lines in front of the player to activate.
 //
-void P_UseLines(player_t *player)
+void P_UseLines(void)
 {
     int     angle;
     fixed_t x1, y1;
@@ -1774,12 +1763,12 @@ void P_UseLines(player_t *player)
     if (automapactive && !am_followmode)
         return;
 
-    usething = player->mo;
+    usething = viewplayer->mo;
 
-    angle = player->mo->angle >> ANGLETOFINESHIFT;
+    angle = usething->angle >> ANGLETOFINESHIFT;
 
-    x1 = player->mo->x;
-    y1 = player->mo->y;
+    x1 = usething->x;
+    y1 = usething->y;
     x2 = x1 + (USERANGE >> FRACBITS) * finecosine[angle];
     y2 = y1 + (USERANGE >> FRACBITS) * finesine[angle];
 
@@ -1855,7 +1844,7 @@ static dboolean PIT_RadiusAttack(mobj_t *thing)
         {
             if (bombspot->nudge == 1)
             {
-                players[0].shotshit++;
+                viewplayer->shotshit++;
                 stat_shotshit = SafeAdd(stat_shotshit, 1);
             }
 
@@ -1987,8 +1976,7 @@ static void PIT_ChangeSector(mobj_t *thing)
         if (!(flags & MF_NOBLOOD) && thing->blood && (thing->type != MT_PLAYER
             || (!viewplayer->powers[pw_invulnerability] && !(viewplayer->cheats & CF_GODMODE))))
         {
-            int type = (r_blood == r_blood_all ? ((thing->flags & MF_FUZZ) ? MT_FUZZYBLOOD : thing->blood) :
-                           MT_BLOOD);
+            int type = (r_blood == r_blood_all ? ((thing->flags & MF_FUZZ) ? MT_FUZZYBLOOD : thing->blood) : MT_BLOOD);
             int z = thing->z + thing->height * 2 / 3;
 
             for (int i = 0; i < 4; i++)
@@ -1996,8 +1984,8 @@ static void PIT_ChangeSector(mobj_t *thing)
                 // spray blood in a random direction
                 mobj_t  *mo = P_SpawnMobj(thing->x, thing->y, z, type);
 
-                mo->momx = (M_Random() - M_Random()) << 11;
-                mo->momy = (M_Random() - M_Random()) << 11;
+                mo->momx = M_NegRandom() << 11;
+                mo->momy = M_NegRandom() << 11;
             }
         }
 
@@ -2056,8 +2044,7 @@ dboolean P_ChangeSector(sector_t *sector, dboolean crunch)
 
                 break;                                              // exit and start over
             }
-    }
-    while (n);      // repeat from scratch until all things left are marked valid
+    } while (n);    // repeat from scratch until all things left are marked valid
 
     return nofit;
 }
@@ -2176,6 +2163,7 @@ static msecnode_t *P_DelSecnode(msecnode_t *node)
         P_PutSecnode(node);
         return tn;
     }
+
     return NULL;
 }
 

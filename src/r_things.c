@@ -7,7 +7,7 @@
 ========================================================================
 
   Copyright © 1993-2012 id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2017 Brad Harding.
+  Copyright © 2013-2018 Brad Harding.
 
   DOOM Retro is a fork of Chocolate DOOM.
   For a list of credits, see <http://wiki.doomretro.com/credits>.
@@ -228,8 +228,7 @@ static void R_InitSpriteDefs(void)
                     if (lump->name[6])
                         R_InstallSpriteLump(lump, j + firstspritelump, lump->name[6] - 'A', lump->name[7], true);
                 }
-            }
-            while ((j = hash[j].next) >= 0);
+            } while ((j = hash[j].next) >= 0);
 
             // check the frames that were found for completeness
             if ((sprites[i].numframes = ++maxframe))  // killough 1/31/98
@@ -350,7 +349,7 @@ static vissprite_t *R_NewVisSprite(void)
 }
 
 //
-// R_BlastMaskedColumn
+// R_BlastSpriteColumn
 //
 int     *mfloorclip;
 int     *mceilingclip;
@@ -359,7 +358,7 @@ fixed_t spryscale;
 int64_t sprtopscreen;
 int     fuzzpos;
 
-static void R_BlastMaskedColumn(const rcolumn_t *column)
+static void R_BlastSpriteColumn(const rcolumn_t *column)
 {
     int count = column->numposts;
 
@@ -538,7 +537,7 @@ static void R_DrawVisSprite(const vissprite_t *vis)
     fuzzpos = 0;
 
     for (dc_x = vis->x1, frac = startfrac; dc_x <= x2; dc_x++, frac += xiscale)
-        R_BlastMaskedColumn(R_GetPatchColumnClamped(patch, frac >> FRACBITS));
+        R_BlastSpriteColumn(R_GetPatchColumnClamped(patch, frac >> FRACBITS));
 
     R_UnlockPatchNum(id);
 }
@@ -751,8 +750,7 @@ static void R_ProjectSprite(mobj_t *thing)
         vis->colfunc = thing->colfunc;
 
     // foot clipping
-    if ((flags2 & MF2_FEETARECLIPPED) && fz <= floorheight + FRACUNIT && !heightsec
-        && r_liquid_clipsprites)
+    if ((flags2 & MF2_FEETARECLIPPED) && fz <= floorheight + FRACUNIT && !heightsec && r_liquid_clipsprites)
     {
         fixed_t clipfeet = MIN((spriteheight[lump] >> FRACBITS) / 4, 10) << FRACBITS;
 
@@ -771,22 +769,34 @@ static void R_ProjectSprite(mobj_t *thing)
 
     if (flip)
     {
-        vis->startfrac = width - 1;
         vis->xiscale = -FixedDiv(FRACUNIT, xscale);
-    }
-    else
-    {
-        vis->startfrac = 0;
-        vis->xiscale = FixedDiv(FRACUNIT, xscale);
-    }
 
-    if (x1 < 0)
-    {
-        vis->x1 = 0;
-        vis->startfrac -= vis->xiscale * x1;
+        if (x1 < 0)
+        {
+            vis->x1 = 0;
+            vis->startfrac = width - 1 - vis->xiscale * x1;
+        }
+        else
+        {
+            vis->x1 = x1;
+            vis->startfrac = width - 1;
+        }
     }
     else
-        vis->x1 = x1;
+    {
+        vis->xiscale = FixedDiv(FRACUNIT, xscale);
+
+        if (x1 < 0)
+        {
+            vis->x1 = 0;
+            vis->startfrac = -vis->xiscale * x1;
+        }
+        else
+        {
+            vis->x1 = x1;
+            vis->startfrac = 0;
+        }
+    }
 
     vis->x2 = MIN(x2, viewwidth - 1);
     vis->patch = lump;
@@ -806,9 +816,7 @@ static void R_ProjectBloodSplat(const bloodsplat_t *splat)
     fixed_t                 xscale;
     int                     x1;
     int                     x2;
-    int                     lump;
     bloodsplatvissprite_t   *vis;
-    int                     flags;
     fixed_t                 fx = splat->x;
     fixed_t                 fy = splat->y;
     fixed_t                 width;
@@ -829,10 +837,8 @@ static void R_ProjectBloodSplat(const bloodsplat_t *splat)
     if (ABS(tx) > (tz << 2))
         return;
 
-    lump = splat->frame;
-
     // calculate edges of the shape
-    width = spritewidth[lump];
+    width = splat->width;
     tx -= (width >> 1);
 
     // off the right side?
@@ -854,32 +860,42 @@ static void R_ProjectBloodSplat(const bloodsplat_t *splat)
     vis->gx = fx;
     vis->gy = fy;
     vis->blood = splat->blood;
-    flags = splat->flags;
-    vis->colfunc = ((flags & BSF_FUZZ) && pausesprites && r_textures ? R_DrawPausedFuzzColumn :
-        splat->colfunc);
+    vis->colfunc = (pausesprites && r_textures && splat->colfunc == fuzzcolfunc ? R_DrawPausedFuzzColumn : splat->colfunc);
     vis->texturemid = floorheight + FRACUNIT - viewz;
 
-    if (flags & BSF_MIRRORED)
+    if (splat->flip)
     {
-        vis->startfrac = width - 1;
         vis->xiscale = -FixedDiv(FRACUNIT, xscale);
-    }
-    else
-    {
-        vis->startfrac = 0;
-        vis->xiscale = FixedDiv(FRACUNIT, xscale);
-    }
 
-    if (x1 < 0)
-    {
-        vis->x1 = 0;
-        vis->startfrac -= vis->xiscale * x1;
+        if (x1 < 0)
+        {
+            vis->x1 = 0;
+            vis->startfrac = width - 1 - vis->xiscale * x1;
+        }
+        else
+        {
+            vis->x1 = x1;
+            vis->startfrac = width - 1;
+        }
     }
     else
-        vis->x1 = x1;
+    {
+        vis->xiscale = FixedDiv(FRACUNIT, xscale);
+
+        if (x1 < 0)
+        {
+            vis->x1 = 0;
+            vis->startfrac = -vis->xiscale * x1;
+        }
+        else
+        {
+            vis->x1 = x1;
+            vis->startfrac = 0;
+        }
+    }
 
     vis->x2 = MIN(x2, viewwidth - 1);
-    vis->patch = lump;
+    vis->patch = splat->patch;
 
     // get light level
     if (fixedcolormap)

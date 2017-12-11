@@ -7,7 +7,7 @@
 ========================================================================
 
   Copyright © 1993-2012 id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2017 Brad Harding.
+  Copyright © 2013-2018 Brad Harding.
 
   DOOM Retro is a fork of Chocolate DOOM.
   For a list of credits, see <http://wiki.doomretro.com/credits>.
@@ -693,7 +693,7 @@ static dboolean F_CastResponder(event_t *ev)
         }
     }
 
-    S_StartSound(players[0].mo, sfx_dshtgn);
+    S_StartSound(viewplayer->mo, sfx_dshtgn);
 
     type = castorder[castnum].type;
 
@@ -905,8 +905,7 @@ static void F_BunnyScroll(void)
                 F_DrawPatchCol(frac / xscale, p2, x + scrolled - ORIGINALWIDTH, yscale);
 
             frac += xscale;
-        }
-        while ((frac >> FRACBITS) <= x);
+        } while ((frac >> FRACBITS) <= x);
     }
 
     if (finalecount < 1130)

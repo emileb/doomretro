@@ -7,7 +7,7 @@
 ========================================================================
 
   Copyright © 1993-2012 id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2017 Brad Harding.
+  Copyright © 2013-2018 Brad Harding.
 
   DOOM Retro is a fork of Chocolate DOOM.
   For a list of credits, see <http://wiki.doomretro.com/credits>.
@@ -53,20 +53,20 @@
 
 // when to clip out sounds
 // Does not fit the large outdoor areas.
-#define S_CLIPPING_DIST (1200 << FRACBITS)
+#define S_CLIPPING_DIST 1200
 
 // Distance to origin when sounds should be maxed out.
 // This should relate to movement clipping resolution
 // (see BLOCKMAP handling).
 // In the source code release: (160*FRACUNIT). Changed back to the
 // Vanilla value of 200 (why was this changed?)
-#define S_CLOSE_DIST    (200 << FRACBITS)
+#define S_CLOSE_DIST    200
 
 // The range over which sound attenuates
-#define S_ATTENUATOR    ((S_CLIPPING_DIST - S_CLOSE_DIST) >> FRACBITS)
+#define S_ATTENUATOR    (S_CLIPPING_DIST - S_CLOSE_DIST)
 
 // Stereo separation
-#define S_STEREO_SWING  (96 << FRACBITS)
+#define S_STEREO_SWING  96
 
 #define NORM_SEP        128
 
@@ -134,8 +134,9 @@ static void InitSfxModule(void)
 {
     if (I_InitSound())
     {
-        C_Output("Sound effects will play at a sample rate of %.1fkHz on %i channels.", SAMPLERATE / 1000.0f,
-            s_channels);
+        C_Output("Sound effects will play at a sample rate of %.1fkHz on %i channels%s.", SAMPLERATE / 1000.0f,
+            s_channels, (M_StringCompare(SDL_GetCurrentAudioDriver(), "directsound") ?
+            " using the <i><b>DirectSound</b></i> API" : ""));
         return;
     }
 
@@ -176,10 +177,13 @@ void S_Init(void)
 
     if (M_CheckParm("-nosfx"))
     {
-        C_Output("A <b>-nosfx</b> parameter was found on the command-line. Sound effects have been "
-            "disabled.");
+        C_Output("A <b>-nosfx</b> parameter was found on the command-line. Sound effects have been disabled.");
         nosfx = true;
     }
+
+#if defined(WIN32)
+    putenv("SDL_AUDIODRIVER=DirectSound");
+#endif
 
     if (!nosfx)
     {
@@ -380,9 +384,9 @@ static int S_GetChannel(mobj_t *origin, sfxinfo_t *sfxinfo)
 }
 
 // Changes volume and stereo-separation variables from the norm of a sound
-// effect to be played. If the sound is not audible, returns a 0. Otherwise,
-// modifies parameters and returns 1.
-static int S_AdjustSoundParams(mobj_t *listener, mobj_t *source, int *vol, int *sep)
+// effect to be played. If the sound is not audible, returns false. Otherwise,
+// modifies parameters and returns true.
+static dboolean S_AdjustSoundParams(mobj_t *listener, fixed_t x, fixed_t y, int *vol, int *sep)
 {
     fixed_t dist = 0;
     fixed_t adx;
@@ -390,14 +394,13 @@ static int S_AdjustSoundParams(mobj_t *listener, mobj_t *source, int *vol, int *
     angle_t angle;
 
     if (nosfx || !listener)
-        return 0;
+        return false;
 
-    // calculate the distance to sound origin
-    //  and clip it if necessary
+    // calculate the distance to sound origin and clip it if necessary
     // killough 11/98: scale coordinates down before calculations start
     // killough 12/98: use exact distance formula instead of approximation
-    adx = ABS((listener->x >> FRACBITS) - (source->x >> FRACBITS));
-    ady = ABS((listener->y >> FRACBITS) - (source->y >> FRACBITS));
+    adx = ABS((listener->x >> FRACBITS) - (x >> FRACBITS));
+    ady = ABS((listener->y >> FRACBITS) - (y >> FRACBITS));
 
     if (ady > adx)
         SWAP(adx, ady);
@@ -405,11 +408,11 @@ static int S_AdjustSoundParams(mobj_t *listener, mobj_t *source, int *vol, int *
     if (adx)
         dist = FixedDiv(adx, finesine[(tantoangle[FixedDiv(ady, adx) >> DBITS] + ANG90) >> ANGLETOFINESHIFT]);
 
-    if (dist > (S_CLIPPING_DIST >> FRACBITS))
-        return 0;
+    if (dist > S_CLIPPING_DIST)
+        return false;
 
     // angle of source to listener
-    angle = R_PointToAngle2(listener->x, listener->y, source->x, source->y);
+    angle = R_PointToAngle2(listener->x, listener->y, x, y);
 
     if (angle <= listener->angle)
         angle += 0xFFFFFFFF;
@@ -418,13 +421,10 @@ static int S_AdjustSoundParams(mobj_t *listener, mobj_t *source, int *vol, int *
     angle >>= ANGLETOFINESHIFT;
 
     // stereo separation
-    *sep = NORM_SEP - FixedMul(S_STEREO_SWING >> FRACBITS, finesine[angle]);
+    *sep = NORM_SEP - FixedMul(S_STEREO_SWING, finesine[angle]);
 
     // volume calculation
-    if (dist < (S_CLOSE_DIST >> FRACBITS))
-        *vol = snd_SfxVolume;
-    else
-        *vol = snd_SfxVolume * ((S_CLIPPING_DIST >> FRACBITS) - dist) / S_ATTENUATOR;
+    *vol = (dist < S_CLOSE_DIST ? snd_SfxVolume : snd_SfxVolume * (S_CLIPPING_DIST - dist) / S_ATTENUATOR);
 
     return (*vol > 0);
 }
@@ -432,7 +432,7 @@ static int S_AdjustSoundParams(mobj_t *listener, mobj_t *source, int *vol, int *
 static void S_StartSoundAtVolume(mobj_t *origin, int sfx_id, int pitch, int volume)
 {
     sfxinfo_t   *sfx = &S_sfx[sfx_id];
-    mobj_t      *player = players[0].mo;
+    mobj_t      *mo = viewplayer->mo;
     int         sep;
     int         cnum;
     int         handle;
@@ -452,13 +452,12 @@ static void S_StartSoundAtVolume(mobj_t *origin, int sfx_id, int pitch, int volu
             volume = snd_SfxVolume;
     }
 
-    // Check to see if it is audible,
-    //  and if not, modify the parms
-    if (!origin || origin == player)
+    // Check to see if it is audible, and if not, modify the parms
+    if (!origin || origin == mo)
         sep = NORM_SEP;
-    else if (!S_AdjustSoundParams(player, origin, &volume, &sep))
+    else if (!S_AdjustSoundParams(mo, origin->x, origin->y, &volume, &sep))
         return;
-    else if (origin->x == player->x && origin->y == player->y)
+    else if (origin->x == mo->x && origin->y == mo->y)
         sep = NORM_SEP;
 
     // kill old sound
@@ -542,8 +541,9 @@ void S_UpdateSounds(mobj_t *listener)
             if (I_SoundIsPlaying(c->handle))
             {
                 // initialize parameters
-                int volume = snd_SfxVolume;
-                int sep = NORM_SEP;
+                int     volume = snd_SfxVolume;
+                int     sep = NORM_SEP;
+                mobj_t  *origin = c->origin;
 
                 if (sfx->link)
                 {
@@ -560,9 +560,9 @@ void S_UpdateSounds(mobj_t *listener)
 
                 // check non-local sounds for distance clipping
                 //  or modify their parms
-                if (c->origin && listener != c->origin)
+                if (origin && listener != origin)
                 {
-                    if (!S_AdjustSoundParams(listener, c->origin, &volume, &sep))
+                    if (!S_AdjustSoundParams(listener, origin->x, origin->y, &volume, &sep))
                         S_StopChannel(cnum);
                     else
                         I_UpdateSoundParams(c->handle, volume, sep);
@@ -739,7 +739,7 @@ void S_ParseMusInfo(char *mapid)
 
 void MusInfoThinker(mobj_t *thing)
 {
-    if (musinfo.mapthing != thing && thing->subsector->sector == players[0].mo->subsector->sector)
+    if (musinfo.mapthing != thing && thing->subsector->sector == viewplayer->mo->subsector->sector)
     {
         musinfo.lastmapthing = musinfo.mapthing;
         musinfo.mapthing = thing;

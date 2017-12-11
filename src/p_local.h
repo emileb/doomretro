@@ -7,7 +7,7 @@
 ========================================================================
 
   Copyright © 1993-2012 id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2017 Brad Harding.
+  Copyright © 2013-2018 Brad Harding.
 
   DOOM Retro is a fork of Chocolate DOOM.
   For a list of credits, see <http://wiki.doomretro.com/credits>.
@@ -44,9 +44,10 @@
 
 #define FOOTCLIPSIZE        (10 * FRACUNIT)
 
-#define FLOATSPEED          (FRACUNIT * 4)
+#define FLOATSPEED          (4 * FRACUNIT)
 
 #define VIEWHEIGHT          (41 * FRACUNIT)
+#define DEADVIEWHEIGHT      (6 * FRACUNIT)
 
 // mapblocks are used to check movement
 // against lines and things
@@ -86,11 +87,11 @@
 //
 // P_PSPR
 //
-void P_SetupPsprites(player_t *player);
-void P_MovePsprites(player_t *player);
-void P_FireWeapon(player_t *player);
-void P_DropWeapon(player_t *player);
-void P_SetPsprite(player_t *player, size_t position, statenum_t stnum);
+void P_SetupPsprites(void);
+void P_MovePsprites(void);
+void P_FireWeapon(void);
+void P_DropWeapon(void);
+void P_SetPsprite(size_t position, statenum_t stnum);
 
 //
 // P_USER
@@ -99,11 +100,11 @@ void P_SetPsprite(player_t *player, size_t position, statenum_t stnum);
 #define MAXBOB              0x100000
 #define MLOOKUNIT           8
 
-void P_CalcHeight(player_t *player);
-void P_MovePlayer(player_t *player);
-void P_PlayerThink(player_t *player);
-void P_ResurrectPlayer(player_t *player, int health);
-void P_ChangeWeapon(player_t *player, weapontype_t newweapon);
+void P_CalcHeight(void);
+void P_MovePlayer(void);
+void P_PlayerThink(void);
+void P_ResurrectPlayer(int health);
+void P_ChangeWeapon(weapontype_t newweapon);
 
 //
 // P_MOBJ
@@ -124,7 +125,7 @@ extern int          iquetail;
 
 void P_RespawnSpecials(void);
 
-void P_InitCards(player_t *player);
+void P_InitCards(void);
 
 mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type);
 mobjtype_t P_FindDoomedNum(unsigned int type);
@@ -224,7 +225,7 @@ dboolean P_CheckLineSide(mobj_t *actor, fixed_t x, fixed_t y);
 dboolean P_TeleportMove(mobj_t *thing, fixed_t x, fixed_t y, fixed_t z, dboolean boss);
 void P_SlideMove(mobj_t *mo);
 dboolean P_CheckSight(mobj_t *t1, mobj_t *t2);
-void P_UseLines(player_t *player);
+void P_UseLines(void);
 
 dboolean P_ChangeSector(sector_t *sector, dboolean crunch);
 void P_FreeSecNodeList(void);

@@ -7,7 +7,7 @@
 ========================================================================
 
   Copyright © 1993-2012 id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2017 Brad Harding.
+  Copyright © 2013-2018 Brad Harding.
 
   DOOM Retro is a fork of Chocolate DOOM.
   For a list of credits, see <http://wiki.doomretro.com/credits>.
@@ -1427,7 +1427,7 @@ static void M_DrawReadThis(void)
             V_FillRect(0, 0, 0, SCREENWIDTH, SCREENHEIGHT, 245);
         else
         {
-            players[0].fixedcolormap = 0;
+            viewplayer->fixedcolormap = 0;
             M_DarkBlueBackground();
         }
 
@@ -2816,7 +2816,7 @@ dboolean M_Responder(event_t *ev)
 
         // Save
         else if (key == KEY_F2 && (!functionkey || functionkey == KEY_F2) && (viewactive || automapactive)
-            && !keydown && players[0].health > 0)
+            && !keydown && viewplayer->health > 0)
         {
             keydown = key;
 
@@ -2911,7 +2911,7 @@ dboolean M_Responder(event_t *ev)
 
         // Quicksave
         else if (key == KEY_F6 && (!functionkey || functionkey == KEY_F6) && (viewactive || automapactive)
-            && !keydown && players[0].health > 0)
+            && !keydown && viewplayer->health > 0)
         {
             keydown = key;
 
@@ -3019,8 +3019,7 @@ dboolean M_Responder(event_t *ev)
                         itemOn = 0;
                     else
                         itemOn++;
-                }
-                while (M_StringCompare(savegamestrings[itemOn], s_EMPTYSTRING));
+                } while (M_StringCompare(savegamestrings[itemOn], s_EMPTYSTRING));
 
                 if (itemOn != old)
                     S_StartSound(NULL, sfx_pstop);
@@ -3043,7 +3042,7 @@ dboolean M_Responder(event_t *ev)
                         itemOn++;
 
                     if (currentMenu == &MainDef && itemOn == 3
-                        && (gamestate != GS_LEVEL || players[0].health <= 0))
+                        && (gamestate != GS_LEVEL || viewplayer->health <= 0))
                         itemOn++;
 
                     if (currentMenu == &OptionsDef && !itemOn && gamestate != GS_LEVEL)
@@ -3051,8 +3050,7 @@ dboolean M_Responder(event_t *ev)
 
                     if (currentMenu->menuitems[itemOn].status != -1)
                         S_StartSound(NULL, sfx_pstop);
-                }
-                while (currentMenu->menuitems[itemOn].status == -1);
+                } while (currentMenu->menuitems[itemOn].status == -1);
             }
 
             if (currentMenu == &EpiDef && gamemode != shareware)
@@ -3098,8 +3096,7 @@ dboolean M_Responder(event_t *ev)
                         itemOn = currentMenu->numitems - 1;
                     else
                         itemOn--;
-                }
-                while (M_StringCompare(savegamestrings[itemOn], s_EMPTYSTRING));
+                } while (M_StringCompare(savegamestrings[itemOn], s_EMPTYSTRING));
 
                 if (itemOn != old)
                     S_StartSound(NULL, sfx_pstop);
@@ -3119,7 +3116,7 @@ dboolean M_Responder(event_t *ev)
                         itemOn--;
 
                     if (currentMenu == &MainDef && itemOn == 3
-                        && (gamestate != GS_LEVEL || players[0].health <= 0))
+                        && (gamestate != GS_LEVEL || viewplayer->health <= 0))
                         itemOn--;
 
                     if (currentMenu == &MainDef && itemOn == 2 && !savegames)
@@ -3130,8 +3127,7 @@ dboolean M_Responder(event_t *ev)
 
                     if (currentMenu->menuitems[itemOn].status != -1)
                         S_StartSound(NULL, sfx_pstop);
-                }
-                while (currentMenu->menuitems[itemOn].status == -1);
+                } while (currentMenu->menuitems[itemOn].status == -1);
             }
 
             if (currentMenu == &EpiDef && gamemode != shareware)
@@ -3311,7 +3307,7 @@ dboolean M_Responder(event_t *ev)
                         && toupper(*currentMenu->menuitems[i].text[0]) == toupper(ch)))
                 {
                     if (currentMenu == &MainDef && i == 3
-                        && (gamestate != GS_LEVEL || players[0].health <= 0))
+                        && (gamestate != GS_LEVEL || viewplayer->health <= 0))
                         return true;
 
                     if (currentMenu == &MainDef && i == 2 && !savegames)
@@ -3373,7 +3369,7 @@ dboolean M_Responder(event_t *ev)
                         && toupper(*currentMenu->menuitems[i].text[0]) == toupper(ch)))
                 {
                     if (currentMenu == &MainDef && i == 3
-                        && (gamestate != GS_LEVEL || players[0].health <= 0))
+                        && (gamestate != GS_LEVEL || viewplayer->health <= 0))
                         return true;
 
                     if (currentMenu == &MainDef && i == 2 && !savegames)
@@ -3456,7 +3452,7 @@ void M_StartControlPanel(void)
         XInputVibration(idlemotorspeed);
     }
 
-    players[0].fixedcolormap = 0;
+    viewplayer->fixedcolormap = 0;
     I_SetPalette(W_CacheLumpName("PLAYPAL"));
     I_UpdateBlitFunc(false);
 

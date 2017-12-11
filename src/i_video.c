@@ -7,7 +7,7 @@
 ========================================================================
 
   Copyright © 1993-2012 id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2017 Brad Harding.
+  Copyright © 2013-2018 Brad Harding.
 
   DOOM Retro is a fork of Chocolate DOOM.
   For a list of credits, see <http://wiki.doomretro.com/credits>.
@@ -68,8 +68,8 @@
 #define MAXUPSCALEWIDTH     (1600 / ORIGINALWIDTH)
 #define MAXUPSCALEHEIGHT    (1200 / ORIGINALHEIGHT)
 
-#define I_SDLError(func)    I_Error("The call to "func"() failed in %s on line %i of %s with the error:\n" \
-                            "\"%s\".", __FUNCTION__, __LINE__ - 1, leafname(__FILE__), SDL_GetError())
+#define I_SDLError(func)    I_Error("The call to "func"() failed in %s() on line %i of %s with the error:\n" \
+                                "\"%s\".", __FUNCTION__, __LINE__ - 1, leafname(__FILE__), SDL_GetError())
 
 #if !defined(SDL_VIDEO_RENDER_D3D11)
 #define SDL_VIDEO_RENDER_D3D11  0

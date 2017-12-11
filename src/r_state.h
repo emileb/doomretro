@@ -7,7 +7,7 @@
 ========================================================================
 
   Copyright © 1993-2012 id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2017 Brad Harding.
+  Copyright © 2013-2018 Brad Harding.
 
   DOOM Retro is a fork of Chocolate DOOM.
   For a list of credits, see <http://wiki.doomretro.com/credits>.
@@ -50,7 +50,7 @@
 // needed for texture pegging
 extern fixed_t      *textureheight;
 
-extern byte         **texturefullbright;
+extern byte         **brightmap;
 extern dboolean     *nobrightmap;
 
 // needed for pre rendering (fracs)
@@ -75,9 +75,7 @@ extern int          firstflat;
 extern int          *flattranslation;
 extern int          *texturetranslation;
 
-extern byte         **flatfullbright;
-
-// Sprite....
+// Sprite...
 extern int          firstspritelump;
 extern int          lastspritelump;
 
@@ -127,6 +125,7 @@ extern mapformat_t  mapformat;
 
 extern dboolean     boomlinespecials;
 extern dboolean     blockmaprecreated;
+
 //
 // POV data.
 //
@@ -136,6 +135,7 @@ extern fixed_t      viewz;
 
 extern angle_t      viewangle;
 extern player_t     *viewplayer;
+extern player_t     tempplayer;
 
 extern angle_t      clipangle;
 

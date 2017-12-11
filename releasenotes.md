@@ -1,3 +1,21 @@
+### DOOM Retro v2.6.1
+
+* Optimizations have been made to further improve the overall performance and stability of *DOOM Retro*.
+* A bug has been fixed whereby sound effects weren’t playing correctly for some users.
+* The rendering of floor and ceiling textures has been improved.
+* A bug has been fixed whereby there was no effect when the `r_corpses_nudge` CVAR was `on`.
+* Minor changes have been made to text that is output to the console.
+* Further improvements have been made to the console’s autocomplete feature.
+* Weapon recoil is now reset when the player is either teleported or resurrected.
+* The `freeze` CCMD can now only be used when in a game.
+* The player’s view now tilts upward in time with it also lowering to the floor when the player dies and either the `mouselook` CVAR is `on` or a control is bound to the `+mouselook` action.
+* The infighting among monsters once the player dies can now be toggled on or off using the new `infighting` CVAR. This CVAR is `on` by default and `off` when vanilla mode is enabled.
+* An incorrect obituary is no longer displayed in the console when the player uses the `kill` CCMD to kill themselves.
+
+---
+
+###### Saturday, November 25, 2017
+
 ### DOOM Retro v2.6
 
 * *DOOM Retro* now uses [*SDL v2.0.7*](http://libsdl.org), [*SDL_mixer v2.0.2*](http://libsdl.org/SDL_mixer) and [*SDL_image v2.0.2*](http://libsdl.org/SDL_image).

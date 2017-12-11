@@ -7,7 +7,7 @@
 ========================================================================
 
   Copyright © 1993-2012 id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2017 Brad Harding.
+  Copyright © 2013-2018 Brad Harding.
 
   DOOM Retro is a fork of Chocolate DOOM.
   For a list of credits, see <http://wiki.doomretro.com/credits>.
@@ -224,15 +224,6 @@ typedef struct player_s
 //
 typedef struct
 {
-    // Player stats, kills, collected items etc.
-    int                 skills;
-    int                 sitems;
-    int                 ssecret;
-    int                 stime;
-} wbplayerstruct_t;
-
-typedef struct
-{
     int                 epsd;           // episode # (0-2)
 
     // if true, splash the secret level
@@ -249,10 +240,10 @@ typedef struct
     // the par time
     int                 partime;
 
-    // index of this player in game
-    int                 pnum;
-
-    wbplayerstruct_t    plyr[MAXPLAYERS];
+    int                 skills;
+    int                 sitems;
+    int                 ssecret;
+    int                 stime;
 } wbstartstruct_t;
 
 #endif

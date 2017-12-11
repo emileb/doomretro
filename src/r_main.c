@@ -7,7 +7,7 @@
 ========================================================================
 
   Copyright © 1993-2012 id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2017 Brad Harding.
+  Copyright © 2013-2018 Brad Harding.
 
   DOOM Retro is a fork of Chocolate DOOM.
   For a list of credits, see <http://wiki.doomretro.com/credits>.
@@ -74,6 +74,7 @@ fixed_t             viewcos;
 fixed_t             viewsin;
 
 player_t            *viewplayer;
+player_t            tempplayer;
 
 // [AM] Fractional part of the current tic, in the half-open
 //      range of [0.0, 1.0). Used for interpolation.
@@ -463,7 +464,7 @@ void R_InitColumnFunctions(void)
         fuzzcolfunc = R_DrawFuzzColumn;
         transcolfunc = R_DrawTranslatedColumn;
         wallcolfunc = R_DrawWallColumn;
-        fbwallcolfunc = R_DrawFullbrightWallColumn;
+        bmapwallcolfunc = R_DrawBrightMapWallColumn;
 
         if (r_skycolor != r_skycolor_default)
             skycolfunc = R_DrawSkyColorColumn;
@@ -523,7 +524,7 @@ void R_InitColumnFunctions(void)
         fuzzcolfunc = R_DrawColorColumn;
         transcolfunc = R_DrawColorColumn;
         wallcolfunc = R_DrawColorColumn;
-        fbwallcolfunc = R_DrawColorColumn;
+        bmapwallcolfunc = R_DrawColorColumn;
         skycolfunc = (r_skycolor == r_skycolor_default ? R_DrawColorColumn : R_DrawSkyColorColumn);
         spanfunc = R_DrawColorSpan;
         tlcolfunc = R_DrawColorColumn;
@@ -631,14 +632,13 @@ subsector_t *R_PointInSubsector(fixed_t x, fixed_t y)
 //
 // R_SetupFrame
 //
-static void R_SetupFrame(player_t *player)
+static void R_SetupFrame(void)
 {
     int     cm = 0;
-    mobj_t  *mo = player->mo;
+    mobj_t  *mo = viewplayer->mo;
     int     tempCentery = viewheight / 2;
     int     pitch = 0;
 
-    viewplayer = player;
     mo->flags2 |= MF2_DONTDRAW;
 
     // [AM] Interpolate the player camera if the feature is enabled.
@@ -660,17 +660,17 @@ static void R_SetupFrame(player_t *player)
         // Interpolate player camera from their old position to their current one.
         viewx = mo->oldx + FixedMul(mo->x - mo->oldx, fractionaltic);
         viewy = mo->oldy + FixedMul(mo->y - mo->oldy, fractionaltic);
-        viewz = player->oldviewz + FixedMul(player->viewz - player->oldviewz, fractionaltic);
+        viewz = viewplayer->oldviewz + FixedMul(viewplayer->viewz - viewplayer->oldviewz, fractionaltic);
         viewangle = R_InterpolateAngle(mo->oldangle, mo->angle, fractionaltic);
 
         if (canmouselook)
         {
-            pitch = (player->oldlookdir + (int)((player->lookdir - player->oldlookdir)
+            pitch = (viewplayer->oldlookdir + (int)((viewplayer->lookdir - viewplayer->oldlookdir)
                 * FIXED2DOUBLE(fractionaltic))) / MLOOKUNIT;
 
             if (weaponrecoil)
-                pitch = BETWEEN(-LOOKDIRMAX, pitch + player->oldrecoil + FixedMul(player->recoil
-                    - player->oldrecoil, fractionaltic), LOOKDIRMAX);
+                pitch = BETWEEN(-LOOKDIRMAX, pitch + viewplayer->oldrecoil + FixedMul(viewplayer->recoil
+                    - viewplayer->oldrecoil, fractionaltic), LOOKDIRMAX);
 
             tempCentery += (pitch << 1) * (r_screensize + 3) / 10;
         }
@@ -679,15 +679,15 @@ static void R_SetupFrame(player_t *player)
     {
         viewx = mo->x;
         viewy = mo->y;
-        viewz = player->viewz;
+        viewz = viewplayer->viewz;
         viewangle = mo->angle;
 
         if (canmouselook)
         {
-            pitch = player->lookdir / MLOOKUNIT;
+            pitch = viewplayer->lookdir / MLOOKUNIT;
 
             if (weaponrecoil)
-                pitch = BETWEEN(-LOOKDIRMAX, pitch + player->recoil, LOOKDIRMAX);
+                pitch = BETWEEN(-LOOKDIRMAX, pitch + viewplayer->recoil, LOOKDIRMAX);
 
             tempCentery += (pitch << 1) * (r_screensize + 3) / 10;
         }
@@ -700,7 +700,7 @@ static void R_SetupFrame(player_t *player)
         barreltics--;
     }
 
-    extralight = player->extralight << 2;
+    extralight = viewplayer->extralight << 2;
 
     if (centery != tempCentery)
     {
@@ -729,13 +729,13 @@ static void R_SetupFrame(player_t *player)
     psprscalelight = c_psprscalelight[cm];
     drawbloodsplats = (r_blood != r_blood_none && r_bloodsplats_max && !vanilla);
 
-    if (player->fixedcolormap)
+    if (viewplayer->fixedcolormap)
     {
         // killough 3/20/98: localize scalelightfixed (readability/optimization)
         static lighttable_t *scalelightfixed[MAXLIGHTSCALE];
 
         // killough 3/20/98: use fullcolormap
-        fixedcolormap = fullcolormap + player->fixedcolormap * 256 * sizeof(lighttable_t);
+        fixedcolormap = fullcolormap + viewplayer->fixedcolormap * 256 * sizeof(lighttable_t);
 
         usebrightmaps = false;
         walllights = scalelightfixed;
@@ -755,9 +755,9 @@ static void R_SetupFrame(player_t *player)
 //
 // R_RenderPlayerView
 //
-void R_RenderPlayerView(player_t *player)
+void R_RenderPlayerView(void)
 {
-    R_SetupFrame(player);
+    R_SetupFrame();
 
     // Clear buffers.
     R_ClearClipSegs();
@@ -771,7 +771,7 @@ void R_RenderPlayerView(player_t *player)
     {
         if (r_homindicator)
             V_FillRect(0, viewwindowx, viewwindowy, viewwidth, viewheight, ((activetic % 20) < 9 ? RED : BLACK));
-        else if ((player->cheats & CF_NOCLIP) || freeze)
+        else if ((viewplayer->cheats & CF_NOCLIP) || freeze)
             V_FillRect(0, viewwindowx, viewwindowy, viewwidth, viewheight, BLACK);
 
         R_RenderBSPNode(numnodes - 1);  // head node is the last node output

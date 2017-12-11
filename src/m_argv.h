@@ -7,7 +7,7 @@
 ========================================================================
 
   Copyright © 1993-2012 id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2017 Brad Harding.
+  Copyright © 2013-2018 Brad Harding.
 
   DOOM Retro is a fork of Chocolate DOOM.
   For a list of credits, see <http://wiki.doomretro.com/credits>.
@@ -53,7 +53,5 @@ int M_CheckParm(char *check);
 // following the specified argument.
 int M_CheckParmWithArgs(char *check, int num_args, int start);
 int M_CheckParmsWithArgs(char *check1, char *check2, int num_args, int start);
-
-dboolean M_ParmExists(char *check);
 
 #endif

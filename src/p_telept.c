@@ -7,7 +7,7 @@
 ========================================================================
 
   Copyright © 1993-2012 id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2017 Brad Harding.
+  Copyright © 2013-2018 Brad Harding.
 
   DOOM Retro is a fork of Chocolate DOOM.
   For a list of credits, see <http://wiki.doomretro.com/credits>.
@@ -116,6 +116,9 @@ dboolean EV_Teleport(line_t *line, int side, mobj_t *thing)
                         player->momy = 0;
 
                         player->lookdir = 0;
+                        player->oldlookdir = 0;
+                        player->recoil = 0;
+                        player->oldrecoil = 0;
                     }
 
                     thing->angle = m->angle;
@@ -196,7 +199,7 @@ dboolean EV_SilentTeleport(line_t *line, int side, mobj_t *thing)
                     player->deltaviewheight = 0;
 
                     // Set player's view according to the newly set parameters
-                    P_CalcHeight(player);
+                    P_CalcHeight();
 
                     // Reset the delta to have the same dynamics as before
                     player->deltaviewheight = deltaviewheight;
@@ -322,7 +325,7 @@ dboolean EV_SilentLineTeleport(line_t *line, int side, mobj_t *thing, dboolean r
                 player->deltaviewheight = 0;
 
                 // Set player's view according to the newly set parameters
-                P_CalcHeight(player);
+                P_CalcHeight();
 
                 // Reset the delta to have the same dynamics as before
                 player->deltaviewheight = deltaviewheight;

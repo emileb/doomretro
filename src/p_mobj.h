@@ -7,7 +7,7 @@
 ========================================================================
 
   Copyright © 1993-2012 id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2017 Brad Harding.
+  Copyright © 2013-2018 Brad Harding.
 
   DOOM Retro is a fork of Chocolate DOOM.
   For a list of credits, see <http://wiki.doomretro.com/credits>.
@@ -304,12 +304,6 @@ enum
     MF2_MONSTERMISSILE            = 0x40000000
 };
 
-enum
-{
-    BSF_MIRRORED                  = 0x00000001,
-    BSF_FUZZ                      = 0x00000002
-};
-
 // Map Object definition.
 typedef struct mobj_s
 {
@@ -431,9 +425,10 @@ typedef struct bloodsplat_s
     fixed_t             y;
     struct bloodsplat_s *snext;
     struct bloodsplat_s **sprev;
-    int                 frame;
+    int                 patch;
+    fixed_t             width;
     struct sector_s     *sector;
-    int                 flags;
+    dboolean            flip;
     int                 blood;
     void                (*colfunc)(void);
 } bloodsplat_t;

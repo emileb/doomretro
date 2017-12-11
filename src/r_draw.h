@@ -7,7 +7,7 @@
 ========================================================================
 
   Copyright © 1993-2012 id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2017 Brad Harding.
+  Copyright © 2013-2018 Brad Harding.
 
   DOOM Retro is a fork of Chocolate DOOM.
   For a list of credits, see <http://wiki.doomretro.com/credits>.
@@ -55,7 +55,7 @@ extern fixed_t          dc_texturemid;
 extern fixed_t          dc_texheight;
 extern fixed_t          dc_texturefrac;
 extern byte             *dc_blood;
-extern byte             *dc_colormask;
+extern byte             *dc_brightmap;
 extern int              dc_baseclip;
 extern int              dc_floorclip;
 extern int              dc_ceilingclip;
@@ -84,7 +84,7 @@ extern byte             *tinttabblue25;
 void R_DrawColumn(void);
 void R_DrawColorColumn(void);
 void R_DrawWallColumn(void);
-void R_DrawFullbrightWallColumn(void);
+void R_DrawBrightMapWallColumn(void);
 void R_DrawSkyColumn(void);
 void R_DrawFlippedSkyColumn(void);
 void R_DrawSkyColorColumn(void);

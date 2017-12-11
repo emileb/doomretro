@@ -7,7 +7,7 @@
 ========================================================================
 
   Copyright © 1993-2012 id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2017 Brad Harding.
+  Copyright © 2013-2018 Brad Harding.
 
   DOOM Retro is a fork of Chocolate DOOM.
   For a list of credits, see <http://wiki.doomretro.com/credits>.
@@ -161,8 +161,7 @@ static allocated_sound_t *AllocateSound(sfxinfo_t *sfxinfo, int len)
         // Out of memory? Try to free an old sound, then loop round and try again.
         if (!(snd = malloc(sizeof(allocated_sound_t) + len)) && !FindAndFreeSound())
             return NULL;
-    }
-    while (!snd);
+    } while (!snd);
 
     // Skip past the chunk structure for the audio buffer
     snd->chunk.abuf = (byte *)(snd + 1);

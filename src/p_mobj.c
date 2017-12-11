@@ -7,7 +7,7 @@
 ========================================================================
 
   Copyright © 1993-2012 id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2017 Brad Harding.
+  Copyright © 2013-2018 Brad Harding.
 
   DOOM Retro is a fork of Chocolate DOOM.
   For a list of credits, see <http://wiki.doomretro.com/credits>.
@@ -76,11 +76,12 @@ static fixed_t floatbobdiffs[64] =
 };
 
 extern fixed_t      animatedliquiddiffs[64];
+extern int          deadlookdir;
 extern int          deathcount;
 extern msecnode_t   *sector_list;   // phares 3/16/98
 extern dboolean     usemouselook;
 
-void A_Recoil(player_t *player, weapontype_t weapon);
+void A_Recoil(weapontype_t weapon);
 void G_PlayerReborn(void);
 void P_DelSeclist(msecnode_t *node);
 
@@ -114,8 +115,7 @@ dboolean P_SetMobjState(mobj_t *mobj, statenum_t state)
             st->action(mobj, NULL, NULL);
 
         state = st->nextstate;
-    }
-    while (!mobj->tics);
+    } while (!mobj->tics);
 
     return true;
 }
@@ -270,8 +270,7 @@ static void P_XYMovement(mobj_t *mo)
                 mo->momy = 0;
             }
         }
-    }
-    while (xmove || ymove);
+    } while (xmove || ymove);
 
     if (flags & (MF_MISSILE | MF_SKULLFLY))
         return;         // no friction for missiles or lost souls ever
@@ -287,21 +286,20 @@ static void P_XYMovement(mobj_t *mo)
 
         if (blood)
         {
-            int frame = mo->frame & FF_FRAMEMASK;
-            int radius = (spritewidth[sprites[mo->sprite].spriteframes[frame].lump[0]] >> FRACBITS) >> 1;
+            int radius = (spritewidth[sprites[mo->sprite].spriteframes[mo->frame & FF_FRAMEMASK].lump[0]] >> FRACBITS) >> 1;
             int max = MIN((ABS(mo->momx) + ABS(mo->momy)) >> (FRACBITS - 2), 8);
-            int x = mo->x;
-            int y = mo->y;
             int floorz = mo->floorz;
 
-            for (int i = 0; i < max; i++)
+            for (int i = 0, x, y; i < max; i++)
             {
                 if (!mo->bloodsplats)
                     break;
 
-                if (floorz == R_PointInSubsector(x, y)->sector->floorheight)
-                    P_SpawnBloodSplat(x + (M_RandomInt(-radius, radius) << FRACBITS),
-                        y + (M_RandomInt(-radius, radius) << FRACBITS), blood, floorz, mo);
+                x = mo->x + (M_RandomInt(-radius, radius) << FRACBITS);
+                y = mo->y + (M_RandomInt(-radius, radius) << FRACBITS);
+
+                if (R_PointInSubsector(x, y)->sector->floorheight <= floorz)
+                    P_SpawnBloodSplat(x, y, blood, floorz, mo);
             }
         }
     }
@@ -396,14 +394,14 @@ static void P_ZMovement(mobj_t *mo)
     // clip movement
     if (mo->z <= mo->floorz)
     {
-        // [BH] remove blood the moment it hits the ground
-        //  and spawn a blood splat in its place
+        // [BH] remove blood the moment it hits the ground and spawn a blood splat in its place
         if ((mo->flags2 & MF2_BLOOD) && mo->blood)
         {
+            P_RemoveMobj(mo);
+
             if (r_bloodsplats_max)
                 P_SpawnBloodSplat(mo->x, mo->y, mo->blood, mo->floorz, NULL);
 
-            P_RemoveMobj(mo);
             return;
         }
 
@@ -630,13 +628,7 @@ void P_MobjThinker(mobj_t *mobj)
     {
         // you can cycle through multiple states in a tic
         if (!--mobj->tics)
-        {
-            // [WDJ] This would segfault if mobj had been removed.
-            if (mobj->state == &states[S_NULL])
-                return;
-
             P_SetMobjState(mobj, mobj->state->nextstate);
-        }
     }
     else
     {
@@ -893,40 +885,40 @@ extern int lastepisode;
 
 static void P_SpawnPlayer(const mapthing_t *mthing)
 {
-    player_t    *p = &players[0];
-    mobj_t      *mobj;
+    mobj_t  *mobj;
 
-    if (p->playerstate == PST_REBORN)
+    if (viewplayer->playerstate == PST_REBORN)
         G_PlayerReborn();
 
     mobj = P_SpawnMobj(mthing->x << FRACBITS, mthing->y << FRACBITS, ONFLOORZ, MT_PLAYER);
 
     mobj->angle = ((mthing->angle % 45) ? mthing->angle * (ANG45 / 45) : ANG45 * (mthing->angle / 45));
-    mobj->player = p;
-    mobj->health = p->health;
+    mobj->player = viewplayer;
+    mobj->health = viewplayer->health;
 
-    p->mo = mobj;
-    p->playerstate = PST_LIVE;
-    p->refire = 0;
-    p->message = NULL;
-    p->damagecount = 0;
-    p->bonuscount = 0;
-    p->extralight = 0;
-    p->fixedcolormap = 0;
-    p->viewheight = VIEWHEIGHT;
+    viewplayer->mo = mobj;
+    viewplayer->playerstate = PST_LIVE;
+    viewplayer->refire = 0;
+    viewplayer->message = NULL;
+    viewplayer->damagecount = 0;
+    viewplayer->bonuscount = 0;
+    viewplayer->extralight = 0;
+    viewplayer->fixedcolormap = 0;
+    viewplayer->viewheight = VIEWHEIGHT;
 
-    p->viewz = p->mo->z + p->viewheight;
-    p->psprites[ps_weapon].sx = 0;
-    p->mo->momx = 0;
-    p->mo->momy = 0;
-    p->momx = 0;
-    p->momy = 0;
-    p->lookdir = 0;
+    viewplayer->viewz = viewplayer->mo->z + viewplayer->viewheight;
+    viewplayer->psprites[ps_weapon].sx = 0;
+    viewplayer->mo->momx = 0;
+    viewplayer->mo->momy = 0;
+    viewplayer->momx = 0;
+    viewplayer->momy = 0;
+    viewplayer->lookdir = 0;
 
     deathcount = 0;
+    deadlookdir = -1;
 
     // setup gun psprite
-    P_SetupPsprites(p);
+    P_SetupPsprites();
 
     lastlevel = -1;
     lastepisode = -1;
@@ -1151,7 +1143,7 @@ void P_SpawnPuff(fixed_t x, fixed_t y, fixed_t z, angle_t angle)
     th->floorz = sector->interpfloorheight;
     th->ceilingz = sector->interpceilingheight;
 
-    th->z = z + ((M_Random() - M_Random()) << 10);
+    th->z = z + (M_NegRandom() << 10);
 
     th->thinker.function = P_MobjThinker;
     P_AddThinker(&th->thinker);
@@ -1166,7 +1158,7 @@ void P_SpawnPuff(fixed_t x, fixed_t y, fixed_t z, angle_t angle)
         {
             int motorspeed = weaponinfo[wp_fist].motorspeed * gp_vibrate_damage / 100;
 
-            if (players[0].powers[pw_strength])
+            if (viewplayer->powers[pw_strength])
                 motorspeed *= 2;
 
             XInputVibration(motorspeed);
@@ -1180,7 +1172,7 @@ void P_SpawnPuff(fixed_t x, fixed_t y, fixed_t z, angle_t angle)
 //
 void P_SpawnSmokeTrail(fixed_t x, fixed_t y, fixed_t z, angle_t angle)
 {
-    mobj_t  *th = P_SpawnMobj(x, y, z + ((M_Random() - M_Random()) << 10), MT_TRAIL);
+    mobj_t  *th = P_SpawnMobj(x, y, z + (M_NegRandom() << 10), MT_TRAIL);
 
     th->momz = FRACUNIT / 2;
     th->tics -= M_Random() & 3;
@@ -1234,7 +1226,7 @@ void P_SpawnBlood(fixed_t x, fixed_t y, fixed_t z, angle_t angle, int damage, mo
         th->floorz = sector->interpfloorheight;
         th->ceilingz = sector->interpceilingheight;
 
-        th->z = BETWEEN(minz, z + ((M_Random() - M_Random()) << 10), maxz);
+        th->z = BETWEEN(minz, z + (M_NegRandom() << 10), maxz);
 
         th->thinker.function = P_MobjThinker;
         P_AddThinker(&th->thinker);
@@ -1244,7 +1236,7 @@ void P_SpawnBlood(fixed_t x, fixed_t y, fixed_t z, angle_t angle, int damage, mo
         th->momz = FRACUNIT * (2 + i / 6);
 
         th->angle = angle;
-        angle += (M_Random() - M_Random()) * 0xB60B60;
+        angle += M_NegRandom() * 0xB60B60;
 
         if (damage <= 12 && th->state->nextstate)
             P_SetMobjState(th, th->state->nextstate);
@@ -1270,24 +1262,17 @@ void P_SpawnBloodSplat(fixed_t x, fixed_t y, int blood, int maxheight, mobj_t *t
         if (!sec->isliquid && sec->interpfloorheight <= maxheight && sec->floorpic != skyflatnum)
         {
             bloodsplat_t    *splat = malloc(sizeof(*splat));
+            int             patch = firstbloodsplatlump + (M_Random() & 7);
 
-            splat->frame = firstbloodsplatlump + (M_Random() & 7);
-            splat->flags = M_Random() & BSF_MIRRORED;
-
-            if (blood == FUZZYBLOOD)
-            {
-                splat->flags |= BSF_FUZZ;
-                splat->colfunc = fuzzcolfunc;
-            }
-            else
-                splat->colfunc = bloodsplatcolfunc;
-
+            splat->patch = patch;
+            splat->flip = M_Random() & 1;
+            splat->colfunc = (blood == FUZZYBLOOD ? fuzzcolfunc : bloodsplatcolfunc);
             splat->blood = blood;
             splat->x = x;
             splat->y = y;
+            splat->width = spritewidth[patch];
             splat->sector = sec;
             P_SetBloodSplatPosition(splat);
-
             r_bloodsplats_total++;
 
             if (target && target->bloodsplats)
@@ -1326,8 +1311,7 @@ mobj_t *P_SpawnMissile(mobj_t *source, mobj_t *dest, mobjtype_t type)
     int     dist;
     int     speed;
 
-    if ((source->flags2 & MF2_FEETARECLIPPED) && !source->subsector->sector->heightsec
-        && r_liquid_clipsprites)
+    if ((source->flags2 & MF2_FEETARECLIPPED) && !source->subsector->sector->heightsec && r_liquid_clipsprites)
         z -= FOOTCLIPSIZE;
 
     th = P_SpawnMobj(source->x, source->y, z, type);
@@ -1340,7 +1324,7 @@ mobj_t *P_SpawnMissile(mobj_t *source, mobj_t *dest, mobjtype_t type)
 
     // fuzzy player
     if (dest->flags & MF_FUZZ)
-        an += (M_Random() - M_Random()) << 20;
+        an += M_NegRandom() << 20;
 
     th->angle = an;
     an >>= ANGLETOFINESHIFT;
@@ -1372,14 +1356,10 @@ void P_SpawnPlayerMissile(mobj_t *source, mobjtype_t type)
 
     if (!linetarget)
     {
-        an += 1 << 26;
-        slope = P_AimLineAttack(source, an, 16 * 64 * FRACUNIT);
+        slope = P_AimLineAttack(source, (an += 1 << 26), 16 * 64 * FRACUNIT);
 
         if (!linetarget)
-        {
-            an -= 2 << 26;
-            slope = P_AimLineAttack(source, an, 16 * 64 * FRACUNIT);
-        }
+            slope = P_AimLineAttack(source, (an -= 2 << 26), 16 * 64 * FRACUNIT);
 
         if (!linetarget)
         {
@@ -1392,8 +1372,7 @@ void P_SpawnPlayerMissile(mobj_t *source, mobjtype_t type)
     y = source->y;
     z = source->z + 4 * 8 * FRACUNIT;
 
-    if ((source->flags2 & MF2_FEETARECLIPPED) && !source->subsector->sector->heightsec
-        && r_liquid_lowerview)
+    if ((source->flags2 & MF2_FEETARECLIPPED) && !source->subsector->sector->heightsec && r_liquid_lowerview)
         z -= FOOTCLIPSIZE;
 
     th = P_SpawnMobj(x, y, z, type);
@@ -1421,47 +1400,14 @@ void P_SpawnPlayerMissile(mobj_t *source, mobjtype_t type)
 
     P_CheckMissileSpawn(th);
 
-    A_Recoil(source->player, source->player->readyweapon);
+    A_Recoil(source->player->readyweapon);
 }
 
 void P_InitExtraMobjs(void)
 {
     for (int i = MT_EXTRA00; i <= MT_EXTRA99; i++)
     {
+        memset(&mobjinfo[i], 0, sizeof(mobjinfo_t));
         mobjinfo[i].doomednum = -1;
-        mobjinfo[i].spawnstate = S_NULL;
-        mobjinfo[i].spawnhealth = 0;
-        mobjinfo[i].gibhealth = 0;
-        mobjinfo[i].seestate = S_NULL;
-        mobjinfo[i].seesound = sfx_None;
-        mobjinfo[i].reactiontime = 0;
-        mobjinfo[i].attacksound = sfx_None;
-        mobjinfo[i].painstate = S_NULL;
-        mobjinfo[i].painchance = 0;
-        mobjinfo[i].painsound = sfx_None;
-        mobjinfo[i].meleestate = S_NULL;
-        mobjinfo[i].missilestate = S_NULL;
-        mobjinfo[i].deathstate = S_NULL;
-        mobjinfo[i].xdeathstate = S_NULL;
-        mobjinfo[i].deathsound = sfx_None;
-        mobjinfo[i].speed = 0;
-        mobjinfo[i].radius = 0;
-        mobjinfo[i].pickupradius = 0;
-        mobjinfo[i].height = 0;
-        mobjinfo[i].projectilepassheight = 0;
-        mobjinfo[i].mass = 0;
-        mobjinfo[i].damage = 0;
-        mobjinfo[i].activesound = sfx_None;
-        mobjinfo[i].flags = 0;
-        mobjinfo[i].flags2 = 0;
-        mobjinfo[i].raisestate = S_NULL;
-        mobjinfo[i].frames = 0;
-        mobjinfo[i].fullbright = false;
-        mobjinfo[i].blood = 0;
-        mobjinfo[i].shadowoffset = 0;
-        mobjinfo[i].name1[0] = '\0';
-        mobjinfo[i].plural1[0] = '\0';
-        mobjinfo[i].name2[0] = '\0';
-        mobjinfo[i].plural2[0] = '\0';
     }
 }

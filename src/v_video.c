@@ -7,7 +7,7 @@
 ========================================================================
 
   Copyright © 1993-2012 id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2017 Brad Harding.
+  Copyright © 2013-2018 Brad Harding.
 
   DOOM Retro is a fork of Chocolate DOOM.
   For a list of credits, see <http://wiki.doomretro.com/credits>.
@@ -57,8 +57,9 @@
 #include "w_wad.h"
 #include "z_zone.h"
 
-#define BLACK   0
-#define WHITE   4
+#define BLACK       nearestcolors[0]
+#define DARKGRAY    nearestcolors[1]
+#define WHITE       nearestcolors[4]
 
 // Each screen is [SCREENWIDTH * SCREENHEIGHT];
 byte            *screens[5];
@@ -1029,7 +1030,6 @@ void V_DrawFlippedShadowPatch(int x, int y, patch_t *patch)
             }
 
             *dest = tinttab25[*dest];
-
             column = (column_t *)((byte *)column + column->length + 4);
         }
     }
@@ -1058,18 +1058,17 @@ void V_DrawFlippedSolidShadowPatch(int x, int y, patch_t *patch)
 
             if (--count)
             {
-                *dest = 1;
+                *dest = DARKGRAY;
                 dest += SCREENWIDTH;
             }
 
             while (--count > 0)
             {
-                *dest = 0;
+                *dest = BLACK;
                 dest += SCREENWIDTH;
             }
 
-            *dest = 1;
-
+            *dest = DARKGRAY;
             column = (column_t *)((byte *)column + column->length + 4);
         }
     }
@@ -1266,7 +1265,6 @@ void V_DrawNoGreenPatchWithShadow(int x, int y, patch_t *patch)
                     byte    *shadow;
 
                     *dest = src;
-
                     shadow = dest + SCREENWIDTH * 2 + 2;
 
                     if (*shadow != 47 && *shadow != 191)
@@ -1306,7 +1304,7 @@ void V_DrawTranslucentNoGreenPatch(int x, int y, patch_t *patch)
 
             while (count--)
             {
-                byte src = source[srccol >> FRACBITS];
+                byte    src = source[srccol >> FRACBITS];
 
                 if (nogreen[src])
                     *dest = tinttab33[(*dest << 8) + src];
@@ -1363,12 +1361,12 @@ void GetPixelSize(dboolean reset)
     if (width > 0 && width <= SCREENWIDTH && height > 0 && height <= SCREENHEIGHT && (width >= 2 || height >= 2))
     {
         pixelwidth = width;
-        pixelheight = height;
+        pixelheight = height * SCREENWIDTH;
     }
     else if (reset)
     {
         pixelwidth = 2;
-        pixelheight = 2;
+        pixelheight = 2 * SCREENWIDTH;
         r_lowpixelsize = r_lowpixelsize_default;
 
         M_SaveCVARs();
@@ -1379,14 +1377,13 @@ void V_LowGraphicDetail(void)
 {
     int w = viewwindowx + viewwidth;
     int h = (viewwindowy + viewheight) * SCREENWIDTH;
-    int hh = pixelheight * SCREENWIDTH;
 
-    for (int y = viewwindowy * SCREENWIDTH; y < h; y += hh)
+    for (int y = viewwindowy * SCREENWIDTH; y < h; y += pixelheight)
         for (int x = viewwindowx; x < w; x += pixelwidth)
         {
             byte    *dot = *screens + y + x;
 
-            for (int yy = 0; yy < hh && y + yy < h; yy += SCREENWIDTH)
+            for (int yy = 0; yy < pixelheight && y + yy < h; yy += SCREENWIDTH)
                 for (int xx = 0; xx < pixelwidth && x + xx < w; xx++)
                     *(dot + yy + xx) = *dot;
         }
@@ -1466,8 +1463,7 @@ static dboolean V_SavePNG(SDL_Renderer *renderer, char *path)
 
             if ((screenshot = SDL_CreateRGBSurface(0, width, height, 32, 0, 0, 0, 0)))
             {
-                if (!SDL_RenderReadPixels(renderer, NULL, SDL_PIXELFORMAT_ARGB8888, screenshot->pixels,
-                    screenshot->pitch))
+                if (!SDL_RenderReadPixels(renderer, NULL, 0, screenshot->pixels, screenshot->pitch))
                     result = !IMG_SavePNG(screenshot, path);
 
                 SDL_FreeSurface(screenshot);
@@ -1519,8 +1515,7 @@ dboolean V_ScreenShot(void)
         count++;
         M_MakeDirectory(screenshotfolder);
         M_snprintf(lbmpath1, sizeof(lbmpath1), "%s"DIR_SEPARATOR_S"%s", screenshotfolder, lbmname1);
-    }
-    while (M_FileExists(lbmpath1));
+    } while (M_FileExists(lbmpath1));
 
     result = V_SavePNG(renderer, lbmpath1);
     lbmpath2[0] = '\0';
@@ -1531,8 +1526,7 @@ dboolean V_ScreenShot(void)
         {
             M_snprintf(lbmname2, sizeof(lbmname2), "%s (%s).png", makevalidfilename(mapname), commify(count++));
             M_snprintf(lbmpath2, sizeof(lbmpath2), "%s"DIR_SEPARATOR_S"%s", screenshotfolder, lbmname2);
-        }
-        while (M_FileExists(lbmpath2));
+        } while (M_FileExists(lbmpath2));
 
         V_SavePNG(maprenderer, lbmpath2);
     }

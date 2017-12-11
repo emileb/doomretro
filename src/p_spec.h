@@ -7,7 +7,7 @@
 ========================================================================
 
   Copyright © 1993-2012 id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2017 Brad Harding.
+  Copyright © 2013-2018 Brad Harding.
 
   DOOM Retro is a fork of Chocolate DOOM.
   For a list of credits, see <http://wiki.doomretro.com/credits>.
@@ -72,6 +72,7 @@ void P_InitPicAnims(void);
 void P_SetTimer(int minutes);
 void P_SpawnSpecials(void);
 void P_SetLiquids(void);
+void P_SetLifts(void);
 
 // every tic
 void P_UpdateSpecials(void);
@@ -88,7 +89,7 @@ void P_ShootSpecialLine(mobj_t *thing, line_t *line);
 
 void P_CrossSpecialLine(line_t *line, int side, mobj_t *thing);
 
-void P_PlayerInSpecialSector(player_t *player);
+void P_PlayerInSpecialSector(void);
 
 dboolean twoSided(int sector, int line);
 
@@ -124,7 +125,7 @@ int P_FindLineFromLineTag(const line_t *line, int start);
 
 int P_FindMinSurroundingLight(sector_t *sec, int min);
 
-dboolean P_CanUnlockGenDoor(line_t *line, player_t *player);
+dboolean P_CanUnlockGenDoor(line_t *line);
 
 sector_t *getNextSector(line_t *line, sector_t *sec);
 
@@ -236,7 +237,6 @@ typedef struct
     degenmobj_t *soundorg;
 } button_t;
 
-// 4 players, 4 buttons each at once, max.
 #define MAXBUTTONS  32
 
 // 1 second, in ticks.

@@ -7,7 +7,7 @@
 ========================================================================
 
   Copyright © 1993-2012 id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2017 Brad Harding.
+  Copyright © 2013-2018 Brad Harding.
 
   DOOM Retro is a fork of Chocolate DOOM.
   For a list of credits, see <http://wiki.doomretro.com/credits>.
@@ -1482,8 +1482,7 @@ static void P_CreateBlockMap(void)
             maxy = j;
 
         vertex++;
-    }
-    while (--i);
+    } while (--i);
 
     // Save blockmap parameters
     bmaporgx = minx << FRACBITS;
@@ -1604,8 +1603,8 @@ static void P_CreateBlockMap(void)
 
         // Now compress the blockmap.
         {
-            int     ndx = tot += 4; // Advance index to start of linedef lists
-            bmap_t  *bp = bmap;     // Start of uncompressed blockmap
+            int     ndx = (tot += 4);   // Advance index to start of linedef lists
+            bmap_t  *bp = bmap;         // Start of uncompressed blockmap
 
             blockmaplump[ndx++] = 0;    // Store an empty blockmap list at start
             blockmaplump[ndx++] = -1;   // (Used for compression)
@@ -1925,9 +1924,8 @@ static void P_RemoveSlimeTrails(void)                   // killough 10/98
                             v->y = y0;
                         }
                     }
-                }  // Obfuscated C contest entry:   :)
-            }
-            while (v != segs[i].v2 && (v = segs[i].v2));
+                }
+            } while (v != segs[i].v2 && (v = segs[i].v2));
         }
     }
 
@@ -1952,7 +1950,7 @@ static void P_CalcSegsLength(void)
     }
 }
 
-static char mapnum[6];
+char        mapnum[6];
 char        maptitle[256];
 char        mapnumandtitle[512];
 char        automaptitle[512];
@@ -2147,9 +2145,8 @@ extern dboolean massacre;
 //
 void P_SetupLevel(int ep, int map)
 {
-    char        lumpname[6];
-    int         lumpnum;
-    player_t    *player = &players[0];
+    char    lumpname[6];
+    int     lumpnum;
 
     totalkills = 0;
     totalitems = 0;
@@ -2158,18 +2155,18 @@ void P_SetupLevel(int ep, int map)
     memset(monstercount, 0, sizeof(int) * NUMMOBJTYPES);
     barrelcount = 0;
     wminfo.partime = 0;
-    player->killcount = 0;
-    player->secretcount = 0;
-    player->itemcount = 0;
+    viewplayer->killcount = 0;
+    viewplayer->secretcount = 0;
+    viewplayer->itemcount = 0;
 
     // Initial height of PointOfView
     // will be set by player think.
-    player->viewz = 1;
+    viewplayer->viewz = 1;
 
     if (!(samelevel = (map == current_map && ep == current_episode)))
     {
-        player->cheats &= ~CF_ALLMAP;
-        player->cheats &= ~CF_ALLMAP_THINGS;
+        viewplayer->cheats &= ~CF_ALLMAP;
+        viewplayer->cheats &= ~CF_ALLMAP_THINGS;
     }
 
     idclev = false;
@@ -2273,13 +2270,13 @@ void P_SetupLevel(int ep, int map)
     P_SetLiquids();
     P_GetMapLiquids((ep - 1) * 10 + map);
     P_GetMapNoLiquids((ep - 1) * 10 + map);
-
     P_LoadThings(lumpnum + ML_THINGS);
 
-    P_InitCards(player);
+    P_InitCards();
 
     // set up world state
     P_SpawnSpecials();
+    P_SetLifts();
 
     P_MapEnd();
 
@@ -2301,7 +2298,7 @@ static void InitMapInfo(void)
     int         mcmdvalue;
     mapinfo_t   *info;
 
-    if (M_ParmExists("-nomapinfo"))
+    if (M_CheckParm("-nomapinfo"))
         return;
 
     if ((RMAPINFO = MAPINFO = W_CheckNumForName(RMAPINFO_SCRIPT_NAME)) < 0)
