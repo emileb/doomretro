@@ -207,6 +207,9 @@ void PortableAction(int state, int action)
 		case PORT_ACT_WEAP7:
 			key = keyboardweapon7;
 			break;
+        case PORT_ACT_CONSOLE:
+            key = keyboardconsole;
+            break;
 		}
 
 		if (key != -1)
