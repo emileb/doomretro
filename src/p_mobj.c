@@ -523,7 +523,7 @@ static void PlayerLandedOnThing(mobj_t *mo)
     mo->player->deltaviewheight = mo->momz >> 3;
 
     if (mo->momz < -23 * FRACUNIT)
-        P_NoiseAlert(mo, mo);
+        P_NoiseAlert(mo);
 }
 
 //
@@ -913,6 +913,7 @@ static void P_SpawnPlayer(const mapthing_t *mthing)
     viewplayer->momx = 0;
     viewplayer->momy = 0;
     viewplayer->lookdir = 0;
+    viewplayer->recoil = 0;
 
     deathcount = 0;
     deadlookdir = -1;
@@ -1377,7 +1378,7 @@ void P_SpawnPlayerMissile(mobj_t *source, mobjtype_t type)
 
     th = P_SpawnMobj(x, y, z, type);
 
-    P_NoiseAlert(source, source);
+    P_NoiseAlert(source);
 
     if (th->info->seesound)
         S_StartSound(th, th->info->seesound);

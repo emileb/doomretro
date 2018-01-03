@@ -415,22 +415,22 @@ static dboolean PIT_CheckThing(mobj_t *thing)
     dboolean    unblocking = false;
     int         flags = thing->flags;
     int         tmflags = tmthing->flags;
-    fixed_t     dist = P_ApproxDistance(thing->x - tmthing->x, thing->y - tmthing->y);
+    dboolean    corpse = (flags & MF_CORPSE);
 
     // [BH] apply small amount of momentum to a corpse when a monster walks over it
-    if (r_corpses_nudge && (flags & MF_CORPSE) && (tmflags & MF_SHOOTABLE) && !thing->nudge
-        && dist < 16 * FRACUNIT && thing->z == tmthing->z)
-    {
-        thing->nudge = TICRATE;
-        thing->momx = M_RandomInt(-1, 1) * FRACUNIT;
-        thing->momy = M_RandomInt(-1, 1) * FRACUNIT;
-
-        if (!(thing->flags2 & MF2_FEETARECLIPPED))
+    if (r_corpses_nudge && corpse && (tmflags & MF_SHOOTABLE) && !thing->nudge && thing->z == tmthing->z)
+        if (P_ApproxDistance(thing->x - tmthing->x, thing->y - tmthing->y) < 16 * FRACUNIT)
         {
-            thing->momx /= 2;
-            thing->momy /= 2;
+            thing->nudge = TICRATE;
+            thing->momx = M_RandomInt(-1, 1) * FRACUNIT;
+            thing->momy = M_RandomInt(-1, 1) * FRACUNIT;
+
+            if (!(thing->flags2 & MF2_FEETARECLIPPED))
+            {
+                thing->momx /= 2;
+                thing->momy /= 2;
+            }
         }
-    }
 
     if (!(flags & (MF_SOLID | MF_SPECIAL | MF_SHOOTABLE)))
         return true;
@@ -447,11 +447,11 @@ static dboolean PIT_CheckThing(mobj_t *thing)
         return true;
 
     // [BH] check if things are stuck and allow move if it makes them further apart
-    if (!thing->player)
+    if (!thing->player && !corpse)
     {
         if (tmx == tmthing->x && tmy == tmthing->y)
             unblocking = true;
-        else if (P_ApproxDistance(thing->x - tmx, thing->y - tmy) > dist)
+        else if (P_ApproxDistance(thing->x - tmx, thing->y - tmy) > P_ApproxDistance(thing->x - tmthing->x, thing->y - tmthing->y))
             unblocking = (tmthing->z < thing->z + thing->height && tmthing->z + tmthing->height > thing->z);
     }
 
@@ -467,7 +467,7 @@ static dboolean PIT_CheckThing(mobj_t *thing)
     // check for skulls slamming into things
     if ((tmflags & MF_SKULLFLY) && (flags & MF_SOLID))
     {
-        P_DamageMobj(thing, tmthing, tmthing, ((M_Random() % 8) + 1) * tmthing->info->damage, true);
+        P_DamageMobj(thing, tmthing, tmthing, ((M_Random() & 7) + 1) * tmthing->info->damage, true);
 
         tmthing->flags &= ~MF_SKULLFLY;
         tmthing->momx = 0;
@@ -489,9 +489,10 @@ static dboolean PIT_CheckThing(mobj_t *thing)
         if (tmthing->z + tmthing->height < thing->z)
             return true;        // underneath
 
-        if (tmthing->target && (tmthing->target->type == thing->type
-            || (tmthing->target->type == MT_KNIGHT && thing->type == MT_BRUISER)
-            || (tmthing->target->type == MT_BRUISER && thing->type == MT_KNIGHT)))
+        if (tmthing->target
+            && (tmthing->target->type == thing->type
+                || (tmthing->target->type == MT_KNIGHT && thing->type == MT_BRUISER)
+                || (tmthing->target->type == MT_BRUISER && thing->type == MT_KNIGHT)))
         {
             // Don't hit same species as originator.
             if (thing == tmthing->target)
@@ -506,7 +507,7 @@ static dboolean PIT_CheckThing(mobj_t *thing)
             return !(flags & MF_SOLID);                         // didn't do any damage
 
         // damage / explode
-        P_DamageMobj(thing, tmthing, tmthing->target, ((M_Random() % 8) + 1) * tmthing->info->damage, true);
+        P_DamageMobj(thing, tmthing, tmthing->target, ((M_Random() & 7) + 1) * tmthing->info->damage, true);
 
         if (thing->type != MT_BARREL)
         {

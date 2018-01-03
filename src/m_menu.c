@@ -1941,9 +1941,9 @@ static void M_QuitResponse(int key)
         int i = 30;
 
         if (gamemode == commercial)
-            S_StartSound(NULL, quitsounds2[M_Random() % 8]);
+            S_StartSound(NULL, quitsounds2[M_Random() & 7]);
         else
-            S_StartSound(NULL, quitsounds[M_Random() % 8]);
+            S_StartSound(NULL, quitsounds[M_Random() & 7]);
 
         // wait until all sounds stopped or 3 seconds has passed
         while (i > 0)
@@ -2003,7 +2003,7 @@ static void M_ChangeSensitivity(int choice)
                         gp_sensitivity++;
 
                     gp_sensitivity -= 2;
-                    I_SetGamepadSensitivity(gp_sensitivity);
+                    I_SetGamepadSensitivity();
                     C_IntCVAROutput(stringize(gp_sensitivity), gp_sensitivity);
                     M_SliderSound();
                     M_SaveCVARs();
@@ -2018,7 +2018,7 @@ static void M_ChangeSensitivity(int choice)
                         gp_sensitivity--;
 
                     gp_sensitivity += 2;
-                    I_SetGamepadSensitivity(gp_sensitivity);
+                    I_SetGamepadSensitivity();
                     C_IntCVAROutput(stringize(gp_sensitivity), gp_sensitivity);
                     M_SliderSound();
                     M_SaveCVARs();

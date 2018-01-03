@@ -324,6 +324,7 @@ static void expansion_cvar_func2(char *cmd, char *parms);
 static dboolean gp_deadzone_cvars_func1(char *cmd, char *parms);
 static void gp_deadzone_cvars_func2(char *cmd, char *parms);
 static void gp_sensitivity_cvar_func2(char *cmd, char *parms);
+static void gp_swapthumbsticks_cvar_func2(char *cmd, char *parms);
 static void mouselook_cvar_func2(char *cmd, char *parms);
 static dboolean player_cvars_func1(char *cmd, char *parms);
 static void player_cvars_func2(char *cmd, char *parms);
@@ -396,25 +397,19 @@ static char *C_LookupAliasFromValue(const int value, const valuealias_type_t val
 #define CMD_CHEAT(name, parms) \
     { #name, "", cheat_func1, NULL, parms, CT_CHEAT, CF_NONE, NULL, 0, 0, 0, "", "", 0, 0 }
 #define CVAR_BOOL(name, alt, cond, func, valuealiases, desc) \
-    { #name, #alt, cond, func, 1, CT_CVAR, CF_BOOLEAN, &name, valuealiases, false, true, "", desc, \
-      name##_default, 0 }
+    { #name, #alt, cond, func, 1, CT_CVAR, CF_BOOLEAN, &name, valuealiases, false, true, "", desc, name##_default, 0 }
 #define CVAR_INT(name, alt, cond, func, flags, valuealiases, desc) \
-    { #name, #alt, cond, func, 1, CT_CVAR, (CF_INTEGER | flags), &name, valuealiases, name##_min, \
-      name##_max, "", desc, name##_default, 0 }
+    { #name, #alt, cond, func, 1, CT_CVAR, (CF_INTEGER | flags), &name, valuealiases, name##_min, name##_max, "", desc, name##_default, 0 }
 #define CVAR_FLOAT(name, alt, cond, func, flags, desc) \
-    { #name, #alt, cond, func, 1, CT_CVAR, (CF_FLOAT | flags), &name, 0, 0, 0, "", desc, \
-      name##_default, 0 }
+    { #name, #alt, cond, func, 1, CT_CVAR, (CF_FLOAT | flags), &name, 0, 0, 0, "", desc, name##_default, 0 }
 #define CVAR_POS(name, alt, cond, func, desc) \
-    { #name, #alt, cond, func, 1, CT_CVAR, CF_POSITION, &name, 0, 0, 0, "", desc, 0, \
-      name##_default }
+    { #name, #alt, cond, func, 1, CT_CVAR, CF_POSITION, &name, 0, 0, 0, "", desc, 0, name##_default }
 #define CVAR_SIZE(name, alt, cond, func, desc) \
     { #name, #alt, cond, func, 1, CT_CVAR, CF_SIZE, &name, 0, 0, 0, "", desc, 0, name##_default }
 #define CVAR_STR(name, alt, cond, func, flags, desc) \
-    { #name, #alt, cond, func, 1, CT_CVAR, (CF_STRING | flags), &name, 0, 0, 0, "", desc, 0, \
-      name##_default }
+    { #name, #alt, cond, func, 1, CT_CVAR, (CF_STRING | flags), &name, 0, 0, 0, "", desc, 0, name##_default }
 #define CVAR_TIME(name, alt, cond, func, desc) \
-    { #name, #alt, cond, func, 1, CT_CVAR, (CF_TIME | CF_READONLY), &name, 0, 0, 0, "", desc, 0, \
-      "" }
+    { #name, #alt, cond, func, 1, CT_CVAR, (CF_TIME | CF_READONLY), &name, 0, 0, 0, "", desc, 0, "" }
 
 consolecmd_t consolecmds[] =
 {
@@ -520,7 +515,7 @@ consolecmd_t consolecmds[] =
         "Toggles inverting the vertical axis of the\ngamepad's right thumbstick when looking up and\ndown."),
     CVAR_INT(gp_sensitivity, "", int_cvars_func1, gp_sensitivity_cvar_func2, CF_NONE, NOVALUEALIAS,
         "The gamepad's sensitivity (<b>0</b> to <b>128</b>)."),
-    CVAR_BOOL(gp_swapthumbsticks, "", bool_cvars_func1, bool_cvars_func2, BOOLVALUEALIAS,
+    CVAR_BOOL(gp_swapthumbsticks, "", bool_cvars_func1, gp_swapthumbsticks_cvar_func2, BOOLVALUEALIAS,
         "Toggles swapping the gamepad's left and right\nthumbsticks."),
     CVAR_INT(gp_vibrate_barrels, "", int_cvars_func1, int_cvars_func2, CF_PERCENT, NOVALUEALIAS,
         "The amount <i><b>XInput</b></i> gamepads vibrate when the\nplayer is near an exploding barrel (<b>0%</b> to <b>200%</b>)."),
@@ -4515,14 +4510,14 @@ static void gp_deadzone_cvars_func2(char *cmd, char *parms)
             if (gp_deadzone_left != value)
             {
                 gp_deadzone_left = BETWEENF(gp_deadzone_left_min, value, gp_deadzone_left_max);
-                I_SetGamepadLeftDeadZone(gp_deadzone_left);
+                I_SetGamepadLeftDeadZone();
                 M_SaveCVARs();
             }
         }
         else if (gp_deadzone_right != value)
         {
             gp_deadzone_right = BETWEENF(gp_deadzone_right_min, value, gp_deadzone_right_max);
-            I_SetGamepadRightDeadZone(gp_deadzone_right);
+            I_SetGamepadRightDeadZone();
             M_SaveCVARs();
         }
     }
@@ -4557,7 +4552,17 @@ static void gp_sensitivity_cvar_func2(char *cmd, char *parms)
     int_cvars_func2(cmd, parms);
 
     if (gp_sensitivity != gp_sensitivity_old)
-        I_SetGamepadSensitivity(gp_sensitivity);
+        I_SetGamepadSensitivity();
+}
+
+static void gp_swapthumbsticks_cvar_func2(char *cmd, char *parms)
+{
+    const int   gp_swapthumbsticks_old = gp_swapthumbsticks;
+
+    bool_cvars_func2(cmd, parms);
+
+    if (gp_swapthumbsticks != gp_swapthumbsticks_old)
+        I_SetGamepadThumbSticks();
 }
 
 //
@@ -4617,7 +4622,8 @@ dboolean P_CheckAmmo(void);
 
 static dboolean player_cvars_func1(char *cmd, char *parms)
 {
-    return (int_cvars_func1(cmd, parms) && gamestate == GS_LEVEL);
+    return (int_cvars_func1(cmd, parms) && gamestate == GS_LEVEL && (!M_StringCompare(cmd, stringize(health))
+        || (!(viewplayer->cheats & CF_GODMODE) && !viewplayer->powers[pw_invulnerability])));
 }
 
 static void player_cvars_func2(char *cmd, char *parms)
@@ -4678,38 +4684,31 @@ static void player_cvars_func2(char *cmd, char *parms)
         if (*parms)
         {
             sscanf(parms, "%10i", &value);
+            value = BETWEEN(health_min, value, maxhealth);
 
-            if (!(viewplayer->cheats & CF_GODMODE) && !viewplayer->powers[pw_invulnerability])
+            if (viewplayer->health <= 0)
             {
-                if (!viewplayer->mo)
-                    return;
-
-                value = BETWEEN(health_min, value, maxhealth);
-
-                if (viewplayer->health <= 0)
+                if (value <= 0)
                 {
-                    if (value <= 0)
-                    {
-                        viewplayer->health = value;
-                        viewplayer->mo->health = value;
-                    }
-                    else
-                        P_ResurrectPlayer(value);
+                    viewplayer->health = value;
+                    viewplayer->mo->health = value;
                 }
                 else
+                    P_ResurrectPlayer(value);
+            }
+            else
+            {
+                if (value < viewplayer->health)
+                    P_DamageMobj(viewplayer->mo, viewplayer->mo, NULL, viewplayer->health - value, false);
+                else
                 {
-                    if (value < viewplayer->health)
-                        P_DamageMobj(viewplayer->mo, viewplayer->mo, NULL, viewplayer->health - value, false);
-                    else
-                    {
-                        viewplayer->health = value;
-                        viewplayer->mo->health = value;
-                        P_AddBonus();
-                        S_StartSound(NULL, sfx_getpow);
-                    }
-
-                    C_HideConsole();
+                    viewplayer->health = value;
+                    viewplayer->mo->health = value;
+                    P_AddBonus();
+                    S_StartSound(NULL, sfx_getpow);
                 }
+
+                C_HideConsole();
             }
         }
         else

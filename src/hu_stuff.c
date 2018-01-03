@@ -289,7 +289,7 @@ void HU_Start(void)
     // create the map title widget
     HUlib_initTextLine(&w_title, HU_TITLEX, HU_TITLEY, hu_font, HU_FONTSTART);
 
-    while (M_StringWidth(s) > ORIGINALWIDTH - 6)
+    while (M_StringWidth(s) > (r_messagescale == r_messagescale_small ? (SCREENWIDTH - 12) : (ORIGINALWIDTH - 6)))
     {
         s[len - 1] = '.';
         s[len] = '.';
@@ -305,8 +305,7 @@ void HU_Start(void)
     hudnumoffset = (16 - SHORT(tallnum[0]->height)) / 2;
 }
 
-static void DrawHUDNumber(int *x, int y, int val, byte *tinttab,
-    void (*hudnumfunc)(int, int, patch_t *, byte *))
+static void DrawHUDNumber(int *x, int y, int val, byte *tinttab, void (*hudnumfunc)(int, int, patch_t *, byte *))
 {
     int     oldval = ABS(val);
     patch_t *patch;
@@ -865,8 +864,7 @@ static void HU_DrawAltHUD(void)
             {
                 altkeypic_t altkeypic = altkeypics[viewplayer->neededcard];
 
-                althudfunc(ALTHUD_RIGHT_X + 11 * cardsfound, ALTHUD_Y, altkeypic.patch, WHITE,
-                    altkeypic.color);
+                althudfunc(ALTHUD_RIGHT_X + 11 * cardsfound, ALTHUD_Y, altkeypic.patch, WHITE, altkeypic.color);
             }
         }
         else
@@ -883,8 +881,7 @@ static void HU_DrawAltHUD(void)
             {
                 altkeypic_t    altkeypic = altkeypics[i];
 
-                althudfunc(ALTHUD_RIGHT_X + 11 * (card - 1), ALTHUD_Y, altkeypic.patch, WHITE,
-                    altkeypic.color);
+                althudfunc(ALTHUD_RIGHT_X + 11 * (card - 1), ALTHUD_Y, altkeypic.patch, WHITE, altkeypic.color);
             }
         }
     }
@@ -913,8 +910,10 @@ static void HU_DrawAltHUD(void)
         powerupbar = (powerup == -1 ? max : powerup);
     }
 
-    if ((powerup = viewplayer->powers[pw_strength]) && ((viewplayer->readyweapon == wp_fist && viewplayer->pendingweapon == wp_nochange)
-        || viewplayer->pendingweapon == wp_fist) && !powerupbar)
+    if ((powerup = viewplayer->powers[pw_strength])
+        && ((viewplayer->readyweapon == wp_fist && viewplayer->pendingweapon == wp_nochange)
+            || viewplayer->pendingweapon == wp_fist)
+        && !powerupbar)
     {
         max = STARTFLASHING + 1;
         powerupbar = STARTFLASHING + 1;
@@ -936,7 +935,10 @@ void HU_DrawDisk(void)
 void HU_GetMessagePosition(void)
 {
     if (sscanf(r_messagepos, "(%10i,%10i)", &message_x, &message_y) != 2
-        || message_x < 0 || message_x >= SCREENWIDTH || message_y < 0 || message_y >= SCREENHEIGHT - SBARHEIGHT)
+        || message_x < 0
+        || message_x >= SCREENWIDTH
+        || message_y < 0
+        || message_y >= SCREENHEIGHT - SBARHEIGHT)
     {
         message_x = HU_MSGX;
         message_y = HU_MSGY;
@@ -1022,8 +1024,13 @@ void HU_Ticker(void)
     const dboolean  idmypos = viewplayer->cheats & CF_MYPOS;
 
     // tick down message counter if message is up
-    if (message_counter && ((!menuactive && !paused && !consoleactive) || inhelpscreens || message_dontpause)
-        && !idbehold && !idmypos && !--message_counter)
+    if (message_counter
+        && ((!menuactive && !paused && !consoleactive)
+            || inhelpscreens
+            || message_dontpause)
+        && !idbehold
+        && !idmypos
+        && !--message_counter)
     {
         message_on = false;
         message_nottobefuckedwith = false;
@@ -1088,7 +1095,8 @@ void HU_Ticker(void)
 
             strcpy(s, viewplayer->message);
 
-            while (M_StringWidth(s) > ORIGINALWIDTH - 6)
+            while (M_StringWidth(s) > (vid_widescreen || r_messagescale == r_messagescale_small ?
+                (SCREENWIDTH - 12) : (ORIGINALWIDTH - 6)))
             {
                 s[len - 1] = '.';
                 s[len] = '.';

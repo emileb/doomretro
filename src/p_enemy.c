@@ -122,21 +122,22 @@ static void P_RecursiveSound(sector_t *sec, int soundblocks, mobj_t *soundtarget
 
     for (int i = 0; i < sec->linecount; i++)
     {
-        line_t  *check = sec->lines[i];
+        line_t  *line = sec->lines[i];
+        int     flags = line->flags;
 
-        if (!(check->flags & ML_TWOSIDED))
+        if (!(flags & ML_TWOSIDED))
             continue;
 
-        P_LineOpening(check);
+        P_LineOpening(line);
 
         if (openrange <= 0)
             continue;   // closed door
 
-        if (!(check->flags & ML_SOUNDBLOCK))
-            P_RecursiveSound(sides[check->sidenum[(sides[check->sidenum[0]].sector == sec)]].sector,
-                soundblocks, soundtarget);
+        if (!(flags & ML_SOUNDBLOCK))
+            P_RecursiveSound(sides[line->sidenum[(sides[line->sidenum[0]].sector == sec)]].sector, soundblocks,
+                soundtarget);
         else if (!soundblocks)
-            P_RecursiveSound(sides[check->sidenum[(sides[check->sidenum[0]].sector == sec)]].sector, 1,
+            P_RecursiveSound(sides[line->sidenum[(sides[line->sidenum[0]].sector == sec)]].sector, 1,
                 soundtarget);
     }
 }
@@ -146,14 +147,14 @@ static void P_RecursiveSound(sector_t *sec, int soundblocks, mobj_t *soundtarget
 // If a monster yells at a player,
 // it will alert other monsters to the player.
 //
-void P_NoiseAlert(mobj_t *target, mobj_t *emmiter)
+void P_NoiseAlert(mobj_t *target)
 {
     // [BH] don't alert if notarget is enabled
-    if (target && target->player && (viewplayer->cheats & CF_NOTARGET))
+    if (target->player && (viewplayer->cheats & CF_NOTARGET))
         return;
 
     validcount++;
-    P_RecursiveSound(emmiter->subsector->sector, 0, target);
+    P_RecursiveSound(target->subsector->sector, 0, target);
 }
 
 //
@@ -162,6 +163,9 @@ void P_NoiseAlert(mobj_t *target, mobj_t *emmiter)
 dboolean P_CheckMeleeRange(mobj_t *actor)
 {
     mobj_t  *pl = actor->target;
+
+    if (!pl)
+        return false;
 
     if (P_ApproxDistance(pl->x - actor->x, pl->y - actor->y) >= MELEERANGE - 20 * FRACUNIT + pl->info->radius)
         return false;
@@ -992,7 +996,7 @@ void A_TroopAttack(mobj_t *actor, player_t *player, pspdef_t *psp)
     if (P_CheckMeleeRange(actor))
     {
         S_StartSound(actor, sfx_claw);
-        P_DamageMobj(actor->target, actor, actor, (M_Random() % 8 + 1) * 3, true);
+        P_DamageMobj(actor->target, actor, actor, ((M_Random() & 7) + 1) * 3, true);
         return;
     }
 
@@ -1061,7 +1065,7 @@ void A_BruisAttack(mobj_t *actor, player_t *player, pspdef_t *psp)
     if (P_CheckMeleeRange(actor))
     {
         S_StartSound(actor, sfx_claw);
-        P_DamageMobj(actor->target, actor, actor, (M_Random() % 8 + 1) * 10, true);
+        P_DamageMobj(actor->target, actor, actor, ((M_Random() & 7) + 1) * 10, true);
         return;
     }
 
@@ -1523,7 +1527,7 @@ void A_BetaSkullAttack(mobj_t *actor, player_t *player, pspdef_t *psp)
 
     S_StartSound(actor, actor->info->attacksound);
     A_FaceTarget(actor, NULL, NULL);
-    P_DamageMobj(actor->target, actor, actor, (M_Random() % 8 + 1) * actor->info->damage, true);
+    P_DamageMobj(actor->target, actor, actor, ((M_Random() & 7) + 1) * actor->info->damage, true);
 }
 
 void A_Stop(mobj_t *actor, player_t *player, pspdef_t *psp)

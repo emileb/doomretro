@@ -60,8 +60,7 @@
 //
 typedef struct
 {
-    short           originx;
-    short           originy;
+    short           originx, originy;
     short           patch;
     short           stepdir;
     short           colormap;
@@ -95,8 +94,7 @@ typedef struct
     // Block origin (always UL),
     // which has already accounted
     // for the internal origin of the patch.
-    short           originx;
-    short           originy;
+    short           originx, originy;
     int             patch;
 } texpatch_t;
 

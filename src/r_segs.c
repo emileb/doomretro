@@ -501,8 +501,8 @@ static void R_RenderSegLoop(void)
 static fixed_t R_ScaleFromGlobalAngle(angle_t visangle)
 {
     const int       angle = ANG90 + visangle;
-    const int       den = FixedMul(rw_distance, finesine[(angle - viewangle) >> ANGLETOFINESHIFT]);
-    const fixed_t   num = FixedMul(projection, finesine[(angle - rw_normalangle) >> ANGLETOFINESHIFT]);
+    const int       den = FixedMul(rw_distance, finesine[angle >> ANGLETOFINESHIFT]);
+    const fixed_t   num = FixedMul(projection, finesine[(angle + viewangle - rw_normalangle) >> ANGLETOFINESHIFT]);
 
     return (den > (num >> FRACBITS) ? BETWEEN(256, FixedDiv(num, den), max_rwscale) : max_rwscale);
 }
@@ -600,18 +600,19 @@ void R_StoreWallRange(const int start, const int stop)
     worldbottom = frontsector->interpfloorheight - viewz;
 
     // [BH] animate liquid sectors
-    if (r_liquid_bob && frontsector->isliquid && (!frontsector->heightsec
-        || viewz > frontsector->heightsec->interpfloorheight))
+    if (r_liquid_bob
+        && frontsector->isliquid
+        && (!frontsector->heightsec || viewz > frontsector->heightsec->interpfloorheight))
         worldbottom += animatedliquiddiff;
 
     R_FixWiggle(frontsector);
 
     // calculate scale at both ends and step
-    ds_p->scale1 = rw_scale = R_ScaleFromGlobalAngle(viewangle + xtoviewangle[start]);
+    ds_p->scale1 = rw_scale = R_ScaleFromGlobalAngle(xtoviewangle[start]);
 
     if (stop > start)
     {
-        ds_p->scale2 = R_ScaleFromGlobalAngle(viewangle + xtoviewangle[stop]);
+        ds_p->scale2 = R_ScaleFromGlobalAngle(xtoviewangle[stop]);
         ds_p->scalestep = rw_scalestep = (ds_p->scale2 - rw_scale) / (stop - start);
 
         if (ds_p->scale1 < ds_p->scale2)
@@ -691,7 +692,9 @@ void R_StoreWallRange(const int start, const int stop)
             worldtop = worldhigh;
 
         // [BH] animate liquid sectors
-        if (r_liquid_bob && backsector->isliquid && backsector->interpfloorheight >= frontsector->interpfloorheight
+        if (r_liquid_bob
+            && backsector->isliquid
+            && backsector->interpfloorheight >= frontsector->interpfloorheight
             && (!backsector->heightsec || viewz > backsector->heightsec->interpfloorheight))
         {
             liquidoffset = animatedliquiddiff;
@@ -751,8 +754,7 @@ void R_StoreWallRange(const int start, const int stop)
         {
             // bottom texture
             bottomtexture = texturetranslation[sidedef->bottomtexture];
-            bottomtexheight = ((linedef->r_flags & RF_BOT_TILE) ? 0 :
-                textureheight[bottomtexture] >> FRACBITS);
+            bottomtexheight = ((linedef->r_flags & RF_BOT_TILE) ? 0 : textureheight[bottomtexture] >> FRACBITS);
             bottombrightmap = (usebrightmaps && !nobrightmap[bottomtexture] ? brightmap[bottomtexture] : NULL);
             rw_bottomtexturemid = ((linedef->flags & ML_DONTPEGBOTTOM) ? worldtop : worldlow - liquidoffset);
             rw_bottomtexturemid += FixedMod(sidedef->rowoffset, textureheight[bottomtexture]);

@@ -245,10 +245,12 @@ void P_MovePlayer(void)
 static void P_ReduceDamageCount(void)
 {
     if (viewplayer->damagecount)
+    {
         viewplayer->damagecount--;
 
-    if (r_shake_damage)
-        I_UpdateBlitFunc(!!viewplayer->damagecount);
+        if (r_shake_damage)
+            I_UpdateBlitFunc(!!viewplayer->damagecount);
+    }
 }
 
 //
@@ -271,30 +273,36 @@ static void P_DeathThink(void)
     // fall to the ground
     if ((onground = (mo->z <= mo->floorz || (mo->flags2 & MF2_ONMOBJ))))
     {
+        if (canmouselook)
+        {
+            static int  inc;
+
+            if (deadlookdir == -1)
+            {
+                float   viewheightrange = (float)(viewplayer->viewheight - DEADVIEWHEIGHT) / FRACUNIT;
+
+                inc = MAX(1, ABS(DEADLOOKDIR - viewplayer->lookdir));
+
+                if (viewheightrange)
+                    inc = (int)(inc / viewheightrange + 0.5);
+
+                deadlookdir = DEADLOOKDIR / inc * inc;
+            }
+
+            if (viewplayer->lookdir > deadlookdir)
+                viewplayer->lookdir -= inc;
+            else if (viewplayer->lookdir < deadlookdir)
+                viewplayer->lookdir += inc;
+
+            if (ABS(viewplayer->lookdir - deadlookdir) < inc)
+                viewplayer->lookdir = deadlookdir;
+        }
+
         if (viewplayer->viewheight > DEADVIEWHEIGHT)
             viewplayer->viewheight -= FRACUNIT;
 
         if (viewplayer->viewheight < DEADVIEWHEIGHT)
             viewplayer->viewheight = DEADVIEWHEIGHT;
-
-        if (canmouselook)
-        {
-            if (deadlookdir == -1)
-                deadlookdir = viewplayer->lookdir;
-
-            if (deadlookdir)
-            {
-                int inc = ABS(128 - deadlookdir) / ((VIEWHEIGHT - DEADVIEWHEIGHT) >> FRACBITS);
-
-                if (viewplayer->lookdir > 128)
-                    viewplayer->lookdir -= inc;
-                else if (viewplayer->lookdir < 128)
-                    viewplayer->lookdir += inc;
-
-                if (ABS(viewplayer->lookdir - 128) < inc)
-                    viewplayer->lookdir = 128;
-            }
-        }
     }
 
     viewplayer->deltaviewheight = 0;
@@ -324,8 +332,8 @@ static void P_DeathThink(void)
     if (consoleactive)
         return;
 
-    if (((viewplayer->cmd.buttons & BT_USE) || ((viewplayer->cmd.buttons & BT_ATTACK) && !viewplayer->damagecount
-        && deathcount > TICRATE * 2) || gamekeydown[KEY_ENTER]))
+    if (((viewplayer->cmd.buttons & BT_USE) || ((viewplayer->cmd.buttons & BT_ATTACK)
+        && !viewplayer->damagecount && deathcount > TICRATE * 2) || gamekeydown[KEY_ENTER]))
     {
         deathcount = 0;
         damagevibrationtics = 1;

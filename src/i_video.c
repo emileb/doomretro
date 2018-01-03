@@ -1009,7 +1009,7 @@ void I_CreateExternalAutomap(dboolean output)
 
     am_displayindex = !displayindex;
 
-    SDL_SetHint(SDL_HINT_VIDEO_MINIMIZE_ON_FOCUS_LOSS, "0");
+    SDL_SetHintWithPriority(SDL_HINT_VIDEO_MINIMIZE_ON_FOCUS_LOSS, "0", SDL_HINT_OVERRIDE);
 
     if (!(mapwindow = SDL_CreateWindow("Automap", SDL_WINDOWPOS_UNDEFINED_DISPLAY(am_displayindex),
         SDL_WINDOWPOS_UNDEFINED_DISPLAY(am_displayindex), 0, 0, SDL_WINDOW_FULLSCREEN_DESKTOP)))
@@ -1359,13 +1359,12 @@ static void SetVideoMode(dboolean output)
             SDL_GL_SetAttribute( SDL_GL_DEPTH_SIZE, 16 ); // Defaults to 24 which is not needed and fails on old Tegras
 #endif
             if (!(window = SDL_CreateWindow(PACKAGE_NAME, SDL_WINDOWPOS_UNDEFINED_DISPLAY(displayindex),
-                SDL_WINDOWPOS_UNDEFINED_DISPLAY(displayindex), 0, 0,
-                (windowflags | SDL_WINDOW_FULLSCREEN_DESKTOP))))
+                SDL_WINDOWPOS_UNDEFINED_DISPLAY(displayindex), 0, 0, (windowflags | SDL_WINDOW_FULLSCREEN_DESKTOP))))
                 I_SDLError("SDL_CreateWindow");
 
             if (output)
                 C_Output("Staying at the desktop resolution of %s\xD7%s%s%s%s with a %s aspect ratio.",
-                    commify(width), commify(height), (*acronym ? " (" : " "), acronym, (*acronym ? ")" : ""),
+                    commify(width), commify(height), (*acronym ? " (" : ""), acronym, (*acronym ? ")" : ""),
                     ratio);
         }
         else
@@ -1375,14 +1374,16 @@ static void SetVideoMode(dboolean output)
             acronym = getacronym(width, height);
             ratio = getaspectratio(width, height);
 
-            if(!(window = SDL_CreateWindow(PACKAGE_NAME, SDL_WINDOWPOS_UNDEFINED_DISPLAY(displayindex),
-                SDL_WINDOWPOS_UNDEFINED_DISPLAY(displayindex), width, height,
-                (windowflags | SDL_WINDOW_FULLSCREEN))))
+            if (!(window = SDL_CreateWindow(PACKAGE_NAME, SDL_WINDOWPOS_UNDEFINED_DISPLAY(displayindex),
+                SDL_WINDOWPOS_UNDEFINED_DISPLAY(displayindex), width, height, windowflags)))
                 I_SDLError("SDL_CreateWindow");
+
+            if (SDL_SetWindowFullscreen(window, SDL_WINDOW_FULLSCREEN) < 0)
+                I_SDLError("SDL_SetWindowFullscreen");
 
             if (output)
                 C_Output("Switched to a resolution of %s\xD7%s%s%s%s with a %s aspect ratio.",
-                    commify(width), commify(height), (*acronym ? " (" : " "), acronym, (*acronym ? ")" : ""),
+                    commify(width), commify(height), (*acronym ? " (" : ""), acronym, (*acronym ? ")" : ""),
                     ratio);
         }
     }
@@ -1504,8 +1505,7 @@ static void SetVideoMode(dboolean output)
         {
             software = true;
             nearestlinear = false;
-            SDL_SetHintWithPriority(SDL_HINT_RENDER_SCALE_QUALITY, vid_scalefilter_nearest,
-                SDL_HINT_OVERRIDE);
+            SDL_SetHintWithPriority(SDL_HINT_RENDER_SCALE_QUALITY, vid_scalefilter_nearest, SDL_HINT_OVERRIDE);
 
             if (output)
                 C_Output("The screen is rendered in software.");
@@ -1726,18 +1726,16 @@ void I_RestartGraphics(void)
 
 void I_ToggleFullscreen(void)
 {
-    dboolean    fullscreen = !vid_fullscreen;
-
-    if (!M_StringCompare(vid_screenresolution, vid_screenresolution_desktop)
-        || SDL_SetWindowFullscreen(window, (fullscreen ? SDL_WINDOW_FULLSCREEN_DESKTOP : 0)) < 0)
+    if (SDL_SetWindowFullscreen(window, (!vid_fullscreen ? (M_StringCompare(vid_screenresolution,
+        vid_screenresolution_desktop) ? SDL_WINDOW_FULLSCREEN_DESKTOP : SDL_WINDOW_FULLSCREEN) : 0)) < 0)
     {
         menuactive = false;
         C_ShowConsole();
-        C_Warning("Unable to switch to %s.", (fullscreen ? "fullscreen" : "a window"));
+        C_Warning("Unable to switch to %s.", (!vid_fullscreen ? "fullscreen" : "a window"));
         return;
     }
 
-    vid_fullscreen = fullscreen;
+    vid_fullscreen = !vid_fullscreen;
     M_SaveCVARs();
 
     if (nearestlinear)

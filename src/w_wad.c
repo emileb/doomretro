@@ -324,7 +324,8 @@ GameMission_t IWADRequiredByPWAD(char *pwadname)
     {
         if (M_StringCompare(leaf, "pl2.wad") || M_StringCompare(leaf, "plut3.wad"))
             result = pack_plut;
-        else if (M_StringCompare(leaf, "tntr.wad") || M_StringCompare(leaf, "tnt-ren.wad"))
+        else if (M_StringCompare(leaf, "tntr.wad") || M_StringCompare(leaf, "tnt-ren.wad")
+            || M_StringCompare(leaf, "resist.wad"))
             result = pack_tnt;
     }
 
@@ -338,7 +339,7 @@ GameMission_t IWADRequiredByPWAD(char *pwadname)
 int W_WadType(char *filename)
 {
     wadinfo_t   header;
-    wadfile_t  *wadfile = W_OpenFile(filename);
+    wadfile_t   *wadfile = W_OpenFile(filename);
 
     if (!wadfile)
         return 0;
