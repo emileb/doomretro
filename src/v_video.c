@@ -9,8 +9,8 @@
   Copyright © 1993-2012 id Software LLC, a ZeniMax Media company.
   Copyright © 2013-2018 Brad Harding.
 
-  DOOM Retro is a fork of Chocolate DOOM.
-  For a list of credits, see <http://wiki.doomretro.com/credits>.
+  DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
+  <https://github.com/bradharding/doomretro/wiki/CREDITS>.
 
   This file is part of DOOM Retro.
 
@@ -47,6 +47,7 @@
 #include "i_colors.h"
 #include "i_swap.h"
 #include "i_system.h"
+#include "m_argv.h"
 #include "m_config.h"
 #include "m_misc.h"
 #include "m_random.h"
@@ -400,13 +401,11 @@ void V_DrawBigPatch(int x, int y, int scrn, patch_t *patch)
     }
 }
 
-static const int    italicize[15] = { 0, 2, 2, 2, 1, 1, 1, 1, 0, 0, 0, 0, -1, -1, -1 };
-
-void V_DrawConsoleTextPatch(int x, int y, patch_t *patch, int color, int backgroundcolor, dboolean italics,
-    byte *tinttab)
+void V_DrawConsoleTextPatch(int x, int y, patch_t *patch, int color, int backgroundcolor, dboolean italics, byte *tinttab)
 {
-    byte    *desttop = screens[0] + y * SCREENWIDTH + x;
-    int     w = SHORT(patch->width);
+    byte        *desttop = screens[0] + y * SCREENWIDTH + x;
+    int         w = SHORT(patch->width);
+    const int   italicize[15] = { 0, 2, 2, 2, 1, 1, 1, 1, 0, 0, 0, 0, -1, -1, -1 };
 
     for (int col = 0; col < w; col++, desttop++)
     {
@@ -1396,6 +1395,7 @@ void V_Init(void)
 {
     byte                *base = Z_Malloc(SCREENWIDTH * SCREENHEIGHT * 4, PU_STATIC, NULL);
     const SDL_version   *linked = IMG_Linked_Version();
+    int                 p;
 #if defined(_WIN32) && !defined(PORTABILITY)
     char                buffer[MAX_PATH];
 #endif
@@ -1425,9 +1425,11 @@ void V_Init(void)
         M_snprintf(screenshotfolder, sizeof(screenshotfolder), "%s"DIR_SEPARATOR_S PACKAGE_NAME,
             M_GetExecutableFolder());
 #else
-        M_snprintf(screenshotfolder, sizeof(screenshotfolder), "%s"DIR_SEPARATOR_S"screenshots",
-            M_GetAppDataFolder());
+    M_snprintf(screenshotfolder, sizeof(screenshotfolder), "%s"DIR_SEPARATOR_S"screenshots", M_GetAppDataFolder());
 #endif
+
+    if ((p = M_CheckParmWithArgs("-shotdir", 1, 1)))
+        M_snprintf(screenshotfolder, sizeof(screenshotfolder), myargv[p + 1]);
 }
 
 char            lbmname1[MAX_PATH];

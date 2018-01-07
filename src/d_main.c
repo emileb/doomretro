@@ -9,8 +9,8 @@
   Copyright © 1993-2012 id Software LLC, a ZeniMax Media company.
   Copyright © 2013-2018 Brad Harding.
 
-  DOOM Retro is a fork of Chocolate DOOM.
-  For a list of credits, see <http://wiki.doomretro.com/credits>.
+  DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
+  <https://github.com/bradharding/doomretro/wiki/CREDITS>.
 
   This file is part of DOOM Retro.
 
@@ -158,7 +158,6 @@ struct tm           *gamestarttime;
 
 static event_t      events[MAXEVENTS];
 static int          eventhead;
-static int          eventtail;
 
 //
 // D_PostEvent
@@ -176,6 +175,8 @@ void D_PostEvent(event_t *ev)
 //
 void D_ProcessEvents(void)
 {
+    static int  eventtail;
+
     for (; eventtail != eventhead; eventtail = (eventtail + 1) & (MAXEVENTS - 1))
     {
         event_t *ev = events + eventtail;
@@ -457,6 +458,21 @@ void D_PageDrawer(void)
     }
     else if (pagelump)
         V_DrawPagePatch(pagelump);
+}
+
+//
+// D_FadeScreen
+//
+void D_FadeScreen(void)
+{
+    if (W_CheckMultipleLumps("COLORMAP") > 1)
+        return;
+
+    for (int i = 0; i < 11; i++)
+    {
+        I_SetPalette(splashpal + i * 768);
+        blitfunc();
+    }
 }
 
 //
@@ -1547,8 +1563,6 @@ static int D_OpenWADLauncher(void)
 }
 #endif
 
-dboolean CheckPackageWADVersion(void);
-
 static void D_ProcessDehCommandLine(void)
 {
     int p = M_CheckParm("-deh");
@@ -1848,7 +1862,7 @@ static void D_DoomMainSetup(void)
         }
     }
 
-    // get skill / episode / map from parms
+    // get skill/episode/map from parms
     startskill = sk_medium;
     startepisode = 1;
     startmap = 1;

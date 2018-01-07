@@ -9,8 +9,8 @@
   Copyright © 1993-2012 id Software LLC, a ZeniMax Media company.
   Copyright © 2013-2018 Brad Harding.
 
-  DOOM Retro is a fork of Chocolate DOOM.
-  For a list of credits, see <http://wiki.doomretro.com/credits>.
+  DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
+  <https://github.com/bradharding/doomretro/wiki/CREDITS>.
 
   This file is part of DOOM Retro.
 
@@ -1453,7 +1453,7 @@ state_t states[NUMSTATES] =
     { SPR_DOGS,  9,                                5,               NULL,              S_DOGS_RAISE6   }, // S_DOGS_RAISE5
     { SPR_DOGS,  8,                                5,               NULL,              S_DOGS_RUN1     }, // S_DOGS_RAISE6
 
-    // add dummy beta bfg / lost soul frames for dehacked compatibility
+    // add dummy beta bfg/lost soul frames for dehacked compatibility
     { SPR_BFGG,  0,                               10,               A_BFGsound,        S_OLDBFG2       }, // S_OLDBFG1
     { SPR_BFGG,  1,                                1,               A_FireOldBFG,      S_OLDBFG3       }, // S_OLDBFG2
     { SPR_BFGG,  1,                                1,               A_FireOldBFG,      S_OLDBFG4       }, // S_OLDBFG3
@@ -2617,7 +2617,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
         /* plural1              */ "icons of sin",
         /* name2                */ "boss brain",
         /* plural2              */ "boss brains",
-        /* name3                */ "",
+        /* name3                */ "romero",
         /* plural3              */ ""
     },
 

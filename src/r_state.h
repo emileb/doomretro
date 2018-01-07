@@ -9,8 +9,8 @@
   Copyright © 1993-2012 id Software LLC, a ZeniMax Media company.
   Copyright © 2013-2018 Brad Harding.
 
-  DOOM Retro is a fork of Chocolate DOOM.
-  For a list of credits, see <http://wiki.doomretro.com/credits>.
+  DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
+  <https://github.com/bradharding/doomretro/wiki/CREDITS>.
 
   This file is part of DOOM Retro.
 
@@ -61,9 +61,6 @@ extern fixed_t      *spriteoffset;
 extern fixed_t      *spritetopoffset;
 extern fixed_t      *newspriteoffset;
 extern fixed_t      *newspritetopoffset;
-
-extern lighttable_t **colormaps;    // killough 3/20/98, 4/4/98
-extern lighttable_t *fullcolormap;  // killough 3/20/98
 
 extern int          viewwidth;
 extern int          scaledviewwidth;

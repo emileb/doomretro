@@ -9,8 +9,8 @@
   Copyright © 1993-2012 id Software LLC, a ZeniMax Media company.
   Copyright © 2013-2018 Brad Harding.
 
-  DOOM Retro is a fork of Chocolate DOOM.
-  For a list of credits, see <http://wiki.doomretro.com/credits>.
+  DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
+  <https://github.com/bradharding/doomretro/wiki/CREDITS>.
 
   This file is part of DOOM Retro.
 
@@ -44,6 +44,7 @@
 #include "doomstat.h"
 #include "g_game.h"
 #include "i_gamepad.h"
+#include "m_argv.h"
 #include "m_config.h"
 #include "m_fixed.h"
 #include "m_misc.h"
@@ -91,6 +92,7 @@ static default_t cvars[] =
     CONFIG_VARIABLE_INT          (am_thingcolor,                                     NOVALUEALIAS      ),
     CONFIG_VARIABLE_INT          (am_tswallcolor,                                    NOVALUEALIAS      ),
     CONFIG_VARIABLE_INT          (am_wallcolor,                                      NOVALUEALIAS      ),
+    CONFIG_VARIABLE_INT          (autoaim,                                           BOOLVALUEALIAS    ),
     CONFIG_VARIABLE_INT          (autoload,                                          BOOLVALUEALIAS    ),
     CONFIG_VARIABLE_INT          (autouse,                                           BOOLVALUEALIAS    ),
     CONFIG_VARIABLE_INT          (centerweapon,                                      BOOLVALUEALIAS    ),
@@ -273,12 +275,15 @@ static void SaveBindByValue(FILE *file, char *action, int value, controltype_t t
 void M_SaveCVARs(void)
 {
     int     numaliases = 0;
+    int     p;
     FILE    *file;
 
     if (!cvarsloaded || vanilla)
         return;
 
-    if (!(file = fopen(packageconfig, "w")))
+    p = M_CheckParmWithArgs("-config", 1, 1);
+
+    if (!(file = fopen((p ? myargv[p + 1] : packageconfig), "w")))
         return; // can't write the file, but don't complain
 
     if (returntowidescreen)
@@ -530,6 +535,9 @@ static void M_CheckCVARs(void)
 
     if (am_wallcolor < am_wallcolor_min || am_wallcolor > am_wallcolor_max)
         am_wallcolor = am_wallcolor_default;
+
+    if (autoaim != false && autoaim != true)
+        autoaim = autoaim_default;
 
     if (autoload != false && autoload != true)
         autoload = autoload_default;
@@ -810,7 +818,7 @@ void M_LoadCVARs(char *filename)
     }
 
     // Clear all default controls before reading them from config file
-    if (!togglingvanilla && M_StringCompare(filename, packageconfig))
+    if (!togglingvanilla && M_StringEndsWith(filename, PACKAGE_CONFIG))
     {
         for (int i = 0; *actions[i].action; i++)
         {

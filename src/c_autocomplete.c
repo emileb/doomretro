@@ -9,8 +9,8 @@
   Copyright © 1993-2012 id Software LLC, a ZeniMax Media company.
   Copyright © 2013-2018 Brad Harding.
 
-  DOOM Retro is a fork of Chocolate DOOM.
-  For a list of credits, see <http://wiki.doomretro.com/credits>.
+  DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
+  <https://github.com/bradharding/doomretro/wiki/CREDITS>.
 
   This file is part of DOOM Retro.
 
@@ -355,6 +355,9 @@ char autocompletelist[][255] =
     "am_wallcolor yellow",
     "ammo ",
     "armor ",
+    "autoaim ",
+    "autoaim off",
+    "autoaim on",
     "autoload ",
     "autoload off",
     "autoload on",
@@ -5856,6 +5859,11 @@ char autocompletelist[][255] =
     "if am_wallcolor yellow then ",
     "if ammo ",
     "if armor ",
+    "if autoaim ",
+    "if autoaim off ",
+    "if autoaim off then ",
+    "if autoaim on ",
+    "if autoaim on then ",
     "if autoload ",
     "if autoload off ",
     "if autoload off then ",
@@ -6844,7 +6852,9 @@ char autocompletelist[][255] =
     "reset am_wallcolor",
     "reset ammo",
     "reset armor",
+    "reset autoaim",
     "reset autoload",
+    "reset autouse",
     "reset centerweapon",
     "reset con_obituaries",
     "reset con_timestamps",
@@ -6874,7 +6884,6 @@ char autocompletelist[][255] =
     "reset r_berserkintensity",
     "reset r_blood",
     "reset r_bloodsplats_max",
-    "reset r_bloodsplats_total",
     "reset r_bloodsplats_translucency",
     "reset r_brightmaps",
     "reset r_corpses_color",
@@ -6937,7 +6946,6 @@ char autocompletelist[][255] =
     "reset vid_widescreen",
     "reset vid_windowpos",
     "reset vid_windowsize",
-    "reset wad",
     "reset weaponbob",
     "reset weaponrecoil",
     "reset wipe",

@@ -9,8 +9,8 @@
   Copyright © 1993-2012 id Software LLC, a ZeniMax Media company.
   Copyright © 2013-2018 Brad Harding.
 
-  DOOM Retro is a fork of Chocolate DOOM.
-  For a list of credits, see <http://wiki.doomretro.com/credits>.
+  DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
+  <https://github.com/bradharding/doomretro/wiki/CREDITS>.
 
   This file is part of DOOM Retro.
 
@@ -179,7 +179,7 @@ static struct
     { "COMP2",    DOOM1AND2, notgrayorbrown }, { "COMPSTA1", DOOM1AND2, notgray        },
     { "COMPSTA2", DOOM1AND2, notgray        }, { "COMPUTE1", DOOM1AND2, notgrayorbrown },
     { "COMPUTE2", DOOM1AND2, notgrayorbrown }, { "COMPUTE3", DOOM1AND2, notgrayorbrown },
-    { "EXITSIGN", DOOM1AND2, notgray        }, { "EXITSTON", DOOM1AND2, notgray        },
+    { "EXITSIGN", DOOM1AND2, notgray        }, { "EXITSTON", DOOM1AND2, redonly        },
     { "M_TEC",    DOOM2ONLY, greenonly2     }, { "PLANET1",  DOOM1AND2, notgray        },
     { "PNK4EXIT", DOOM2ONLY, redonly        }, { "SILVER2",  DOOM1AND2, notgray        },
     { "SILVER3",  DOOM1AND2, notgrayorbrown }, { "SLAD2",    DOOM2ONLY, notgrayorbrown },
@@ -196,18 +196,18 @@ static struct
     { "SW1STON2", DOOM2ONLY, redonly        }, { "SW1STONE", DOOM1AND2, redonly        },
     { "SW1STRTN", DOOM1AND2, redonly        }, { "SW2BLUE",  DOOM1AND2, redonly        },
     { "SW2BRCOM", DOOM1AND2, greenonly2     }, { "SW2BRIK",  DOOM1AND2, greenonly1     },
-    { "SW2BRN1",  DOOM1AND2, greenonly1     }, { "SW2BRN2",  DOOM1AND2, greenonly1     },
-    { "SW2BRNGN", DOOM1AND2, greenonly2     }, { "SW2COMM",  DOOM1AND2, greenonly1     },
-    { "SW2COMP",  DOOM1AND2, redonly        }, { "SW2DIRT",  DOOM1AND2, greenonly1     },
+    { "SW2BRN1",  DOOM1AND2, greenonly2     }, { "SW2BRN2",  DOOM1AND2, greenonly1     },
+    { "SW2BRNGN", DOOM1AND2, greenonly3     }, { "SW2COMM",  DOOM1AND2, greenonly1     },
+    { "SW2COMP",  DOOM1AND2, redonly        }, { "SW2DIRT",  DOOM1AND2, greenonly2     },
     { "SW2EXIT",  DOOM1AND2, notgray        }, { "SW2GRAY",  DOOM1AND2, notgray        },
     { "SW2GRAY1", DOOM1AND2, notgray        }, { "SW2GSTON", DOOM1AND2, redonly        },
     { "SW2MARB",  DOOM2ONLY, redonly        }, { "SW2MET2",  DOOM1AND2, greenonly1     },
-    { "SW2METAL", DOOM1AND2, greenonly3     }, { "SW2MOD1",  DOOM1AND2, notgrayorbrown },
+    { "SW2METAL", DOOM1AND2, greenonly3     }, { "SW2MOD1",  DOOM1AND2, greenonly1     },
     { "SW2PANEL", DOOM1AND2, redonly        }, { "SW2ROCK",  DOOM1AND2, redonly        },
-    { "SW2SLAD",  DOOM1AND2, redonly        }, { "SW2STARG", DOOM2ONLY, greenonly1     },
-    { "SW2STON1", DOOM1AND2, greenonly1     }, { "SW2STON2", DOOM1ONLY, redonly        },
-    { "SW2STON2", DOOM2ONLY, greenonly1     }, { "SW2STON6", DOOM1AND2, redonly        },
-    { "SW2STONE", DOOM1AND2, greenonly1     }, { "SW2STRTN", DOOM1AND2, greenonly1     },
+    { "SW2SLAD",  DOOM1AND2, redonly        }, { "SW2STARG", DOOM2ONLY, greenonly2     },
+    { "SW2STON1", DOOM1AND2, greenonly3     }, { "SW2STON2", DOOM1ONLY, redonly        },
+    { "SW2STON2", DOOM2ONLY, greenonly2     }, { "SW2STON6", DOOM1AND2, redonly        },
+    { "SW2STONE", DOOM1AND2, greenonly2     }, { "SW2STRTN", DOOM1AND2, greenonly1     },
     { "SW2TEK",   DOOM1AND2, greenonly1     }, { "SW2VINE",  DOOM1AND2, greenonly1     },
     { "SW2WOOD",  DOOM1AND2, redonly        }, { "SW2ZIM",   DOOM1AND2, redonly        },
     { "WOOD4",    DOOM1AND2, redonly        }, { "WOODGARG", DOOM1AND2, redonly        },
@@ -421,7 +421,35 @@ static void R_InitFlats(void)
 //
 static void R_InitSpriteLumps(void)
 {
-    int numspritelumps;
+    dboolean    fixspriteoffsets = false;
+    int         numspritelumps;
+
+    SC_Open("DRCOMPAT");
+
+    while (SC_GetString())
+    {
+        if (M_StringCompare(sc_String, "FIXSPRITEOFFSETS"))
+        {
+            SC_MustGetString();
+
+            if (M_StringCompare(pwadfile, removeext(sc_String)))
+                fixspriteoffsets = true;
+        }
+        else if (M_StringCompare(sc_String, "NOTRANSLUCENCY"))
+        {
+            SC_MustGetString();
+
+            if (M_StringCompare(pwadfile, removeext(sc_String)))
+                notranslucency = true;
+        }
+        else if (M_StringCompare(sc_String, "TELEFRAGONMAP30"))
+        {
+            SC_MustGetString();
+
+            if (M_StringCompare(pwadfile, removeext(sc_String)))
+                telefragonmap30 = true;
+        }
+    }
 
     firstspritelump = W_GetNumForName("S_START") + 1;
     lastspritelump = W_GetNumForName("S_END") - 1;
@@ -457,7 +485,7 @@ static void R_InitSpriteLumps(void)
                         && spritewidth[i] == (SHORT(sproffsets[j].width) << FRACBITS)
                         && spriteheight[i] == (SHORT(sproffsets[j].height) << FRACBITS)
                         && ((!BTSX && !sprfix18) || sproffsets[j].sprfix18)
-                        && (BTSX || lumpinfo[firstspritelump + i]->wadfile->type != PWAD))
+                        && (BTSX || fixspriteoffsets || lumpinfo[firstspritelump + i]->wadfile->type != PWAD))
                     {
                         newspriteoffset[i] = SHORT(sproffsets[j].x) << FRACBITS;
                         newspritetopoffset[i] = SHORT(sproffsets[j].y) << FRACBITS;
@@ -476,7 +504,6 @@ static void R_InitSpriteLumps(void)
         states[S_BAR1].tics = 0;
         mobjinfo[MT_BARREL].spawnstate = S_BAR2;
         mobjinfo[MT_BARREL].frames = 0;
-
         mobjinfo[MT_HEAD].blood = MT_BLOOD;
         mobjinfo[MT_BRUISER].blood = MT_BLOOD;
         mobjinfo[MT_KNIGHT].blood = MT_BLOOD;
@@ -504,26 +531,6 @@ static void R_InitSpriteLumps(void)
         mobjinfo[MT_KNIGHT].blood = MT_BLOOD;
     }
 
-    SC_Open("DRCOMPAT");
-
-    while (SC_GetString())
-    {
-        if (M_StringCompare(sc_String, "NOTRANSLUCENCY"))
-        {
-            SC_MustGetString();
-
-            if (M_StringCompare(pwadfile, removeext(sc_String)))
-                notranslucency = true;
-        }
-        else if (M_StringCompare(sc_String, "TELEFRAGONMAP30"))
-        {
-            SC_MustGetString();
-
-            if (M_StringCompare(pwadfile, removeext(sc_String)))
-                telefragonmap30 = true;
-        }
-    }
-
     SC_Close();
 }
 
@@ -535,7 +542,7 @@ static void R_InitSpriteLumps(void)
 //
 // killough 4/4/98: Add support for C_START/C_END markers
 //
-byte grays[256];
+byte    grays[256];
 
 static void R_InitColormaps(void)
 {
@@ -551,28 +558,25 @@ static void R_InitColormaps(void)
 
         colormaps = Z_Malloc(sizeof(*colormaps) * numcolormaps, PU_STATIC, NULL);
 
-        colormaps[0] = W_CacheLumpName("COLORMAP");
-
         for (int i = 1; i < numcolormaps; i++)
             colormaps[i] = W_CacheLumpNum(i + firstcolormaplump);
     }
     else
-    {
         colormaps = Z_Malloc(sizeof(*colormaps), PU_STATIC, NULL);
-        colormaps[0] = W_CacheLumpName("COLORMAP");
-    }
+
+    dc_colormap[1] = colormaps[0] = W_CacheLumpName("COLORMAP");
 
     colormapwad = lumpinfo[W_CheckNumForName("COLORMAP")]->wadfile;
     C_Output("Using %s colormap%s from the <b>COLORMAP</b> lump in %s <b>%s</b>.",
         (numcolormaps == 1 ? "the" : commify(numcolormaps)), (numcolormaps == 1 ? "" : "s"),
         (colormapwad->type == IWAD ? "IWAD" : "PWAD"), colormapwad->path);
 
-    // [BH] There's a typo in dcolors.c, the source code of the utility Id
+    // [BH] There's a typo in dcolors.c, the source code of the utility id
     // Software used to construct the palettes and colormaps for DOOM (see
-    // http://www.doomworld.com/idgames/?id=16644). When constructing colormap
+    // <https://www.doomworld.com/idgames/?id=16644>). When constructing colormap
     // 32, which is used for the invulnerability power-up, the traditional
-    // Y luminance values are used (see http://en.wikipedia.org/wiki/YIQ), but a
-    // value of 0.144 is used when it should be 0.114. So I've grabbed the
+    // Y luminance values are used (see <https://en.wikipedia.org/wiki/YIQ>),
+    // but a value of 0.144 is used when it should be 0.114. So I've grabbed the
     // offending code from dcolor.c, corrected it, put it here, and now colormap
     // 32 is manually calculated rather than grabbing it from the colormap lump.
     // The resulting differences are minor.

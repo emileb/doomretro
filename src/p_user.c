@@ -9,8 +9,8 @@
   Copyright © 1993-2012 id Software LLC, a ZeniMax Media company.
   Copyright © 2013-2018 Brad Harding.
 
-  DOOM Retro is a fork of Chocolate DOOM.
-  For a list of credits, see <http://wiki.doomretro.com/credits>.
+  DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
+  <https://github.com/bradharding/doomretro/wiki/CREDITS>.
 
   This file is part of DOOM Retro.
 
@@ -97,7 +97,7 @@ static void P_Bob(angle_t angle, fixed_t move)
 
 //
 // P_CalcHeight
-// Calculate the walking / running height adjustment
+// Calculate the walking/running height adjustment
 //
 void P_CalcHeight(void)
 {
@@ -245,12 +245,10 @@ void P_MovePlayer(void)
 static void P_ReduceDamageCount(void)
 {
     if (viewplayer->damagecount)
-    {
         viewplayer->damagecount--;
 
-        if (r_shake_damage)
-            I_UpdateBlitFunc(!!viewplayer->damagecount);
-    }
+    if (r_shake_damage)
+        I_UpdateBlitFunc(!!viewplayer->damagecount);
 }
 
 //
@@ -266,6 +264,7 @@ static void P_DeathThink(void)
 
     weaponvibrationtics = 1;
     idlemotorspeed = 0;
+    freeze = false;
     infight = infighting;
 
     P_MovePsprites();
@@ -321,7 +320,12 @@ static void P_DeathThink(void)
             facingkiller = true;
         }
         else
+        {
             mo->angle += (delta < ANG180 ? ANG5 : -ANG5);
+
+            if (r_shake_damage)
+                I_UpdateBlitFunc(!!viewplayer->damagecount);
+        }
     }
     else
         P_ReduceDamageCount();
@@ -517,10 +521,6 @@ void P_PlayerThink(void)
         return;
     }
 
-    // [BH] regenerate health up to 100 every 1 second
-    if (regenhealth && mo->health < initial_health && !(leveltime % TICRATE) && !viewplayer->damagecount)
-        mo->health = viewplayer->health = MIN(viewplayer->health + 1, initial_health);
-
     // Move around.
     // Reaction time is used to prevent movement for a bit after a teleport.
     if (mo->reactiontime)
@@ -530,14 +530,23 @@ void P_PlayerThink(void)
 
     P_CalcHeight();
 
+    if (freeze)
+        return;
+
+    // cycle psprites
+    P_MovePsprites();
+
+    // [BH] regenerate health up to 100 every 1 second
+    if (regenhealth && mo->health < initial_health && !(leveltime % TICRATE) && !viewplayer->damagecount)
+        mo->health = viewplayer->health = MIN(viewplayer->health + 1, initial_health);
+
     // [BH] Check all sectors player is touching are special
-    if (!freeze)
-        for (const struct msecnode_s *seclist = mo->touching_sectorlist; seclist; seclist = seclist->m_tnext)
-            if (seclist->m_sector->special && mo->z == seclist->m_sector->interpfloorheight)
-            {
-                P_PlayerInSpecialSector();
-                break;
-            }
+    for (const struct msecnode_s *seclist = mo->touching_sectorlist; seclist; seclist = seclist->m_tnext)
+        if (seclist->m_sector->special && mo->z == seclist->m_sector->interpfloorheight)
+        {
+            P_PlayerInSpecialSector();
+            break;
+        }
 
     // Check for weapon change.
 
@@ -566,9 +575,6 @@ void P_PlayerThink(void)
     }
     else
         viewplayer->usedown = false;
-
-    // cycle psprites
-    P_MovePsprites();
 
     // Counters, time dependent power ups.
     if (viewplayer->powers[pw_invulnerability] > 0)

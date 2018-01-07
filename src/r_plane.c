@@ -9,8 +9,8 @@
   Copyright © 1993-2012 id Software LLC, a ZeniMax Media company.
   Copyright © 2013-2018 Brad Harding.
 
-  DOOM Retro is a fork of Chocolate DOOM.
-  For a list of credits, see <http://wiki.doomretro.com/credits>.
+  DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
+  <https://github.com/bradharding/doomretro/wiki/CREDITS>.
 
   This file is part of DOOM Retro.
 
@@ -44,11 +44,11 @@
 #include "w_wad.h"
 #include "z_zone.h"
 
-#define MAXVISPLANES    128                         // must be a power of 2
+#define MAXVISPLANES    128                     // must be a power of 2
 
-static visplane_t   *visplanes[MAXVISPLANES];       // killough
-static visplane_t   *freetail;                      // killough
-static visplane_t   **freehead = &freetail;         // killough
+static visplane_t   *visplanes[MAXVISPLANES];   // killough
+static visplane_t   *freetail;                  // killough
+static visplane_t   **freehead = &freetail;     // killough
 visplane_t          *floorplane;
 visplane_t          *ceilingplane;
 
@@ -57,24 +57,20 @@ visplane_t          *ceilingplane;
 #define visplane_hash(picnum, lightlevel, height) (((unsigned int)(picnum) * 3 + (unsigned int)(lightlevel) \
             + (unsigned int)(height) * 7) & (MAXVISPLANES - 1))
 
-int                *openings;                       // dropoff overflow
-int                *lastopening;                    // dropoff overflow
+int                *openings;                   // dropoff overflow
+int                *lastopening;                // dropoff overflow
 
 // Clip values are the solid pixel bounding the range.
 //  floorclip starts out SCREENHEIGHT
 //  ceilingclip starts out -1
-int                 floorclip[SCREENWIDTH];         // dropoff overflow
-int                 ceilingclip[SCREENWIDTH];       // dropoff overflow
-
-// spanstart holds the start of a plane span
-// initialized to 0 at start
-static int          spanstart[SCREENHEIGHT];
+int                 floorclip[SCREENWIDTH];     // dropoff overflow
+int                 ceilingclip[SCREENWIDTH];   // dropoff overflow
 
 // texture mapping
 static lighttable_t **planezlight;
 static fixed_t      planeheight;
 
-static fixed_t      xoffs, yoffs;                   // killough 2/28/98: flat offsets
+static fixed_t      xoffs, yoffs;               // killough 2/28/98: flat offsets
 
 fixed_t             *yslope;
 fixed_t             yslopes[LOOKDIRS][SCREENHEIGHT];
@@ -101,9 +97,13 @@ extern dboolean     canmouselook;
 static void R_MapPlane(int y, int x1, int x2)
 {
     static fixed_t  cacheddistance[SCREENHEIGHT];
+    static fixed_t  cachedviewcosdistance[SCREENHEIGHT];
+    static fixed_t  cachedviewsindistance[SCREENHEIGHT];
     static fixed_t  cachedxstep[SCREENHEIGHT];
     static fixed_t  cachedystep[SCREENHEIGHT];
     fixed_t         distance;
+    fixed_t         viewcosdistance;
+    fixed_t         viewsindistance;
     int             dx;
 
     if (y == centery)
@@ -115,19 +115,23 @@ static void R_MapPlane(int y, int x1, int x2)
 
         cachedheight[y] = planeheight;
         distance = cacheddistance[y] = FixedMul(planeheight, yslope[y]);
+        viewcosdistance = cachedviewcosdistance[y] = FixedMul(viewcos, distance);
+        viewsindistance = cachedviewsindistance[y] = FixedMul(viewsin, distance);
         ds_xstep = cachedxstep[y] = FixedMul(viewsin, planeheight) / dy;
         ds_ystep = cachedystep[y] = FixedMul(viewcos, planeheight) / dy;
     }
     else
     {
         distance = cacheddistance[y];
+        viewcosdistance = cachedviewcosdistance[y];
+        viewsindistance = cachedviewsindistance[y];
         ds_xstep = cachedxstep[y];
         ds_ystep = cachedystep[y];
     }
 
     dx = x1 - centerx;
-    ds_xfrac = viewx + xoffs + FixedMul(viewcos, distance) + dx * ds_xstep;
-    ds_yfrac = -viewy + yoffs - FixedMul(viewsin, distance) + dx * ds_ystep;
+    ds_xfrac = viewx + xoffs + viewcosdistance + dx * ds_xstep;
+    ds_yfrac = -viewy + yoffs - viewsindistance + dx * ds_ystep;
 
     ds_colormap = (fixedcolormap ? fixedcolormap :
         planezlight[BETWEEN(0, distance >> LIGHTZSHIFT, MAXLIGHTZ - 1)]);
@@ -200,7 +204,6 @@ visplane_t *R_FindPlane(fixed_t height, int picnum, int lightlevel, fixed_t xoff
             return check;
 
     check = new_visplane(hash);                                 // killough
-
     check->height = height;
     check->picnum = picnum;
     check->lightlevel = lightlevel;
@@ -219,7 +222,6 @@ visplane_t *R_FindPlane(fixed_t height, int picnum, int lightlevel, fixed_t xoff
     }
 
     memset(check->top, USHRT_MAX, sizeof(check->top));
-
     return check;
 }
 
@@ -289,12 +291,14 @@ visplane_t *R_CheckPlane(visplane_t *pl, int start, int stop)
 //
 static void R_MakeSpans(visplane_t *pl)
 {
+    // spanstart holds the start of a plane span
+    // initialized to 0 at start
+    static int  spanstart[SCREENHEIGHT];
+
     xoffs = pl->xoffs;
     yoffs = pl->yoffs;
     planeheight = ABS(pl->height - viewz);
-
     planezlight = zlight[BETWEEN(0, (pl->lightlevel >> LIGHTSEGSHIFT) + extralight, LIGHTLEVELS - 1)];
-
     pl->top[pl->minx - 1] = USHRT_MAX;
     pl->top[pl->maxx + 1] = USHRT_MAX;
 
@@ -344,7 +348,7 @@ static byte *R_DistortedFlat(int flatnum)
     static int  offset[4096];
     static byte *normalflat;
     static byte distortedflat[4096];
-    int         leveltic = activetic;
+    int         leveltic = leveltime;
 
     // Already swirled this one?
     if (leveltic == swirltic && lastflat == flatnum)
@@ -366,7 +370,6 @@ static byte *R_DistortedFlat(int flatnum)
                 sinvalue = finesine[(y * SWIRLFACTOR + leveltic * 5 + 900) & 8191];
                 sinvalue2 = finesine[(x * SWIRLFACTOR2 + leveltic * 4 + 300) & 8191];
                 x1 = x + 128 + ((sinvalue * AMP) >> FRACBITS) + ((sinvalue2 * AMP2) >> FRACBITS);
-
                 sinvalue = finesine[(x * SWIRLFACTOR + leveltic * 3 + 700) & 8191];
                 sinvalue2 = finesine[(y * SWIRLFACTOR2 + leveltic * 4 + 1200) & 8191];
                 y1 = y + 128 + ((sinvalue * AMP) >> FRACBITS) + ((sinvalue2 * AMP2) >> FRACBITS);
@@ -374,7 +377,7 @@ static byte *R_DistortedFlat(int flatnum)
                 offset[(y << 6) + x] = ((y1 & 63) << 6) + (x1 & 63);
             }
 
-        swirltic = activetic;
+        swirltic = leveltime;
     }
 
     normalflat = W_CacheLumpNum(firstflat + flatnum);
@@ -450,7 +453,7 @@ void R_DrawPlanes(void)
                         dc_texturemid = skytexturemid;
                     }
 
-                    dc_colormap = (viewplayer->fixedcolormap == INVERSECOLORMAP ? fixedcolormap : fullcolormap);
+                    dc_colormap[0] = (viewplayer->fixedcolormap == INVERSECOLORMAP ? fixedcolormap : fullcolormap);
                     dc_iscale = skyiscale;
                     tex_patch = R_CacheTextureCompositePatchNum(texture);
                     offset = skycolumnoffset >> FRACBITS;

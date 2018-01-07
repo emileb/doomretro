@@ -9,8 +9,8 @@
   Copyright © 1993-2012 id Software LLC, a ZeniMax Media company.
   Copyright © 2013-2018 Brad Harding.
 
-  DOOM Retro is a fork of Chocolate DOOM.
-  For a list of credits, see <http://wiki.doomretro.com/credits>.
+  DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
+  <https://github.com/bradharding/doomretro/wiki/CREDITS>.
 
   This file is part of DOOM Retro.
 
@@ -38,6 +38,7 @@
 
 #include "c_console.h"
 #include "doomstat.h"
+#include "i_colors.h"
 #include "i_timer.h"
 #include "m_config.h"
 #include "m_random.h"
@@ -47,6 +48,7 @@
 
 #define BLACK       0
 #define RED         176
+#define WHITE       4
 
 // increment every time a check is made
 int                 validcount = 1;
@@ -61,8 +63,6 @@ int                 centery;
 fixed_t             centerxfrac;
 fixed_t             centeryfrac;
 fixed_t             projection;
-
-fixed_t             fovscale = FRACUNIT;
 
 fixed_t             viewx;
 fixed_t             viewy;
@@ -332,12 +332,9 @@ void R_InitLightTables(void)
 {
     int width = FixedMul(SCREENWIDTH, FixedDiv(FRACUNIT, finetangent[FINEANGLES / 4 + (r_fov * FINEANGLES / 360) / 2])) + 1;
 
-    if (!c_zlight)
-    {
-        c_zlight = malloc(sizeof(*c_zlight) * numcolormaps);
-        c_scalelight = malloc(sizeof(*c_scalelight) * numcolormaps);
-        c_psprscalelight = malloc(sizeof(*c_psprscalelight) * numcolormaps);
-    }
+    c_zlight = malloc(sizeof(*c_zlight) * numcolormaps);
+    c_scalelight = malloc(sizeof(*c_scalelight) * numcolormaps);
+    c_psprscalelight = malloc(sizeof(*c_psprscalelight) * numcolormaps);
 
     // Calculate the light levels to use
     //  for each level / distance combination.
@@ -377,6 +374,8 @@ void R_SetViewSize(int blocks)
 //
 void R_ExecuteSetViewSize(void)
 {
+    fixed_t fovscale;
+
     setsizeneeded = false;
 
     if (setblocks == 11)
@@ -425,7 +424,7 @@ void R_ExecuteSetViewSize(void)
     yslope = yslopes[LOOKDIRMAX];
 
     // Calculate the light levels to use
-    //  for each level / scale combination.
+    //  for each level/scale combination.
     for (int i = 0; i < LIGHTLEVELS; i++)
     {
         const int   startmap = ((LIGHTLEVELS - LIGHTBRIGHT - i) * 2) * NUMCOLORMAPS / LIGHTLEVELS;
@@ -555,35 +554,80 @@ void R_InitColumnFunctions(void)
         const int   flags2 = info->flags2;
 
         if (flags2 & MF2_TRANSLUCENT)
+        {
             info->colfunc = tlcolfunc;
+            info->altcolfunc = tl50colfunc;
+        }
         else if (info->doomednum == MegaSphere && !hacx)
+        {
             info->colfunc = megaspherecolfunc;
+            info->altcolfunc = basecolfunc;
+        }
         else if (info->flags & MF_FUZZ)
+        {
             info->colfunc = fuzzcolfunc;
+            info->altcolfunc = basecolfunc;
+        }
         else if (flags2 & MF2_TRANSLUCENT_REDONLY)
+        {
             info->colfunc = tlredcolfunc;
+            info->altcolfunc = tlred33colfunc;
+        }
         else if (flags2 & MF2_TRANSLUCENT_GREENONLY)
+        {
             info->colfunc = tlgreencolfunc;
+            info->altcolfunc = tlgreen33colfunc;
+        }
         else if (flags2 & MF2_TRANSLUCENT_BLUEONLY)
+        {
             info->colfunc = tlbluecolfunc;
+            info->altcolfunc = tlblue25colfunc;
+        }
         else if (flags2 & MF2_TRANSLUCENT_33)
+        {
             info->colfunc = tl33colfunc;
+            info->altcolfunc = basecolfunc;
+        }
         else if ((info->flags & MF_TRANSLUCENT) || (flags2 & MF2_TRANSLUCENT_50))
+        {
             info->colfunc = tl50colfunc;
+            info->altcolfunc = basecolfunc;
+        }
         else if (flags2 & MF2_TRANSLUCENT_REDWHITEONLY)
+        {
             info->colfunc = tlredwhitecolfunc1;
+            info->altcolfunc = tlred33colfunc;
+        }
         else if (flags2 & MF2_TRANSLUCENT_REDTOGREEN_33)
+        {
             info->colfunc = tlredtogreen33colfunc;
+            info->altcolfunc = basecolfunc;
+        }
         else if (flags2 & MF2_TRANSLUCENT_REDTOBLUE_33)
+        {
             info->colfunc = tlredtoblue33colfunc;
+            info->altcolfunc = basecolfunc;
+        }
         else if (flags2 & MF2_TRANSLUCENT_BLUE_25)
+        {
             info->colfunc = tlblue25colfunc;
+            info->altcolfunc = basecolfunc;
+        }
         else if (flags2 & MF2_REDTOGREEN)
+        {
             info->colfunc = redtogreencolfunc;
+            info->altcolfunc = basecolfunc;
+        }
         else if (flags2 & MF2_REDTOBLUE)
+        {
             info->colfunc = redtobluecolfunc;
+            info->altcolfunc = basecolfunc;
+        }
         else
+        {
             info->colfunc = basecolfunc;
+            info->altcolfunc = basecolfunc;
+        }
     }
 
     if (chex)
@@ -770,9 +814,11 @@ void R_RenderPlayerView(void)
     else
     {
         if (r_homindicator)
-            V_FillRect(0, viewwindowx, viewwindowy, viewwidth, viewheight, ((activetic % 20) < 9 ? RED : BLACK));
+            V_FillRect(0, viewwindowx, viewwindowy, viewwidth, viewheight,
+                nearestcolors[(leveltime % 20) < 9 ? RED : (viewplayer->fixedcolormap == INVERSECOLORMAP ? WHITE : BLACK)]);
         else if ((viewplayer->cheats & CF_NOCLIP) || freeze)
-            V_FillRect(0, viewwindowx, viewwindowy, viewwidth, viewheight, BLACK);
+            V_FillRect(0, viewwindowx, viewwindowy, viewwidth, viewheight,
+                nearestcolors[viewplayer->fixedcolormap == INVERSECOLORMAP ? WHITE : BLACK]);
 
         R_RenderBSPNode(numnodes - 1);  // head node is the last node output
         R_DrawPlanes();

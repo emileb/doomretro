@@ -9,8 +9,8 @@
   Copyright © 1993-2012 id Software LLC, a ZeniMax Media company.
   Copyright © 2013-2018 Brad Harding.
 
-  DOOM Retro is a fork of Chocolate DOOM.
-  For a list of credits, see <http://wiki.doomretro.com/credits>.
+  DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
+  <https://github.com/bradharding/doomretro/wiki/CREDITS>.
 
   This file is part of DOOM Retro.
 
@@ -514,6 +514,7 @@ dboolean ST_Responder(event_t *ev)
             {
                 dboolean    ammogiven = false;
                 dboolean    armorgiven = false;
+                dboolean    berserkgiven = false;
                 dboolean    weaponsgiven = false;
 
                 // [BH] note if doesn't have full armor before giving it
@@ -526,6 +527,9 @@ dboolean ST_Responder(event_t *ev)
 
                 // [BH] note if any weapons given that player didn't have already
                 weaponsgiven = P_GiveAllWeapons();
+
+                // [BH] give player a berserk power-up so they can still use fists
+                berserkgiven = P_GivePower(pw_strength);
 
                 // [BH] give player a backpack if they don't have one
                 P_GiveBackpack(false, false);
@@ -540,7 +544,7 @@ dboolean ST_Responder(event_t *ev)
                 }
 
                 // [BH] only acknowledge cheat if player was given something
-                if (ammogiven || armorgiven || weaponsgiven)
+                if (ammogiven || armorgiven || berserkgiven || weaponsgiven)
                 {
                     // [BH] flash screen
                     P_AddBonus();
@@ -568,6 +572,7 @@ dboolean ST_Responder(event_t *ev)
             {
                 dboolean    ammogiven = false;
                 dboolean    armorgiven = false;
+                dboolean    berserkgiven = false;
                 dboolean    keysgiven = false;
                 dboolean    weaponsgiven = false;
 
@@ -581,6 +586,9 @@ dboolean ST_Responder(event_t *ev)
 
                 // [BH] note if any weapons given that player didn't have already
                 weaponsgiven = P_GiveAllWeapons();
+
+                // [BH] give player a berserk power-up so they can still use fists
+                berserkgiven = P_GivePower(pw_strength);
 
                 // [BH] give player a backpack if they don't have one
                 P_GiveBackpack(false, false);
@@ -599,7 +607,7 @@ dboolean ST_Responder(event_t *ev)
                 }
 
                 // [BH] only acknowledge cheat if player was given something
-                if (ammogiven || armorgiven || weaponsgiven || keysgiven)
+                if (ammogiven || armorgiven || berserkgiven || weaponsgiven || keysgiven)
                 {
                     // [BH] flash screen
                     P_AddBonus();

@@ -9,8 +9,8 @@
   Copyright © 1993-2012 id Software LLC, a ZeniMax Media company.
   Copyright © 2013-2018 Brad Harding.
 
-  DOOM Retro is a fork of Chocolate DOOM.
-  For a list of credits, see <http://wiki.doomretro.com/credits>.
+  DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
+  <https://github.com/bradharding/doomretro/wiki/CREDITS>.
 
   This file is part of DOOM Retro.
 
@@ -98,33 +98,33 @@
 #define METERSPERKILOMETER  1000
 #define FEETPERMILE         5280
 
-alias_t             aliases[MAXALIASES];
+alias_t         aliases[MAXALIASES];
 
-static int          ammo;
-static int          armor;
-static int          health;
+static int      ammo;
+static int      armor;
+static int      health;
 
-static int          mapcmdepisode;
-static int          mapcmdmap;
-static char         mapcmdlump[7];
+static int      mapcmdepisode;
+static int      mapcmdmap;
+static char     mapcmdlump[7];
 
-static dboolean     resettingall;
+static dboolean resettingall;
 
-dboolean            executingalias = false;
-dboolean            vanilla = false;
-dboolean            togglingvanilla = false;
+dboolean        executingalias = false;
+dboolean        vanilla = false;
+dboolean        togglingvanilla = false;
 
-char                *version = version_default;
+char            *version = version_default;
 
-extern dboolean     setsizeneeded;
-extern dboolean     usemouselook;
-extern char         *packageconfig;
-extern int          st_palette;
-extern menu_t       EpiDef;
-extern menu_t       ExpDef;
-extern menu_t       LoadDef;
-extern menu_t       NewDef;
-extern menu_t       SaveDef;
+extern dboolean setsizeneeded;
+extern dboolean usemouselook;
+extern char     *packageconfig;
+extern int      st_palette;
+extern menu_t   EpiDef;
+extern menu_t   ExpDef;
+extern menu_t   LoadDef;
+extern menu_t   NewDef;
+extern menu_t   SaveDef;
 
 control_t controls[] =
 {
@@ -246,6 +246,7 @@ action_t actions[] =
     { "",              NULL,                    NULL,                       NULL,                  NULL,             NULL,                      NULL         }
 };
 
+static dboolean alive_func1(char *cmd, char *parms);
 static dboolean cheat_func1(char *cmd, char *parms);
 static dboolean game_func1(char *cmd, char *parms);
 static dboolean null_func1(char *cmd, char *parms);
@@ -463,6 +464,8 @@ consolecmd_t consolecmds[] =
         "The amount of ammo for the player's currently\nequipped weapon."),
     CVAR_INT(armor, armour, player_cvars_func1, player_cvars_func2, CF_PERCENT, NOVALUEALIAS,
         "The player's armor."),
+    CVAR_BOOL(autoaim, "", bool_cvars_func1, bool_cvars_func2, BOOLVALUEALIAS,
+        "Toggles vertical autoaiming as the player fires\ntheir weapon while using mouselook."),
     CVAR_BOOL(autoload, "", bool_cvars_func1, bool_cvars_func2, BOOLVALUEALIAS,
         "Toggles automatically loading the last savegame\nafter the player dies."),
     CVAR_BOOL(autouse, "", bool_cvars_func1, bool_cvars_func2, BOOLVALUEALIAS,
@@ -499,7 +502,7 @@ consolecmd_t consolecmds[] =
         "The color behind the player's face in the status bar\n(<b>none</b>, <b>0</b> to <b>255</b>, or <b>#</b><i>rrggbb</i>)."),
     CMD(fastmonsters, "", fastmonsters_cmd_func1, fastmonsters_cmd_func2, true, "[<b>on</b>|<b>off</b>]",
         "Toggles fast monsters."),
-    CMD(freeze, "", game_func1, freeze_cmd_func2, true, "[<b>on</b>|<b>off</b>]",
+    CMD(freeze, "", alive_func1, freeze_cmd_func2, true, "[<b>on</b>|<b>off</b>]",
         "Toggles freeze mode."),
     CVAR_TIME(gametime, "", null_func1, time_cvars_func2,
         "The amount of time <i><b>"PACKAGE_NAME"</b></i> has been running."),
@@ -950,7 +953,6 @@ static void weapon7_action_func(void)
     P_ChangeWeapon(wp_bfg);
 }
 
-
 static int C_GetIndex(const char *cmd)
 {
     int i = 0;
@@ -964,6 +966,11 @@ static int C_GetIndex(const char *cmd)
     }
 
     return i;
+}
+
+static dboolean alive_func1(char *cmd, char *parms)
+{
+    return (gamestate == GS_LEVEL && viewplayer->health > 0);
 }
 
 static dboolean cheat_func1(char *cmd, char *parms)
@@ -985,7 +992,8 @@ static dboolean cheat_func1(char *cmd, char *parms)
             M_snprintf(mapcmdlump, sizeof(mapcmdlump), "E%cM%c", parms[0], parms[1]);
         }
 
-        result = (W_CheckNumForName(mapcmdlump) >= 0 && (gamemission != pack_nerve || mapcmdmap <= 9)
+        result = (W_CheckNumForName(mapcmdlump) >= 0
+            && (gamemission != pack_nerve || mapcmdmap <= 9)
             && (!BTSX || W_CheckMultipleLumps(mapcmdlump) > 1));
 
         if (gamestate == GS_LEVEL)
@@ -1198,26 +1206,21 @@ void bind_cmd_func2(char *cmd, char *parms)
             {
                 if (controls[i].type == keyboardcontrol)
                 {
-                    if (actions[action].keyboard1
-                        && controls[i].value == *(int *)actions[action].keyboard1)
+                    if (actions[action].keyboard1 && controls[i].value == *(int *)actions[action].keyboard1)
                         C_Output(actions[action].action);
-                    else if (actions[action].keyboard2
-                        && controls[i].value == *(int *)actions[action].keyboard2)
+                    else if (actions[action].keyboard2 && controls[i].value == *(int *)actions[action].keyboard2)
                         C_Output(actions[action].action);
                 }
                 else if (controls[i].type == mousecontrol)
                 {
-                    if (actions[action].mouse1
-                        && controls[i].value == *(int *)actions[action].mouse1)
+                    if (actions[action].mouse1 && controls[i].value == *(int *)actions[action].mouse1)
                         C_Output(actions[action].action);
                 }
                 else if (controls[i].type == gamepadcontrol)
                 {
-                    if (actions[action].gamepad1
-                        && controls[i].value == *(int *)actions[action].gamepad1)
+                    if (actions[action].gamepad1 && controls[i].value == *(int *)actions[action].gamepad1)
                         C_Output(actions[action].action);
-                    else if (actions[action].gamepad2
-                        && controls[i].value == *(int *)actions[action].gamepad2)
+                    else if (actions[action].gamepad2 && controls[i].value == *(int *)actions[action].gamepad2)
                         C_Output(actions[action].action);
                 }
 
@@ -1231,15 +1234,13 @@ void bind_cmd_func2(char *cmd, char *parms)
                 switch (controls[i].type)
                 {
                     case keyboardcontrol:
-                        if (actions[action].keyboard1
-                            && controls[i].value == *(int *)actions[action].keyboard1)
+                        if (actions[action].keyboard1 && controls[i].value == *(int *)actions[action].keyboard1)
                         {
                             *(int *)actions[action].keyboard1 = 0;
                             M_SaveCVARs();
                         }
 
-                        if (actions[action].keyboard2
-                            && controls[i].value == *(int *)actions[action].keyboard2)
+                        if (actions[action].keyboard2 && controls[i].value == *(int *)actions[action].keyboard2)
                         {
                             *(int *)actions[action].keyboard2 = 0;
                             M_SaveCVARs();
@@ -1248,8 +1249,7 @@ void bind_cmd_func2(char *cmd, char *parms)
                         break;
 
                     case mousecontrol:
-                        if (actions[action].mouse1
-                            && controls[i].value == *(int *)actions[action].mouse1)
+                        if (actions[action].mouse1 && controls[i].value == *(int *)actions[action].mouse1)
                         {
                             *(int *)actions[action].mouse1 = -1;
                             M_SaveCVARs();
@@ -1258,15 +1258,13 @@ void bind_cmd_func2(char *cmd, char *parms)
                         break;
 
                     case gamepadcontrol:
-                        if (actions[action].gamepad1
-                            && controls[i].value == *(int *)actions[action].gamepad1)
+                        if (actions[action].gamepad1 && controls[i].value == *(int *)actions[action].gamepad1)
                         {
                             *(int *)actions[action].gamepad1 = 0;
                             M_SaveCVARs();
                         }
 
-                        if (actions[action].gamepad2
-                            && controls[i].value == *(int *)actions[action].gamepad2)
+                        if (actions[action].gamepad2 && controls[i].value == *(int *)actions[action].gamepad2)
                         {
                             *(int *)actions[action].gamepad2 = 0;
                             M_SaveCVARs();
@@ -1305,7 +1303,8 @@ void bind_cmd_func2(char *cmd, char *parms)
                     case keyboardcontrol:
                         if (actions[action].keyboard1)
                         {
-                            if (actions[action].keyboard2 && *(int *)actions[action].keyboard1
+                            if (actions[action].keyboard2
+                                && *(int *)actions[action].keyboard1
                                 && *(int *)actions[action].keyboard1 != controls[i].value)
                             {
                                 if (*(int *)actions[action].keyboard2)
@@ -1338,7 +1337,8 @@ void bind_cmd_func2(char *cmd, char *parms)
                     case gamepadcontrol:
                         if (actions[action].gamepad1)
                         {
-                            if (actions[action].gamepad2 && *(int *)actions[action].gamepad1
+                            if (actions[action].gamepad2
+                                && *(int *)actions[action].gamepad1
                                 && *(int *)actions[action].gamepad1 != controls[i].value)
                             {
                                 if (*(int *)actions[action].gamepad2)
@@ -1486,7 +1486,8 @@ static void cmdlist_cmd_func2(char *cmd, char *parms)
     C_Header(tabs, CMDLISTTITLE);
 
     for (int i = 0; *consolecmds[i].name; i++)
-        if (consolecmds[i].type == CT_CMD && *consolecmds[i].description
+        if (consolecmds[i].type == CT_CMD
+            && *consolecmds[i].description
             && (!*parms || wildcard(consolecmds[i].name, parms)))
         {
             char    description1[255];
@@ -1530,8 +1531,7 @@ static void condump_cmd_func2(char *cmd, char *parms)
             M_snprintf(filename, sizeof(filename), "%s"DIR_SEPARATOR_S"condump.txt", appdatafolder);
 
             while (M_FileExists(filename))
-                M_snprintf(filename, sizeof(filename), "%s"DIR_SEPARATOR_S"condump (%i).txt", appdatafolder,
-                    ++count);
+                M_snprintf(filename, sizeof(filename), "%s"DIR_SEPARATOR_S"condump (%i).txt", appdatafolder, ++count);
         }
         else
             M_snprintf(filename, sizeof(filename), "%s"DIR_SEPARATOR_S"%s", appdatafolder, parms);
@@ -1783,6 +1783,8 @@ static void fastmonsters_cmd_func2(char *cmd, char *parms)
 
             fastparm = true;
         }
+        else
+            return;
     }
     else
         fastparm = !fastparm;
@@ -1804,6 +1806,8 @@ static void freeze_cmd_func2(char *cmd, char *parms)
             freeze = false;
         else if (value == 1)
             freeze = true;
+        else
+            return;
     }
     else
         freeze = !freeze;
@@ -1911,6 +1915,7 @@ static void give_cmd_func2(char *cmd, char *parms)
                     || (num == mobjinfo[i].doomednum && num != -1)))
                 {
                     static char buffer[128];
+                    dboolean    old_freeze = freeze;
 
                     if (gamemode != commercial && (i == MT_SUPERSHOTGUN || i == MT_MEGA))
                     {
@@ -1924,8 +1929,7 @@ static void give_cmd_func2(char *cmd, char *parms)
                         return;
                     }
 
-                    if (gamemode == shareware && (i == MT_MISC28 || i == MT_MISC25 || i == MT_MISC20
-                        || i == MT_MISC21))
+                    if (gamemode == shareware && (i == MT_MISC28 || i == MT_MISC25 || i == MT_MISC20 || i == MT_MISC21))
                     {
                         M_StringCopy(buffer, mobjinfo[i].plural1, sizeof(buffer));
 
@@ -1937,7 +1941,9 @@ static void give_cmd_func2(char *cmd, char *parms)
                         return;
                     }
 
+                    freeze = false;
                     P_TouchSpecialThing(P_SpawnMobj(viewx, viewy, viewz, i), viewplayer->mo, false, false);
+                    freeze = old_freeze;
                     C_HideConsole();
                     break;
                 }
@@ -1968,6 +1974,8 @@ static void god_cmd_func2(char *cmd, char *parms)
             viewplayer->cheats &= ~CF_GODMODE;
         else if (value == 1)
             viewplayer->cheats |= CF_GODMODE;
+        else
+            return;
     }
     else
         viewplayer->cheats ^= CF_GODMODE;
@@ -3076,6 +3084,8 @@ static void noclip_cmd_func2(char *cmd, char *parms)
             viewplayer->cheats &= ~CF_NOCLIP;
         else if (value == 1)
             viewplayer->cheats |= CF_NOCLIP;
+        else
+            return;
     }
     else
         viewplayer->cheats ^= CF_NOCLIP;
@@ -3104,22 +3114,44 @@ static void nomonsters_cmd_func2(char *cmd, char *parms)
             nomonsters = false;
         else if (value == 1)
             nomonsters = true;
+        else
+            return;
     }
     else
         nomonsters = !nomonsters;
 
     if (nomonsters)
     {
+        if (gamestate == GS_LEVEL)
+            for (int i = 0; i < numsectors; i++)
+            {
+                mobj_t  *thing = sectors[i].thinglist;
+
+                while (thing)
+                {
+                    const mobjtype_t    type = thing->type;
+                    const int           flags = thing->flags;
+
+                    if (((flags & MF_SHOOTABLE) || (flags & MF_CORPSE) || (thing->flags2 & MF2_MONSTERMISSILE))
+                        && type != MT_PLAYER && type != MT_BARREL && type != MT_BOSSBRAIN)
+                        P_RemoveMobj(thing);
+
+                    thing = thing->snext;
+                }
+            }
+
         HU_PlayerMessage(s_STSTR_NMON, false);
         viewplayer->cheated++;
         stat_cheated = SafeAdd(stat_cheated, 1);
         M_SaveCVARs();
     }
     else
+    {
         HU_PlayerMessage(s_STSTR_NMOFF, false);
 
-    if (gamestate == GS_LEVEL)
-        C_Warning(PENDINGCHANGE);
+        if (gamestate == GS_LEVEL)
+            C_Warning(PENDINGCHANGE);
+    }
 }
 
 //
@@ -3135,6 +3167,8 @@ static void notarget_cmd_func2(char *cmd, char *parms)
             viewplayer->cheats &= ~CF_NOTARGET;
         else if (value == 1)
             viewplayer->cheats |= CF_NOTARGET;
+        else
+            return;
     }
     else
         viewplayer->cheats ^= CF_NOTARGET;
@@ -3184,6 +3218,8 @@ static void pistolstart_cmd_func2(char *cmd, char *parms)
             pistolstart = false;
         else if (value == 1)
             pistolstart = true;
+        else
+            return;
     }
     else
         pistolstart = !pistolstart;
@@ -3733,6 +3769,8 @@ static void regenhealth_cmd_func2(char *cmd, char *parms)
             regenhealth = false;
         else if (value == 1)
             regenhealth = true;
+        else
+            return;
     }
     else
         regenhealth = !regenhealth;
@@ -3761,6 +3799,8 @@ static void respawnitems_cmd_func2(char *cmd, char *parms)
             respawnitems = false;
         else if (value == 1)
             respawnitems = true;
+        else
+            return;
     }
     else
         respawnitems = !respawnitems;
@@ -3794,6 +3834,8 @@ static void respawnmonsters_cmd_func2(char *cmd, char *parms)
             respawnmonsters = false;
         else if (value == 1)
             respawnmonsters = true;
+        else
+            return;
     }
     else
         respawnmonsters = !respawnmonsters;
@@ -4074,6 +4116,8 @@ static void vanilla_cmd_func2(char *cmd, char *parms)
             vanilla = false;
         else if (value == 1)
             vanilla = true;
+        else
+            return;
     }
     else
         vanilla = !vanilla;
@@ -4194,7 +4238,6 @@ static void color_cvars_func2(char *cmd, char *parms)
 
     if (strlen(parms) == 7 && parms[0] == '#')
     {
-
         M_snprintf(buffer, sizeof(buffer), "%i", FindNearestColor(W_CacheLumpName("PLAYPAL"),
             hextodec(M_SubString(parms, 1, 2)), hextodec(M_SubString(parms, 3, 2)),
             hextodec(M_SubString(parms, 5, 2))));
@@ -5113,12 +5156,7 @@ static void r_shadows_translucency_cvar_func2(char *cmd, char *parms)
 
                 while (mo)
                 {
-                    if (r_textures)
-                        mo->shadowcolfunc = (r_shadows_translucency ? ((mo->flags & MF_FUZZ) ?
-                            R_DrawFuzzyShadowColumn : R_DrawShadowColumn) : R_DrawSolidShadowColumn);
-                    else
-                        mo->shadowcolfunc = R_DrawColorColumn;
-
+                    P_SetShadowColumnFunction(mo);
                     mo = mo->snext;
                 }
             }
@@ -5193,13 +5231,7 @@ static void r_textures_cvar_func2(char *cmd, char *parms)
                 while (mo)
                 {
                     mo->colfunc = mo->info->colfunc;
-
-                    if (r_textures)
-                        mo->shadowcolfunc = (r_translucency ? ((mo->flags & MF_FUZZ) ?
-                            R_DrawFuzzyShadowColumn : R_DrawShadowColumn) : R_DrawSolidShadowColumn);
-                    else
-                        mo->shadowcolfunc = R_DrawColorColumn;
-
+                    P_SetShadowColumnFunction(mo);
                     mo = mo->snext;
                 }
 
@@ -5618,7 +5650,7 @@ static void vid_screenresolution_cvar_func2(char *cmd, char *parms)
 //
 extern int      minfps;
 extern int      maxfps;
-extern Uint32   starttime;
+extern uint64_t starttime;
 extern int      frames;
 
 static void vid_showfps_cvar_func2(char *cmd, char *parms)
@@ -5640,7 +5672,7 @@ static void vid_showfps_cvar_func2(char *cmd, char *parms)
             frames = -1;
         }
 
-        starttime = SDL_GetTicks();
+        starttime = SDL_GetPerformanceCounter();
     }
 }
 

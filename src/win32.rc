@@ -9,8 +9,8 @@
   Copyright © 1993-2012 id Software LLC, a ZeniMax Media company.
   Copyright © 2013-2018 Brad Harding.
 
-  DOOM Retro is a fork of Chocolate DOOM.
-  For a list of credits, see <http://wiki.doomretro.com/credits>.
+  DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
+  <https://github.com/bradharding/doomretro/wiki/CREDITS>.
 
   This file is part of DOOM Retro.
 
@@ -47,25 +47,27 @@ IDI_ICON1 ICON DISCARDABLE PACKAGE_ICON_PATH
 VS_VERSION_INFO VERSIONINFO
     FILEVERSION         PACKAGE_VERSION
     PRODUCTVERSION      PACKAGE_VERSION
+    FILEFLAGSMASK       VS_FFI_FILEFLAGSMASK
 #if defined(_DEBUG)
     FILEFLAGS           VS_FF_DEBUG
 #else
     FILEFLAGS           0x0L
 #endif
-    FILEOS              VOS__WINDOWS32
+    FILEOS              VOS_NT_WINDOWS32
     FILETYPE            VFT_APP
 BEGIN
     BLOCK "StringFileInfo"
     BEGIN
         BLOCK "040904B0"
         BEGIN
-            VALUE "FileVersion",     PACKAGE_VERSIONSTRING
-            VALUE "FileDescription", PACKAGE_NAME
-            VALUE "InternalName",    PACKAGE
-            VALUE "CompanyName",     PACKAGE_AUTHOR
-            VALUE "LegalCopyright",  PACKAGE_COPYRIGHT
-            VALUE "ProductName",     PACKAGE_NAME
-            VALUE "ProductVersion",  PACKAGE_VERSIONSTRING
+            VALUE "CompanyName",      PACKAGE_AUTHOR
+            VALUE "FileDescription",  PACKAGE_NAME
+            VALUE "FileVersion",      PACKAGE_VERSIONSTRING
+            VALUE "InternalName",     PACKAGE
+            VALUE "LegalCopyright",   PACKAGE_COPYRIGHT
+            VALUE "OriginalFilename", PACKAGE_FILENAME
+            VALUE "ProductName",      PACKAGE_NAME
+            VALUE "ProductVersion",   PACKAGE_VERSIONSTRING
         END
     END
     BLOCK "VarFileInfo"

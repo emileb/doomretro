@@ -9,8 +9,8 @@
   Copyright © 1993-2012 id Software LLC, a ZeniMax Media company.
   Copyright © 2013-2018 Brad Harding.
 
-  DOOM Retro is a fork of Chocolate DOOM.
-  For a list of credits, see <http://wiki.doomretro.com/credits>.
+  DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
+  <https://github.com/bradharding/doomretro/wiki/CREDITS>.
 
   This file is part of DOOM Retro.
 
@@ -126,7 +126,6 @@ typedef struct sector_s
     struct line_s       **lines;                // [linecount] size
 
     int                 cachedheight;
-    int                 scaleindex;
 
     // [AM] Previous position of floor and ceiling before
     //      think. Used to interpolate between positions.
@@ -884,7 +883,7 @@ typedef struct
     // for line side calculation
     fixed_t             gx, gy;
 
-    // global bottom / top for silhouette clipping
+    // global bottom/top for silhouette clipping
     fixed_t             gz;
     fixed_t             gzt;
 
@@ -901,7 +900,7 @@ typedef struct
 
     // for color translation and shadow draw,
     //  maxbright frames as well
-    lighttable_t        *colormap;
+    lighttable_t        *colormap[2];
 
     mobj_t              *mobj;
 

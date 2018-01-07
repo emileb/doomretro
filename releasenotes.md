@@ -1,3 +1,36 @@
+### DOOM Retro v2.6.3
+
+* Optimizations have been made to further improve the overall performance and stability of *DOOM Retro*.
+* The following changes have been made to the boss in *MAP30: Icon Of Sin* at the end of *DOOM II: Hell On Earth*:
+  * Its projectiles will now move downwards.
+  * The explosions when it is destroyed are now translucent if the `r_translucency` CVAR is `on`.
+* The screen will now quickly fade to black when quitting *DOOM Retro*.
+* Minor changes have been made to text that is output to the console.
+* Further improvements have been made to the console’s autocomplete feature.
+* The keycards and skull keys displayed in the alternate widescreen HUD now use the most dominant colors of those picked up by the player.
+* A bug has been fixed whereby the screen would continue to shake after the player had died in some rare instances if the `r_shake_damage` CVAR was `on`.
+* Vertical autoaiming as the player fires their weapon while using mouselook can now be toggled on and off using the new `autoaim` CVAR. This CVAR is `on` by default.
+* The player is now given a berserk power-up when entering the `IDFA` or `IDKFA` cheats so they can then still equip their fists.
+* The following changes have been made when freeze mode is on:
+  * The bob of the player and the player’s weapon are disabled.
+  * The `give` CCMD will now work correctly.
+  * Any power-ups the player has will no longer time out.
+  * The player’s health will no longer regenerate if the `regenhealth` CCMD has been used.
+* The screen will now be updated immediately when entering the `IDBEHOLDL` or `IDBEHOLDV` cheats in the console.
+* Areas outside of the map (accessible when either freeze mode or no clipping mode are on) are now white rather than black when the player has an invulnerability power-up.
+* The `-config` command-line parameter will no longer be ignored when saving the configuration file.
+* The `-shotdir` command-line parameter can now be used to specify the folder that screenshots will be saved in when the <kbd>PRINTSCREEN</kbd> key is pressed.
+* Objects will no longer be lit incorrectly in some rare instances.
+* The shadows cast by monsters will now be displayed correctly in areas with a custom colormap.
+* The shadows cast by spectres will now be displayed correctly when the `r_shadows_translucency` CVAR is `off`.
+* Using the `nomonsters` CCMD will now instantly remove all monsters in the current map.
+* The brightmaps for several wall textures are now fixed.
+* A bug present in *Vanilla DOOM* has been fixed whereby Mancubi projectiles would sometimes pass through walls.
+
+---
+
+###### Saturday, December 16, 2017
+
 ### DOOM Retro v2.6.2
 
 * Optimizations have been made to further improve the overall performance and stability of *DOOM Retro*.

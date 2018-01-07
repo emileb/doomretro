@@ -9,8 +9,8 @@
   Copyright © 1993-2012 id Software LLC, a ZeniMax Media company.
   Copyright © 2013-2018 Brad Harding.
 
-  DOOM Retro is a fork of Chocolate DOOM.
-  For a list of credits, see <http://wiki.doomretro.com/credits>.
+  DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
+  <https://github.com/bradharding/doomretro/wiki/CREDITS>.
 
   This file is part of DOOM Retro.
 
@@ -52,6 +52,7 @@
 #define CHAINSAWIDLEMOTORSPEED  15000
 #define MAXMOTORSPEED           65535
 
+dboolean        autoaim = autoaim_default;
 dboolean        centerweapon = centerweapon_default;
 dboolean        weaponrecoil = weaponrecoil_default;
 int             weaponbob = weaponbob_default;
@@ -573,21 +574,26 @@ static fixed_t  bulletslope;
 
 static void P_BulletSlope(mobj_t *mo)
 {
-    angle_t an = mo->angle;
-
-    // see which target is to be aimed at
-    bulletslope = P_AimLineAttack(mo, an, 16 * 64 * FRACUNIT);
-
-    if (!linetarget)
+    if (usemouselook && !autoaim)
+        bulletslope = ((mo->player->lookdir / MLOOKUNIT) << FRACBITS) / 173;
+    else
     {
-        bulletslope = P_AimLineAttack(mo, (an += 1 << 26), 16 * 64 * FRACUNIT);
+        angle_t an = mo->angle;
+
+        // see which target is to be aimed at
+        bulletslope = P_AimLineAttack(mo, an, 16 * 64 * FRACUNIT);
 
         if (!linetarget)
         {
-            bulletslope = P_AimLineAttack(mo, (an -= 2 << 26), 16 * 64 * FRACUNIT);
+            bulletslope = P_AimLineAttack(mo, (an += 1 << 26), 16 * 64 * FRACUNIT);
 
-            if (!linetarget && usemouselook)
-                bulletslope = ((mo->player->lookdir / MLOOKUNIT) << FRACBITS) / 173;
+            if (!linetarget)
+            {
+                bulletslope = P_AimLineAttack(mo, (an -= 2 << 26), 16 * 64 * FRACUNIT);
+
+                if (!linetarget && usemouselook)
+                    bulletslope = ((mo->player->lookdir / MLOOKUNIT) << FRACBITS) / 173;
+            }
         }
     }
 }

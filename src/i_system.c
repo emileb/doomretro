@@ -9,8 +9,8 @@
   Copyright © 1993-2012 id Software LLC, a ZeniMax Media company.
   Copyright © 2013-2018 Brad Harding.
 
-  DOOM Retro is a fork of Chocolate DOOM.
-  For a list of credits, see <http://wiki.doomretro.com/credits>.
+  DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
+  <https://github.com/bradharding/doomretro/wiki/CREDITS>.
 
   This file is part of DOOM Retro.
 
@@ -45,6 +45,7 @@ void I_ShutdownWindows32(void);
 #endif
 
 #include "c_console.h"
+#include "d_main.h"
 #include "doomstat.h"
 #include "i_gamepad.h"
 #include "i_timer.h"
@@ -210,6 +211,8 @@ void I_Quit(dboolean shutdown)
 {
     if (shutdown)
     {
+        D_FadeScreen();
+
         S_Shutdown();
 
         if (returntowidescreen)

@@ -9,8 +9,8 @@
   Copyright © 1993-2012 id Software LLC, a ZeniMax Media company.
   Copyright © 2013-2018 Brad Harding.
 
-  DOOM Retro is a fork of Chocolate DOOM.
-  For a list of credits, see <http://wiki.doomretro.com/credits>.
+  DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
+  <https://github.com/bradharding/doomretro/wiki/CREDITS>.
 
   This file is part of DOOM Retro.
 
@@ -175,8 +175,8 @@ const float gammalevels[GAMMALEVELS] =
 int                 gammaindex;
 float               r_gamma = r_gamma_default;
 
-static SDL_Rect     src_rect = { 0, 0, 0, 0 };
-static SDL_Rect     map_rect = { 0, 0, 0, 0 };
+static SDL_Rect     src_rect;
+static SDL_Rect     map_rect;
 
 int                 fps;
 int                 minfps = INT_MAX;
@@ -645,9 +645,6 @@ static void I_ReadMouse(void)
         D_PostEvent(&ev);
         button = false;
     }
-
-    if (MouseShouldBeGrabbed())
-        CenterMouse();
 }
 
 //
@@ -699,7 +696,7 @@ static void GetUpscaledTextureSize(int width, int height)
     upscaledheight = MIN(height / SCREENHEIGHT + !!(height % SCREENHEIGHT), MAXUPSCALEHEIGHT);
 }
 
-uint64_t        performancefrequency;
+static uint64_t performancefrequency;
 uint64_t        starttime;
 int             frames = -1;
 static uint64_t currenttime;
@@ -722,6 +719,27 @@ static void CalculateFPS(void)
 
     C_UpdateFPS();
 }
+
+#if defined(_WIN32)
+void I_WindowResizeBlit(void)
+{
+    SDL_LowerBlit(surface, &src_rect, buffer, &src_rect);
+    SDL_UpdateTexture(texture, &src_rect, buffer->pixels, SCREENWIDTH * 4);
+    SDL_RenderClear(renderer);
+
+    if (nearestlinear)
+    {
+        SDL_SetRenderTarget(renderer, texture_upscaled);
+        SDL_RenderCopy(renderer, texture, &src_rect, NULL);
+        SDL_SetRenderTarget(renderer, NULL);
+        SDL_RenderCopy(renderer, texture_upscaled, NULL, NULL);
+    }
+    else
+        SDL_RenderCopy(renderer, texture, &src_rect, NULL);
+
+    SDL_RenderPresent(renderer);
+}
+#endif
 
 static void I_Blit(void)
 {
@@ -900,8 +918,6 @@ void I_Blit_Automap(void)
 
 void I_Blit_Automap_NearestLinear(void)
 {
-    UpdateGrab();
-
     SDL_LowerBlit(mapsurface, &map_rect, mapbuffer, &map_rect);
     SDL_UpdateTexture(maptexture, &map_rect, mapbuffer->pixels, SCREENWIDTH * 4);
     SDL_RenderClear(maprenderer);

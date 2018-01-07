@@ -9,8 +9,8 @@
   Copyright © 1993-2012 id Software LLC, a ZeniMax Media company.
   Copyright © 2013-2018 Brad Harding.
 
-  DOOM Retro is a fork of Chocolate DOOM.
-  For a list of credits, see <http://wiki.doomretro.com/credits>.
+  DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
+  <https://github.com/bradharding/doomretro/wiki/CREDITS>.
 
   This file is part of DOOM Retro.
 
@@ -161,6 +161,7 @@ static void P_XYMovement(mobj_t *mo)
     int         flags = mo->flags;
     int         flags2 = mo->flags2;
     dboolean    corpse = ((flags & MF_CORPSE) && type != MT_BARREL);
+    int         stepdir = 0;
 
     if (!(mo->momx | mo->momy))
     {
@@ -188,28 +189,27 @@ static void P_XYMovement(mobj_t *mo)
     xmove = mo->momx;
     ymove = mo->momy;
 
+    if (xmove < 0)
+    {
+        xmove = -xmove;
+        stepdir = 1;
+    }
+
+    if (ymove < 0)
+    {
+        ymove = -ymove;
+        stepdir |= 2;
+    }
+
     do
     {
-        fixed_t ptryx, ptryy;
+        fixed_t stepx = MIN(xmove, MAXMOVE_STEP);
+        fixed_t stepy = MIN(ymove, MAXMOVE_STEP);
+        fixed_t ptryx = mo->x + ((stepdir & 1) ? -stepx : stepx);
+        fixed_t ptryy = mo->y + ((stepdir & 2) ? -stepy : stepy);
 
-        // killough 8/9/98: fix bug in original DOOM source:
-        // Large negative displacements were never considered.
-        // This explains the tendency for Mancubus fireballs
-        // to pass through walls.
-        if ((xmove > MAXMOVE / 2 || ymove > MAXMOVE / 2) && (xmove < -MAXMOVE / 2 || ymove < -MAXMOVE / 2))
-        {
-            ptryx = mo->x + xmove / 2;
-            ptryy = mo->y + ymove / 2;
-            xmove >>= 1;
-            ymove >>= 1;
-        }
-        else
-        {
-            ptryx = mo->x + xmove;
-            ptryy = mo->y + ymove;
-            xmove = 0;
-            ymove = 0;
-        }
+        xmove -= stepx;
+        ymove -= stepy;
 
         // killough 3/15/98: Allow objects to drop off
         if (!P_TryMove(mo, ptryx, ptryy, true))
@@ -241,8 +241,11 @@ static void P_XYMovement(mobj_t *mo)
                 }
             }
             else if (player)
+            {
                 // try to slide along it
                 P_SlideMove(mo);
+                break;
+            }
             else if (flags & MF_MISSILE)
             {
                 // explode a missile
@@ -474,7 +477,7 @@ static void P_NightmareRespawn(mobj_t *mobj)
     mobj_t      *mo;
     mapthing_t  *mthing = &mobj->spawnpoint;
 
-    // [BH] Fix (0,0) respawning bug. See <http://doomwiki.org/wiki/(0,0)_respawning_bug>.
+    // [BH] Fix (0,0) respawning bug. See <https://doomwiki.org/wiki/(0,0)_respawning_bug>.
     if (!x && !y)
     {
         x = mobj->x;
@@ -612,7 +615,8 @@ void P_MobjThinker(mobj_t *mobj)
     {
         // killough 9/12/98: objects fall off ledges if they are hanging off
         // slightly push off of ledge if hanging more than halfway off
-        if (((flags & MF_CORPSE) || (flags & MF_DROPPED)) && mobj->z - mobj->dropoffz > 2 * FRACUNIT)
+        if (((flags & MF_CORPSE) || (flags & MF_DROPPED) || mobj->type == MT_BARREL)
+            && mobj->z - mobj->dropoffz > 2 * FRACUNIT)
             P_ApplyTorque(mobj);
         else
         {
@@ -644,6 +648,22 @@ void P_MobjThinker(mobj_t *mobj)
 }
 
 //
+// P_SetShadowColumnFunction
+//
+void P_SetShadowColumnFunction(mobj_t *mobj)
+{
+    if (r_textures)
+    {
+        if (r_shadows_translucency)
+            mobj->shadowcolfunc = ((mobj->flags & MF_FUZZ) ? R_DrawFuzzyShadowColumn : R_DrawShadowColumn);
+        else
+            mobj->shadowcolfunc = ((mobj->flags & MF_FUZZ) ? R_DrawSolidFuzzyShadowColumn : R_DrawSolidShadowColumn);
+    }
+    else
+        mobj->shadowcolfunc = R_DrawColorColumn;
+}
+
+//
 // P_SpawnMobj
 //
 mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
@@ -652,7 +672,7 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
     state_t     *st;
     mobjinfo_t  *info = &mobjinfo[type];
     sector_t    *sector;
-    static int  prevx, prevy, prevz;
+    static int  prevx, prevy;
     int         height = (z == ONCEILINGZ && type != MT_KEEN && info->projectilepassheight ?
                     info->projectilepassheight : info->height);
 
@@ -689,12 +709,9 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
     mobj->sprite = st->sprite;
     mobj->frame = st->frame;
     mobj->colfunc = info->colfunc;
+    mobj->altcolfunc = info->altcolfunc;
 
-    if (r_textures)
-        mobj->shadowcolfunc = (r_shadows_translucency ? ((mobj->flags & MF_FUZZ) ?
-            R_DrawFuzzyShadowColumn : R_DrawShadowColumn) : R_DrawSolidShadowColumn);
-    else
-        mobj->shadowcolfunc = R_DrawColorColumn;
+    P_SetShadowColumnFunction(mobj);
 
     mobj->shadowoffset = info->shadowoffset;
 
@@ -719,11 +736,10 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
     {
         static int  prevbob;
 
-        mobj->floatbob = prevbob = (x == prevx && y == prevy && z == prevz ? prevbob : M_Random());
+        mobj->floatbob = prevbob = (x == prevx && y == prevy ? prevbob : M_Random());
     }
 
-    mobj->z = (z == ONFLOORZ ? mobj->floorz : (z == ONCEILINGZ ? mobj->ceilingz - height :
-        BETWEEN(mobj->floorz, z, mobj->ceilingz - height)));
+    mobj->z = (z == ONFLOORZ ? mobj->floorz : (z == ONCEILINGZ ? mobj->ceilingz - mobj->height : z));
 
     mobj->oldx = mobj->x;
     mobj->oldy = mobj->y;
@@ -738,7 +754,6 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 
     prevx = x;
     prevy = y;
-    prevz = z;
 
     return mobj;
 }
@@ -1137,6 +1152,7 @@ void P_SpawnPuff(fixed_t x, fixed_t y, fixed_t z, angle_t angle)
     th->interpolate = true;
 
     th->colfunc = info->colfunc;
+    th->altcolfunc = info->altcolfunc;
 
     P_SetThingPosition(th);
 
@@ -1219,6 +1235,7 @@ void P_SpawnBlood(fixed_t x, fixed_t y, fixed_t z, angle_t angle, int damage, mo
         th->interpolate = true;
 
         th->colfunc = info->colfunc;
+        th->altcolfunc = info->altcolfunc;
         th->blood = blood;
 
         P_SetThingPosition(th);
@@ -1349,23 +1366,29 @@ mobj_t *P_SpawnMissile(mobj_t *source, mobj_t *dest, mobjtype_t type)
 void P_SpawnPlayerMissile(mobj_t *source, mobjtype_t type)
 {
     mobj_t  *th;
-    fixed_t x, y, z;
-
-    // see which target is to be aimed at
     angle_t an = source->angle;
-    fixed_t slope = P_AimLineAttack(source, an, 16 * 64 * FRACUNIT);
+    fixed_t x, y, z;
+    fixed_t slope;
 
-    if (!linetarget)
+    if (usemouselook && !autoaim)
+        slope = ((source->player->lookdir / MLOOKUNIT) << FRACBITS) / 173;
+    else
     {
-        slope = P_AimLineAttack(source, (an += 1 << 26), 16 * 64 * FRACUNIT);
-
-        if (!linetarget)
-            slope = P_AimLineAttack(source, (an -= 2 << 26), 16 * 64 * FRACUNIT);
+        // see which target is to be aimed at
+        slope = P_AimLineAttack(source, an, 16 * 64 * FRACUNIT);
 
         if (!linetarget)
         {
-            an = source->angle;
-            slope = (usemouselook ? ((source->player->lookdir / MLOOKUNIT) << FRACBITS) / 173 : 0);
+            slope = P_AimLineAttack(source, (an += 1 << 26), 16 * 64 * FRACUNIT);
+
+            if (!linetarget)
+                slope = P_AimLineAttack(source, (an -= 2 << 26), 16 * 64 * FRACUNIT);
+
+            if (!linetarget)
+            {
+                an = source->angle;
+                slope = (usemouselook ? ((source->player->lookdir / MLOOKUNIT) << FRACBITS) / 173 : 0);
+            }
         }
     }
 

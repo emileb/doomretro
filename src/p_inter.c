@@ -9,8 +9,8 @@
   Copyright © 1993-2012 id Software LLC, a ZeniMax Media company.
   Copyright © 2013-2018 Brad Harding.
 
-  DOOM Retro is a fork of Chocolate DOOM.
-  For a list of credits, see <http://wiki.doomretro.com/credits>.
+  DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
+  <https://github.com/bradharding/doomretro/wiki/CREDITS>.
 
   This file is part of DOOM Retro.
 
@@ -630,12 +630,20 @@ dboolean P_GivePower(int power)
 
     switch (power)
     {
+        case pw_invulnerability:
+            viewplayer->fixedcolormap = INVERSECOLORMAP;
+            break;
+
         case pw_strength:
             P_GiveBody(100, true);
             break;
 
         case pw_invisibility:
             viewplayer->mo->flags |= MF_FUZZ;
+            break;
+
+        case pw_infrared:
+            viewplayer->fixedcolormap = 1;
             break;
     }
 
@@ -1417,14 +1425,13 @@ void P_KillMobj(mobj_t *target, mobj_t *inflicter, mobj_t *source)
 
     if (tossdrop)
     {
-        mo = P_SpawnMobj(target->x, target->y, target->floorz + target->height * 3 / 2, item);
+        mo = P_SpawnMobj(target->x, target->y, target->floorz + target->height * 3 / 2 - 3 * FRACUNIT, item);
         mo->momx = M_NegRandom() << 8;
         mo->momy = M_NegRandom() << 8;
         mo->momz = FRACUNIT * 2 + (M_Random() << 10);
     }
     else
         mo = P_SpawnMobj(target->x, target->y, ONFLOORZ, item);
-
 
     mo->angle = target->angle + (M_NegRandom() << 20);
     mo->flags |= MF_DROPPED;    // special versions of items
@@ -1487,8 +1494,7 @@ void P_DamageMobj(mobj_t *target, mobj_t *inflicter, mobj_t *source, int damage,
         fixed_t         thrust = damage * (FRACUNIT >> 3) * 100 / mass;
 
         // make fall forwards sometimes
-        if (damage < 40 && damage > target->health  && target->z - inflicter->z > 64 * FRACUNIT
-            && (M_Random() & 1))
+        if (damage < 40 && damage > target->health && target->z - inflicter->z > 64 * FRACUNIT && (M_Random() & 1))
         {
             ang += ANG180;
             thrust *= 4;
@@ -1571,8 +1577,7 @@ void P_DamageMobj(mobj_t *target, mobj_t *inflicter, mobj_t *source, int damage,
 
         if (gp_vibrate_damage && vibrate)
         {
-            XInputVibration((30000 + (100 - MIN(tplayer->health, 100)) / 100 * 30000)
-                * gp_vibrate_damage / 100);
+            XInputVibration((30000 + (100 - MIN(tplayer->health, 100)) / 100 * 30000) * gp_vibrate_damage / 100);
             damagevibrationtics += BETWEEN(12, damage, 100);
         }
 

@@ -9,8 +9,8 @@
   Copyright © 1993-2012 id Software LLC, a ZeniMax Media company.
   Copyright © 2013-2018 Brad Harding.
 
-  DOOM Retro is a fork of Chocolate DOOM.
-  For a list of credits, see <http://wiki.doomretro.com/credits>.
+  DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
+  <https://github.com/bradharding/doomretro/wiki/CREDITS>.
 
   This file is part of DOOM Retro.
 
@@ -65,6 +65,7 @@
 
 #define GRAVITY             FRACUNIT
 #define MAXMOVE             (30 * FRACUNIT)
+#define MAXMOVE_STEP        (8 * FRACUNIT)
 
 #define USERANGE            (64 * FRACUNIT)
 #define MELEERANGE          (64 * FRACUNIT)
@@ -130,6 +131,7 @@ void P_RespawnSpecials(void);
 void P_InitCards(void);
 
 mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type);
+void P_SetShadowColumnFunction(mobj_t *mobj);
 mobjtype_t P_FindDoomedNum(unsigned int type);
 
 void P_RemoveMobj(mobj_t *mobj);

@@ -9,8 +9,8 @@
   Copyright © 1993-2012 id Software LLC, a ZeniMax Media company.
   Copyright © 2013-2018 Brad Harding.
 
-  DOOM Retro is a fork of Chocolate DOOM.
-  For a list of credits, see <http://wiki.doomretro.com/credits>.
+  DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
+  <https://github.com/bradharding/doomretro/wiki/CREDITS>.
 
   This file is part of DOOM Retro.
 
@@ -46,8 +46,6 @@
 static unsigned int maxdrawsegs;
 
 static dboolean     segtextured;        // True if any of the segs textures might be visible.
-
-static side_t       *sidedef;
 
 static dboolean     markfloor;          // False if the back side is the same plane.
 dboolean            markceiling;
@@ -154,7 +152,7 @@ static void R_FixWiggle(sector_t *sector)
         int heightbits;
     } scalevalues_t;
 
-    static const scalevalues_t scale_values[] =
+    static const scalevalues_t scalevalues[] =
     {
         { 2048 * FRACUNIT, 12 }, { 1024 * FRACUNIT, 12 }, { 1024 * FRACUNIT, 11 },
         {  512 * FRACUNIT, 11 }, {  512 * FRACUNIT, 10 }, {  256 * FRACUNIT, 10 },
@@ -169,14 +167,13 @@ static void R_FixWiggle(sector_t *sector)
     // early out?
     if (height != lastheight)
     {
-        const scalevalues_t *svp;
-
         lastheight = height;
 
         // initialize, or handle moving sector
         if (height != sector->cachedheight)
         {
-            int scaleindex = 0;
+            int                 scaleindex = 0;
+            const scalevalues_t *svp;
 
             sector->cachedheight = height;
             height >>= 7;
@@ -185,15 +182,13 @@ static void R_FixWiggle(sector_t *sector)
             while ((height >>= 1))
                 scaleindex++;
 
-            sector->scaleindex = scaleindex;
+            // fine-tune renderer for this wall
+            svp = &scalevalues[scaleindex];
+            max_rwscale = svp->clamp;
+            heightbits = svp->heightbits;
+            heightunit = 1 << heightbits;
+            invhgtbits = FRACBITS - heightbits;
         }
-
-        // fine-tune renderer for this wall
-        svp = &scale_values[sector->scaleindex];
-        max_rwscale = svp->clamp;
-        heightbits = svp->heightbits;
-        heightunit = 1 << heightbits;
-        invhgtbits = FRACBITS - heightbits;
     }
 }
 
@@ -203,17 +198,16 @@ static lighttable_t **GetLightTable(const int lightlevel)
         LIGHTLEVELS - 1)];
 }
 
-static void R_BlastMaskedSegColumn(const rcolumn_t *column)
+static void R_BlastMaskedSegColumn(const rcolumn_t *column, int numposts)
 {
-    int             count = column->numposts;
     unsigned char   *pixels = column->pixels;
 
     dc_ceilingclip = mceilingclip[dc_x] + 1;
     dc_floorclip = mfloorclip[dc_x] - 1;
 
-    while (count--)
+    while (numposts--)
     {
-        const rpost_t   *post = &column->posts[count];
+        const rpost_t   *post = &column->posts[numposts];
         const int       topdelta = post->topdelta;
 
         // calculate unclipped screen coordinates for post
@@ -257,7 +251,7 @@ void R_RenderMaskedSegRange(drawseg_t *ds, const int x1, const int x2)
     // Use different light tables for horizontal/vertical.
     // killough 4/13/98: get correct lightlevel for 2s normal textures
     if (fixedcolormap)
-        dc_colormap = fixedcolormap;
+        dc_colormap[0] = fixedcolormap;
     else
         walllights = GetLightTable(R_FakeFlat(frontsector, &tempsec, NULL, NULL, false)->lightlevel);
 
@@ -269,8 +263,8 @@ void R_RenderMaskedSegRange(drawseg_t *ds, const int x1, const int x2)
 
     // find positioning
     if (curline->linedef->flags & ML_DONTPEGBOTTOM)
-        dc_texturemid = MAX(frontsector->interpfloorheight, backsector->interpfloorheight) + texheight
-            - viewz + curline->sidedef->rowoffset;
+        dc_texturemid = MAX(frontsector->interpfloorheight, backsector->interpfloorheight) + texheight - viewz
+            + curline->sidedef->rowoffset;
     else
         dc_texturemid = MIN(frontsector->interpceilingheight, backsector->interpceilingheight) - viewz
             + curline->sidedef->rowoffset;
@@ -281,6 +275,13 @@ void R_RenderMaskedSegRange(drawseg_t *ds, const int x1, const int x2)
     for (dc_x = x1; dc_x <= x2; dc_x++, spryscale += rw_scalestep)
         if (maskedtexturecol[dc_x] != INT_MAX)
         {
+            const rcolumn_t *column = R_GetPatchColumnWrapped(patch, maskedtexturecol[dc_x]);
+            const int       numposts = column->numposts;
+            int64_t         t;
+
+            if (!numposts)
+                continue;
+
             // killough 3/2/98:
             //
             // This calculation used to overflow and cause crashes in DOOM:
@@ -290,7 +291,7 @@ void R_RenderMaskedSegRange(drawseg_t *ds, const int x1, const int x2)
             // This code fixes it, by using double-precision intermediate
             // arithmetic and by skipping the drawing of 2s normals whose
             // mapping to screen coordinates is totally out of range:
-            int64_t t = ((int64_t)centeryfrac << FRACBITS) - (int64_t)dc_texturemid * spryscale;
+            t = ((int64_t)centeryfrac << FRACBITS) - (int64_t)dc_texturemid * spryscale;
 
             if (t + (int64_t)texheight * spryscale < 0 || t > (int64_t)SCREENHEIGHT << FRACBITS * 2)
                 continue;                       // skip if the texture is out of screen's range
@@ -299,12 +300,12 @@ void R_RenderMaskedSegRange(drawseg_t *ds, const int x1, const int x2)
 
             // calculate lighting
             if (!fixedcolormap)
-                dc_colormap = walllights[BETWEEN(0, spryscale >> LIGHTSCALESHIFT, MAXLIGHTSCALE - 1)];
+                dc_colormap[0] = walllights[BETWEEN(0, spryscale >> LIGHTSCALESHIFT, MAXLIGHTSCALE - 1)];
 
             dc_iscale = 0xFFFFFFFFu / (unsigned int)spryscale;
 
             // draw the texture
-            R_BlastMaskedSegColumn(R_GetPatchColumnWrapped(patch, maskedtexturecol[dc_x]));
+            R_BlastMaskedSegColumn(column, numposts);
             maskedtexturecol[dc_x] = INT_MAX;   // dropoff overflow
         }
 
@@ -322,7 +323,7 @@ static dboolean didsolidcol;
 static void R_RenderSegLoop(void)
 {
     if (fixedcolormap)
-        dc_colormap = fixedcolormap;
+        dc_colormap[0] = fixedcolormap;
 
     for (; rw_x < rw_stopx; rw_x++)
     {
@@ -332,7 +333,7 @@ static void R_RenderSegLoop(void)
         int     bottom;
         int     top = ceilingclip[rw_x] + 1;
 
-        // mark floor / ceiling areas
+        // mark floor/ceiling areas
         int     yl = MAX((int)((topfrac + heightunit - 1) >> heightbits), top);
         int     yh = (int)(bottomfrac >> heightbits);
 
@@ -370,7 +371,7 @@ static void R_RenderSegLoop(void)
             texturecolumn = (rw_offset - FixedMul(finetangent[angle], rw_distance)) >> FRACBITS;
 
             if (!fixedcolormap)
-                dc_colormap = walllights[BETWEEN(0, rw_scale >> LIGHTSCALESHIFT, MAXLIGHTSCALE - 1)];
+                dc_colormap[0] = walllights[BETWEEN(0, rw_scale >> LIGHTSCALESHIFT, MAXLIGHTSCALE - 1)];
 
             dc_x = rw_x;
             dc_iscale = 0xFFFFFFFFu / (unsigned int)rw_scale;
@@ -521,6 +522,7 @@ void R_StoreWallRange(const int start, const int stop)
     int      worldbottom;
     int      worldhigh;
     int      worldlow;
+    side_t  *sidedef;
 
     linedef = curline->linedef;
 
@@ -778,12 +780,12 @@ void R_StoreWallRange(const int start, const int stop)
 
         // calculate light table
         //  use different light tables
-        //  for horizontal / vertical / diagonal
+        //  for horizontal/vertical/diagonal
         if (!fixedcolormap)
             walllights = GetLightTable(frontsector->lightlevel);
     }
 
-    // if a floor / ceiling plane is on the wrong side
+    // if a floor/ceiling plane is on the wrong side
     //  of the view plane, it is definitely invisible
     //  and doesn't need to be marked.
 

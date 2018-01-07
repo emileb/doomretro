@@ -9,8 +9,8 @@
   Copyright © 1993-2012 id Software LLC, a ZeniMax Media company.
   Copyright © 2013-2018 Brad Harding.
 
-  DOOM Retro is a fork of Chocolate DOOM.
-  For a list of credits, see <http://wiki.doomretro.com/credits>.
+  DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
+  <https://github.com/bradharding/doomretro/wiki/CREDITS>.
 
   This file is part of DOOM Retro.
 
@@ -1184,13 +1184,7 @@ void P_UnArchiveThinkers(void)
 
                 mobj->thinker.function = (mobj->type == MT_MUSICSOURCE ? MusInfoThinker : P_MobjThinker);
                 mobj->colfunc = mobj->info->colfunc;
-
-                if (r_textures)
-                    mobj->shadowcolfunc = (r_shadows_translucency ? ((mobj->flags & MF_FUZZ) ?
-                        R_DrawFuzzyShadowColumn : R_DrawShadowColumn) : R_DrawSolidShadowColumn);
-                else
-                    mobj->shadowcolfunc = R_DrawColorColumn;
-
+                P_SetShadowColumnFunction(mobj);
                 P_AddThinker(&mobj->thinker);
                 break;
             }

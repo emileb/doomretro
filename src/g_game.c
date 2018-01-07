@@ -9,8 +9,8 @@
   Copyright © 1993-2012 id Software LLC, a ZeniMax Media company.
   Copyright © 2013-2018 Brad Harding.
 
-  DOOM Retro is a fork of Chocolate DOOM.
-  For a list of credits, see <http://wiki.doomretro.com/credits>.
+  DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
+  <https://github.com/bradharding/doomretro/wiki/CREDITS>.
 
   This file is part of DOOM Retro.
 
@@ -90,7 +90,6 @@ static dboolean sendsave;               // send a save event next tic
 dboolean        viewactive;
 
 int             gametic;
-int             activetic;
 int             gametime;
 int             totalkills;             // for intermission
 int             totalitems;
@@ -99,7 +98,7 @@ int             totalpickups;
 int             monstercount[NUMMOBJTYPES];
 int             barrelcount;
 
-wbstartstruct_t wminfo;                 // parms for world map / intermission
+wbstartstruct_t wminfo;                 // parms for world map/intermission
 
 dboolean        autoload = autoload_default;
 

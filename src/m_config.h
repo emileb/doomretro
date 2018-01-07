@@ -9,8 +9,8 @@
   Copyright © 1993-2012 id Software LLC, a ZeniMax Media company.
   Copyright © 2013-2018 Brad Harding.
 
-  DOOM Retro is a fork of Chocolate DOOM.
-  For a list of credits, see <http://wiki.doomretro.com/credits>.
+  DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
+  <https://github.com/bradharding/doomretro/wiki/CREDITS>.
 
   This file is part of DOOM Retro.
 
@@ -61,6 +61,7 @@ extern int          am_teleportercolor;
 extern int          am_thingcolor;
 extern int          am_tswallcolor;
 extern int          am_wallcolor;
+extern dboolean     autoaim;
 extern dboolean     autoload;
 extern dboolean     autouse;
 extern dboolean     centerweapon;
@@ -308,6 +309,8 @@ enum
 #define armor_min                               0
 #define armor_default                           0
 #define armor_max                               INT_MAX
+
+#define autoaim_default                         true
 
 #define autoload_default                        true
 

@@ -9,8 +9,8 @@
   Copyright © 1993-2012 id Software LLC, a ZeniMax Media company.
   Copyright © 2013-2018 Brad Harding.
 
-  DOOM Retro is a fork of Chocolate DOOM.
-  For a list of credits, see <http://wiki.doomretro.com/credits>.
+  DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
+  <https://github.com/bradharding/doomretro/wiki/CREDITS>.
 
   This file is part of DOOM Retro.
 
@@ -60,7 +60,7 @@ typedef enum
 typedef struct
 {
     evtype_t    type;
-    int         data1;          // keys / mouse buttons
+    int         data1;          // keys/mouse buttons
     int         data2;          // mouse x move
     int         data3;          // mouse y move
 } event_t;

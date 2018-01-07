@@ -9,8 +9,8 @@
   Copyright © 1993-2012 id Software LLC, a ZeniMax Media company.
   Copyright © 2013-2018 Brad Harding.
 
-  DOOM Retro is a fork of Chocolate DOOM.
-  For a list of credits, see <http://wiki.doomretro.com/credits>.
+  DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
+  <https://github.com/bradharding/doomretro/wiki/CREDITS>.
 
   This file is part of DOOM Retro.
 
@@ -55,6 +55,7 @@
 #include "m_menu.h"
 #include "m_misc.h"
 #include "m_random.h"
+#include "r_main.h"
 #include "s_sound.h"
 #include "sc_man.h"
 #include "SDL_image.h"
@@ -1545,9 +1546,9 @@ dboolean C_Responder(event_t *ev)
                         if (M_StringStartsWith(output, input)
                             && input[strlen(input) - 1] != '+'
                             && ((!spaces1 && (!spaces2 || (spaces2 == 1 && endspace2)))
-                                || !endspace1 && (spaces1 == 1 && (spaces2 == 1 || (spaces2 == 2 && endspace2)))
-                                || (spaces1 == 2 && (spaces2 == 2 || (spaces2 == 3 && endspace2)))
-                                || spaces1 == 3))
+                                || (spaces1 == 1 && !endspace1 && (spaces2 == 1 || (spaces2 == 2 && endspace2)))
+                                || (spaces1 == 2 && !endspace1 && (spaces2 == 2 || (spaces2 == 3 && endspace2)))
+                                || (spaces1 == 3 && !endspace1)))
                         {
                             M_StringCopy(consoleinput, M_StringJoin(prefix, output, NULL), sizeof(consoleinput));
                             caretpos = selectstart = selectend = len2 + (int)strlen(prefix);
@@ -1796,11 +1797,10 @@ dboolean C_Responder(event_t *ev)
     return true;
 }
 
-static const char *days[] = { "Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday" };
-
 static const char *dayofweek(int d, int m, int y)
 {
     const int   adjustment = (14 - m) / 12;
+    const char  *days[] = { "Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday" };
 
     m += 12 * adjustment - 2;
     y -= adjustment;

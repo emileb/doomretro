@@ -9,8 +9,8 @@
   Copyright © 1993-2012 id Software LLC, a ZeniMax Media company.
   Copyright © 2013-2018 Brad Harding.
 
-  DOOM Retro is a fork of Chocolate DOOM.
-  For a list of credits, see <http://wiki.doomretro.com/credits>.
+  DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
+  <https://github.com/bradharding/doomretro/wiki/CREDITS>.
 
   This file is part of DOOM Retro.
 
@@ -90,7 +90,6 @@ static dirtype_t diags[] =
     DI_SOUTHWEST,
     DI_SOUTHEAST
 };
-
 
 void A_Fall(mobj_t *actor, player_t *player, pspdef_t *psp);
 
@@ -1865,8 +1864,7 @@ void A_BabyMetal(mobj_t *actor, player_t *player, pspdef_t *psp)
 }
 
 // [jeff] remove limit on braintargets
-//  and fix http://doomwiki.org/wiki/Spawn_cubes_miss_east_and_west_targets
-static unsigned int braintargeted;
+//  and fix <https://doomwiki.org/wiki/Spawn_cubes_miss_east_and_west_targets>
 
 void A_BrainAwake(mobj_t *actor, player_t *player, pspdef_t *psp)
 {
@@ -1890,6 +1888,8 @@ void A_BrainScream(mobj_t *actor, player_t *player, pspdef_t *psp)
         th->momz = M_Random() * 512;
         P_SetMobjState(th, S_BRAINEXPLODE1);
         th->tics = MAX(1, th->tics - (M_Random() & 7));
+        th->colfunc = tlcolfunc;
+        th->flags2 &= ~MF2_CASTSHADOW;
     }
 
     S_StartSound(NULL, sfx_bosdth);
@@ -1902,6 +1902,8 @@ void A_BrainExplode(mobj_t *actor, player_t *player, pspdef_t *psp)
     th->momz = M_Random() * 512;
     P_SetMobjState(th, S_BRAINEXPLODE1);
     th->tics = MAX(1, th->tics - (M_Random() & 7));
+    th->colfunc = tlcolfunc;
+    th->flags2 &= ~MF2_CASTSHADOW;
 }
 
 void A_BrainDie(mobj_t *actor, player_t *player, pspdef_t *psp)
@@ -1911,8 +1913,9 @@ void A_BrainDie(mobj_t *actor, player_t *player, pspdef_t *psp)
 
 static mobj_t *A_NextBrainTarget(void)
 {
-    unsigned int    count = 0;
-    mobj_t          *found = NULL;
+    unsigned int        count = 0;
+    static unsigned int braintargeted;
+    mobj_t              *found = NULL;
 
     // find all the target spots
     for (thinker_t *th = thinkerclasscap[th_mobj].cnext; th != &thinkerclasscap[th_mobj]; th = th->cnext)
@@ -1959,8 +1962,7 @@ void A_BrainSpit(mobj_t *actor, player_t *player, pspdef_t *psp)
 
         P_SetTarget(&newmobj->target, target);
 
-        // Use the reactiontime to hold the distance (squared)
-        // from the target after the next move.
+        // Use the reactiontime to hold the distance (squared) from the target after the next move.
         newmobj->reactiontime = P_ApproxDistance(target->x - (actor->x + actor->momx),
             target->y - (actor->y + actor->momy));
 
@@ -1977,11 +1979,8 @@ void A_SpawnFly(mobj_t *actor, player_t *player, pspdef_t *psp)
 
     if (target)
     {
-        int dist;
-
-        // Will the next move put the cube closer to
-        // the target point than it is now?
-        dist = P_ApproxDistance(target->x - (actor->x + actor->momx), target->y - (actor->y + actor->momy));
+        // Will the next move put the cube closer to the target point than it is now?
+        int dist = P_ApproxDistance(target->x - (actor->x + actor->momx), target->y - (actor->y + actor->momy));
 
         if ((unsigned int)dist < (unsigned int)actor->reactiontime)
         {
@@ -2035,8 +2034,7 @@ void A_SpawnFly(mobj_t *actor, player_t *player, pspdef_t *psp)
             // killough 8/29/98: add to appropriate thread
             P_UpdateThinker(&newmobj->thinker);
 
-            if (!(P_LookForPlayers(newmobj, true))
-                || P_SetMobjState(newmobj, newmobj->info->seestate))
+            if (!P_LookForPlayers(newmobj, true) || P_SetMobjState(newmobj, newmobj->info->seestate))
                 // telefrag anything in this spot
                 P_TeleportMove(newmobj, newmobj->x, newmobj->y, newmobj->z, true);
 
@@ -2201,7 +2199,7 @@ void A_LineEffect(mobj_t *actor, player_t *player, pspdef_t *psp)
     player_t    *oldplayer = actor->player;
 
     actor->player = &newplayer;
-    newplayer.health = 100;
+    newplayer.health = initial_health;
 
     if (!(junk.special = (short)actor->state->misc1))
         return;

@@ -9,8 +9,8 @@
   Copyright © 1993-2012 id Software LLC, a ZeniMax Media company.
   Copyright © 2013-2018 Brad Harding.
 
-  DOOM Retro is a fork of Chocolate DOOM.
-  For a list of credits, see <http://wiki.doomretro.com/credits>.
+  DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
+  <https://github.com/bradharding/doomretro/wiki/CREDITS>.
 
   This file is part of DOOM Retro.
 
@@ -402,7 +402,7 @@ static void R_AddLine(seg_t *line)
         //      should already be interpolated.
         R_MaybeInterpolateSector(backsector);
 
-        // killough 3/8/98, 4/4/98: hack for invisible ceilings / deep water
+        // killough 3/8/98, 4/4/98: hack for invisible ceilings/deep water
         backsector = R_FakeFlat(backsector, &tempsec, NULL, NULL, true);
     }
 
@@ -511,18 +511,19 @@ static void R_Subsector(int num)
 {
     subsector_t *sub = subsectors + num;
     sector_t    tempsec;              // killough 3/7/98: deep water hack
+    sector_t    *sector = sub->sector;
     int         floorlightlevel;      // killough 3/16/98: set floor lightlevel
     int         ceilinglightlevel;    // killough 4/11/98
     int         count = sub->numlines;
     seg_t       *line = segs + sub->firstline;
 
-    frontsector = sub->sector;
+    frontsector = sector;
 
     // [AM] Interpolate sector movement. Usually only needed
     //      when you're standing inside the sector.
     R_MaybeInterpolateSector(frontsector);
 
-    // killough 3/8/98, 4/4/98: Deep water / fake ceiling effect
+    // killough 3/8/98, 4/4/98: Deep water/fake ceiling effect
     frontsector = R_FakeFlat(frontsector, &tempsec, &floorlightlevel, &ceilinglightlevel, false);
 
     floorplane = (frontsector->interpfloorheight < viewz        // killough 3/7/98
@@ -555,10 +556,10 @@ static void R_Subsector(int num)
     // Either you must pass the fake sector and handle validcount here, on the
     // real sector, or you must account for the lighting in some other way,
     // like passing it as an argument.
-    if (sub->sector->validcount != validcount)
+    if (sector->validcount != validcount)
     {
-        sub->sector->validcount = validcount;
-        R_AddSprites(sub->sector, (ceilinglightlevel + floorlightlevel) / 2);
+        sector->validcount = validcount;
+        R_AddSprites(sector, (sector->heightsec ? (ceilinglightlevel + floorlightlevel) / 2 : floorlightlevel));
     }
 
     while (count--)

@@ -9,8 +9,8 @@
   Copyright © 1993-2012 id Software LLC, a ZeniMax Media company.
   Copyright © 2013-2018 Brad Harding.
 
-  DOOM Retro is a fork of Chocolate DOOM.
-  For a list of credits, see <http://wiki.doomretro.com/credits>.
+  DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
+  <https://github.com/bradharding/doomretro/wiki/CREDITS>.
 
   This file is part of DOOM Retro.
 
@@ -190,7 +190,6 @@ extern gamestate_t      gamestate;
 //  WAD, partly set at startup time.
 
 extern int              gametic;
-extern int              activetic;
 extern int              gametime;
 extern struct tm        *gamestarttime;
 
@@ -198,7 +197,7 @@ extern int              vid_capfps;
 extern dboolean         realframe;
 
 // Intermission stats.
-// Parameters for world map / intermission.
+// Parameters for world map/intermission.
 extern wbstartstruct_t  wminfo;
 
 //-----------------------------------------
