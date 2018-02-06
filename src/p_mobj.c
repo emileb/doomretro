@@ -92,10 +92,10 @@ void P_DelSeclist(msecnode_t *node);
 //
 dboolean P_SetMobjState(mobj_t *mobj, statenum_t state)
 {
-    state_t *st;
-
     do
     {
+        state_t *st;
+
         if (state == S_NULL)
         {
             mobj->state = (state_t *)S_NULL;
@@ -540,8 +540,13 @@ void P_MobjThinker(mobj_t *mobj)
     sector_t    *sector = mobj->subsector->sector;
 
     // [AM] Handle interpolation unless we're an active player.
-    if (!(player && mobj == player->mo) && mobj->interpolate)
+    if (mobj->interpolate == -1)
+        mobj->interpolate = false;
+    else if (!(player && mobj == player->mo))
     {
+        // Assume we can interpolate at the beginning of the tic.
+        mobj->interpolate = true;
+
         // Store starting position for mobj interpolation.
         mobj->oldx = mobj->x;
         mobj->oldy = mobj->y;
@@ -575,12 +580,11 @@ void P_MobjThinker(mobj_t *mobj)
 
     // [BH] otherwise bob certain power-ups
     else if ((flags2 & MF2_FLOATBOB) && r_floatbob)
-        mobj->z = BETWEEN(mobj->floorz, mobj->z + floatbobdiffs[(mobj->floatbob + leveltime) & 63],
-            mobj->ceilingz);
+        mobj->z = BETWEEN(mobj->floorz, mobj->z + floatbobdiffs[(mobj->floatbob + leveltime) & 63], mobj->ceilingz);
 
     else if (mobj->z != mobj->floorz || mobj->momz)
     {
-        if (flags2 & MF2_PASSMOBJ)
+        if ((flags2 & MF2_PASSMOBJ) && !infiniteheight)
         {
             mobj_t *onmo;
 
@@ -652,15 +656,10 @@ void P_MobjThinker(mobj_t *mobj)
 //
 void P_SetShadowColumnFunction(mobj_t *mobj)
 {
-    if (r_textures)
-    {
-        if (r_shadows_translucency)
-            mobj->shadowcolfunc = ((mobj->flags & MF_FUZZ) ? R_DrawFuzzyShadowColumn : R_DrawShadowColumn);
-        else
-            mobj->shadowcolfunc = ((mobj->flags & MF_FUZZ) ? R_DrawSolidFuzzyShadowColumn : R_DrawSolidShadowColumn);
-    }
+    if (r_shadows_translucency)
+        mobj->shadowcolfunc = ((mobj->flags & MF_FUZZ) ? R_DrawFuzzyShadowColumn : R_DrawShadowColumn);
     else
-        mobj->shadowcolfunc = R_DrawColorColumn;
+        mobj->shadowcolfunc = ((mobj->flags & MF_FUZZ) ? R_DrawSolidFuzzyShadowColumn : R_DrawSolidShadowColumn);
 }
 
 //
@@ -839,7 +838,7 @@ mobjtype_t P_FindDoomedNum(unsigned int type)
 
     i = hash[type % NUMMOBJTYPES].first;
 
-    while ((i < NUMMOBJTYPES) && ((unsigned int)mobjinfo[i].doomednum != type))
+    while (i < NUMMOBJTYPES && (unsigned int)mobjinfo[i].doomednum != type)
         i = hash[i].next;
 
     return i;
@@ -1020,7 +1019,7 @@ mobj_t *P_SpawnMapThing(mapthing_t *mthing, int index, dboolean nomonsters)
     if (!(mthing->options & bit))
         return NULL;
 
-    if (type >= 14101 && type <= 14164)
+    if (type >= 14100 && type <= 14164)
     {
         // Use the ambient number
         id = type - 14100;              // Mus change
@@ -1216,7 +1215,7 @@ void P_SpawnBlood(fixed_t x, fixed_t y, fixed_t z, angle_t angle, int damage, mo
 
     angle += ANG180;
 
-    for (int i = (damage >> 2) + 1; i; i--)
+    for (int i = (damage >> 2) + 1; i > 0; i--)
     {
         mobj_t  *th = Z_Calloc(1, sizeof(*th), PU_LEVEL, NULL);
         state_t *st = &states[info->spawnstate];
@@ -1277,7 +1276,8 @@ void P_SpawnBloodSplat(fixed_t x, fixed_t y, int blood, int maxheight, mobj_t *t
     {
         sector_t    *sec = R_PointInSubsector(x, y)->sector;
 
-        if (!sec->isliquid && sec->interpfloorheight <= maxheight && sec->floorpic != skyflatnum)
+        if (!sec->isliquid && sec->interpfloorheight <= maxheight
+            && sec->interpfloorheight != sec->interpceilingheight && sec->floorpic != skyflatnum)
         {
             bloodsplat_t    *splat = malloc(sizeof(*splat));
             int             patch = firstbloodsplatlump + (M_Random() & 7);
@@ -1420,7 +1420,7 @@ void P_SpawnPlayerMissile(mobj_t *source, mobjtype_t type)
         th->nudge = 1;
     }
 
-    th->interpolate = false;
+    th->interpolate = -1;
 
     P_CheckMissileSpawn(th);
 

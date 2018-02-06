@@ -93,8 +93,8 @@ extern fixed_t          animatedliquiddiff;
 extern dboolean         drawbloodsplats;
 extern dboolean         inhelpscreens;
 extern dboolean         notranslucency;
-extern dboolean         skippsprinterp;
 extern dboolean         SHT2A0;
+extern dboolean         skippsprinterp;
 
 //
 // R_InstallSpriteLump
@@ -360,8 +360,10 @@ int             fuzzpos;
 
 void (*shadowcolfunc)(void);
 
-static void R_BlastShadowColumn(const rcolumn_t *column, int numposts)
+static void R_BlastShadowColumn(const rcolumn_t *column)
 {
+    int numposts = dc_numposts;
+
     while (numposts--)
     {
         const rpost_t   *post = &column->posts[numposts];
@@ -373,8 +375,9 @@ static void R_BlastShadowColumn(const rcolumn_t *column, int numposts)
     }
 }
 
-static void R_BlastSpriteColumn(const rcolumn_t *column, int numposts)
+static void R_BlastSpriteColumn(const rcolumn_t *column)
 {
+    int             numposts = dc_numposts;
     unsigned char   *pixels = column->pixels;
 
     while (numposts--)
@@ -394,8 +397,9 @@ static void R_BlastSpriteColumn(const rcolumn_t *column, int numposts)
     }
 }
 
-static void R_BlastPlayerSpriteColumn(const rcolumn_t *column, int numposts)
+static void R_BlastPlayerSpriteColumn(const rcolumn_t *column)
 {
+    int             numposts = dc_numposts;
     unsigned char   *pixels = column->pixels;
 
     while (numposts--)
@@ -415,8 +419,10 @@ static void R_BlastPlayerSpriteColumn(const rcolumn_t *column, int numposts)
     }
 }
 
-static void R_BlastBloodSplatColumn(const rcolumn_t *column, int numposts)
+static void R_BlastBloodSplatColumn(const rcolumn_t *column)
 {
+    int numposts = dc_numposts;
+
     while (numposts--)
     {
         const rpost_t   *post = &column->posts[numposts];
@@ -463,13 +469,12 @@ static void R_DrawVisSprite(const vissprite_t *vis)
     for (dc_x = vis->x1; dc_x <= x2; dc_x++, frac += xiscale)
     {
         const rcolumn_t *column = R_GetPatchColumnClamped(patch, frac >> FRACBITS);
-        int             numposts = column->numposts;
 
-        if (numposts)
+        if ((dc_numposts = column->numposts))
         {
             dc_ceilingclip = mceilingclip[dc_x] + 1;
             dc_floorclip = MIN(dc_baseclip, mfloorclip[dc_x]) - 1;
-            R_BlastSpriteColumn(column, numposts);
+            R_BlastSpriteColumn(column);
         }
     }
 
@@ -491,6 +496,7 @@ static void R_DrawVisSpriteWithShadow(const vissprite_t *vis)
 
     spryscale = vis->scale;
     dc_colormap[0] = vis->colormap[0];
+    dc_black = dc_colormap[0][0] << 8;
     dc_iscale = FixedDiv(FRACUNIT, spryscale);
     dc_texturemid = vis->texturemid;
 
@@ -511,14 +517,13 @@ static void R_DrawVisSpriteWithShadow(const vissprite_t *vis)
     for (dc_x = vis->x1; dc_x <= x2; dc_x++, frac += xiscale)
     {
         const rcolumn_t *column = R_GetPatchColumnClamped(patch, frac >> FRACBITS);
-        int             numposts = column->numposts;
 
-        if (numposts)
+        if ((dc_numposts = column->numposts))
         {
             dc_ceilingclip = mceilingclip[dc_x] + 1;
             dc_floorclip = mfloorclip[dc_x] - 1;
-            R_BlastShadowColumn(column, numposts);
-            R_BlastSpriteColumn(column, numposts);
+            R_BlastShadowColumn(column);
+            R_BlastSpriteColumn(column);
         }
     }
 
@@ -545,10 +550,9 @@ static void R_DrawPlayerVisSprite(const vissprite_t *vis)
     for (dc_x = vis->x1; dc_x <= x2; dc_x++, frac += pspriteiscale)
     {
         const rcolumn_t *column = R_GetPatchColumnClamped(patch, frac >> FRACBITS);
-        int             numposts = column->numposts;
 
-        if (numposts)
-            R_BlastPlayerSpriteColumn(column, numposts);
+        if ((dc_numposts = column->numposts))
+            R_BlastPlayerSpriteColumn(column);
     }
 
     R_UnlockPatchNum(id);
@@ -566,8 +570,7 @@ static void R_DrawBloodSplatVisSprite(const bloodsplatvissprite_t *vis)
     const rcolumn_t *columns = R_CachePatchNum(id)->columns;
 
     colfunc = vis->colfunc;
-    dc_colormap[0] = vis->colormap;
-    dc_blood = tinttab75 + (dc_colormap[0][vis->blood] << 8);
+    dc_blood = tinttab75 + (vis->colormap[vis->blood] << 8);
     spryscale = vis->scale;
     sprtopscreen = centeryfrac - FixedMul(vis->texturemid, spryscale);
     fuzzpos = 0;
@@ -575,13 +578,12 @@ static void R_DrawBloodSplatVisSprite(const bloodsplatvissprite_t *vis)
     for (dc_x = vis->x1; dc_x <= x2; dc_x++, frac += xiscale)
     {
         const rcolumn_t *column = &columns[frac >> FRACBITS];
-        int             numposts = column->numposts;
 
-        if (numposts)
+        if ((dc_numposts = column->numposts))
         {
             dc_ceilingclip = mceilingclip[dc_x] + 1;
             dc_floorclip = mfloorclip[dc_x] - 1;
-            R_BlastBloodSplatColumn(column, numposts);
+            R_BlastBloodSplatColumn(column);
         }
     }
 
@@ -627,7 +629,6 @@ static void R_ProjectSprite(mobj_t *thing)
     }
     else
     {
-        thing->interpolate = true;
         fx = thing->x;
         fy = thing->y;
         fz = thing->z;
@@ -859,8 +860,18 @@ static void R_ProjectBloodSplat(const bloodsplat_t *splat)
     vis->scale = xscale;
     vis->gx = fx;
     vis->gy = fy;
-    vis->blood = splat->blood;
-    vis->colfunc = (pausesprites && r_textures && splat->colfunc == fuzzcolfunc ? R_DrawPausedFuzzColumn : splat->colfunc);
+
+    if (r_blood == r_blood_red)
+    {
+        vis->blood = MT_BLOOD;
+        vis->colfunc = (r_bloodsplats_translucency ? R_DrawBloodSplatColumn : R_DrawSolidBloodSplatColumn);
+    }
+    else
+    {
+        vis->blood = splat->blood;
+        vis->colfunc = (pausesprites && r_textures && splat->colfunc == fuzzcolfunc ? R_DrawPausedFuzzColumn : splat->colfunc);
+    }
+
     vis->texturemid = floorheight + FRACUNIT - viewz;
 
     if (splat->flip)
@@ -1150,11 +1161,9 @@ static void R_DrawBloodSplatSprite(const bloodsplatvissprite_t *splat)
         int         r1;
         int         r2;
         const int   silhouette = ds->silhouette;
-        dboolean    bottom;
-        dboolean    top;
 
         // determine if the drawseg obscures the bloodsplat
-        if (ds->x1 > x2 || ds->x2 < x1 || !(silhouette & SIL_BOTH))
+        if (ds->x1 > x2 || ds->x2 < x1 || (!silhouette && !ds->maskedtexturecol))
             continue;       // does not cover bloodsplat
 
         if (ds->maxscale < splat->scale
@@ -1164,17 +1173,16 @@ static void R_DrawBloodSplatSprite(const bloodsplatvissprite_t *splat)
         // clip this piece of the bloodsplat
         r1 = MAX(ds->x1, x1);
         r2 = MIN(ds->x2, x2);
-        bottom = (silhouette & SIL_BOTTOM);
-        top = (silhouette & SIL_TOP);
 
-        for (int i = r1; i <= r2; i++)
-        {
-            if (top && cliptop[i] < ds->sprtopclip[i])
-                cliptop[i] = ds->sprtopclip[i];
+        if (silhouette & SIL_TOP)
+            for (int i = r1; i <= r2; i++)
+                if (cliptop[i] < ds->sprtopclip[i])
+                    cliptop[i] = ds->sprtopclip[i];
 
-            if (bottom && clipbot[i] > ds->sprbottomclip[i])
-                clipbot[i] = ds->sprbottomclip[i];
-        }
+        if (silhouette & SIL_BOTTOM)
+            for (int i = r1; i <= r2; i++)
+                if (clipbot[i] > ds->sprbottomclip[i])
+                    clipbot[i] = ds->sprbottomclip[i];
     }
 
     // all clipping has been performed, so draw the bloodsplat
@@ -1266,11 +1274,9 @@ static void R_DrawSprite(const vissprite_t *spr)
         int         r1;
         int         r2;
         const int   silhouette = ds->silhouette;
-        dboolean    bottom;
-        dboolean    top;
 
         // determine if the drawseg obscures the sprite
-        if (ds->x1 > x2 || ds->x2 < x1 || !(silhouette & SIL_BOTH))
+        if (ds->x1 > x2 || ds->x2 < x1 || (!silhouette && !ds->maskedtexturecol))
             continue;       // does not cover sprite
 
         if (ds->maxscale < spr->scale
@@ -1287,17 +1293,16 @@ static void R_DrawSprite(const vissprite_t *spr)
         // clip this piece of the sprite
         r1 = MAX(ds->x1, x1);
         r2 = MIN(ds->x2, x2);
-        bottom = (silhouette & SIL_BOTTOM);
-        top = (silhouette & SIL_TOP);
 
-        for (int i = r1; i <= r2; i++)
-        {
-            if (top && cliptop[i] < ds->sprtopclip[i])
-                cliptop[i] = ds->sprtopclip[i];
+        if (silhouette & SIL_TOP)
+            for (int i = r1; i <= r2; i++)
+                if (cliptop[i] < ds->sprtopclip[i])
+                    cliptop[i] = ds->sprtopclip[i];
 
-            if (bottom && clipbot[i] > ds->sprbottomclip[i])
-                clipbot[i] = ds->sprbottomclip[i];
-        }
+        if (silhouette & SIL_BOTTOM)
+            for (int i = r1; i <= r2; i++)
+                if (clipbot[i] > ds->sprbottomclip[i])
+                    clipbot[i] = ds->sprbottomclip[i];
     }
 
     // killough 3/27/98:

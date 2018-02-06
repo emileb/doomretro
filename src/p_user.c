@@ -44,8 +44,15 @@
 #include "p_local.h"
 #include "s_sound.h"
 
+dboolean        autouse = autouse_default;
 dboolean        infighting = infighting_default;
+int             movebob = movebob_default;
+dboolean        r_liquid_lowerview = r_liquid_lowerview_default;
+int             r_shake_damage = r_shake_damage_default;
+int             stillbob = stillbob_default;
 
+dboolean        autousing = false;
+static dboolean onground;
 int             deathcount = 0;
 int             deadlookdir = -1;
 
@@ -59,15 +66,6 @@ void G_RemoveChoppers(void);
 //
 // Movement
 //
-
-dboolean        autouse = autouse_default;
-int             movebob = movebob_default;
-dboolean        r_liquid_lowerview = r_liquid_lowerview_default;
-int             r_shake_damage = r_shake_damage_default;
-int             stillbob = stillbob_default;
-
-dboolean        autousing = false;
-static dboolean onground;
 
 //
 // P_Thrust
@@ -513,7 +511,7 @@ void P_PlayerThink(void)
     }
 
     if (viewplayer->recoil)
-        viewplayer->recoil += (viewplayer->recoil > 0 ? -1 : 1);
+        viewplayer->recoil -= SIGN(viewplayer->recoil);
 
     if (viewplayer->playerstate == PST_DEAD)
     {

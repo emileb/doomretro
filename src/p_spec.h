@@ -280,34 +280,34 @@ typedef enum
 
 typedef struct
 {
-    thinker_t          thinker;
-    sector_t           *sector;
-    fixed_t            speed;
-    fixed_t            low;
-    fixed_t            high;
-    int                wait;
-    int                count;
-    plat_e             status;
-    plat_e             oldstatus;
-    dboolean           crush;
-    int                tag;
-    plattype_e         type;
+    thinker_t           thinker;
+    sector_t            *sector;
+    fixed_t             speed;
+    fixed_t             low;
+    fixed_t             high;
+    int                 wait;
+    int                 count;
+    plat_e              status;
+    plat_e              oldstatus;
+    dboolean            crush;
+    int                 tag;
+    plattype_e          type;
 
-    struct platlist_s  *list;   // killough
+    struct platlist_s   *list;  // killough
 } plat_t;
 
 // New limit-free plat structure -- killough
 typedef struct platlist_s
 {
-    plat_t             *plat;
-    struct platlist_s  *next;
-    struct platlist_s  **prev;
+    plat_t              *plat;
+    struct platlist_s   *next;
+    struct platlist_s   **prev;
 } platlist_t;
 
 #define PLATWAIT    3
 #define PLATSPEED   FRACUNIT
 
-extern platlist_t      *activeplats;
+extern platlist_t   *activeplats;
 
 void T_PlatRaise(plat_t *plat);
 
@@ -439,9 +439,9 @@ typedef struct ceilinglist_s
     struct ceilinglist_s    **prev;
 } ceilinglist_t;
 
-#define CEILSPEED               FRACUNIT
+#define CEILSPEED       FRACUNIT
 
-extern ceilinglist_t            *activeceilings;
+extern ceilinglist_t    *activeceilings;
 
 dboolean EV_DoCeiling(line_t *line, ceiling_e type);
 

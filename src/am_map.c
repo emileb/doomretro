@@ -53,29 +53,26 @@
 #include "v_video.h"
 #include "z_zone.h"
 
-#define MASKCOLOR   251
-
 // Automap colors
-int     am_allmapcdwallcolor = am_allmapcdwallcolor_default;
-int     am_allmapfdwallcolor = am_allmapfdwallcolor_default;
-int     am_allmapwallcolor = am_allmapwallcolor_default;
-int     am_backcolor = am_backcolor_default;
-int     am_cdwallcolor = am_cdwallcolor_default;
-int     am_crosshaircolor = am_crosshaircolor_default;
-int     am_fdwallcolor = am_fdwallcolor_default;
-int     am_gridcolor = am_gridcolor_default;
-int     am_markcolor = am_markcolor_default;
-int     am_pathcolor = am_pathcolor_default;
-int     am_playercolor = am_playercolor_default;
-int     am_teleportercolor = am_teleportercolor_default;
-int     am_thingcolor = am_thingcolor_default;
-int     am_tswallcolor = am_tswallcolor_default;
-int     am_wallcolor = am_wallcolor_default;
+int am_allmapcdwallcolor = am_allmapcdwallcolor_default;
+int am_allmapfdwallcolor = am_allmapfdwallcolor_default;
+int am_allmapwallcolor = am_allmapwallcolor_default;
+int am_backcolor = am_backcolor_default;
+int am_cdwallcolor = am_cdwallcolor_default;
+int am_crosshaircolor = am_crosshaircolor_default;
+int am_fdwallcolor = am_fdwallcolor_default;
+int am_gridcolor = am_gridcolor_default;
+int am_markcolor = am_markcolor_default;
+int am_pathcolor = am_pathcolor_default;
+int am_playercolor = am_playercolor_default;
+int am_teleportercolor = am_teleportercolor_default;
+int am_thingcolor = am_thingcolor_default;
+int am_tswallcolor = am_tswallcolor_default;
+int am_wallcolor = am_wallcolor_default;
 
 // Automap color priorities
-#define WALLPRIORITY            10
-#define ALLMAPWALLPRIORITY      9
-#define MASKPRIORITY            8
+#define WALLPRIORITY            9
+#define ALLMAPWALLPRIORITY      8
 #define CDWALLPRIORITY          7
 #define ALLMAPCDWALLPRIORITY    6
 #define FDWALLPRIORITY          5
@@ -85,7 +82,6 @@ int     am_wallcolor = am_wallcolor_default;
 #define GRIDPRIORITY            1
 
 static byte *priorities;
-static byte *mask;
 
 static byte playercolor;
 static byte thingcolor;
@@ -95,7 +91,6 @@ static byte backcolor;
 
 static byte *wallcolor;
 static byte *allmapwallcolor;
-static byte *maskcolor;
 static byte *teleportercolor;
 static byte *fdwallcolor;
 static byte *allmapfdwallcolor;
@@ -158,12 +153,12 @@ typedef struct
     mpoint_t    b;
 } mline_t;
 
-dboolean            automapactive;
-
 static const unsigned int   mapwidth = SCREENWIDTH;
 static const unsigned int   mapheight = SCREENHEIGHT - SBARHEIGHT;
 static const unsigned int   maparea = SCREENWIDTH * (SCREENHEIGHT - SBARHEIGHT);
 static const unsigned int   mapbottom = SCREENWIDTH * (SCREENHEIGHT - SBARHEIGHT) - SCREENWIDTH;
+
+dboolean            automapactive;
 
 static mpoint_t     m_paninc;       // how far the window pans each tic (map coords)
 static fixed_t      mtof_zoommul;   // how far the window zooms in each tic (map coords)
@@ -227,6 +222,9 @@ int                 direction;
 static am_frame_t   am_frame;
 
 static void AM_rotate(fixed_t *x, fixed_t *y, angle_t angle);
+static void (*putbigdot)(unsigned int, unsigned int, byte *);
+static void PUTDOT(unsigned int x, unsigned int y, byte *color);
+static void PUTBIGDOT(unsigned int x, unsigned int y, byte *color);
 
 static void AM_activateNewScale(void)
 {
@@ -238,6 +236,7 @@ static void AM_activateNewScale(void)
     m_y -= m_h / 2;
     m_x2 = m_x + m_w;
     m_y2 = m_y + m_h;
+    putbigdot = (scale_mtof >= FRACUNIT * 1.5 ? PUTBIGDOT : PUTDOT);
 }
 
 static void AM_saveScaleAndLoc(void)
@@ -255,8 +254,8 @@ static void AM_restoreScaleAndLoc(void)
 
     if (am_followmode)
     {
-        m_x = (viewx >> FRACTOMAPBITS) - m_w / 2;
-        m_y = (viewy >> FRACTOMAPBITS) - m_h / 2;
+        m_x = (viewplayer->mo->x >> FRACTOMAPBITS) - m_w / 2;
+        m_y = (viewplayer->mo->y >> FRACTOMAPBITS) - m_h / 2;
     }
     else
     {
@@ -270,6 +269,7 @@ static void AM_restoreScaleAndLoc(void)
     // Change the scaling multipliers
     scale_mtof = FixedDiv(mapwidth << FRACBITS, m_w);
     scale_ftom = FixedDiv(FRACUNIT, scale_mtof);
+    putbigdot = (scale_mtof >= FRACUNIT * 1.5 ? PUTBIGDOT : PUTDOT);
 }
 
 //
@@ -313,7 +313,7 @@ static void AM_changeWindowLoc(void)
 
     if (am_rotatemode)
     {
-        AM_rotate(&incx, &incy, viewangle - ANG90);
+        AM_rotate(&incx, &incy, viewplayer->mo->angle - ANG90);
 
         m_x += incx;
         m_y += incy;
@@ -345,19 +345,12 @@ void AM_setColors(void)
     *(priority + nearestcolors[am_tswallcolor]) = TSWALLPRIORITY;
     *(priority + nearestcolors[am_gridcolor]) = GRIDPRIORITY;
 
-    *(priority + nearestcolors[MASKCOLOR]) = MASKPRIORITY;
-
     playercolor = nearestcolors[am_playercolor];
     thingcolor = nearestcolors[am_thingcolor];
     pathcolor = nearestcolors[am_pathcolor];
     markcolor = nearestcolors[am_markcolor];
     backcolor = nearestcolors[am_backcolor];
     crosshaircolor = tinttab60 + (nearestcolors[am_crosshaircolor] << 8);
-
-    for (int x = 0; x < 256; x++)
-        *(mask + x) = x;
-
-    *(mask + nearestcolors[MASKCOLOR]) = backcolor;
 
     for (int x = 0; x < 256; x++)
         for (int y = 0; y < 256; y++)
@@ -372,8 +365,6 @@ void AM_setColors(void)
     teleportercolor = priorities + (nearestcolors[am_teleportercolor] << 8);
     tswallcolor = priorities + (nearestcolors[am_tswallcolor] << 8);
     gridcolor = priorities + (nearestcolors[am_gridcolor] << 8);
-
-    maskcolor = priorities + (nearestcolors[MASKCOLOR] << 8);
 }
 
 void AM_getGridSize(void)
@@ -400,7 +391,6 @@ void AM_getGridSize(void)
 
 void AM_Init(void)
 {
-    mask = Z_Malloc(256, PU_STATIC, NULL);
     priorities = Z_Malloc(256 * 256, PU_STATIC, NULL);
 
     AM_setColors();
@@ -424,8 +414,8 @@ static void AM_initVariables(const dboolean mainwindow)
 
     if (m_x == INT_MAX || am_followmode)
     {
-        m_x = (viewx >> FRACTOMAPBITS) - m_w / 2;
-        m_y = (viewy >> FRACTOMAPBITS) - m_h / 2;
+        m_x = (viewplayer->mo->x >> FRACTOMAPBITS) - m_w / 2;
+        m_y = (viewplayer->mo->y >> FRACTOMAPBITS) - m_h / 2;
         m_x2 = m_x + m_w;
         m_y2 = m_y + m_h;
     }
@@ -448,6 +438,7 @@ static void AM_LevelInit(void)
     if (scale_mtof > max_scale_mtof)
         scale_mtof = min_scale_mtof;
 
+    putbigdot = (scale_mtof >= FRACUNIT * 1.5 ? PUTBIGDOT : PUTDOT);
     scale_ftom = FixedDiv(FRACUNIT, scale_mtof);
 
     // for saving & restoring
@@ -510,7 +501,7 @@ static dboolean     speedtoggle;
 
 static dboolean AM_getSpeedToggle(void)
 {
-    return (!!(gamepadbuttons & GAMEPAD_LEFT_TRIGGER) + !!(modstate & KMOD_SHIFT) == 1);
+    return ((!!(gamepadbuttons & GAMEPAD_LEFT_TRIGGER)) ^ (!!(modstate & KMOD_SHIFT)));
 }
 
 void AM_toggleZoomOut(void)
@@ -636,8 +627,8 @@ void AM_clearMarks(void)
 
 void AM_addToPath(void)
 {
-    const int   x = viewx >> FRACTOMAPBITS;
-    const int   y = viewy >> FRACTOMAPBITS;
+    const int   x = viewplayer->mo->x >> FRACTOMAPBITS;
+    const int   y = viewplayer->mo->y >> FRACTOMAPBITS;
 
     if (pathpointnum)
         if (ABS(pathpoints[pathpointnum - 1].x - x) < FRACUNIT
@@ -693,9 +684,8 @@ dboolean AM_Responder(const event_t *ev)
 
         if (!automapactive && !mapwindow)
         {
-            if ((ev->type == ev_keydown && ev->data1 == AM_STARTKEY && keydown != AM_STARTKEY
-                && !(modstate & KMOD_ALT)) || (ev->type == ev_gamepad && (gamepadbuttons & gamepadautomap)
-                    && !backbuttondown))
+            if ((ev->type == ev_keydown && ev->data1 == AM_STARTKEY && keydown != AM_STARTKEY && !(modstate & KMOD_ALT))
+                || (ev->type == ev_gamepad && (gamepadbuttons & gamepadautomap) && !backbuttondown))
             {
                 keydown = AM_STARTKEY;
                 backbuttondown = true;
@@ -861,7 +851,6 @@ dboolean AM_Responder(const event_t *ev)
             }
             else if (ev->type == ev_keyup)
             {
-                rc = false;
                 key = ev->data1;
 
                 if (key == AM_CLEARMARKKEY)
@@ -981,16 +970,14 @@ dboolean AM_Responder(const event_t *ev)
                 }
 
                 // zoom out
-                else if ((gamepadbuttons & gamepadautomapzoomout)
-                    && !(gamepadbuttons & gamepadautomapzoomin))
+                else if ((gamepadbuttons & gamepadautomapzoomout) && !(gamepadbuttons & gamepadautomapzoomin))
                 {
                     movement = true;
                     AM_toggleZoomOut();
                 }
 
                 // zoom in
-                else if ((gamepadbuttons & gamepadautomapzoomin)
-                    && !(gamepadbuttons & gamepadautomapzoomout))
+                else if ((gamepadbuttons & gamepadautomapzoomin) && !(gamepadbuttons & gamepadautomapzoomout))
                 {
                     movement = true;
                     AM_toggleZoomIn();
@@ -1092,6 +1079,7 @@ dboolean AM_Responder(const event_t *ev)
             }
         }
     }
+
     return rc;
 }
 
@@ -1142,8 +1130,8 @@ static void AM_changeWindowScale(void)
 
 static void AM_doFollowPlayer(void)
 {
-    m_x = (viewx >> FRACTOMAPBITS) - m_w / 2;
-    m_y = (viewy >> FRACTOMAPBITS) - m_h / 2;
+    m_x = (viewplayer->mo->x >> FRACTOMAPBITS) - m_w / 2;
+    m_y = (viewplayer->mo->y >> FRACTOMAPBITS) - m_h / 2;
     m_x2 = m_x + m_w;
     m_y2 = m_y + m_h;
 }
@@ -1259,6 +1247,8 @@ static __inline void PUTDOT2(unsigned int x, unsigned int y, byte *color)
     if (x < mapwidth && y < maparea)
         *(mapscreen + y + x) = *color;
 }
+
+static void (*putbigdot)(unsigned int, unsigned int, byte *);
 
 static __inline void PUTBIGDOT(unsigned int x, unsigned int y, byte *color)
 {
@@ -1417,7 +1407,7 @@ static void AM_drawMline2(int x0, int y0, int x1, int y1, byte *color)
 static void AM_drawBigMline(int x0, int y0, int x1, int y1, byte *color)
 {
     if (AM_clipMline(&x0, &y0, &x1, &y1))
-        AM_drawFline(x0, y0, x1, y1, color, (scale_mtof >= FRACUNIT * 1.5 ? PUTBIGDOT : PUTDOT));
+        AM_drawFline(x0, y0, x1, y1, color, putbigdot);
 }
 
 static void AM_drawTransMline(int x0, int y0, int x1, int y1, byte *color)
@@ -1431,28 +1421,26 @@ static void AM_drawTransMline(int x0, int y0, int x1, int y1, byte *color)
 //
 static void AM_drawGrid(void)
 {
-    fixed_t         start;
-    fixed_t         end;
-    mline_t         ml;
     const fixed_t   minlen = (fixed_t)(sqrt((double)m_w * m_w + (double)m_h * m_h));
-    const fixed_t   extx = (minlen - m_w) / 2;
-    const fixed_t   exty = (minlen - m_h) / 2;
+    fixed_t         startx = m_x - (minlen - m_w) / 2;
+    fixed_t         starty = m_y - (minlen - m_h) / 2;
+    fixed_t         end;
 
     // Figure out start of vertical gridlines
-    start = m_x - extx;
+    if ((startx - (bmaporgx >> FRACTOMAPBITS)) % gridwidth)
+        startx += gridwidth - ((startx - (bmaporgx >> FRACTOMAPBITS)) % gridwidth);
 
-    if ((start - (bmaporgx >> FRACTOMAPBITS)) % gridwidth)
-        start += gridwidth - ((start - (bmaporgx >> FRACTOMAPBITS)) % gridwidth);
-
-    end = m_x + minlen - extx;
+    end = startx + minlen;
 
     // draw vertical gridlines
-    for (fixed_t x = start; x < end; x += gridwidth)
+    for (fixed_t x = startx; x < end; x += gridwidth)
     {
+        mline_t ml;
+
         ml.a.x = x;
         ml.b.x = x;
-        ml.a.y = m_y - exty;
-        ml.b.y = ml.a.y + minlen;
+        ml.a.y = starty;
+        ml.b.y = starty + minlen;
 
         if (am_rotatemode)
         {
@@ -1464,18 +1452,18 @@ static void AM_drawGrid(void)
     }
 
     // Figure out start of horizontal gridlines
-    start = m_y - exty;
+    if ((starty - (bmaporgy >> FRACTOMAPBITS)) % gridheight)
+        starty += gridheight - ((starty - (bmaporgy >> FRACTOMAPBITS)) % gridheight);
 
-    if ((start - (bmaporgy >> FRACTOMAPBITS)) % gridheight)
-        start += gridheight - ((start - (bmaporgy >> FRACTOMAPBITS)) % gridheight);
-
-    end = m_y + minlen - exty;
+    end = starty + minlen;
 
     // draw horizontal gridlines
-    for (fixed_t y = start; y < end; y += gridheight)
+    for (fixed_t y = starty; y < end; y += gridheight)
     {
-        ml.a.x = m_x - extx;
-        ml.b.x = ml.a.x + minlen;
+        mline_t ml;
+
+        ml.a.x = startx;
+        ml.b.x = startx + minlen;
         ml.a.y = y;
         ml.b.y = y;
 
@@ -1559,8 +1547,12 @@ static void AM_drawWalls(void)
                 }
 
                 if (!backsector || (secret && !cheating))
-                    AM_drawBigMline(l.a.x, l.a.y, l.b.x, l.b.y, (mapped || cheating ? wallcolor :
-                    (allmap ? allmapwallcolor : maskcolor)));
+                {
+                    if (mapped || cheating)
+                        AM_drawBigMline(l.a.x, l.a.y, l.b.x, l.b.y, wallcolor);
+                    else if (allmap)
+                        AM_drawBigMline(l.a.x, l.a.y, l.b.x, l.b.y, allmapfdwallcolor);
+                }
                 else if (backsector->floorheight != frontsector->floorheight)
                 {
                     if (mapped || cheating)
@@ -1580,43 +1572,30 @@ static void AM_drawWalls(void)
             }
         }
     }
-
-    if (!cheating && !allmap)
-    {
-        byte    *dot = mapscreen;
-
-        while (dot < area)
-        {
-            *dot = *(*dot + mask);
-            dot++;
-        }
-    }
 }
 
 static void AM_drawLineCharacter(const mline_t *lineguy, const int lineguylines, const fixed_t scale,
     angle_t angle, byte color, fixed_t x, fixed_t y)
 {
-    if (am_rotatemode)
-        angle -= viewangle - ANG90;
-
     for (int i = 0; i < lineguylines; i++)
     {
-        int x1, y1;
-        int x2, y2;
+        int     x1, y1;
+        int     x2, y2;
+        mline_t line = lineguy[i];
 
         if (scale)
         {
-            x1 = FixedMul(lineguy[i].a.x, scale);
-            y1 = FixedMul(lineguy[i].a.y, scale);
-            x2 = FixedMul(lineguy[i].b.x, scale);
-            y2 = FixedMul(lineguy[i].b.y, scale);
+            x1 = FixedMul(line.a.x, scale);
+            y1 = FixedMul(line.a.y, scale);
+            x2 = FixedMul(line.b.x, scale);
+            y2 = FixedMul(line.b.y, scale);
         }
         else
         {
-            x1 = lineguy[i].a.x;
-            y1 = lineguy[i].a.y;
-            x2 = lineguy[i].b.x;
-            y2 = lineguy[i].b.y;
+            x1 = line.a.x;
+            y1 = line.a.y;
+            x2 = line.b.x;
+            y2 = line.b.y;
         }
 
         if (angle)
@@ -1632,27 +1611,25 @@ static void AM_drawLineCharacter(const mline_t *lineguy, const int lineguylines,
 static void AM_drawTransLineCharacter(const mline_t *lineguy, const int lineguylines, const fixed_t scale,
     angle_t angle, byte *color, const fixed_t x, const fixed_t y)
 {
-    if (am_rotatemode)
-        angle -= viewangle - ANG90;
-
     for (int i = 0; i < lineguylines; i++)
     {
-        int x1, y1;
-        int x2, y2;
+        int     x1, y1;
+        int     x2, y2;
+        mline_t line = lineguy[i];
 
         if (scale)
         {
-            x1 = FixedMul(lineguy[i].a.x, scale);
-            y1 = FixedMul(lineguy[i].a.y, scale);
-            x2 = FixedMul(lineguy[i].b.x, scale);
-            y2 = FixedMul(lineguy[i].b.y, scale);
+            x1 = FixedMul(line.a.x, scale);
+            y1 = FixedMul(line.a.y, scale);
+            x2 = FixedMul(line.b.x, scale);
+            y2 = FixedMul(line.b.y, scale);
         }
         else
         {
-            x1 = lineguy[i].a.x;
-            y1 = lineguy[i].a.y;
-            x2 = lineguy[i].b.x;
-            y2 = lineguy[i].b.y;
+            x1 = line.a.x;
+            y1 = line.a.y;
+            x2 = line.b.x;
+            y2 = line.b.y;
         }
 
         if (angle)
@@ -1707,24 +1684,28 @@ static void AM_drawPlayer(void)
 
     const int   invisibility = viewplayer->powers[pw_invisibility];
     mpoint_t    point;
+    angle_t     angle = viewplayer->mo->angle;
 
-    point.x = viewx >> FRACTOMAPBITS;
-    point.y = viewy >> FRACTOMAPBITS;
+    point.x = viewplayer->mo->x >> FRACTOMAPBITS;
+    point.y = viewplayer->mo->y >> FRACTOMAPBITS;
 
     if (am_rotatemode)
+    {
         AM_rotatePoint(&point);
+        angle = ANG90;
+    }
 
     if (viewplayer->cheats & (CF_ALLMAP | CF_ALLMAP_THINGS))
     {
         if (invisibility > STARTFLASHING || (invisibility & 8))
-            AM_drawTransLineCharacter(cheatplayerarrow, CHEATPLAYERARROWLINES, 0, viewangle, &playercolor, point.x, point.y);
+            AM_drawTransLineCharacter(cheatplayerarrow, CHEATPLAYERARROWLINES, 0, angle, &playercolor, point.x, point.y);
         else
-            AM_drawLineCharacter(cheatplayerarrow, CHEATPLAYERARROWLINES, 0, viewangle, playercolor, point.x, point.y);
+            AM_drawLineCharacter(cheatplayerarrow, CHEATPLAYERARROWLINES, 0, angle, playercolor, point.x, point.y);
     }
     else if (invisibility > STARTFLASHING || (invisibility & 8))
-        AM_drawTransLineCharacter(playerarrow, PLAYERARROWLINES, 0, viewangle, &playercolor, point.x, point.y);
+        AM_drawTransLineCharacter(playerarrow, PLAYERARROWLINES, 0, angle, &playercolor, point.x, point.y);
     else
-        AM_drawLineCharacter(playerarrow, PLAYERARROWLINES, 0, viewangle, playercolor, point.x, point.y);
+        AM_drawLineCharacter(playerarrow, PLAYERARROWLINES, 0, angle, playercolor, point.x, point.y);
 }
 
 #define THINGTRIANGLELINES  3
@@ -1765,8 +1746,8 @@ static void AM_drawThings(void)
                 if (!(thing->flags2 & MF2_DONTMAP))
                 {
                     mpoint_t    point;
-                    int         fx;
-                    int         fy;
+                    angle_t     angle = thing->angle;
+                    int         fx, fy;
                     const int   lump = sprites[thing->sprite].spriteframes[0].lump[0];
                     const int   w = (BETWEEN(24 << FRACBITS, MIN(spritewidth[lump], spriteheight[lump]),
                         96 << FRACBITS) >> FRACTOMAPBITS) / 2;
@@ -1775,14 +1756,16 @@ static void AM_drawThings(void)
                     point.y = thing->y >> FRACTOMAPBITS;
 
                     if (am_rotatemode)
+                    {
                         AM_rotatePoint(&point);
+                        angle -= viewplayer->mo->angle - ANG90;
+                    }
 
                     fx = CXMTOF(point.x);
                     fy = CYMTOF(point.y);
 
                     if (fx >= -w && fx <= (int)mapwidth + w && fy >= -w && fy <= (int)mapwidth + w)
-                        AM_drawLineCharacter(thingtriangle, THINGTRIANGLELINES, w, thing->angle,
-                            thingcolor, point.x, point.y);
+                        AM_drawLineCharacter(thingtriangle, THINGTRIANGLELINES, w, angle, thingcolor, point.x, point.y);
                 }
 
                 thing = thing->snext;
@@ -1952,7 +1935,7 @@ static void AM_setFrameVariables(void)
 
     if (am_rotatemode)
     {
-        const int       angle = (ANG90 - viewangle) >> ANGLETOFINESHIFT;
+        const int       angle = (ANG90 - viewplayer->mo->angle) >> ANGLETOFINESHIFT;
         const float     dx = (float)(m_x2 - x);
         const float     dy = (float)(m_y2 - y);
         const fixed_t   r = (fixed_t)sqrt(dx * dx + dy * dy);

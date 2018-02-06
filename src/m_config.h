@@ -79,6 +79,7 @@ extern int          gp_vibrate_barrels;
 extern int          gp_vibrate_damage;
 extern int          gp_vibrate_weapons;
 extern dboolean     infighting;
+extern dboolean     infiniteheight;
 extern char         *iwadfolder;
 extern dboolean     m_doubleclick_use;
 extern dboolean     m_invertyaxis;
@@ -368,6 +369,8 @@ enum
 
 #define infighting_default                      true
 
+#define infiniteheight_default                  false
+
 #define iwadfolder_default                      "C:\\"
 
 #define m_doubleclick_use_default               false
@@ -390,7 +393,7 @@ enum
 
 #define playername_default                      "you"
 
-#define r_althud_default                        true
+#define r_althud_default                        false
 
 #define r_berserkintensity_min                  0
 #define r_berserkintensity_default              2

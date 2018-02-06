@@ -62,11 +62,11 @@ typedef struct
     FILE    *f;
 } DEHFILE;
 
-static dboolean  addtocount;
-static int       linecount;
+static dboolean addtocount;
+static int      linecount;
 
-int              dehcount;
-dboolean         dehacked;
+int             dehcount;
+dboolean        dehacked;
 
 // killough 10/98: emulate IO whether input really comes from a file or not
 
@@ -160,7 +160,6 @@ char    *s_GOTHTHBONUS = GOTHTHBONUS;
 char    *s_GOTARMBONUS = GOTARMBONUS;
 char    *s_GOTSTIM = GOTSTIM;
 char    *s_GOTMEDINEED = GOTMEDINEED;
-char    *s_GOTMEDINEED2 = "";
 char    *s_GOTMEDIKIT = GOTMEDIKIT;
 char    *s_GOTSUPER = GOTSUPER;
 
@@ -696,7 +695,6 @@ deh_strs deh_strlookup[] =
     { &s_GOTARMBONUS,          "GOTARMBONUS"          },
     { &s_GOTSTIM,              "GOTSTIM"              },
     { &s_GOTMEDINEED,          "GOTMEDINEED"          },
-    { &s_GOTMEDINEED2,         "GOTMEDINEED2"         },
     { &s_GOTMEDIKIT,           "GOTMEDIKIT"           },
     { &s_GOTSUPER,             "GOTSUPER"             },
 
@@ -2020,7 +2018,7 @@ void ProcessDehFile(char *filename, int lumpnum)
             // preserve state while including a file
             // killough 10/98: moved to here
 
-            char        *nextfile;
+            char    *nextfile;
             dboolean    oldnotext = includenotext;      // killough 10/98
 
             // killough 10/98: exclude if inside wads (only to discourage
@@ -2450,7 +2448,7 @@ static void deh_procFrame(DEHFILE *fpin, char *line)
             if (devparm)
                 C_Output(" - translucent = %ld", value);
 
-            states[indexnum].translucent = !!value;             // dboolean
+            states[indexnum].translucent = !!value;             // bool
             states[indexnum].dehacked = dehacked = !BTSX;
         }
         else
@@ -2694,7 +2692,7 @@ static void deh_procWeapon(DEHFILE *fpin, char *line)
         }
 
         if (M_StringCompare(key, deh_weapon[0]))                    // Ammo type
-            weaponinfo[indexnum].ammo = value;
+            weaponinfo[indexnum].ammotype = value;
         else if (M_StringCompare(key, deh_weapon[1]))               // Deselect frame
             weaponinfo[indexnum].upstate = value;
         else if (M_StringCompare(key, deh_weapon[2]))               // Select frame
@@ -3196,7 +3194,7 @@ static void deh_procText(DEHFILE *fpin, char *line)
     char        *line2 = NULL;                  // duplicate line for rerouting
 
     // Ty 04/11/98 - Included file may have NOTEXT skip flag set
-    if (includenotext)                          // flag to skip included deh-style text
+    if (includenotext)                      // flag to skip included deh-style text
     {
         C_Output("Skipped text block because of NOTEXT directive.");
         strcpy(inbuffer, line);
@@ -3205,7 +3203,7 @@ static void deh_procText(DEHFILE *fpin, char *line)
             dehfgets(inbuffer, sizeof(inbuffer), fpin); // skip block
 
         // Ty 05/17/98 - don't care if this fails
-        return;                                 // ************** Early return
+        return;                             // ************** Early return
     }
 
     // killough 8/98: allow hex numbers in input:
@@ -3425,14 +3423,13 @@ static void deh_procStrings(DEHFILE *fpin, char *line)
 // Args:    key       -- place to put the mnemonic for the string if found
 //          lookfor   -- original value string to look for
 //          newstring -- string to put in its place if found
-// Returns: dboolean: True if string found, false if not
+// Returns: bool: True if string found, false if not
 //
 static dboolean deh_procStringSub(char *key, char *lookfor, char *newstring)
 {
     dboolean    found = false;  // loop exit flag
-    int         i;              // looper
 
-    for (i = 0; i < deh_numstrlookup; i++)
+    for (int i = 0; i < deh_numstrlookup; i++)
     {
         found = (lookfor ? M_StringCompare(*deh_strlookup[i].ppstr, lookfor) :
             M_StringCompare(deh_strlookup[i].lookup, key));
@@ -3566,7 +3563,7 @@ static void rstrip(char *s)         // strip trailing whitespace
     char    *p = s + strlen(s);     // killough 4/4/98: same here
 
     while (p > s && isspace(*--p))  // break on first non-whitespace
-        *p='\0';
+        *p = '\0';
 }
 
 // ====================================================================

@@ -78,10 +78,10 @@ typedef struct
 //
 typedef struct
 {
-    char        istexture;      // if false, it is a flat
-    char        endname[9];
-    char        startname[9];
-    int         speed;
+    char    istexture;      // if false, it is a flat
+    char    endname[9];
+    char    startname[9];
+    int     speed;
 } PACKEDATTR animdef_t;
 
 #if defined(_MSC_VER) || defined(__GNUC__)
@@ -1932,7 +1932,7 @@ void P_ShootSpecialLine(mobj_t *thing, line_t *line)
     // jff 02/04/98 add check here for generalized linedef
     // pointer to line function is NULL by default, set non-null if
     // line special is gun triggered generalized linedef type
-    dboolean    (*linefunc)(line_t *line) = NULL;
+    dboolean (*linefunc)(line_t *line) = NULL;
 
     // check each range of generalized linedefs
     if ((unsigned int)line->special >= GenFloorBase)
@@ -2025,7 +2025,7 @@ void P_ShootSpecialLine(mobj_t *thing, line_t *line)
         }
 
     // Impacts that other things can activate.
-    if (!thing->player && line->special != GR_Door_OpenStay)
+    if (!thing->player && line->special != G1_Door_OpenStay)
         return;
 
     if (!P_CheckTag(line))      // jff 2/27/98 disallow zero tag on some types
@@ -2039,14 +2039,13 @@ void P_ShootSpecialLine(mobj_t *thing, line_t *line)
 
             break;
 
-        case GR_Door_OpenStay:
+        case G1_Door_OpenStay:
             if (EV_DoDoor(line, doorOpen))
             {
                 P_ChangeSwitchTexture(line, true);
-
-                if (canmodify && gamemission == doom2 && gamemap == 18)
-                    line->special = 0;
+                line->special = 0;
             }
+
             break;
 
         case G1_Floor_RaiseToNextHighestFloor_ChangesTexture:
@@ -2655,9 +2654,9 @@ static void P_SpawnScrollers(void)
 
     for (int i = 0; i < numlines; i++, l++)
     {
-        fixed_t     dx = l->dx >> SCROLL_SHIFT;         // direction and speed of scrolling
+        fixed_t     dx = l->dx >> SCROLL_SHIFT;             // direction and speed of scrolling
         fixed_t     dy = l->dy >> SCROLL_SHIFT;
-        int         control = -1;                       // no control sector or acceleration
+        int         control = -1;                           // no control sector or acceleration
         dboolean    accel = false;
         int         special = l->special;
 

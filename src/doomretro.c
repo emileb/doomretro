@@ -68,10 +68,9 @@ static void I_SetProcessDPIAware(void)
 
     if (hLibrary)
     {
-        typedef dboolean (*SETPROCESSDPIAWARE)();
+        typedef BOOL (*SETPROCESSDPIAWARE)();
 
-        SETPROCESSDPIAWARE  pSetProcessDPIAware = (SETPROCESSDPIAWARE)GetProcAddress(hLibrary,
-                                "SetProcessDPIAware");
+        SETPROCESSDPIAWARE  pSetProcessDPIAware = (SETPROCESSDPIAWARE)GetProcAddress(hLibrary, "SetProcessDPIAware");
 
         if (pSetProcessDPIAware)
             pSetProcessDPIAware();

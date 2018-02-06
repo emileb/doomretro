@@ -42,6 +42,8 @@
 #include "st_lib.h"
 #include "v_video.h"
 
+dboolean    usesmallnums;
+
 void STlib_initNum(st_number_t *n, int x, int y, patch_t **pl, int *num, dboolean *on, int width)
 {
     n->x = x;
@@ -68,9 +70,7 @@ static void STlib_drawLowNum(int number, int color, int shadow, int x, int y)
         "111111001111110011221122112211221111112211111122002211220022112211111122111111220022222200222222"
     };
 
-    int j = (y * SCREENWIDTH + x) * SCREENSCALE;
-
-    for (int i = 0; i < 96; i++)
+    for (int i = 0, j = (y * SCREENWIDTH + x) * SCREENSCALE; i < 96; i++)
     {
         char    dot = lownums[number][i];
 
@@ -97,40 +97,22 @@ static void STlib_drawHighNum(int number, int color, int shadow, int x, int y)
         "011110001111110011021120112211221111112201111122002211220002112201111122011110220002222200022220"
     };
 
-    int j = (y * SCREENWIDTH + x) * SCREENSCALE;
-
-    for (int i = 0; i < 96; i++)
+    for (int i = 0, j = (y * SCREENWIDTH + x) * SCREENSCALE; i < 96; i++)
     {
         char    dot = highnums[number][i];
 
         if (dot == '1')
-        {
-            for (int yy = 0; yy < SCREENSCALE; yy++)
-                for (int xx = 0; xx < SCREENSCALE; xx++)
-                    screens[0][j + i / 8 * SCREENWIDTH + (i & 7)] = color;
-        }
+            screens[0][j + i / 8 * SCREENWIDTH + (i & 7)] = color;
         else if (dot == '2')
-        {
-            for (int yy = 0; yy < SCREENSCALE; yy++)
-                for (int xx = 0; xx < SCREENSCALE; xx++)
-                    screens[0][j + i / 8 * SCREENWIDTH + (i & 7)] = shadow;
-        }
+            screens[0][j + i / 8 * SCREENWIDTH + (i & 7)] = shadow;
     }
 }
 
-//
-// A fairly efficient way to draw a number
-//  based on differences from the old number.
-// Note: worth the trouble?
-//
-static void STlib_drawNum(st_number_t *n)
+static void STlib_drawBigNum(st_number_t *n)
 {
-    int         numdigits = n->width;
-    int         num = MAX(0, *n->num);
-    patch_t     *patch = n->p[0];
-    int         w = SHORT(patch->width);
-    dboolean    smallnum = (SHORT(patch->height) == 6 && !STYSNUM0 && STBAR == 2);
-    int         x = n->x;
+    int numdigits = n->width;
+    int num = MAX(0, *n->num);
+    int x = n->x;
 
     // if non-number, do not draw it
     if (num == 1994)
@@ -138,42 +120,70 @@ static void STlib_drawNum(st_number_t *n)
 
     // in the special case of 0, you draw 0
     if (!num)
-    {
-        if (smallnum)
-        {
-            if (r_detail == r_detail_low)
-                STlib_drawLowNum(0, 160, 47, x - w, n->y);
-            else
-                STlib_drawHighNum(0, 160, 47, x - w, n->y);
-        }
-        else
-            V_DrawPatch(x - w, n->y, 0, patch);
-    }
+        V_DrawPatch(x - 14, n->y, 0, n->p[0]);
     else
-
+    {
         // draw the new number
         while (num && numdigits--)
         {
-            x -= w;
+            x -= 14;
+            V_DrawPatch(x, n->y, 0, n->p[num % 10]);
+            num /= 10;
+        }
+    }
+}
 
-            if (smallnum)
+static void STlib_drawSmallNum(st_number_t *n)
+{
+    int numdigits = n->width;
+    int num = MAX(0, *n->num);
+    int x = n->x;
+
+    // in the special case of 0, you draw 0
+    if (!num)
+    {
+        if (usesmallnums)
+        {
+            if (r_detail == r_detail_high)
+                STlib_drawHighNum(0, 160, 47, x - 4, n->y);
+            else
+                STlib_drawLowNum(0, 160, 47, x - 4, n->y);
+        }
+        else
+            V_DrawPatch(x - 4, n->y, 0, n->p[0]);
+    }
+    else
+    {
+        // draw the new number
+        while (num && numdigits--)
+        {
+            x -= 4;
+
+            if (usesmallnums)
             {
-                if (r_detail == r_detail_low)
-                    STlib_drawLowNum(num % 10, 160, 47, x, n->y);
-                else
+                if (r_detail == r_detail_high)
                     STlib_drawHighNum(num % 10, 160, 47, x, n->y);
+                else
+                    STlib_drawLowNum(num % 10, 160, 47, x, n->y);
             }
             else
-               V_DrawPatch(x, n->y, 0, n->p[num % 10]);
+                V_DrawPatch(x, n->y, 0, n->p[num % 10]);
 
             num /= 10;
         }
+    }
 }
 
-void STlib_updateNum(st_number_t *n)
+void STlib_updateBigNum(st_number_t *n)
 {
     if (*n->on)
-        STlib_drawNum(n);
+        STlib_drawBigNum(n);
+}
+
+void STlib_updateSmallNum(st_number_t *n)
+{
+    if (*n->on)
+        STlib_drawSmallNum(n);
 }
 
 void STlib_initPercent(st_percent_t *p, int x, int y, patch_t **pl, int *num, dboolean *on, patch_t *percent)
@@ -187,7 +197,7 @@ void STlib_updatePercent(st_percent_t *per, int refresh)
     if (refresh && *per->n.on)
         V_DrawPatch(per->n.x, per->n.y, 0, per->p);
 
-    STlib_updateNum(&per->n);
+    STlib_updateBigNum(&per->n);
 }
 
 void STlib_initMultIcon(st_multicon_t *mi, int x, int y, patch_t **il, int *inum, dboolean *on)
@@ -213,12 +223,15 @@ void STlib_updateArmsIcon(st_multicon_t *mi, dboolean refresh, int i)
 {
     if (*mi->on && (mi->oldinum != *mi->inum || refresh) && *mi->inum != -1)
     {
-        if (STYSNUM0 || STBAR > 2)
+        if (usesmallnums)
+        {
+            if (r_detail == r_detail_high)
+                STlib_drawHighNum(i + 2, (*mi->inum ? 160 : 93), 47, mi->x, mi->y);
+            else
+                STlib_drawLowNum(i + 2, (*mi->inum ? 160 : 93), 47, mi->x, mi->y);
+        }
+        else 
             V_DrawPatch(mi->x, mi->y, 0, mi->p[*mi->inum]);
-        else if (r_detail == r_detail_low)
-            STlib_drawLowNum(i + 2, (*mi->inum ? 160 : 93), 47, mi->x, mi->y);
-        else
-            STlib_drawHighNum(i + 2, (*mi->inum ? 160 : 93), 47, mi->x, mi->y);
 
         mi->oldinum = *mi->inum;
     }

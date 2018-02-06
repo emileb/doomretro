@@ -77,47 +77,6 @@
 #include <unistd.h>
 #endif
 
-struct s_commify
-{
-    char    *p[128];
-    size_t  pidx;
-};
-
-static struct s_commify *M_GetCommify(void)
-{
-    static struct s_commify *sc = NULL;
-
-    if (!sc)
-        sc = calloc(1, sizeof(struct s_commify));
-
-    return sc;
-}
-
-static void M_FreeCommifies(int shutdown)
-{
-    struct s_commify    *sc = M_GetCommify();
-
-    if (sc->pidx > 0)
-        for (size_t i = 0; i < sc->pidx; i++)
-            free(sc->p[i]);
-
-    if (shutdown)
-        free(sc);
-}
-
-static void M_AddToCommifies(char *p)
-{
-    struct s_commify    *sc = M_GetCommify();
-
-    if (sc->pidx == 128)
-    {
-        M_FreeCommifies(0);
-        sc->pidx = 0;
-    }
-
-    sc->p[sc->pidx++] = p;
-}
-
 //
 // Create a directory
 //
@@ -339,10 +298,7 @@ char *M_StringJoin(char *s, ...)
     va_end(args);
 
     if (!(result = malloc(result_len)))
-    {
-        I_Error("M_StringJoin: Failed to allocate new string.");
         return NULL;
-    }
 
     M_StringCopy(result, s, result_len);
 
@@ -611,7 +567,6 @@ char *commify(int64_t value)
     }
 
     p = strdup(result);
-    M_AddToCommifies(p);
     return p;
 }
 
@@ -635,7 +590,6 @@ char *uncommify(const char *input)
         *p2 = '\0';
     }
 
-    M_AddToCommifies(p);
     return p;
 }
 

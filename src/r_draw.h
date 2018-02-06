@@ -59,6 +59,8 @@ extern byte             *dc_brightmap;
 extern int              dc_baseclip;
 extern int              dc_floorclip;
 extern int              dc_ceilingclip;
+extern int              dc_numposts;
+extern int              dc_black;
 
 // first pixel in a column
 extern byte             *dc_source;
@@ -90,7 +92,9 @@ void R_DrawFlippedSkyColumn(void);
 void R_DrawSkyColorColumn(void);
 void R_DrawTranslucentColumn(void);
 void R_DrawTranslucent50Column(void);
+void R_DrawTranslucentColor50Column(void);
 void R_DrawDitheredColumn(void);
+void R_DrawDitheredColorColumn(void);
 void R_DrawTranslucent33Column(void);
 void R_DrawTranslucentGreenColumn(void);
 void R_DrawTranslucentRedColumn(void);

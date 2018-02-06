@@ -75,18 +75,6 @@
 // Location of status bar
 #define ST_X                0
 
-// Number of status faces.
-#define ST_NUMPAINFACES     5
-#define ST_NUMSTRAIGHTFACES 3
-#define ST_NUMTURNFACES     2
-#define ST_NUMSPECIALFACES  3
-
-#define ST_FACESTRIDE       (ST_NUMSTRAIGHTFACES + ST_NUMTURNFACES + ST_NUMSPECIALFACES)
-
-#define ST_NUMEXTRAFACES    2
-
-#define ST_NUMFACES         (ST_FACESTRIDE * ST_NUMPAINFACES + ST_NUMEXTRAFACES)
-
 #define ST_TURNOFFSET       ST_NUMSTRAIGHTFACES
 #define ST_OUCHOFFSET       (ST_TURNOFFSET + ST_NUMTURNFACES)
 #define ST_EVILGRINOFFSET   (ST_OUCHOFFSET + 1)
@@ -202,7 +190,7 @@ static patch_t              *shortnum[10];
 static patch_t              *keys[NUMCARDS];
 
 // face status patches
-static patch_t              *faces[ST_NUMFACES];
+patch_t                     *faces[ST_NUMFACES];
 
 // main bar right
 static patch_t              *armsbg;
@@ -260,7 +248,7 @@ dboolean                    oldweaponsowned[NUMWEAPONS];
 int                         st_facecount;
 
 // current face index, used by w_faces
-static int                  st_faceindex;
+int                         st_faceindex;
 
 // holds key-type for each key box on bar
 static int                  keyboxes[3];
@@ -317,7 +305,7 @@ static dboolean movekey(char key)
         || key == keyboardstrafeleft || key == keyboardstraferight);
 }
 
-static void ST_InitCheats(void)
+static void ST_initCheats(void)
 {
     cheat_mus.movekey = movekey(cheat_mus.sequence[0]);
     cheat_mus_xy.movekey = movekey(cheat_mus_xy.sequence[0]);
@@ -748,7 +736,7 @@ dboolean ST_Responder(event_t *ev)
                                 viewplayer->powers[pw_invulnerability] = (viewplayer->invulnbeforechoppers ? 1 : STARTFLASHING);
                                 viewplayer->weaponowned[wp_chainsaw] = viewplayer->chainsawbeforechoppers;
                                 oldweaponsowned[wp_chainsaw] = viewplayer->chainsawbeforechoppers;
-                              }
+                            }
                         }
 
                         C_Input(cheat_powerup[i].sequence);
@@ -1090,7 +1078,6 @@ static int ST_calcPainOffset(void)
 //
 static void ST_updateFaceWidget(void)
 {
-    int         i;
     static int  priority;
 
     // [crispy] fix status bar face hysteresis
@@ -1118,7 +1105,7 @@ static void ST_updateFaceWidget(void)
             // picking up bonus
             dboolean    doevilgrin = false;
 
-            for (i = 0; i < NUMWEAPONS; i++)
+            for (int i = 0; i < NUMWEAPONS; i++)
                 // [BH] no evil grin when invulnerable
                 if (oldweaponsowned[i] != viewplayer->weaponowned[i] && !invulnerable)
                 {
@@ -1138,53 +1125,37 @@ static void ST_updateFaceWidget(void)
 
     if (priority < 8)
     {
-        if (viewplayer->damagecount && viewplayer->attacker && viewplayer->attacker != viewplayer->mo)
+        if (viewplayer->damagecount && viewplayer->attacker)
         {
-            // being attacked
-            priority = 7;
-
             // [BH] fix ouch-face when damage > 20
             if (st_oldhealth - viewplayer->health > ST_MUCHPAIN)
             {
+                priority = 8;   // [BH] keep ouch-face visible
                 st_facecount = ST_TURNCOUNT;
                 faceindex = ST_OUCHOFFSET;
-                priority = 8;   // [BH] keep ouch-face visible
             }
             else
             {
-                angle_t badguyangle = R_PointToAngle2(viewx, viewy, viewplayer->attacker->x, viewplayer->attacker->y);
-                angle_t diffang;
+                angle_t     badguyangle = R_PointToAngle2(viewx, viewy, viewplayer->attacker->x, viewplayer->attacker->y);
+                angle_t     diffang;
+                dboolean    turn;
 
                 if (badguyangle > viewangle)
                 {
                     // whether right or left
                     diffang = badguyangle - viewangle;
-                    i = (diffang > ANG180);
+                    turn = (diffang > ANG180);
                 }
                 else
                 {
                     // whether left or right
                     diffang = viewangle - badguyangle;
-                    i = (diffang <= ANG180);
+                    turn = (diffang <= ANG180);
                 }
 
+                priority = 7;
                 st_facecount = ST_TURNCOUNT;
-
-                if (diffang < ANG45)
-                {
-                    // head-on
-                    faceindex = ST_RAMPAGEOFFSET;
-                }
-                else if (i)
-                {
-                    // turn face right
-                    faceindex = ST_TURNOFFSET;
-                }
-                else
-                {
-                    // turn face left
-                    faceindex = ST_TURNOFFSET + 1;
-                }
+                faceindex = (diffang < ANG45 ? ST_RAMPAGEOFFSET : ST_TURNOFFSET + !turn);
             }
         }
     }
@@ -1246,9 +1217,9 @@ static void ST_updateFaceWidget(void)
     // look left or look right if the facecount has timed out
     if (!st_facecount)
     {
+        priority = 0;
         faceindex = st_randomnumber % 3;
         st_facecount = ST_STRAIGHTFACECOUNT;
-        priority = 0;
     }
 
     st_facecount--;
@@ -1259,10 +1230,10 @@ static void ST_updateFaceWidget(void)
 
 static void ST_updateWidgets(void)
 {
-    static int largeammo = 1994; // means "n/a"
-    ammotype_t ammo = weaponinfo[viewplayer->readyweapon].ammo;
+    static int  largeammo = 1994;   // means "n/a"
+    ammotype_t  ammotype = weaponinfo[viewplayer->readyweapon].ammotype;
 
-    w_ready.num = (ammo == am_noammo || viewplayer->health <= 0 ? &largeammo : &viewplayer->ammo[ammo]);
+    w_ready.num = (ammotype == am_noammo || viewplayer->health <= 0 ? &largeammo : &viewplayer->ammo[ammotype]);
     w_ready.data = viewplayer->readyweapon;
 
     // update keycard multiple widgets
@@ -1270,7 +1241,7 @@ static void ST_updateWidgets(void)
     {
         keyboxes[i] = (viewplayer->cards[i] > 0 ? i : -1);
 
-        if (viewplayer->cards[i + 3] > 0)
+        if (viewplayer->cards[i + 3] > 0 && viewplayer->cards[i + 3] < viewplayer->cards[i])
             keyboxes[i] = i + 3;
     }
 
@@ -1282,10 +1253,16 @@ static void ST_updateWidgets(void)
 
 void ST_Ticker(void)
 {
+    st_randomnumber = M_Random();
+
     if (!vid_widescreen)
     {
-        st_randomnumber = M_Random();
         ST_updateWidgets();
+        st_oldhealth = viewplayer->health;
+    }
+    else if (r_hud && !r_althud && !paused && !menuactive && !consoleactive)
+    {
+        ST_updateFaceWidget();
         st_oldhealth = viewplayer->health;
     }
 
@@ -1300,7 +1277,7 @@ void ST_Ticker(void)
         }
 }
 
-int st_palette;
+int st_palette = 0;
 
 static void ST_doPaletteStuff(void)
 {
@@ -1338,12 +1315,12 @@ static void ST_doPaletteStuff(void)
 
 static void ST_drawWidgets(dboolean refresh)
 {
-    STlib_updateNum(&w_ready);
+    STlib_updateBigNum(&w_ready);
 
     for (int i = 0; i < 4; i++)
     {
-        STlib_updateNum(&w_ammo[i]);
-        STlib_updateNum(&w_maxammo[i]);
+        STlib_updateSmallNum(&w_ammo[i]);
+        STlib_updateSmallNum(&w_maxammo[i]);
     }
 
     STlib_updatePercent(&w_health, refresh);
@@ -1424,8 +1401,8 @@ static void ST_loadUnloadGraphics(load_callback_t callback)
 
     // Load percent key.
     callback("STTPRCNT", &tallpercent);
-    tallpercentwidth = SHORT(tallpercent->width);
     emptytallpercent = V_EmptyPatch(tallpercent);
+    tallpercentwidth = (emptytallpercent ? 0 : SHORT(tallpercent->width));
 
     // key cards
     for (int i = 0; i < NUMCARDS; i++)
@@ -1524,19 +1501,9 @@ static void ST_loadUnloadGraphics(load_callback_t callback)
 static void ST_loadCallback(char *lumpname, patch_t **variable)
 {
     if (M_StringCompare(lumpname, "STARMS"))
-    {
-        if (FREEDOOM || hacx)
-            *variable = W_CacheLumpName2("STARMS");
-        else
-            *variable = W_CacheLumpName("STARMS");
-    }
+        *variable = (FREEDOOM || hacx ? W_CacheLumpName2("STARMS") : W_CacheLumpName("STARMS"));
     else if (M_StringCompare(lumpname, "STBAR"))
-    {
-        if (FREEDOOM || hacx)
-            *variable = W_CacheLumpName2("STBAR");
-        else
-            *variable = W_CacheLumpName("STBAR");
-    }
+        *variable = (FREEDOOM || hacx ? W_CacheLumpName2("STBAR") : W_CacheLumpName("STBAR"));
     else
         *variable = W_CacheLumpName(lumpname);
 }
@@ -1555,12 +1522,9 @@ static void ST_loadData(void)
 static void ST_initData(void)
 {
     st_firsttime = true;
-
     st_statusbaron = true;
-
     st_faceindex = 0;
     st_palette = -1;
-
     st_oldhealth = -1;
 
     for (int i = 0; i < NUMWEAPONS; i++)
@@ -1574,7 +1538,7 @@ static void ST_createWidgets(void)
 {
     // ready weapon ammo
     STlib_initNum(&w_ready, ST_AMMOX, ST_AMMOY + (STBAR != 2 && !BTSX), tallnum,
-        &viewplayer->ammo[weaponinfo[viewplayer->readyweapon].ammo], &st_statusbaron, ST_AMMOWIDTH);
+        &viewplayer->ammo[weaponinfo[viewplayer->readyweapon].ammotype], &st_statusbaron, ST_AMMOWIDTH);
 
     // the last weapon type
     w_ready.data = viewplayer->readyweapon;
@@ -1606,6 +1570,8 @@ static void ST_createWidgets(void)
     STlib_initMultIcon(&w_keyboxes[1], ST_KEY1X + (STBAR >= 3), ST_KEY1Y, keys, &keyboxes[1], &st_statusbaron);
     STlib_initMultIcon(&w_keyboxes[2], ST_KEY2X + (STBAR >= 3), ST_KEY2Y, keys, &keyboxes[2], &st_statusbaron);
 
+    usesmallnums = ((!STYSNUM0 && STBAR == 2) || gamemode == shareware);
+
     // ammo count (all four kinds)
     STlib_initNum(&w_ammo[0], ST_AMMO0X, ST_AMMO0Y, shortnum, &viewplayer->ammo[0], &st_statusbaron, ST_AMMO0WIDTH);
     STlib_initNum(&w_ammo[1], ST_AMMO1X, ST_AMMO1Y, shortnum, &viewplayer->ammo[1], &st_statusbaron, ST_AMMO1WIDTH);
@@ -1631,7 +1597,6 @@ static void ST_Stop(void)
         return;
 
     I_SetPalette(W_CacheLumpNum(lu_palette));
-
     st_stopped = true;
 }
 
@@ -1648,12 +1613,12 @@ void ST_Start(void)
 void ST_Init(void)
 {
     ST_loadData();
-    screens[4] = Z_Malloc(ST_WIDTH * SBARHEIGHT, PU_STATIC, NULL);
+    screens[4] = malloc(ST_WIDTH * SBARHEIGHT);
 
     // [BH] fix evil grin being displayed when picking up first item after
     // loading save game or entering IDFA/IDKFA cheat
     for (int i = 0; i < NUMWEAPONS; i++)
         oldweaponsowned[i] = false;
 
-    ST_InitCheats();
+    ST_initCheats();
 }

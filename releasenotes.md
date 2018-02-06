@@ -1,3 +1,57 @@
+### DOOM Retro v2.6.6
+
+* Optimizations have been made to further improve the overall performance and stability of *DOOM Retro*.
+* A bug has been fixed whereby the wall textures visible beyond a moving sector would shift slightly.
+* Improvements have been made to how blood splats are spawned.
+* Entering text in the console has now been improved for non-US keyboard layouts.
+* Minor changes have been made to text that is output to the console.
+* Early versions of *DOOM Shareware* will now run without quitting with an error.
+* When the player’s health or ammo is low, now only the values themselves will flash in the widescreen HUD.
+* Multiple keycards and skull keys are now positioned better in the widescreen HUD.
+* A bug has been fixed whereby keycards and skull keys weren’t appearing at all in the alternate widescreen HUD.
+* Keycards and skull keys in both the default and alternate widescreen HUDs now appear in the order they were picked up by the player.
+* A bug has been fixed whereby a monster’s position would be interpolated when teleporting if the `vid_capfps` CVAR was a value other than `35`.
+* Giving the player and monsters infinite height can now be toggled on or off using the new `infiniteheight` CVAR. This CVAR is `off` by default and `on` when vanilla mode is enabled.
+
+---
+
+###### Friday, January 26, 2018
+
+### DOOM Retro v2.6.5
+
+* Optimizations have been made to further improve the overall performance and stability of *DOOM Retro*.
+* A bug has been fixed whereby the wrong description would be displayed when entering a CVAR without a value in the console.
+* The rendering of two-sided textures has been improved.
+* The widescreen HUD has been completely redesigned and now includes the player’s face instead of a medikit.
+* The `r_althud` CVAR is now `off` by default.
+* When the `r_textures` CVAR is `off`, shadows cast by monsters are now still translucent when the `r_shadows_translucency` CVAR is `on`, and *BOOM*-compatible translucent wall textures are now still translucent when the `r_translucency` CVAR is `on`.
+* A crash will no longer occur when picking up an invulnerability power-up on the same map after loading a savegame.
+* The `playername` CVAR is now used instead of “OUR HERO” when displaying the player in *DOOM II’s* cast sequence.
+
+---
+
+###### Friday, January 19, 2018
+
+### DOOM Retro v2.6.4
+
+* Optimizations have been made to further improve the overall performance and stability of *DOOM Retro*.
+* A bug has been fixed whereby an error would be displayed when trying to load `doom1.wad`.
+* A new `restartmap` CCMD has been implemented that restarts the current map.
+* Minor changes have been made to text that is output to the console.
+* Further improvements have been made to the console’s autocomplete feature.
+* A bug present in *Vanilla DOOM* has been fixed whereby [the player would sometimes bounce off walls](https://doomwiki.org/wiki/Elastic_collisions_with_walls).
+* The `unbind` CCMD will now also accept an action as its parameter, unbinding all keyboard, mouse and gamepad controls bound to that action.
+* The `resetall` CCMD will now also reset all bound controls to their default actions.
+* A bug has been fixed whereby the bottom edge of spectres and their blood weren’t drawn correctly in some instances.
+* The effects of changing the `r_blood` CVAR between `all` and `red` are now immediate.
+* Movement of the player arrow in the automap is now smoother.
+* The vertical axis of a *DirectInput* gamepad’s right thumbstick when looking up and down will now be inverted when the `gp_invertyaxis` CVAR is `on`.
+* The shadows cast by the monsters in *DOOM II’s* cast sequence are now more consistent with how they appear during a game.
+
+---
+
+###### Friday, January 5, 2018
+
 ### DOOM Retro v2.6.3
 
 * Optimizations have been made to further improve the overall performance and stability of *DOOM Retro*.
@@ -25,7 +79,7 @@
 * The shadows cast by spectres will now be displayed correctly when the `r_shadows_translucency` CVAR is `off`.
 * Using the `nomonsters` CCMD will now instantly remove all monsters in the current map.
 * The brightmaps for several wall textures are now fixed.
-* A bug present in *Vanilla DOOM* has been fixed whereby Mancubi projectiles would sometimes pass through walls.
+* A bug present in *Vanilla DOOM* has been fixed whereby [Mancubi projectiles would sometimes pass through walls](https://doomwiki.org/wiki/Mancubus_fireball_clipping).
 
 ---
 

@@ -86,6 +86,8 @@ dboolean        infight;
 
 static mobj_t   *onmobj;
 
+dboolean        infiniteheight = infiniteheight_default;
+
 unsigned int    stat_distancetraveled;
 
 extern dboolean autousing;
@@ -157,9 +159,9 @@ int P_GetFriction(const mobj_t *mo, int *frictionfactor)
     // friction value (muddy has precedence over icy).
     if (!(mo->flags & (MF_NOCLIP | MF_NOGRAVITY)))
         for (const msecnode_t *m = mo->touching_sectorlist; m; m = m->m_tnext)
-            if (((sec = m->m_sector)->special & FRICTION_MASK) && (sec->friction < friction
-                || friction == ORIG_FRICTION) && (mo->z <= sec->floorheight
-                || (sec->heightsec && mo->z <= sec->heightsec->floorheight)))
+            if (((sec = m->m_sector)->special & FRICTION_MASK)
+                && (sec->friction < friction || friction == ORIG_FRICTION)
+                && (mo->z <= sec->floorheight || (sec->heightsec && mo->z <= sec->heightsec->floorheight)))
             {
                 friction = sec->friction;
                 movefactor = sec->movefactor;
@@ -299,8 +301,8 @@ dboolean P_TeleportMove(mobj_t *thing, fixed_t x, fixed_t y, fixed_t z, dboolean
 // intersection of the trajectory and the line, but that takes
 // longer and probably really isn't worth the effort.
 //
-//
 // killough 11/98: reformatted
+//
 // [BH] Allow pain elementals to shoot lost souls through 2-sided walls with an ML_BLOCKMONSTERS
 //  flag. This is a compromise between BOOM and Vanilla DOOM behaviors, and allows pain elementals
 //  at the end of REQUIEM.WAD's MAP04 to do their thing.
@@ -456,7 +458,7 @@ static dboolean PIT_CheckThing(mobj_t *thing)
     }
 
     // check if a mobj passed over/under another object
-    if (tmthing->flags2 & MF2_PASSMOBJ)
+    if ((tmthing->flags2 & MF2_PASSMOBJ) && !infiniteheight)
     {
         if (tmthing->z >= thing->z + thing->height)
             return true;        // over thing
@@ -1151,8 +1153,6 @@ static void P_HitSlideLine(line_t *ld)
     angle_t     lineangle;
     angle_t     moveangle;
     angle_t     deltaangle;
-    fixed_t     movelen;
-    fixed_t     newlen;
     dboolean    icyfloor;       // is floor icy?
 
     // phares:
@@ -1171,12 +1171,14 @@ static void P_HitSlideLine(line_t *ld)
     {
         if (icyfloor && ABS(tmymove) > ABS(tmxmove))
         {
-            S_StartSound(slidemo, sfx_oof);     // oooff!
-            tmxmove /= 2;                       // absorb half the momentum
+            if (slidemo->player && slidemo->health > 0)
+                S_StartSound(slidemo, sfx_oof);             // oooff!
+
+            tmxmove /= 2;                                   // absorb half the momentum
             tmymove = -tmymove / 2;
         }
         else
-            tmymove = 0;                        // no more movement in the Y direction
+            tmymove = 0;                                    // no more movement in the Y direction
 
         return;
     }
@@ -1185,12 +1187,14 @@ static void P_HitSlideLine(line_t *ld)
     {
         if (icyfloor && ABS(tmxmove) > ABS(tmymove))
         {
-            S_StartSound(slidemo, sfx_oof);     // oooff!
-            tmxmove /= -2;                      // absorb half the momentum
+            if (slidemo->player && slidemo->health > 0)
+                S_StartSound(slidemo, sfx_oof);             // oooff!
+
+            tmxmove = -tmxmove / 2;                         // absorb half the momentum
             tmymove /= 2;
         }
         else
-            tmxmove = 0;                        // no more movement in the X direction
+            tmxmove = 0;                                    // no more movement in the X direction
 
         return;
     }
@@ -1206,17 +1210,50 @@ static void P_HitSlideLine(line_t *ld)
     moveangle += 10;    // prevents sudden path reversal due to rounding error
     deltaangle = moveangle - lineangle;
 
-    if (deltaangle > ANG180)
-        deltaangle += ANG180;
+    if (icyfloor && deltaangle > ANG45 && deltaangle < ANG90 + ANG45)
+    {
+        fixed_t movelen = P_ApproxDistance(tmxmove, tmymove) / 2;
 
-    lineangle >>= ANGLETOFINESHIFT;
-    deltaangle >>= ANGLETOFINESHIFT;
+        moveangle = (lineangle - deltaangle) >> ANGLETOFINESHIFT;
+        tmxmove = FixedMul(movelen, finecosine[moveangle]);
+        tmymove = FixedMul(movelen, finesine[moveangle]);
 
-    movelen = P_ApproxDistance(tmxmove, tmymove);
-    newlen = FixedMul(movelen, finecosine[deltaangle]);
+        if (slidemo->player && slidemo->health > 0)
+            S_StartSound(slidemo, sfx_oof);                 // oooff!
+    }
+    else
+    {
+        divline_t   dll;
+        divline_t   dlv;
+        fixed_t     inter1;
+        fixed_t     inter2;
+        fixed_t     inter3;
 
-    tmxmove = FixedMul(newlen, finecosine[lineangle]);
-    tmymove = FixedMul(newlen, finesine[lineangle]);
+        P_MakeDivline(ld, &dll);
+
+        dlv.x = slidemo->x;
+        dlv.y = slidemo->y;
+        dlv.dx = dll.dy;
+        dlv.dy = -dll.dx;
+
+        inter1 = P_InterceptVector(&dll, &dlv);
+
+        dlv.dx = tmxmove;
+        dlv.dy = tmymove;
+        inter2 = P_InterceptVector(&dll, &dlv);
+        inter3 = P_InterceptVector(&dlv, &dll);
+
+        if (inter3)
+        {
+            tmxmove = FixedDiv(FixedMul(inter2 - inter1, dll.dx), inter3);
+            tmymove = FixedDiv(FixedMul(inter2 - inter1, dll.dy), inter3);
+        }
+        else
+        {
+            tmxmove = 0;
+            tmymove = 0;
+        }
+    }
 }
 
 //
@@ -1911,7 +1948,7 @@ static void PIT_ChangeSector(mobj_t *thing)
     // crunch bodies to giblets
     if (thing->health <= 0 && (flags2 & MF2_CRUSHABLE))
     {
-        if (thing->type == MT_PLAYER)
+        if (thing->player)
         {
             nofit = true;
             return;
@@ -2060,14 +2097,19 @@ void P_FreeSecNodeList(void)
 
 // P_GetSecnode() retrieves a node from the freelist. The calling routine
 // should make sure it sets all fields properly.
-//
-// killough 11/98: reformatted
 static msecnode_t *P_GetSecnode(void)
 {
     msecnode_t  *node;
 
-    return (headsecnode ? node = headsecnode, headsecnode = node->m_snext, node :
-        Z_Malloc(sizeof(*node), PU_LEVEL, NULL));
+    if (headsecnode)
+    {
+        node = headsecnode;
+        headsecnode = headsecnode->m_snext;
+    }
+    else
+        node = Z_Malloc(sizeof(*node), PU_LEVEL, NULL);
+
+    return node;
 }
 
 // P_PutSecnode() returns a node to the freelist.

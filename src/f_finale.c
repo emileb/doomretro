@@ -427,7 +427,7 @@ static castinfo_t castorder[] =
     { &s_CC_ARCH,    MT_VILE      },
     { &s_CC_SPIDER,  MT_SPIDER    },
     { &s_CC_CYBER,   MT_CYBORG    },
-    { &s_CC_HERO,    MT_PLAYER    },
+    { &playername,   MT_PLAYER    },
     { NULL,          0            }
 };
 
@@ -817,7 +817,12 @@ static void F_CastDrawer(void)
                     V_DrawFlippedShadowPatch(ORIGINALWIDTH / 2, ORIGINALHEIGHT - 28, patch);
             }
             else
-                V_DrawFlippedSolidShadowPatch(ORIGINALWIDTH / 2, ORIGINALHEIGHT - 28, patch);
+            {
+                if (type == MT_SHADOWS)
+                    V_DrawFlippedSolidSpectreShadowPatch(ORIGINALWIDTH / 2, ORIGINALHEIGHT - 28, patch);
+                else
+                    V_DrawFlippedSolidShadowPatch(ORIGINALWIDTH / 2, ORIGINALHEIGHT - 28, patch);
+            }
         }
 
         if (r_translucency && (type == MT_SKULL || (type == MT_PAIN && castdeath)))
@@ -841,7 +846,12 @@ static void F_CastDrawer(void)
                     V_DrawShadowPatch(ORIGINALWIDTH / 2, ORIGINALHEIGHT - 28, patch);
             }
             else
-                V_DrawSolidShadowPatch(ORIGINALWIDTH / 2, ORIGINALHEIGHT - 28, patch);
+            {
+                if (type == MT_SHADOWS)
+                    V_DrawSolidSpectreShadowPatch(ORIGINALWIDTH / 2, ORIGINALHEIGHT - 28, patch);
+                else
+                    V_DrawSolidShadowPatch(ORIGINALWIDTH / 2, ORIGINALHEIGHT - 28, patch);
+            }
         }
 
         if (r_translucency && (type == MT_SKULL || (type == MT_PAIN && castdeath)))

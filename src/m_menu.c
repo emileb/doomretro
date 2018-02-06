@@ -66,8 +66,8 @@
 #include "w_wad.h"
 #include "z_zone.h"
 
-#define LINEHEIGHT      17
-#define OFFSET          (vid_widescreen ? 0 : 17)
+#define LINEHEIGHT  17
+#define OFFSET      (vid_widescreen ? 0 : 17)
 
 int             episode = episode_default;
 int             expansion = expansion_default;
@@ -222,12 +222,12 @@ static menuitem_t MainMenu[] =
 
 menu_t MainDef =
 {
-    5,                  // # of menu items
-    NULL,               // previous menu
-    MainMenu,           // menuitem_t ->
-    M_DrawMainMenu,     // drawing routine ->
-    98, 77,             // x, y
-    new_game            // lastOn
+    5,
+    NULL,
+    MainMenu,
+    M_DrawMainMenu,
+    98, 77,
+    new_game
 };
 
 //
@@ -253,12 +253,12 @@ static menuitem_t EpisodeMenu[] =
 
 menu_t EpiDef =
 {
-    ep_end,             // # of menu items
-    &MainDef,           // previous menu
-    EpisodeMenu,        // menuitem_t ->
-    M_DrawEpisode,      // drawing routine ->
-    39, 69,             // x, y
-    ep1                 // lastOn
+    ep_end,
+    &MainDef,
+    EpisodeMenu,
+    M_DrawEpisode,
+    39, 69,
+    ep1
 };
 
 //
@@ -280,12 +280,12 @@ static menuitem_t ExpansionMenu[] =
 
 menu_t ExpDef =
 {
-    ex_end,               // # of menu items
-    &MainDef,             // previous menu
-    ExpansionMenu,        // menuitem_t ->
-    M_DrawExpansion,      // drawing routine ->
-    39, 69,               // x, y
-    ex1                   // lastOn
+    ex_end,
+    &MainDef,
+    ExpansionMenu,
+    M_DrawExpansion,
+    39, 69,
+    ex1
 };
 
 //
@@ -313,12 +313,12 @@ static menuitem_t NewGameMenu[] =
 
 menu_t NewDef =
 {
-    newg_end,           // # of menu items
-    &EpiDef,            // previous menu
-    NewGameMenu,        // menuitem_t ->
-    M_DrawNewGame,      // drawing routine ->
-    39, 69,             // x, y
-    hurtme              // lastOn
+    newg_end,
+    &EpiDef,
+    NewGameMenu,
+    M_DrawNewGame,
+    39, 69,
+    hurtme
 };
 
 //
@@ -338,7 +338,7 @@ enum
     opt_end
 };
 
-static menuitem_t OptionsMenu[]=
+static menuitem_t OptionsMenu[] =
 {
     {  1, "M_ENDGAM", M_EndGame,           &s_M_ENDGAME          },
     {  1, "M_MESSG",  M_ChangeMessages,    &s_M_MESSAGES         },
@@ -1268,6 +1268,8 @@ static void M_SaveSelect(int choice)
     M_StringCopy(saveOldString, savegamestrings[saveSlot], SAVESTRINGSIZE);
     M_UpdateSaveGameName(saveSlot);
     saveCharIndex = (int)strlen(savegamestrings[saveSlot]);
+
+    SDL_StartTextInput();
 }
 
 //
@@ -2553,6 +2555,26 @@ dboolean M_Responder(event_t *ev)
     }
     else if (ev->type == ev_keyup)
         keydown = 0;
+    else if (ev->type == ev_text)
+    {
+        ch = toupper(ev->data1);
+
+        if (ch >= ' ' && ch <= '_'
+            && M_StringWidth(savegamestrings[saveSlot]) + M_CharacterWidth(ch, 0) <= SAVESTRINGPIXELWIDTH)
+        {
+            int len = (int)strlen(savegamestrings[saveSlot]);
+
+            savegamestrings[saveSlot][len + 1] = '\0';
+
+            for (int i = len; i > saveCharIndex; i--)
+                savegamestrings[saveSlot][i] = savegamestrings[saveSlot][i - 1];
+
+            savegamestrings[saveSlot][saveCharIndex++] = ch;
+            caretwait = I_GetTimeMS() + CARETBLINKTIME;
+            showcaret = true;
+            return true;
+        }
+    }
 
     if (key == -1)
         return false;
@@ -2603,6 +2625,7 @@ dboolean M_Responder(event_t *ev)
             case KEY_ESCAPE:
                 if (!keydown)
                 {
+                    SDL_StopTextInput();
                     keydown = key;
                     saveStringEnter = 0;
                     caretwait = 0;
@@ -2620,6 +2643,7 @@ dboolean M_Responder(event_t *ev)
                     int         len = (int)strlen(savegamestrings[saveSlot]);
                     dboolean    allspaces = true;
 
+                    SDL_StopTextInput();
                     keydown = key;
 
                     for (int i = 0; i < len; i++)
@@ -2683,27 +2707,6 @@ dboolean M_Responder(event_t *ev)
                 }
 
                 break;
-            }
-
-            default:
-            {
-                int len = (int)strlen(savegamestrings[saveSlot]);
-
-                ch = toupper(ch);
-
-                if (ch >= ' ' && ch <= '_' && !(modstate & (KMOD_ALT | KMOD_CTRL))
-                    && M_StringWidth(savegamestrings[saveSlot]) + M_CharacterWidth(ch, 0) <= SAVESTRINGPIXELWIDTH)
-                {
-                    keydown = key;
-                    savegamestrings[saveSlot][len + 1] = '\0';
-
-                    for (int i = len; i > saveCharIndex; i--)
-                        savegamestrings[saveSlot][i] = savegamestrings[saveSlot][i - 1];
-
-                    savegamestrings[saveSlot][saveCharIndex++] = ch;
-                    caretwait = I_GetTimeMS() + CARETBLINKTIME;
-                    showcaret = true;
-                }
             }
         }
 

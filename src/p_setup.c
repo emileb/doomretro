@@ -157,7 +157,7 @@ fixed_t         bmaporgy;
 // for thing chains
 mobj_t          **blocklinks;
 
-dboolean        skipblstart;            // MaxW: Skip initial blocklist short
+dboolean        skipblstart;                // MaxW: Skip initial blocklist short
 
 // REJECT
 // For fast sight rejection.
@@ -1529,9 +1529,9 @@ static void P_CreateBlockMap(void)
 
             // x - y deltas
             int adx = lines[i].dx >> FRACBITS;
-            int dx = (adx < 0 ? -1 : 1);
+            int dx = SIGN(adx);
             int ady = lines[i].dy >> FRACBITS;
-            int dy = (ady < 0 ? -1 : 1);
+            int dy = SIGN(ady);
 
             // difference in preferring to move across y (> 0) instead of x (< 0)
             int diff = (!adx ? 1 : (!ady ? -1 : (((x >> MAPBTOFRAC) << MAPBTOFRAC)

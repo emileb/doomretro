@@ -1444,7 +1444,7 @@ typedef struct
     void        (*altcolfunc)(void);
 } mobjinfo_t;
 
-extern mobjinfo_t       mobjinfo[NUMMOBJTYPES];
+extern mobjinfo_t   mobjinfo[NUMMOBJTYPES];
 
 typedef struct
 {

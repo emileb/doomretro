@@ -40,11 +40,11 @@
 #include <Windows.h>
 #include <XInput.h>
 
-typedef DWORD(WINAPI *XINPUTGETSTATE)(DWORD, XINPUT_STATE *);
-typedef DWORD(WINAPI *XINPUTSETSTATE)(DWORD, XINPUT_VIBRATION *);
+typedef DWORD (WINAPI *XINPUTGETSTATE)(DWORD, XINPUT_STATE *);
+typedef DWORD (WINAPI *XINPUTSETSTATE)(DWORD, XINPUT_VIBRATION *);
 
-static XINPUTGETSTATE pXInputGetState;
-static XINPUTSETSTATE pXInputSetState;
+static XINPUTGETSTATE   pXInputGetState;
+static XINPUTSETSTATE   pXInputSetState;
 #endif
 
 #include "c_console.h"
@@ -157,6 +157,7 @@ void I_InitGamepad(void)
             }
 
             if (initcount == 1)
+#endif
             {
                 const char  *name = SDL_JoystickName(gamepad);
 
@@ -165,14 +166,6 @@ void I_InitGamepad(void)
                 else
                     C_Output("A gamepad is connected. Using <i><b>DirectInput</b></i>.");
             }
-#else
-            const char  *name = SDL_JoystickName(gamepad);
-
-            if (*name)
-                C_Output("A gamepad called \"%s\" is connected. Using <i><b>DirectInput</b></i>.", name);
-            else
-                C_Output("A gamepad is connected. Using <i><b>DirectInput</b></i>.");
-#endif
 
             SDL_JoystickEventState(SDL_ENABLE);
         }
@@ -204,7 +197,7 @@ void I_PollThumbs_DirectInput_RightHanded(short LX, short LY, short RX, short RY
     gamepadthumbLX = clamp(SDL_JoystickGetAxis(gamepad, LX), gamepadleftdeadzone);
     gamepadthumbLY = clamp(SDL_JoystickGetAxis(gamepad, LY), gamepadleftdeadzone);
     gamepadthumbRX = clamp(SDL_JoystickGetAxis(gamepad, RX), gamepadrightdeadzone);
-    gamepadthumbRY = clamp(SDL_JoystickGetAxis(gamepad, RY), gamepadrightdeadzone);
+    gamepadthumbRY = (gp_invertyaxis ? -1 : 1) * clamp(SDL_JoystickGetAxis(gamepad, RY), gamepadrightdeadzone);
 }
 
 void I_PollThumbs_DirectInput_LeftHanded(short LX, short LY, short RX, short RY)
@@ -212,7 +205,7 @@ void I_PollThumbs_DirectInput_LeftHanded(short LX, short LY, short RX, short RY)
     gamepadthumbLX = clamp(SDL_JoystickGetAxis(gamepad, RX), gamepadrightdeadzone);
     gamepadthumbLY = clamp(SDL_JoystickGetAxis(gamepad, RY), gamepadrightdeadzone);
     gamepadthumbRX = clamp(SDL_JoystickGetAxis(gamepad, LX), gamepadleftdeadzone);
-    gamepadthumbRY = clamp(SDL_JoystickGetAxis(gamepad, LY), gamepadleftdeadzone);
+    gamepadthumbRY = (gp_invertyaxis ? -1 : 1) * clamp(SDL_JoystickGetAxis(gamepad, LY), gamepadleftdeadzone);
 }
 
 void I_PollDirectInputGamepad(void)
@@ -235,10 +228,10 @@ void I_PollDirectInputGamepad(void)
             | (SDL_JoystickGetButton(gamepad, 11) << 7));
 
         if (hat)
-            gamepadbuttons |= (!!(hat & SDL_HAT_UP)
-                | (!!(hat & SDL_HAT_RIGHT) << 3)
-                | (!!(hat & SDL_HAT_DOWN) << 1)
-                | (!!(hat & SDL_HAT_LEFT) << 2));
+            gamepadbuttons |= ((!!(hat & SDL_HAT_UP))
+                | ((!!(hat & SDL_HAT_RIGHT)) << 3)
+                | ((!!(hat & SDL_HAT_DOWN)) << 1)
+                | ((!!(hat & SDL_HAT_LEFT)) << 2));
 
         if (gamepadbuttons)
         {

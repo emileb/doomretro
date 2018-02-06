@@ -66,7 +66,7 @@ typedef struct
     patch_t     **p;
 
     // user data
-    int data;
+    int         data;
 } st_number_t;
 
 // Percent widget ("child" of number widget,
@@ -123,6 +123,8 @@ typedef struct
     int         data;
 } st_binicon_t;
 
+extern dboolean usesmallnums;
+
 //
 // Widget creation, access, and update routines
 //
@@ -134,11 +136,11 @@ typedef struct
 // Number widget routines
 void STlib_initNum(st_number_t *n, int x, int y, patch_t **pl, int *num, dboolean *on, int width);
 
-void STlib_updateNum(st_number_t *n);
+void STlib_updateBigNum(st_number_t *n);
+void STlib_updateSmallNum(st_number_t *n);
 
 // Percent widget routines
-void STlib_initPercent(st_percent_t *p, int x, int y, patch_t **pl, int *num, dboolean *on,
-    patch_t *percent);
+void STlib_initPercent(st_percent_t *p, int x, int y, patch_t **pl, int *num, dboolean *on, patch_t *percent);
 
 void STlib_updatePercent(st_percent_t *per, int refresh);
 

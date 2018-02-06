@@ -84,7 +84,7 @@ typedef enum
 
 typedef struct
 {
-    int x, y;
+    int         x, y;
 } point_t;
 
 //

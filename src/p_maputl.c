@@ -80,20 +80,20 @@ int P_BoxOnLineSide(fixed_t *tmbox, line_t *ld)
 
         default:
         case ST_HORIZONTAL:
-            return ((tmbox[BOXBOTTOM] > ld->v1->y) == (p = (tmbox[BOXTOP] > ld->v1->y)) ?
-                p ^ (ld->dx < 0) : -1);
+            p = (tmbox[BOXTOP] > ld->v1->y);
+            return ((tmbox[BOXBOTTOM] > ld->v1->y) == p ? p ^ (ld->dx < 0) : -1);
 
         case ST_VERTICAL:
-            return ((tmbox[BOXLEFT] < ld->v1->x) == (p = (tmbox[BOXRIGHT] < ld->v1->x)) ?
-                p ^ (ld->dy < 0) : -1);
+            p = (tmbox[BOXRIGHT] < ld->v1->x);
+            return ((tmbox[BOXLEFT] < ld->v1->x) == p ? p ^ (ld->dy < 0) : -1);
 
         case ST_POSITIVE:
-            return (P_PointOnLineSide(tmbox[BOXRIGHT], tmbox[BOXBOTTOM], ld) ==
-                (p = P_PointOnLineSide(tmbox[BOXLEFT], tmbox[BOXTOP], ld)) ? p : -1);
+            p = P_PointOnLineSide(tmbox[BOXLEFT], tmbox[BOXTOP], ld);
+            return (P_PointOnLineSide(tmbox[BOXRIGHT], tmbox[BOXBOTTOM], ld) == p ? p : -1);
 
         case ST_NEGATIVE:
-            return ((P_PointOnLineSide(tmbox[BOXLEFT], tmbox[BOXBOTTOM], ld)) ==
-                (p = P_PointOnLineSide(tmbox[BOXRIGHT], tmbox[BOXTOP], ld)) ? p : -1);
+            p = P_PointOnLineSide(tmbox[BOXRIGHT], tmbox[BOXTOP], ld);
+            return ((P_PointOnLineSide(tmbox[BOXLEFT], tmbox[BOXBOTTOM], ld)) == p ? p : -1);
     }
 }
 
@@ -110,7 +110,7 @@ static int P_PointOnDivlineSide(fixed_t x, fixed_t y, divline_t *line)
 //
 // P_MakeDivline
 //
-static void P_MakeDivline(line_t *li, divline_t *dl)
+void P_MakeDivline(line_t *li, divline_t *dl)
 {
     dl->x = li->v1->x;
     dl->y = li->v1->y;
@@ -125,7 +125,7 @@ static void P_MakeDivline(line_t *li, divline_t *dl)
 // This is only called by the addthings
 // and addlines traversers.
 //
-static fixed_t P_InterceptVector(divline_t *v2, divline_t *v1)
+fixed_t P_InterceptVector(divline_t *v2, divline_t *v1)
 {
     int64_t den = ((int64_t)v1->dy * v2->dx - (int64_t)v1->dx * v2->dy) >> FRACBITS;
 
@@ -557,8 +557,7 @@ static dboolean P_TraverseIntercepts(traverser_t func, fixed_t maxfrac)
 // Returns true if the traverser function returns true
 // for all lines.
 //
-dboolean P_PathTraverse(fixed_t x1, fixed_t y1, fixed_t x2, fixed_t y2, int flags,
-    dboolean (*trav)(intercept_t *))
+dboolean P_PathTraverse(fixed_t x1, fixed_t y1, fixed_t x2, fixed_t y2, int flags, dboolean (*trav)(intercept_t *))
 {
     fixed_t xt1, yt1;
     fixed_t xt2, yt2;

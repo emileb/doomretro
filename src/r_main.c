@@ -74,7 +74,6 @@ fixed_t             viewcos;
 fixed_t             viewsin;
 
 player_t            *viewplayer;
-player_t            tempplayer;
 
 // [AM] Fractional part of the current tic, in the half-open
 //      range of [0.0, 1.0). Used for interpolation.
@@ -218,8 +217,8 @@ angle_t R_PointToAngleEx(fixed_t x, fixed_t y)
 angle_t R_PointToAngleEx2(fixed_t x1, fixed_t y1, fixed_t x, fixed_t y)
 {
     // [crispy] fix overflows for very long distances
-    const int64_t   y_viewy = (int64_t)y - y1;
     const int64_t   x_viewx = (int64_t)x - x1;
+    const int64_t   y_viewy = (int64_t)y - y1;
 
     // [crispy] the worst that could happen is e.g. INT_MIN - INT_MAX = 2 * INT_MIN
     if (x_viewx < INT_MIN || x_viewx > INT_MAX || y_viewy < INT_MIN || y_viewy > INT_MAX)
@@ -297,8 +296,8 @@ static void R_InitTextureMapping(void)
         else if (tangent < -limit)
             viewangletox[i] = viewwidth + 1;
         else
-            viewangletox[i] = BETWEEN(-1, (centerxfrac - FixedMul(tangent, focallength)
-                + FRACUNIT - 1) >> FRACBITS, viewwidth + 1);
+            viewangletox[i] = BETWEEN(-1, (centerxfrac - FixedMul(tangent, focallength) + FRACUNIT - 1) >> FRACBITS,
+                viewwidth + 1);
     }
 
     // Scan viewangletox[] to generate xtoviewangle[]:
@@ -464,6 +463,7 @@ void R_InitColumnFunctions(void)
         transcolfunc = R_DrawTranslatedColumn;
         wallcolfunc = R_DrawWallColumn;
         bmapwallcolfunc = R_DrawBrightMapWallColumn;
+        segcolfunc = R_DrawColumn;
 
         if (r_skycolor != r_skycolor_default)
             skycolfunc = R_DrawSkyColorColumn;
@@ -477,6 +477,7 @@ void R_InitColumnFunctions(void)
         {
             tlcolfunc = R_DrawTranslucentColumn;
             tl50colfunc = R_DrawTranslucent50Column;
+            tl50segcolfunc = (r_dither ? R_DrawDitheredColumn : R_DrawTranslucent50Column);
             tl33colfunc = R_DrawTranslucent33Column;
             tlgreencolfunc = R_DrawTranslucentGreenColumn;
             tlredcolfunc = R_DrawTranslucentRedColumn;
@@ -496,6 +497,7 @@ void R_InitColumnFunctions(void)
         {
             tlcolfunc = R_DrawColumn;
             tl50colfunc = R_DrawColumn;
+            tl50segcolfunc = R_DrawColumn;
             tl33colfunc = R_DrawColumn;
             tlgreencolfunc = R_DrawColumn;
             tlredcolfunc = R_DrawColumn;
@@ -524,10 +526,13 @@ void R_InitColumnFunctions(void)
         transcolfunc = R_DrawColorColumn;
         wallcolfunc = R_DrawColorColumn;
         bmapwallcolfunc = R_DrawColorColumn;
+        segcolfunc = R_DrawColorColumn;
         skycolfunc = (r_skycolor == r_skycolor_default ? R_DrawColorColumn : R_DrawSkyColorColumn);
         spanfunc = R_DrawColorSpan;
         tlcolfunc = R_DrawColorColumn;
         tl50colfunc = R_DrawColorColumn;
+        tl50segcolfunc = (r_translucency ? (r_dither ? R_DrawDitheredColorColumn : R_DrawTranslucentColor50Column)
+            : R_DrawColorColumn);
         tl33colfunc = R_DrawColorColumn;
         tlgreencolfunc = R_DrawColorColumn;
         tlredcolfunc = R_DrawColorColumn;

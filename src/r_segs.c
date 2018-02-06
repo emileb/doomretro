@@ -198,16 +198,16 @@ static lighttable_t **GetLightTable(const int lightlevel)
         LIGHTLEVELS - 1)];
 }
 
-static void R_BlastMaskedSegColumn(const rcolumn_t *column, int numposts)
+static void R_BlastMaskedSegColumn(const rcolumn_t *column)
 {
     unsigned char   *pixels = column->pixels;
 
     dc_ceilingclip = mceilingclip[dc_x] + 1;
     dc_floorclip = mfloorclip[dc_x] - 1;
 
-    while (numposts--)
+    while (dc_numposts--)
     {
-        const rpost_t   *post = &column->posts[numposts];
+        const rpost_t   *post = &column->posts[dc_numposts];
         const int       topdelta = post->topdelta;
 
         // calculate unclipped screen coordinates for post
@@ -235,13 +235,7 @@ void R_RenderMaskedSegRange(drawseg_t *ds, const int x1, const int x2)
     sector_t        tempsec;        // killough 4/13/98
 
     curline = ds->curline;
-
-    if (r_textures)
-        colfunc = (curline->linedef->tranlump >= 0 && r_translucency ?
-            (r_dither ? R_DrawDitheredColumn : R_DrawTranslucent50Column) : R_DrawColumn);
-    else
-        colfunc = R_DrawColorColumn;
-
+    colfunc = (curline->linedef->tranlump >= 0 ? tl50segcolfunc : segcolfunc);
     frontsector = curline->frontsector;
     backsector = curline->backsector;
     texnum = texturetranslation[curline->sidedef->midtexture];
@@ -258,8 +252,8 @@ void R_RenderMaskedSegRange(drawseg_t *ds, const int x1, const int x2)
     maskedtexturecol = ds->maskedtexturecol;
     rw_scalestep = ds->scalestep;
     spryscale = ds->scale1 + (x1 - ds->x1) * rw_scalestep;
-    mfloorclip = ds->sprbottomclip;
     mceilingclip = ds->sprtopclip;
+    mfloorclip = ds->sprbottomclip;
 
     // find positioning
     if (curline->linedef->flags & ML_DONTPEGBOTTOM)
@@ -276,10 +270,9 @@ void R_RenderMaskedSegRange(drawseg_t *ds, const int x1, const int x2)
         if (maskedtexturecol[dc_x] != INT_MAX)
         {
             const rcolumn_t *column = R_GetPatchColumnWrapped(patch, maskedtexturecol[dc_x]);
-            const int       numposts = column->numposts;
             int64_t         t;
 
-            if (!numposts)
+            if (!(dc_numposts = column->numposts))
                 continue;
 
             // killough 3/2/98:
@@ -305,7 +298,7 @@ void R_RenderMaskedSegRange(drawseg_t *ds, const int x1, const int x2)
             dc_iscale = 0xFFFFFFFFu / (unsigned int)spryscale;
 
             // draw the texture
-            R_BlastMaskedSegColumn(column, numposts);
+            R_BlastMaskedSegColumn(column);
             maskedtexturecol[dc_x] = INT_MAX;   // dropoff overflow
         }
 
@@ -374,7 +367,7 @@ static void R_RenderSegLoop(void)
                 dc_colormap[0] = walllights[BETWEEN(0, rw_scale >> LIGHTSCALESHIFT, MAXLIGHTSCALE - 1)];
 
             dc_x = rw_x;
-            dc_iscale = 0xFFFFFFFFu / (unsigned int)rw_scale;
+            dc_iscale = 0xFFFFFFFFu / (unsigned int)rw_scale - SPARKLEFIX;
         }
 
         // draw the wall tiers
@@ -414,7 +407,7 @@ static void R_RenderSegLoop(void)
                 {
                     dc_yl = yl;
                     dc_yh = mid;
-                    dc_texturemid = rw_toptexturemid;
+                    dc_texturemid = rw_toptexturemid + (dc_yl - centery + 1) * SPARKLEFIX;
                     dc_source = R_GetTextureColumn(R_CacheTextureCompositePatchNum(toptexture), texturecolumn);
                     dc_texheight = toptexheight;
 
@@ -449,7 +442,7 @@ static void R_RenderSegLoop(void)
                 {
                     dc_yl = mid;
                     dc_yh = yh;
-                    dc_texturemid = rw_bottomtexturemid;
+                    dc_texturemid = rw_bottomtexturemid + (dc_yl - centery + 1) * SPARKLEFIX;
                     dc_source = R_GetTextureColumn(R_CacheTextureCompositePatchNum(bottomtexture), texturecolumn);
                     dc_texheight = bottomtexheight;
 
@@ -662,17 +655,17 @@ void R_StoreWallRange(const int start, const int stop)
     }
     else
     {
+        // two sided line
         int liquidoffset = 0;
 
         if (linedef->r_flags & RF_CLOSED)
         {
-            ds_p->sprbottomclip = negonearray;
             ds_p->sprtopclip = viewheightarray;
+            ds_p->sprbottomclip = negonearray;
             ds_p->silhouette = SIL_BOTH;
         }
         else
         {
-            // two sided line
             ds_p->sprtopclip = NULL;
             ds_p->sprbottomclip = NULL;
             ds_p->silhouette = SIL_NONE;

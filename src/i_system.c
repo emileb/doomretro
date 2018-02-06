@@ -57,20 +57,17 @@ void I_ShutdownWindows32(void);
 extern dboolean returntowidescreen;
 
 #if defined(_WIN32)
-typedef long(__stdcall *PRTLGETVERSION)(PRTL_OSVERSIONINFOEXW);
-typedef BOOL(WINAPI *PGETPRODUCTINFO)(DWORD, DWORD, DWORD, DWORD, PDWORD);
-typedef BOOL(WINAPI *PISWOW64PROCESS)(HANDLE, PBOOL);
+typedef long (__stdcall *PRTLGETVERSION)(PRTL_OSVERSIONINFOEXW);
+typedef BOOL (WINAPI *PGETPRODUCTINFO)(DWORD, DWORD, DWORD, DWORD, PDWORD);
+typedef BOOL (WINAPI *PISWOW64PROCESS)(HANDLE, PBOOL);
 
 #define PRODUCT_CORE    0x00000065
 
 void I_PrintWindowsVersion(void)
 {
-    PRTLGETVERSION  pRtlGetVersion = (PRTLGETVERSION)GetProcAddress(GetModuleHandle("ntdll.dll"),
-                        "RtlGetVersion");
-    PGETPRODUCTINFO pGetProductInfo = (PGETPRODUCTINFO)GetProcAddress(GetModuleHandle("kernel32.dll"),
-                        "GetProductInfo");
-    PISWOW64PROCESS pIsWow64Process = (PISWOW64PROCESS)GetProcAddress(GetModuleHandle("kernel32.dll"),
-                        "IsWow64Process");
+    PRTLGETVERSION  pRtlGetVersion = (PRTLGETVERSION)GetProcAddress(GetModuleHandle("ntdll.dll"), "RtlGetVersion");
+    PGETPRODUCTINFO pGetProductInfo = (PGETPRODUCTINFO)GetProcAddress(GetModuleHandle("kernel32.dll"), "GetProductInfo");
+    PISWOW64PROCESS pIsWow64Process = (PISWOW64PROCESS)GetProcAddress(GetModuleHandle("kernel32.dll"), "IsWow64Process");
 
     if (pRtlGetVersion && pGetProductInfo)
     {
@@ -84,7 +81,7 @@ void I_PrintWindowsVersion(void)
             BOOL    Wow64Process = FALSE;
 
             pIsWow64Process(GetCurrentProcess(), &Wow64Process);
-            strcpy(bits, (Wow64Process || sizeof(intptr_t) == 8 ? " (64-bit)" : " (32-bit)"));
+            strcpy(bits, (Wow64Process || sizeof(intptr_t) == 8 ? "64-bit" : "32-bit"));
         }
 
         ZeroMemory(&info, sizeof(OSVERSIONINFOEXW));
@@ -185,12 +182,12 @@ void I_PrintWindowsVersion(void)
                     infoname = "8.1";
             }
             else if (info.dwMajorVersion == 10)
-                infoname = "10";
+                infoname = (info.wProductType == VER_NT_WORKSTATION ? "10" : "Server 2016");
 
-            C_Output("Running on <i><b>Microsoft Windows %s%s%s%s%ws%s%s</b></i>.", infoname,
+            C_Output("Running on %s <i><b>Microsoft Windows %s%s%s%s%ws%s (Build %i)</b></i>.", bits, infoname,
                 (*typename ? " " : ""), (*typename ? typename : ""), (wcslen(info.szCSDVersion) ? " (" : ""),
-                (wcslen(info.szCSDVersion) ? info.szCSDVersion : L""), (wcslen(info.szCSDVersion) ? ")" :
-                ""), bits);
+                (wcslen(info.szCSDVersion) ? info.szCSDVersion : L""), (wcslen(info.szCSDVersion) ? ")" : ""),
+                info.dwBuildNumber);
         }
     }
 }

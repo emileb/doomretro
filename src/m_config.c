@@ -51,12 +51,12 @@
 #include "p_local.h"
 #include "version.h"
 
-static dboolean     cvarsloaded;
+static dboolean cvarsloaded;
 
-extern char         *packageconfig;
-extern dboolean     returntowidescreen;
-extern dboolean     vanilla;
-extern dboolean     togglingvanilla;
+extern char     *packageconfig;
+extern dboolean returntowidescreen;
+extern dboolean vanilla;
+extern dboolean togglingvanilla;
 
 #define CONFIG_VARIABLE_INT(name, set)              { #name, &name, DEFAULT_INT,           set          }
 #define CONFIG_VARIABLE_INT_UNSIGNED(name, set)     { #name, &name, DEFAULT_INT_UNSIGNED,  set          }
@@ -110,6 +110,7 @@ static default_t cvars[] =
     CONFIG_VARIABLE_INT_PERCENT  (gp_vibrate_damage,                                 NOVALUEALIAS      ),
     CONFIG_VARIABLE_INT_PERCENT  (gp_vibrate_weapons,                                NOVALUEALIAS      ),
     CONFIG_VARIABLE_INT          (infighting,                                        BOOLVALUEALIAS    ),
+    CONFIG_VARIABLE_INT          (infiniteheight,                                    BOOLVALUEALIAS    ),
     CONFIG_VARIABLE_STRING       (iwadfolder,                                        NOVALUEALIAS      ),
     CONFIG_VARIABLE_INT          (m_doubleclick_use,                                 BOOLVALUEALIAS    ),
     CONFIG_VARIABLE_INT          (m_invertyaxis,                                     BOOLVALUEALIAS    ),
@@ -554,7 +555,7 @@ static void M_CheckCVARs(void)
     if (con_timestamps != false && con_timestamps != true)
         con_timestamps = con_timestamps_default;
 
-    episode = BETWEEN(episode_min, episode, episode_max - (gamemode == registered));
+    episode = BETWEEN(episode_min, episode, episode_max);
     expansion = BETWEEN(expansion_min, expansion, expansion_max);
 
     if (facebackcolor < facebackcolor_min || facebackcolor > facebackcolor_max)
@@ -580,6 +581,9 @@ static void M_CheckCVARs(void)
 
     if (infighting != false && infighting != true)
         infighting = infighting_default;
+
+    if (infiniteheight != false && infiniteheight != true)
+        infiniteheight = infiniteheight_default;
 
     if (m_doubleclick_use != false && m_doubleclick_use != true)
         m_doubleclick_use = m_doubleclick_use_default;
@@ -775,6 +779,7 @@ static void M_CheckCVARs(void)
     {
         returntowidescreen = true;
         vid_widescreen = false;
+        r_screensize = r_screensize_max;
     }
     else
         r_hud = true;

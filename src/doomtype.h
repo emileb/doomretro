@@ -42,18 +42,15 @@
 #include <inttypes.h>
 #include <limits.h>
 
-#if defined(true)
-#undef true
-#undef false
-#endif
+typedef uint8_t byte;
 
+#if !defined(__cplusplus) && !defined(__bool_true_false_are_defined)
 typedef enum
 {
     false,
     true
 } dboolean;
-
-typedef uint8_t byte;
+#endif
 
 
 #ifdef __ANDROID__

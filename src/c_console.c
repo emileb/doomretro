@@ -136,6 +136,7 @@ char                    consolecheatparm[3];
 static int              outputhistory = -1;
 
 dboolean                con_timestamps = con_timestamps_default;
+
 static int              timestampx;
 static int              zerowidth;
 
@@ -211,25 +212,25 @@ void C_Input(const char *string, ...)
     outputhistory = -1;
 }
 
-void C_IntCVAROutput(const char *cvar, const int value)
+void C_IntCVAROutput(char *cvar, int value)
 {
-    if (consolestrings && M_StringStartsWith(console[consolestrings - 1].string, cvar))
+    if (consolestrings && M_StringStartsWith(console[consolestrings - 1].string, M_StringJoin(cvar, " ", NULL)))
         consolestrings--;
 
     C_Input("%s %i", cvar, value);
 }
 
-void C_PctCVAROutput(const char *cvar, const int value)
+void C_PctCVAROutput(char *cvar, int value)
 {
-    if (consolestrings && M_StringStartsWith(console[consolestrings - 1].string, cvar))
+    if (consolestrings && M_StringStartsWith(console[consolestrings - 1].string, M_StringJoin(cvar, " ", NULL)))
         consolestrings--;
 
     C_Input("%s %i%%", cvar, value);
 }
 
-void C_StrCVAROutput(const char *cvar, const char *string)
+void C_StrCVAROutput(char *cvar, char *string)
 {
-    if (consolestrings && M_StringStartsWith(console[consolestrings - 1].string, cvar))
+    if (consolestrings && M_StringStartsWith(console[consolestrings - 1].string, M_StringJoin(cvar, " ", NULL)))
         consolestrings--;
 
     C_Input("%s %s", cvar, string);
@@ -412,42 +413,43 @@ const static struct
     { '\"', 'a',  -1 }, { '\"', 'c',  -1 }, { '\"', 'd',  -1 }, { '\"', 'e',  -1 },
     { '\"', 'g',  -1 }, { '\"', 'j',  -2 }, { '\"', 'o',  -1 }, { '\"', 'q',  -1 },
     { '\"', 's',  -1 }, { '\"', 'J',  -2 }, { '\\', '\\', -2 }, { '\\', 'd',  -1 },
-    { '\\', 'V',  -1 }, { '\'', 'a',  -1 }, { '\'', 'a',  -1 }, { '\'', 'c',  -1 },
-    { '\'', 'd',  -1 }, { '\'', 'e',  -1 }, { '\'', 'g',  -1 }, { '\'', 'j',  -2 },
-    { '\'', 'o',  -1 }, { '\'', 's',  -1 }, { '\'', 'J',  -2 }, { '.',  '\\', -1 },
-    { '.',  '4',  -1 }, { '.',  '7',  -1 }, { ',',  '4',  -1 }, { '/',  '/',  -2 },
-    { '/',  'd',  -1 }, { '/',  'o',  -1 }, { ':', '\\',  -1 }, { '_',  'f',  -1 },
-    { '0',  ',',  -1 }, { '0',  ';',  -1 }, { '0',  'j',  -2 }, { '1',  '\"', -1 },
-    { '1',  '\'', -1 }, { '1',  'j',  -2 }, { '2',  'j',  -2 }, { '3',  ',',  -1 },
-    { '3',  ';',  -1 }, { '3',  'j',  -2 }, { '4',  'j',  -2 }, { '5',  ',',  -1 },
-    { '5',  ';',  -1 }, { '5',  'j',  -2 }, { '6',  ',',  -1 }, { '6',  'j',  -2 },
-    { '7',  '.',  -2 }, { '7',  ',',  -2 }, { '7',  ';',  -1 }, { '7',  'j',  -2 },
-    { '8',  ',',  -1 }, { '8',  ';',  -1 }, { '8',  'j',  -2 }, { '9',  ',',  -1 },
-    { '9',  ';',  -1 }, { '9',  'j',  -2 }, { 'F',  '.',  -1 }, { 'F',  ',',  -1 },
-    { 'F',  ';',  -1 }, { 'L',  '\\', -1 }, { 'L',  '\"', -1 }, { 'L',  '\'', -1 },
-    { 'P',  '.',  -1 }, { 'P',  ',',  -1 }, { 'P',  ';',  -1 }, { 'T',  '.',  -1 },
-    { 'T',  ',',  -1 }, { 'T',  ';',  -1 }, { 'T',  'a',  -1 }, { 'T',  'e',  -1 },
-    { 'T',  'o',  -1 }, { 'V',  '.',  -1 }, { 'V',  ',',  -1 }, { 'V',  ';',  -1 },
-    { 'Y',  '.',  -1 }, { 'Y',  ',',  -1 }, { 'Y',  ';',  -1 }, { 'a',  '\"', -1 },
-    { 'a',  '\'', -1 }, { 'a',  'j',  -2 }, { 'b',  ',',  -1 }, { 'b',  ';',  -1 },
-    { 'b',  '\"', -1 }, { 'b',  '\\', -1 }, { 'b',  '\'', -1 }, { 'b',  'j',  -2 },
-    { 'c',  '\\', -1 }, { 'c',  ',',  -1 }, { 'c',  ';',  -1 }, { 'c',  '\"', -1 },
-    { 'c',  '\'', -1 }, { 'c',  'j',  -2 }, { 'd',  'j',  -2 }, { 'e',  '\\', -1 },
-    { 'e',  ',',  -1 }, { 'e',  ';',  -1 }, { 'e',  '\"', -1 }, { 'e',  '\'', -1 },
-    { 'e',  '_',  -1 }, { 'e',  'j',  -2 }, { 'f',  ' ',  -1 }, { 'f',  ',',  -2 },
-    { 'f',  ';',  -1 }, { 'f',  '_',  -1 }, { 'f',  'a',  -1 }, { 'f',  'j',  -2 },
-    { 'h',  '\\', -1 }, { 'h',  'j',  -2 }, { 'i',  'j',  -2 }, { 'k',  'j',  -2 },
-    { 'l',  'j',  -2 }, { 'm',  '\"', -1 }, { 'm',  '\\', -1 }, { 'm',  '\'', -1 },
-    { 'm',  'j',  -2 }, { 'n',  '\\', -1 }, { 'n',  '\"', -1 }, { 'n',  '\'', -1 },
-    { 'n',  'j',  -2 }, { 'o',  '\\', -1 }, { 'o',  ',',  -1 }, { 'o',  ';',  -1 },
-    { 'o',  '\"', -1 }, { 'o',  '\'', -1 }, { 'o',  'j',  -2 }, { 'p',  '\\', -1 },
-    { 'p',  ',',  -1 }, { 'p',  ';',  -1 }, { 'p',  '\"', -1 }, { 'p',  '\'', -1 },
-    { 'p',  'j',  -2 }, { 'r',  ' ',  -1 }, { 'r',  '\\', -1 }, { 'r',  '.',  -2 },
-    { 'r',  ',',  -2 }, { 'r',  ';',  -1 }, { 'r',  '\"', -1 }, { 'r',  '\'', -1 },
-    { 'r',  '_',  -1 }, { 'r',  'a',  -1 }, { 'r',  'j',  -2 }, { 's',  '\\', -1 },
-    { 's',  ',',  -1 }, { 's',  ';',  -1 }, { 's',  'j',  -2 }, { 't',  'j',  -2 },
-    { 'u',  'j',  -2 }, { 'v',  ',',  -1 }, { 'v',  ';',  -1 }, { 'v',  'j',  -2 },
-    { 'w',  'j',  -2 }, { 'x',  'j',  -2 }, { 'z',  'j',  -2 }, { '\0', '\0',  0 }
+    { '\\', 'T',  -1 }, { '\\', 'V',  -1 }, { '\'', 'a',  -1 }, { '\'', 'a',  -1 },
+    { '\'', 'c',  -1 }, { '\'', 'd',  -1 }, { '\'', 'e',  -1 }, { '\'', 'g',  -1 },
+    { '\'', 'j',  -2 }, { '\'', 'o',  -1 }, { '\'', 's',  -1 }, { '\'', 'J',  -2 },
+    { '.',  '\\', -1 }, { '.',  '4',  -1 }, { '.',  '7',  -1 }, { ',',  '4',  -1 },
+    { '/',  '/',  -2 }, { '/',  'd',  -1 }, { '/',  'o',  -1 }, { ':', '\\',  -1 },
+    { '_',  'f',  -1 }, { '0',  ',',  -1 }, { '0',  ';',  -1 }, { '0',  'j',  -2 },
+    { '1',  '\"', -1 }, { '1',  '\'', -1 }, { '1',  'j',  -2 }, { '2',  'j',  -2 },
+    { '3',  ',',  -1 }, { '3',  ';',  -1 }, { '3',  'j',  -2 }, { '4',  'j',  -2 },
+    { '5',  ',',  -1 }, { '5',  ';',  -1 }, { '5',  'j',  -2 }, { '6',  ',',  -1 },
+    { '6',  'j',  -2 }, { '7',  '.',  -2 }, { '7',  ',',  -2 }, { '7',  ';',  -1 },
+    { '7',  'j',  -2 }, { '8',  ',',  -1 }, { '8',  ';',  -1 }, { '8',  'j',  -2 },
+    { '9',  ',',  -1 }, { '9',  ';',  -1 }, { '9',  'j',  -2 }, { 'F',  '.',  -1 },
+    { 'F',  ',',  -1 }, { 'F',  ';',  -1 }, { 'L',  '\\', -1 }, { 'L',  '\"', -1 },
+    { 'L',  '\'', -1 }, { 'P',  '.',  -1 }, { 'P',  ',',  -1 }, { 'P',  ';',  -1 },
+    { 'T',  '.',  -1 }, { 'T',  ',',  -1 }, { 'T',  ';',  -1 }, { 'T',  'a',  -1 },
+    { 'T',  'e',  -1 }, { 'T',  'o',  -1 }, { 'V',  '.',  -1 }, { 'V',  ',',  -1 },
+    { 'V',  ';',  -1 }, { 'Y',  '.',  -1 }, { 'Y',  ',',  -1 }, { 'Y',  ';',  -1 },
+    { 'a',  '\"', -1 }, { 'a',  '\'', -1 }, { 'a',  'j',  -2 }, { 'b',  ',',  -1 },
+    { 'b',  ';',  -1 }, { 'b',  '\"', -1 }, { 'b',  '\\', -1 }, { 'b',  '\'', -1 },
+    { 'b',  'j',  -2 }, { 'c',  '\\', -1 }, { 'c',  ',',  -1 }, { 'c',  ';',  -1 },
+    { 'c',  '\"', -1 }, { 'c',  '\'', -1 }, { 'c',  'j',  -2 }, { 'd',  'j',  -2 },
+    { 'e',  '\\', -1 }, { 'e',  ',',  -1 }, { 'e',  ';',  -1 }, { 'e',  '\"', -1 },
+    { 'e',  '\'', -1 }, { 'e',  '_',  -1 }, { 'e',  'j',  -2 }, { 'f',  ' ',  -1 },
+    { 'f',  ',',  -2 }, { 'f',  ';',  -1 }, { 'f',  '_',  -1 }, { 'f',  'a',  -1 },
+    { 'f',  'j',  -2 }, { 'h',  '\\', -1 }, { 'h',  'j',  -2 }, { 'i',  'j',  -2 },
+    { 'k',  'j',  -2 }, { 'l',  'j',  -2 }, { 'm',  '\"', -1 }, { 'm',  '\\', -1 },
+    { 'm',  '\'', -1 }, { 'm',  'j',  -2 }, { 'n',  '\\', -1 }, { 'n',  '\"', -1 },
+    { 'n',  '\'', -1 }, { 'n',  'j',  -2 }, { 'o',  '\\', -1 }, { 'o',  ',',  -1 },
+    { 'o',  ';',  -1 }, { 'o',  '\"', -1 }, { 'o',  '\'', -1 }, { 'o',  'j',  -2 },
+    { 'p',  '\\', -1 }, { 'p',  ',',  -1 }, { 'p',  ';',  -1 }, { 'p',  '\"', -1 },
+    { 'p',  '\'', -1 }, { 'p',  'j',  -2 }, { 'r',  ' ',  -1 }, { 'r',  '\\', -1 },
+    { 'r',  '.',  -2 }, { 'r',  ',',  -2 }, { 'r',  ';',  -1 }, { 'r',  '\"', -1 },
+    { 'r',  '\'', -1 }, { 'r',  '_',  -1 }, { 'r',  'a',  -1 }, { 'r',  'j',  -2 },
+    { 's',  '\\', -1 }, { 's',  ',',  -1 }, { 's',  ';',  -1 }, { 's',  'j',  -2 },
+    { 't',  'j',  -2 }, { 'u',  'j',  -2 }, { 'v',  ',',  -1 }, { 'v',  ';',  -1 },
+    { 'v',  'j',  -2 }, { 'w',  'j',  -2 }, { 'x',  'j',  -2 }, { 'z',  'j',  -2 },
+    { '\0', '\0',  0 }
 };
 
 static int C_TextWidth(const char *text, const dboolean formatting, const dboolean kerning)
@@ -533,8 +535,7 @@ static void C_DrawScrollbar(void)
         for (int y = trackstart; y < trackend; y += CONSOLEWIDTH)
             if (y - offset >= 0)
                 for (int x = CONSOLESCROLLBARX; x < CONSOLESCROLLBARX + CONSOLESCROLLBARWIDTH; x++)
-                    screens[0][y - offset + x] = tinttab50[screens[0][y - offset + x]
-                        + consolescrollbartrackcolor];
+                    screens[0][y - offset + x] = tinttab50[screens[0][y - offset + x] + consolescrollbartrackcolor];
 
         // Draw scrollbar face
         for (int y = facestart; y < faceend; y += CONSOLEWIDTH)
@@ -626,10 +627,14 @@ void C_ShowConsole(void)
 
     if (gamestate == GS_TITLESCREEN && !devparm)
         S_StartSound(NULL, sfx_swtchn);
+
+    SDL_StartTextInput();
 }
 
 void C_HideConsole(void)
 {
+    SDL_StopTextInput();
+
     consoledirection = -1;
     consoleanim = 0;
 
@@ -643,6 +648,8 @@ void C_HideConsole(void)
 
 void C_HideConsoleFast(void)
 {
+    SDL_StopTextInput();
+
     consoledirection = -1;
     consoleanim = 0;
     consoleheight = 0;
@@ -1231,7 +1238,7 @@ dboolean C_ValidateInput(const char *input)
                 && consolecmds[i].func1(consolecmds[i].name, parms)
                 && (consolecmds[i].parameters || !*parms))
             {
-                if (!executingalias)
+                if (!executingalias && !resettingcvar)
                     C_Input((input[strlen(input) - 1] == '%' ? "%s %s%" : "%s %s"), cmd, parms);
 
                 consolecmds[i].func2(consolecmds[i].name, parms);
@@ -1263,24 +1270,18 @@ dboolean C_ValidateInput(const char *input)
 
 dboolean C_Responder(event_t *ev)
 {
-    static const char *shiftxform =
-    {
-        "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0 !\"#$%&\"()*+<_>?"
-        ")!@#$%^&*(::<+>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ{|}\"_'ABCDEFGHIJKLMNOPQRSTUVWXYZ{|}~\0"
-    };
+    static int  autocomplete = -1;
+    static int  inputhistory = -1;
+    int         i;
+    const int   len = (int)strlen(consoleinput);
 
     if ((consoleheight < CONSOLEHEIGHT && consoledirection == -1) || messageToPrint)
         return false;
 
     if (ev->type == ev_keydown)
     {
-        static int          autocomplete = -1;
-        static int          inputhistory = -1;
         static char         currentinput[255];
         const int           key = ev->data1;
-        char                ch = (char)ev->data2;
-        int                 i;
-        const int           len = (int)strlen(consoleinput);
         const SDL_Keymod    modstate = SDL_GetModState();
 
         if (key == keyboardconsole)
@@ -1663,119 +1664,123 @@ dboolean C_Responder(event_t *ev)
 
                 break;
 
-            default:
+            case 'a':
+                // select all text
                 if (modstate & KMOD_CTRL)
                 {
-                    // select all text
-                    if (ch == 'a')
-                    {
-                        selectstart = 0;
-                        selectend = caretpos = len;
-                    }
-
-                    // copy selected text to clipboard
-                    else if (ch == 'c')
-                    {
-                        if (selectstart < selectend)
-                            SDL_SetClipboardText(M_SubString(consoleinput, selectstart, selectend - selectstart));
-                    }
-
-                    // paste text from clipboard
-                    else if (ch == 'v')
-                    {
-                        char    buffer[255];
-
-                        M_snprintf(buffer, sizeof(buffer), "%s%s%s", M_SubString(consoleinput, 0, selectstart),
-                            SDL_GetClipboardText(), M_SubString(consoleinput, selectend, len - selectend));
-
-                        if (C_TextWidth(buffer, false, true) <= CONSOLEINPUTPIXELWIDTH)
-                        {
-                            C_AddToUndoHistory();
-                            M_StringCopy(consoleinput, buffer, sizeof(consoleinput));
-                            selectstart += (int)strlen(SDL_GetClipboardText());
-                            selectend = caretpos = selectstart;
-                        }
-                    }
-
-                    // cut selected text to clipboard
-                    else if (ch == 'x')
-                    {
-                        if (selectstart < selectend)
-                        {
-                            C_AddToUndoHistory();
-                            SDL_SetClipboardText(M_SubString(consoleinput, selectstart,
-                                selectend - selectstart));
-
-                            for (i = selectend; i < len; i++)
-                                consoleinput[selectstart + i - selectend] = consoleinput[i];
-
-                            consoleinput[selectstart + i - selectend] = '\0';
-                            caretpos = selectend = selectstart;
-                            caretwait = I_GetTimeMS() + CARETBLINKTIME;
-                            showcaret = true;
-                        }
-                    }
-
-                    // undo
-                    else if (ch == 'z')
-                    {
-                        if (undolevels)
-                        {
-                            undolevels--;
-                            M_StringCopy(consoleinput, undohistory[undolevels].input, sizeof(consoleinput));
-                            caretpos = undohistory[undolevels].caretpos;
-                            selectstart = undohistory[undolevels].selectstart;
-                            selectend = undohistory[undolevels].selectend;
-                        }
-                    }
+                    selectstart = 0;
+                    selectend = caretpos = len;
                 }
-                else
-                {
-                    if ((modstate & KMOD_SHIFT) || (keyboardalwaysrun != KEY_CAPSLOCK && (modstate & KMOD_CAPS)))
-                        ch = shiftxform[ch];
 
-                    if (ch >= ' ' && ch <= '}' && ch != '`' && C_TextWidth(consoleinput, false, true)
-                        + (ch == ' ' ? spacewidth : SHORT(consolefont[ch - CONSOLEFONTSTART]->width))
-                        - (selectstart < selectend ? C_TextWidth(M_SubString(consoleinput, selectstart,
-                        selectend - selectstart), false, true) : 0) <= CONSOLEINPUTPIXELWIDTH
-                        && !(modstate & KMOD_ALT))
+                break;
+
+            case 'c':
+                // copy selected text to clipboard
+                if (modstate & KMOD_CTRL)
+                    if (selectstart < selectend)
+                        SDL_SetClipboardText(M_SubString(consoleinput, selectstart, selectend - selectstart));
+
+                break;
+
+            case 'v':
+                // paste text from clipboard
+                if (modstate & KMOD_CTRL)
+                {
+                    char    buffer[255];
+
+                    M_snprintf(buffer, sizeof(buffer), "%s%s%s", M_SubString(consoleinput, 0, selectstart),
+                        SDL_GetClipboardText(), M_SubString(consoleinput, selectend, len - selectend));
+
+                    if (C_TextWidth(buffer, false, true) <= CONSOLEINPUTPIXELWIDTH)
                     {
                         C_AddToUndoHistory();
+                        M_StringCopy(consoleinput, buffer, sizeof(consoleinput));
+                        selectstart += (int)strlen(SDL_GetClipboardText());
+                        selectend = caretpos = selectstart;
+                    }
+                }
 
-                        if (selectstart < selectend)
-                        {
-                            // replace selected text with a character
-                            consoleinput[selectstart] = ch;
+                break;
 
-                            for (i = selectend; i < len; i++)
-                                consoleinput[selectstart + i - selectend + 1] = consoleinput[i];
+            case 'x':
+                // cut selected text to clipboard
+                if (modstate & KMOD_CTRL)
+                {
+                    if (selectstart < selectend)
+                    {
+                        C_AddToUndoHistory();
+                        SDL_SetClipboardText(M_SubString(consoleinput, selectstart,
+                            selectend - selectstart));
 
-                            consoleinput[selectstart + i - selectend + 1] = '\0';
-                            caretpos = selectstart + 1;
-                        }
-                        else
-                        {
-                            // insert a character
-                            consoleinput[len + 1] = '\0';
+                        for (i = selectend; i < len; i++)
+                            consoleinput[selectstart + i - selectend] = consoleinput[i];
 
-                            for (i = len; i > caretpos; i--)
-                                consoleinput[i] = consoleinput[i - 1];
-
-                            consoleinput[caretpos++] = ch;
-                        }
-
-                        selectstart = selectend = caretpos;
+                        consoleinput[selectstart + i - selectend] = '\0';
+                        caretpos = selectend = selectstart;
                         caretwait = I_GetTimeMS() + CARETBLINKTIME;
                         showcaret = true;
-                        autocomplete = -1;
-                        inputhistory = -1;
+                    }
+                }
+
+                break;
+
+            case 'z':
+                // undo
+                if (modstate & KMOD_CTRL)
+                {
+                    if (undolevels)
+                    {
+                        undolevels--;
+                        M_StringCopy(consoleinput, undohistory[undolevels].input, sizeof(consoleinput));
+                        caretpos = undohistory[undolevels].caretpos;
+                        selectstart = undohistory[undolevels].selectstart;
+                        selectend = undohistory[undolevels].selectend;
                     }
                 }
         }
     }
     else if (ev->type == ev_keyup)
         return false;
+    else if (ev->type == ev_text)
+    {
+        char    ch = (char)ev->data1;
 
+        if (ch >= ' ' && ch <= '}' && ch != '`' && C_TextWidth(consoleinput, false, true)
+            + (ch == ' ' ? spacewidth : SHORT(consolefont[ch - CONSOLEFONTSTART]->width))
+            - (selectstart < selectend ? C_TextWidth(M_SubString(consoleinput, selectstart,
+            selectend - selectstart), false, true) : 0) <= CONSOLEINPUTPIXELWIDTH)
+        {
+            C_AddToUndoHistory();
+
+            if (selectstart < selectend)
+            {
+                // replace selected text with a character
+                consoleinput[selectstart] = ch;
+
+                for (i = selectend; i < len; i++)
+                    consoleinput[selectstart + i - selectend + 1] = consoleinput[i];
+
+                consoleinput[selectstart + i - selectend + 1] = '\0';
+                caretpos = selectstart + 1;
+            }
+            else
+            {
+                // insert a character
+                consoleinput[len + 1] = '\0';
+
+                for (i = len; i > caretpos; i--)
+                    consoleinput[i] = consoleinput[i - 1];
+
+                consoleinput[caretpos++] = ch;
+            }
+
+            selectstart = selectend = caretpos;
+            caretwait = I_GetTimeMS() + CARETBLINKTIME;
+            showcaret = true;
+            autocomplete = -1;
+            inputhistory = -1;
+        }
+    }
     else if (ev->type == ev_mousewheel)
     {
         // scroll output up

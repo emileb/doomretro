@@ -421,7 +421,7 @@ static void I_GetEvent(void)
 
     while (SDL_PollEvent(Event))
     {
-        event_t event;
+        event_t     event;
 
 #if !defined(_WIN32)
         static dboolean enterdown;
@@ -429,6 +429,21 @@ static void I_GetEvent(void)
 
         switch (Event->type)
         {
+            case SDL_TEXTINPUT:
+                for (int i = 0, len = (int)strlen(Event->text.text); i < len; i++)
+                {
+                    const char  ch = Event->text.text[i];
+
+                    if (isprint(ch))
+                    {
+                        event_t textevent = { ev_text, ch, 0, 0 };
+
+                        D_PostEvent(&textevent);
+                    }
+                }
+
+                break;
+
             case SDL_KEYDOWN:
                 if (noinput)
                     return;
@@ -952,14 +967,6 @@ void I_UpdateBlitFunc(dboolean shake)
 }
 
 //
-// I_ReadScreen
-//
-void I_ReadScreen(byte *screen)
-{
-    memcpy(screen, screens[0], SCREENWIDTH * SCREENHEIGHT);
-}
-
-//
 // I_SetPalette
 //
 void I_SetPalette(byte *playpal)
@@ -1380,8 +1387,7 @@ static void SetVideoMode(dboolean output)
 
             if (output)
                 C_Output("Staying at the desktop resolution of %s\xD7%s%s%s%s with a %s aspect ratio.",
-                    commify(width), commify(height), (*acronym ? " (" : ""), acronym, (*acronym ? ")" : ""),
-                    ratio);
+                    commify(width), commify(height), (*acronym ? " (" : ""), acronym, (*acronym ? ")" : ""), ratio);
         }
         else
         {
@@ -1399,8 +1405,7 @@ static void SetVideoMode(dboolean output)
 
             if (output)
                 C_Output("Switched to a resolution of %s\xD7%s%s%s%s with a %s aspect ratio.",
-                    commify(width), commify(height), (*acronym ? " (" : ""), acronym, (*acronym ? ")" : ""),
-                    ratio);
+                    commify(width), commify(height), (*acronym ? " (" : ""), acronym, (*acronym ? ")" : ""), ratio);
         }
     }
     else
@@ -1574,8 +1579,7 @@ static void SetVideoMode(dboolean output)
                 if (refreshrate < vid_capfps || !vid_capfps)
                 {
                     if (output)
-                        C_Output("The framerate is synced to the display's refresh rate of %iHz.",
-                            refreshrate);
+                        C_Output("The framerate is synced to the display's refresh rate of %iHz.", refreshrate);
                 }
                 else
                 {
@@ -1692,8 +1696,9 @@ void I_ToggleWidescreen(dboolean toggle)
     if (toggle)
     {
         vid_widescreen = true;
+
 #ifndef __ANDROID__
-        if (SDL_RenderSetLogicalSize(renderer, SCREENWIDTH, SCREENHEIGHT) < 0)
+        if (SDL_RenderSetLogicalSize(renderer, SCREENWIDTH, SCREENWIDTH * 10 / 16) < 0)
             I_SDLError("SDL_RenderSetLogicalSize");
 #endif
         src_rect.h = SCREENHEIGHT - SBARHEIGHT;
@@ -1885,7 +1890,7 @@ void I_InitGraphics(void)
     if (vid_fullscreen)
         SetShowCursor(false);
 
-    mapscreen = Z_Malloc(SCREENWIDTH * SCREENHEIGHT, PU_STATIC, NULL);
+    mapscreen = malloc(SCREENWIDTH * SCREENHEIGHT);
     I_CreateExternalAutomap(true);
 
 #if defined(_WIN32)

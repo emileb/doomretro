@@ -89,7 +89,7 @@
 #define SPAWNCMDFORMAT      "<i>monster</i>|<i>item</i>"
 #define TELEPORTCMDFORMAT   "<i>x</i> <i>y</i>"
 #define TIMERCMDFORMAT      "<i>minutes</i>"
-#define UNBINDCMDFORMAT     "<i>control</i>"
+#define UNBINDCMDFORMAT     "<i>control</i>|<b>+</b><i>action</i>"
 
 #define PENDINGCHANGE       "This change won't be effective until the next map."
 
@@ -108,10 +108,9 @@ static int      mapcmdepisode;
 static int      mapcmdmap;
 static char     mapcmdlump[7];
 
-static dboolean resettingall;
-
 dboolean        executingalias = false;
 dboolean        vanilla = false;
+dboolean        resettingcvar = false;
 dboolean        togglingvanilla = false;
 
 char            *version = version_default;
@@ -210,40 +209,40 @@ static void weapon7_action_func(void);
 
 action_t actions[] =
 {
-    { "+alwaysrun",    alwaysrun_action_func,   &keyboardalwaysrun,         NULL,                  NULL,             &gamepadalwaysrun,         NULL         },
-    { "+automap",      automap_action_func,     &keyboardautomap,           NULL,                  NULL,             &gamepadautomap,           NULL         },
-    { "+back",         back_action_func,        &keyboardback,              &keyboardback2,        NULL,             &gamepadback,              NULL         },
-    { "+clearmark",    clearmark_action_func,   &keyboardautomapclearmark,  NULL,                  NULL,             &gamepadautomapclearmark,  NULL         },
-    { "+console",      console_action_func,     &keyboardconsole,           NULL,                  NULL,             NULL,                      NULL         },
-    { "+fire",         fire_action_func,        &keyboardfire,              NULL,                  &mousefire,       &gamepadfire,              NULL         },
-    { "+followmode",   followmode_action_func,  &keyboardautomapfollowmode, NULL,                  NULL,             &gamepadautomapfollowmode, NULL         },
-    { "+forward",      forward_action_func,     &keyboardforward,           &keyboardforward2,     &mouseforward,    &gamepadforward,           NULL         },
-    { "+grid",         grid_action_func,        &keyboardautomapgrid,       NULL,                  NULL,             &gamepadautomapgrid,       NULL         },
-    { "+left",         left_action_func,        &keyboardleft,              NULL,                  NULL,             &gamepadleft,              NULL         },
-    { "+mark",         mark_action_func,        &keyboardautomapmark,       NULL,                  NULL,             &gamepadautomapmark,       NULL         },
-    { "+maxzoom",      maxzoom_action_func,     &keyboardautomapmaxzoom,    NULL,                  NULL,             &gamepadautomapmaxzoom,    NULL         },
-    { "+menu",         menu_action_func,        &keyboardmenu,              NULL,                  NULL,             &gamepadmenu,              NULL         },
-    { "+mouselook",    NULL,                    &keyboardmouselook,         NULL,                  &mousemouselook,  &gamepadmouselook,         NULL         },
-    { "+nextweapon",   nextweapon_action_func,  &keyboardnextweapon,        NULL,                  &mousenextweapon, &gamepadnextweapon,        NULL         },
-    { "+prevweapon",   prevweapon_action_func,  &keyboardprevweapon,        NULL,                  &mouseprevweapon, &gamepadprevweapon,        NULL         },
-    { "+right",        right_action_func,       &keyboardright,             NULL,                  NULL,             &gamepadright,             NULL         },
-    { "+rotatemode",   rotatemode_action_func,  &keyboardautomaprotatemode, NULL,                  NULL,             &gamepadautomaprotatemode, NULL         },
-    { "+run",          NULL,                    &keyboardrun,               NULL,                  &mouserun,        &gamepadrun,               NULL         },
-    { "+screenshot",   screenshot_action_func,  &keyboardscreenshot,        NULL,                  NULL,             NULL,                      NULL         },
-    { "+strafe",       NULL,                    &keyboardstrafe,            NULL,                  &mousestrafe,     &gamepadstrafe,            NULL         },
-    { "+strafeleft",   strafeleft_action_func,  &keyboardstrafeleft,        &keyboardstrafeleft2,  NULL,             &gamepadstrafeleft,        NULL         },
-    { "+straferight",  straferight_action_func, &keyboardstraferight,       &keyboardstraferight2, NULL,             &gamepadstraferight,       NULL         },
-    { "+use",          use_action_func,         &keyboarduse,               &keyboarduse2,         &mouseuse,        &gamepaduse,               &gamepaduse2 },
-    { "+weapon1",      weapon1_action_func,     &keyboardweapon1,           NULL,                  NULL,             &gamepadweapon1,           NULL         },
-    { "+weapon2",      weapon2_action_func,     &keyboardweapon2,           NULL,                  NULL,             &gamepadweapon2,           NULL         },
-    { "+weapon3",      weapon3_action_func,     &keyboardweapon3,           NULL,                  NULL,             &gamepadweapon3,           NULL         },
-    { "+weapon4",      weapon4_action_func,     &keyboardweapon4,           NULL,                  NULL,             &gamepadweapon4,           NULL         },
-    { "+weapon5",      weapon5_action_func,     &keyboardweapon5,           NULL,                  NULL,             &gamepadweapon5,           NULL         },
-    { "+weapon6",      weapon6_action_func,     &keyboardweapon6,           NULL,                  NULL,             &gamepadweapon6,           NULL         },
-    { "+weapon7",      weapon7_action_func,     &keyboardweapon7,           NULL,                  NULL,             &gamepadweapon7,           NULL         },
-    { "+zoomin",       NULL,                    NULL,                       NULL,                  NULL,             &gamepadautomapzoomin,     NULL         },
-    { "+zoomout",      NULL,                    NULL,                       NULL,                  NULL,             &gamepadautomapzoomout,    NULL         },
-    { "",              NULL,                    NULL,                       NULL,                  NULL,             NULL,                      NULL         }
+    { "+alwaysrun",   alwaysrun_action_func,   &keyboardalwaysrun,         NULL,                  NULL,             &gamepadalwaysrun,         NULL         },
+    { "+automap",     automap_action_func,     &keyboardautomap,           NULL,                  NULL,             &gamepadautomap,           NULL         },
+    { "+back",        back_action_func,        &keyboardback,              &keyboardback2,        NULL,             &gamepadback,              NULL         },
+    { "+clearmark",   clearmark_action_func,   &keyboardautomapclearmark,  NULL,                  NULL,             &gamepadautomapclearmark,  NULL         },
+    { "+console",     console_action_func,     &keyboardconsole,           NULL,                  NULL,             NULL,                      NULL         },
+    { "+fire",        fire_action_func,        &keyboardfire,              NULL,                  &mousefire,       &gamepadfire,              NULL         },
+    { "+followmode",  followmode_action_func,  &keyboardautomapfollowmode, NULL,                  NULL,             &gamepadautomapfollowmode, NULL         },
+    { "+forward",     forward_action_func,     &keyboardforward,           &keyboardforward2,     &mouseforward,    &gamepadforward,           NULL         },
+    { "+grid",        grid_action_func,        &keyboardautomapgrid,       NULL,                  NULL,             &gamepadautomapgrid,       NULL         },
+    { "+left",        left_action_func,        &keyboardleft,              NULL,                  NULL,             &gamepadleft,              NULL         },
+    { "+mark",        mark_action_func,        &keyboardautomapmark,       NULL,                  NULL,             &gamepadautomapmark,       NULL         },
+    { "+maxzoom",     maxzoom_action_func,     &keyboardautomapmaxzoom,    NULL,                  NULL,             &gamepadautomapmaxzoom,    NULL         },
+    { "+menu",        menu_action_func,        &keyboardmenu,              NULL,                  NULL,             &gamepadmenu,              NULL         },
+    { "+mouselook",   NULL,                    &keyboardmouselook,         NULL,                  &mousemouselook,  &gamepadmouselook,         NULL         },
+    { "+nextweapon",  nextweapon_action_func,  &keyboardnextweapon,        NULL,                  &mousenextweapon, &gamepadnextweapon,        NULL         },
+    { "+prevweapon",  prevweapon_action_func,  &keyboardprevweapon,        NULL,                  &mouseprevweapon, &gamepadprevweapon,        NULL         },
+    { "+right",       right_action_func,       &keyboardright,             NULL,                  NULL,             &gamepadright,             NULL         },
+    { "+rotatemode",  rotatemode_action_func,  &keyboardautomaprotatemode, NULL,                  NULL,             &gamepadautomaprotatemode, NULL         },
+    { "+run",         NULL,                    &keyboardrun,               NULL,                  &mouserun,        &gamepadrun,               NULL         },
+    { "+screenshot",  screenshot_action_func,  &keyboardscreenshot,        NULL,                  NULL,             NULL,                      NULL         },
+    { "+strafe",      NULL,                    &keyboardstrafe,            NULL,                  &mousestrafe,     &gamepadstrafe,            NULL         },
+    { "+strafeleft",  strafeleft_action_func,  &keyboardstrafeleft,        &keyboardstrafeleft2,  NULL,             &gamepadstrafeleft,        NULL         },
+    { "+straferight", straferight_action_func, &keyboardstraferight,       &keyboardstraferight2, NULL,             &gamepadstraferight,       NULL         },
+    { "+use",         use_action_func,         &keyboarduse,               &keyboarduse2,         &mouseuse,        &gamepaduse,               &gamepaduse2 },
+    { "+weapon1",     weapon1_action_func,     &keyboardweapon1,           NULL,                  NULL,             &gamepadweapon1,           NULL         },
+    { "+weapon2",     weapon2_action_func,     &keyboardweapon2,           NULL,                  NULL,             &gamepadweapon2,           NULL         },
+    { "+weapon3",     weapon3_action_func,     &keyboardweapon3,           NULL,                  NULL,             &gamepadweapon3,           NULL         },
+    { "+weapon4",     weapon4_action_func,     &keyboardweapon4,           NULL,                  NULL,             &gamepadweapon4,           NULL         },
+    { "+weapon5",     weapon5_action_func,     &keyboardweapon5,           NULL,                  NULL,             &gamepadweapon5,           NULL         },
+    { "+weapon6",     weapon6_action_func,     &keyboardweapon6,           NULL,                  NULL,             &gamepadweapon6,           NULL         },
+    { "+weapon7",     weapon7_action_func,     &keyboardweapon7,           NULL,                  NULL,             &gamepadweapon7,           NULL         },
+    { "+zoomin",      NULL,                    NULL,                       NULL,                  NULL,             &gamepadautomapzoomin,     NULL         },
+    { "+zoomout",     NULL,                    NULL,                       NULL,                  NULL,             &gamepadautomapzoomout,    NULL         },
+    { "",             NULL,                    NULL,                       NULL,                  NULL,             NULL,                      NULL         }
 };
 
 static dboolean alive_func1(char *cmd, char *parms);
@@ -266,7 +265,6 @@ static void fastmonsters_cmd_func2(char *cmd, char *parms);
 static void freeze_cmd_func2(char *cmd, char *parms);
 static dboolean give_cmd_func1(char *cmd, char *parms);
 static void give_cmd_func2(char *cmd, char *parms);
-static dboolean god_cmd_func1(char *cmd, char *parms);
 static void god_cmd_func2(char *cmd, char *parms);
 static void help_cmd_func2(char *cmd, char *parms);
 static void if_cmd_func2(char *cmd, char *parms);
@@ -293,9 +291,9 @@ static void resetall_cmd_func2(char *cmd, char *parms);
 static void respawnitems_cmd_func2(char *cmd, char *parms);
 static dboolean respawnmonsters_cmd_func1(char *cmd, char *parms);
 static void respawnmonsters_cmd_func2(char *cmd, char *parms);
+static void restartmap_cmd_func2(char *cmd, char *parms);
 static dboolean resurrect_cmd_func1(char *cmd, char *parms);
 static void resurrect_cmd_func2(char *cmd, char *parms);
-static dboolean save_cmd_func1(char *cmd, char *parms);
 static void save_cmd_func2(char *cmd, char *parms);
 static dboolean spawn_cmd_func1(char *cmd, char *parms);
 static void spawn_cmd_func2(char *cmd, char *parms);
@@ -508,7 +506,7 @@ consolecmd_t consolecmds[] =
         "The amount of time <i><b>"PACKAGE_NAME"</b></i> has been running."),
     CMD(give, "", give_cmd_func1, give_cmd_func2, true, GIVECMDFORMAT,
         "Gives <b>ammo</b>, <b>armor</b>, <b>backpack</b>, <b>health</b>, <b>keys</b>,\n<b>weapons</b>, or <b>all</b> or certain <i>items</i> to the player."),
-    CMD(god, "", god_cmd_func1, god_cmd_func2, true, "[<b>on</b>|<b>off</b>]",
+    CMD(god, "", alive_func1, god_cmd_func2, true, "[<b>on</b>|<b>off</b>]",
         "Toggles god mode."),
     CVAR_FLOAT(gp_deadzone_left, "", gp_deadzone_cvars_func1, gp_deadzone_cvars_func2, CF_PERCENT,
         "The dead zone of the gamepad's left thumbstick."),
@@ -547,9 +545,11 @@ consolecmd_t consolecmds[] =
     CMD_CHEAT(idmypos, false),
     CMD_CHEAT(idspispopd, false),
     CMD(if, "", null_func1, if_cmd_func2, true, IFCMDFORMAT,
-        "If a <i>CVAR</i> equals a <i>value</i> then execute a string of\n<i>commands</i>."),
+        "If a <i>CVAR</i> equals a <i>value</i> then execute a string\nof <i>commands</i>."),
     CVAR_BOOL(infighting, "", bool_cvars_func1, bool_cvars_func2, BOOLVALUEALIAS,
         "Toggles infighting among monsters once the player\ndies."),
+    CVAR_BOOL(infiniteheight, "", bool_cvars_func1, bool_cvars_func2, BOOLVALUEALIAS,
+        "Toggles giving the player and monsters infinite\nheight."),
     CVAR_STR(iwadfolder, "", null_func1, str_cvars_func2, CF_NONE,
         "The folder where an IWAD was last opened."),
     CMD(kill, explode, kill_cmd_func1, kill_cmd_func2, true, KILLCMDFORMAT,
@@ -586,7 +586,7 @@ consolecmd_t consolecmds[] =
     CMD(notarget, "", game_func1, notarget_cmd_func2, true, "[<b>on</b>|<b>off</b>]",
         "Toggles monsters not seeing the player as a\ntarget."),
     CMD(pistolstart, "", null_func1, pistolstart_cmd_func2, true, "[<b>on</b>|<b>off</b>]",
-        "Toggles the player starting each map with only a\npistol."),
+        "Toggles the player starting each map with only\na pistol."),
     CMD(play, "", play_cmd_func1, play_cmd_func2, true, PLAYCMDFORMAT,
         "Plays a <i>sound</i> or <i>music</i> lump."),
     CVAR_STR(playername, "", null_func1, playername_cvar_func2, CF_NONE,
@@ -693,6 +693,8 @@ consolecmd_t consolecmds[] =
         "Toggles respawning items."),
     CMD(respawnmonsters, "", respawnmonsters_cmd_func1, respawnmonsters_cmd_func2, true, "[<b>on</b>|<b>off</b>]",
         "Toggles respawning monsters."),
+    CMD(restartmap, "", game_func1, restartmap_cmd_func2, false, "",
+        "Restarts the current map."),
     CMD(resurrect, "", resurrect_cmd_func1, resurrect_cmd_func2, false, "",
         "Resurrects the player."),
     CVAR_INT(s_channels, "", int_cvars_func1, int_cvars_func2, CF_NONE, NOVALUEALIAS,
@@ -705,7 +707,7 @@ consolecmd_t consolecmds[] =
         "Toggles randomizing the pitch of monster sound\neffects."),
     CVAR_INT(s_sfxvolume, "", s_volume_cvars_func1, s_volume_cvars_func2, CF_PERCENT, NOVALUEALIAS,
         "The volume of sound effects."),
-    CMD(save, "", save_cmd_func1, save_cmd_func2, true, SAVECMDFORMAT,
+    CMD(save, "", alive_func1, save_cmd_func2, true, SAVECMDFORMAT,
         "Saves the game to a file."),
     CVAR_INT(savegame, "", int_cvars_func1, savegame_cvar_func2, CF_NONE, NOVALUEALIAS,
         "The currently selected savegame in the menu\n(<b>1</b> to <b>6</b>)."),
@@ -716,7 +718,7 @@ consolecmd_t consolecmds[] =
     CVAR_INT(stillbob, "", int_cvars_func1, int_cvars_func2, CF_PERCENT, NOVALUEALIAS,
         "The amount the player's view and weapon bob up\nand down when they stand still."),
     CMD(teleport, "", game_func1, teleport_cmd_func2, true, TELEPORTCMDFORMAT,
-        "Teleports the player to (<i>x</i>,<i>y</i>) in the current map."),
+        "Teleports the player to (<i>x</i>,<i>y</i>) in the current\nmap."),
     CMD(thinglist, "", game_func1, thinglist_cmd_func2, false, "",
         "Shows a list of things in the current map."),
     CMD(timer, "", null_func1, timer_cmd_func2, true, TIMERCMDFORMAT,
@@ -784,7 +786,7 @@ consolecmd_t consolecmds[] =
 
 static dboolean run(void)
 {
-    return (gamekeydown[keyboardrun] + !!mousebuttons[mouserun] + !!(gamepadbuttons & gamepadrun) + alwaysrun == 1);
+    return (gamekeydown[keyboardrun] ^ (!!mousebuttons[mouserun]) ^ (!!(gamepadbuttons & gamepadrun)) ^ alwaysrun);
 }
 
 static dboolean strafe(void)
@@ -1174,9 +1176,10 @@ static void C_UnbindDuplicates(const int keep, const controltype_t type, const i
 void bind_cmd_func2(char *cmd, char *parms)
 {
     int             i = 0;
+    int             action = 0;
     char            parm1[128] = "";
     char            parm2[128] = "";
-    const dboolean  mouselookcontrols = (keyboardmouselook || mousemouselook != -1);
+    const dboolean  mouselookcontrols = (keyboardmouselook || gamepadmouselook || mousemouselook != -1);
 
     sscanf(parms, "%127s %127[^\n]", parm1, parm2);
 
@@ -1198,8 +1201,6 @@ void bind_cmd_func2(char *cmd, char *parms)
 
     if (*controls[i].control)
     {
-        int action = 0;
-
         if (!*parm2)
         {
             while (*actions[action].action)
@@ -1227,7 +1228,7 @@ void bind_cmd_func2(char *cmd, char *parms)
                 action++;
             }
         }
-        else if (M_StringCompare(parm2, "none"))
+        else if (M_StringCompare(cmd, "unbind"))
         {
             while (*actions[action].action)
             {
@@ -1286,8 +1287,6 @@ void bind_cmd_func2(char *cmd, char *parms)
         }
         else
         {
-            dboolean    bound = false;
-
             while (*actions[action].action)
             {
                 if (M_StringCompare(parm2, actions[action].action))
@@ -1298,6 +1297,8 @@ void bind_cmd_func2(char *cmd, char *parms)
 
             if (*actions[action].action)
             {
+                dboolean    bound = false;
+
                 switch (controls[i].type)
                 {
                     case keyboardcontrol:
@@ -1387,10 +1388,37 @@ void bind_cmd_func2(char *cmd, char *parms)
             }
         }
     }
+    else if (M_StringCompare(cmd, "unbind"))
+    {
+        while (*actions[action].action)
+        {
+            if (M_StringCompare(parm2, actions[action].action))
+            {
+                if (actions[i].keyboard1)
+                    *(int *)actions[i].keyboard1 = 0;
+
+                if (actions[i].keyboard2)
+                    *(int *)actions[i].keyboard2 = 0;
+
+                if (actions[i].mouse1)
+                    *(int *)actions[i].mouse1 = -1;
+
+                if (actions[i].gamepad1)
+                    *(int *)actions[i].gamepad1 = 0;
+
+                if (actions[i].gamepad2)
+                    *(int *)actions[i].gamepad2 = 0;
+
+                break;
+            }
+
+            action++;
+        }
+    }
     else
         C_Warning("<b>%s</b> is not a valid control.", parm1);
 
-    if (mouselookcontrols != (keyboardmouselook || mousemouselook != -1))
+    if (mouselookcontrols != (keyboardmouselook || gamepadmouselook || mousemouselook != -1))
     {
         if (gamestate == GS_LEVEL)
             R_InitSkyMap();
@@ -1654,7 +1682,7 @@ static void cvarlist_cmd_func2(char *cmd, char *parms)
 
             if (M_StringCompare(consolecmds[i].name, stringize(ammo)))
                 C_TabbedOutput(tabs, "%i.\t<b>%s\t%i</b>\t%s", ++count, consolecmds[i].name,
-                    (gamestate == GS_LEVEL ? viewplayer->ammo[weaponinfo[viewplayer->readyweapon].ammo] : 0),
+                    (gamestate == GS_LEVEL ? viewplayer->ammo[weaponinfo[viewplayer->readyweapon].ammotype] : 0),
                     description1);
             else if (M_StringCompare(consolecmds[i].name, stringize(armor)))
                 C_TabbedOutput(tabs, "%i.\t<b>%s\t%i%%</b>\t%s", ++count, consolecmds[i].name,
@@ -1664,19 +1692,18 @@ static void cvarlist_cmd_func2(char *cmd, char *parms)
                     (gamestate == GS_LEVEL ? viewplayer->health : 0), description1);
             else if (consolecmds[i].flags & CF_BOOLEAN)
                 C_TabbedOutput(tabs, "%i.\t<b>%s\t%s</b>\t%s", ++count, consolecmds[i].name,
-                    C_LookupAliasFromValue(*(dboolean *)consolecmds[i].variable,
-                        consolecmds[i].aliases), description1);
+                    C_LookupAliasFromValue(*(dboolean *)consolecmds[i].variable, consolecmds[i].aliases), description1);
             else if ((consolecmds[i].flags & CF_INTEGER) && (consolecmds[i].flags & CF_PERCENT))
                 C_TabbedOutput(tabs, "%i.\t<b>%s\t%i%%</b>\t%s", ++count, consolecmds[i].name,
                     *(int *)consolecmds[i].variable, description1);
             else if (consolecmds[i].flags & CF_INTEGER)
                 C_TabbedOutput(tabs, "%i.\t<b>%s\t%s</b>\t%s", ++count, consolecmds[i].name,
-                    C_LookupAliasFromValue(*(int *)consolecmds[i].variable,
-                        consolecmds[i].aliases), description1);
+                    C_LookupAliasFromValue(*(int *)consolecmds[i].variable, consolecmds[i].aliases),
+                    description1);
             else if (consolecmds[i].flags & CF_FLOAT)
                 C_TabbedOutput(tabs, "%i.\t<b>%s\t%s%s</b>\t%s", ++count, consolecmds[i].name,
                     striptrailingzero(*(float *)consolecmds[i].variable,
-                        ((consolecmds[i].flags & CF_PERCENT) ? 1 : 2)),
+                    ((consolecmds[i].flags & CF_PERCENT) ? 1 : 2)),
                     ((consolecmds[i].flags & CF_PERCENT) ? "%" : ""), description1);
             else if (consolecmds[i].flags & CF_STRING)
                 C_TabbedOutput(tabs, "%i.\t<b>%s\t\"%.14s%s\"</b>\t%s", ++count, consolecmds[i].name,
@@ -1929,7 +1956,8 @@ static void give_cmd_func2(char *cmd, char *parms)
                         return;
                     }
 
-                    if (gamemode == shareware && (i == MT_MISC28 || i == MT_MISC25 || i == MT_MISC20 || i == MT_MISC21))
+                    if (gamemode == shareware && (i == MT_MISC7 || i == MT_MISC8 || i == MT_MISC9
+                        || i == MT_MISC20 || i == MT_MISC21 || i == MT_MISC25 || i == MT_MISC28))
                     {
                         M_StringCopy(buffer, mobjinfo[i].plural1, sizeof(buffer));
 
@@ -1959,11 +1987,6 @@ static void give_cmd_func2(char *cmd, char *parms)
 //
 // god CCMD
 //
-static dboolean god_cmd_func1(char *cmd, char *parms)
-{
-    return (gamestate == GS_LEVEL && viewplayer->playerstate == PST_LIVE);
-}
-
 static void god_cmd_func2(char *cmd, char *parms)
 {
     if (*parms)
@@ -1997,8 +2020,8 @@ static void god_cmd_func2(char *cmd, char *parms)
 static void help_cmd_func2(char *cmd, char *parms)
 {
 #if defined(_WIN32)
-    ShellExecute(GetActiveWindow(), "open", PACKAGE_WIKI_HELP_URL, NULL, NULL, SW_SHOWNORMAL);
-//#elif defined(__linux__)
+    ShellExecute(NULL, "open", PACKAGE_WIKI_HELP_URL, NULL, NULL, SW_SHOWNORMAL);
+#elif defined(__linux__)
     system("xdg-open "PACKAGE_WIKI_HELP_URL);
 #elif defined(__MACOSX__)
     system("open "PACKAGE_WIKI_HELP_URL);
@@ -2177,6 +2200,7 @@ static void kill_cmd_func2(char *cmd, char *parms)
         || (*playername && M_StringCompare(parm, playername)))
     {
         viewplayer->health = 0;
+        viewplayer->mo->health = 0;
         viewplayer->attacker = NULL;
 
         if (viewplayer->fixedcolormap == INVERSECOLORMAP)
@@ -2385,7 +2409,7 @@ static void load_cmd_func2(char *cmd, char *parms)
 // map CCMD
 //
 extern dboolean samelevel;
-extern int      idclevtics;
+extern int  idclevtics;
 
 static dboolean map_cmd_func1(char *cmd, char *parms)
 {
@@ -3678,6 +3702,8 @@ static void reset_cmd_func2(char *cmd, char *parms)
         return;
     }
 
+    resettingcvar = true;
+
     for (int i = 0; *consolecmds[i].name; i++)
     {
         const int   flags = consolecmds[i].flags;
@@ -3704,6 +3730,8 @@ static void reset_cmd_func2(char *cmd, char *parms)
             break;
         }
     }
+
+    resettingcvar = false;
 }
 
 //
@@ -3715,8 +3743,9 @@ static void C_VerifyResetAll(const int key)
 
     if (key == 'y')
     {
-        resettingall = true;
+        resettingcvar = true;
 
+        // reset all cvars to default values
         for (int i = 0; *consolecmds[i].name; i++)
         {
             const int   flags = consolecmds[i].flags;
@@ -3736,7 +3765,109 @@ static void C_VerifyResetAll(const int key)
             }
         }
 
-        resettingall = false;
+        resettingcvar = false;
+
+        // unbind all controls
+        for (int i = 0; *actions[i].action; i++)
+        {
+            if (actions[i].keyboard1)
+                *(int *)actions[i].keyboard1 = 0;
+
+            if (actions[i].keyboard2)
+                *(int *)actions[i].keyboard2 = 0;
+
+            if (actions[i].mouse1)
+                *(int *)actions[i].mouse1 = -1;
+
+            if (actions[i].gamepad1)
+                *(int *)actions[i].gamepad1 = 0;
+
+            if (actions[i].gamepad2)
+                *(int *)actions[i].gamepad2 = 0;
+        }
+
+        for (int i = 0; i < NUMKEYS; i++)
+            keyactionlist[i][0] = '\0';
+
+        // set all controls to defaults
+        keyboardalwaysrun = KEYALWAYSRUN_DEFAULT;
+        keyboardautomap = KEYAUTOMAP_DEFAULT;
+        keyboardautomapclearmark = KEYAUTOMAPCLEARMARK_DEFAULT;
+        keyboardautomapfollowmode = KEYAUTOMAPFOLLOWMODE_DEFAULT;
+        keyboardautomapgrid = KEYAUTOMAPGRID_DEFAULT;
+        keyboardautomapmark = KEYAUTOMAPMARK_DEFAULT;
+        keyboardautomapmaxzoom = KEYAUTOMAPMAXZOOM_DEFAULT;
+        keyboardautomaprotatemode = KEYAUTOMAPROTATEMODE_DEFAULT;
+        keyboardautomapzoomin = KEYAUTOMAPZOOMIN_DEFAULT;
+        keyboardautomapzoomout = KEYAUTOMAPZOOMOUT_DEFAULT;
+        keyboardconsole = KEYCONSOLE_DEFAULT;
+        keyboardback = KEYDOWN_DEFAULT;
+        keyboardback2 = KEYDOWN2_DEFAULT;
+        keyboardfire = KEYFIRE_DEFAULT;
+        keyboardleft = KEYLEFT_DEFAULT;
+        keyboardmenu = KEY_ESCAPE;
+        keyboardmouselook = KEYMOUSELOOK_DEFAULT;
+        keyboardnextweapon = KEYNEXTWEAPON_DEFAULT;
+        keyboardprevweapon = KEYPREVWEAPON_DEFAULT;
+        keyboardright = KEYRIGHT_DEFAULT;
+        keyboardrun = KEYRUN_DEFAULT;
+        keyboardscreenshot = KEYSCREENSHOT_DEFAULT;
+        keyboardstrafe = KEYSTRAFE_DEFAULT;
+        keyboardstrafeleft = KEYSTRAFELEFT_DEFAULT;
+        keyboardstrafeleft2 = KEYSTRAFELEFT2_DEFAULT;
+        keyboardstraferight = KEYSTRAFERIGHT_DEFAULT;
+        keyboardstraferight2 = KEYSTRAFERIGHT2_DEFAULT;
+        keyboardforward = KEYUP_DEFAULT;
+        keyboardforward2 = KEYUP2_DEFAULT;
+        keyboarduse = KEYUSE_DEFAULT;
+        keyboarduse2 = KEYUSE2_DEFAULT;
+        keyboardweapon1 = KEYWEAPON1_DEFAULT;
+        keyboardweapon2 = KEYWEAPON2_DEFAULT;
+        keyboardweapon3 = KEYWEAPON3_DEFAULT;
+        keyboardweapon4 = KEYWEAPON4_DEFAULT;
+        keyboardweapon5 = KEYWEAPON5_DEFAULT;
+        keyboardweapon6 = KEYWEAPON6_DEFAULT;
+        keyboardweapon7 = KEYWEAPON7_DEFAULT;
+        mousefire = MOUSEFIRE_DEFAULT;
+        mouseforward = MOUSEFORWARD_DEFAULT;
+        mousemouselook = MOUSEMOUSELOOK_DEFAULT;
+        mousenextweapon = MOUSENEXTWEAPON_DEFAULT;
+        mouseprevweapon = MOUSEPREVWEAPON_DEFAULT;
+        mouserun = MOUSERUN_DEFAULT;
+        mousestrafe = MOUSESTRAFE_DEFAULT;
+        mouseuse = MOUSEUSE_DEFAULT;
+        gamepadalwaysrun = GAMEPADALWAYSRUN_DEFAULT;
+        gamepadautomap = GAMEPADAUTOMAP_DEFAULT;
+        gamepadautomapclearmark = GAMEPADAUTOMAPCLEARMARK_DEFAULT;
+        gamepadautomapfollowmode = GAMEPADAUTOMAPFOLLOWMODE_DEFAULT;
+        gamepadautomapgrid = GAMEPADAUTOMAPGRID_DEFAULT;
+        gamepadautomapmark = GAMEPADAUTOMAPMARK_DEFAULT;
+        gamepadautomapmaxzoom = GAMEPADAUTOMAPMAXZOOM_DEFAULT;
+        gamepadautomaprotatemode = GAMEPADAUTOMAPROTATEMODE_DEFAULT;
+        gamepadautomapzoomin = GAMEPADAUTOMAPZOOMIN_DEFAULT;
+        gamepadautomapzoomout = GAMEPADAUTOMAPZOOMOUT_DEFAULT;
+        gamepadback = GAMEPADBACK_DEFAULT;
+        gamepadfire = GAMEPADFIRE_DEFAULT;
+        gamepadforward = GAMEPADFORWARD_DEFAULT;
+        gamepadleft = GAMEPADLEFT_DEFAULT;
+        gamepadmenu = GAMEPADMENU_DEFAULT;
+        gamepadmouselook = GAMEPADMOUSELOOK_DEFAULT;
+        gamepadnextweapon = GAMEPADNEXTWEAPON_DEFAULT;
+        gamepadprevweapon = GAMEPADPREVWEAPON_DEFAULT;
+        gamepadright = GAMEPADRIGHT_DEFAULT;
+        gamepadrun = GAMEPADRUN_DEFAULT;
+        gamepadstrafe = GAMEPADSTRAFE_DEFAULT;
+        gamepadstrafeleft = GAMEPADSTRAFELEFT_DEFAULT;
+        gamepadstraferight = GAMEPADSTRAFERIGHT_DEFAULT;
+        gamepaduse = GAMEPADUSE_DEFAULT;
+        gamepaduse2 = GAMEPADUSE2_DEFAULT;
+        gamepadweapon1 = GAMEPADWEAPON_DEFAULT;
+        gamepadweapon2 = GAMEPADWEAPON_DEFAULT;
+        gamepadweapon3 = GAMEPADWEAPON_DEFAULT;
+        gamepadweapon4 = GAMEPADWEAPON_DEFAULT;
+        gamepadweapon5 = GAMEPADWEAPON_DEFAULT;
+        gamepadweapon6 = GAMEPADWEAPON_DEFAULT;
+        gamepadweapon7 = GAMEPADWEAPON_DEFAULT;
 
 #if defined(_WIN32)
         wad = "";
@@ -3844,11 +3975,21 @@ static void respawnmonsters_cmd_func2(char *cmd, char *parms)
 }
 
 //
+// restartmap CCMD
+//
+static void restartmap_cmd_func2(char *cmd, char *parms)
+{
+    viewplayer->playerstate = PST_REBORN;
+    G_DoLoadLevel();
+    C_HideConsoleFast();
+}
+
+//
 // resurrect CCMD
 //
 static dboolean resurrect_cmd_func1(char *cmd, char *parms)
 {
-    return (gamestate == GS_LEVEL && viewplayer->playerstate == PST_DEAD);
+    return (gamestate == GS_LEVEL && viewplayer->health <= 0);
 }
 
 static void resurrect_cmd_func2(char *cmd, char *parms)
@@ -3862,11 +4003,6 @@ static void resurrect_cmd_func2(char *cmd, char *parms)
 //
 // save CCMD
 //
-static dboolean save_cmd_func1(char *cmd, char *parms)
-{
-    return (gamestate == GS_LEVEL && viewplayer->playerstate == PST_LIVE);
-}
-
 static void save_cmd_func2(char *cmd, char *parms)
 {
     if (!*parms)
@@ -4100,7 +4236,7 @@ static void unbind_cmd_func2(char *cmd, char *parms)
         return;
     }
 
-    bind_cmd_func2(cmd, M_StringJoin(parms, " none", NULL));
+    bind_cmd_func2(cmd, parms);
 }
 
 //
@@ -4504,8 +4640,8 @@ static void episode_cvar_func2(char *cmd, char *parms)
 
     int_cvars_func2(cmd, parms);
 
-    if (episode != episode_old)
-        EpiDef.lastOn = episode - 1;
+    if (episode != episode_old && gamemode != commercial)
+        EpiDef.lastOn = (gamemode == registered ? MIN(episode, episode_max - 1) : (gamemode == retail ? episode : 1)) - 1;
 }
 
 //
@@ -4517,8 +4653,8 @@ static void expansion_cvar_func2(char *cmd, char *parms)
 
     int_cvars_func2(cmd, parms);
 
-    if (expansion != expansion_old)
-        ExpDef.lastOn = expansion - 1;
+    if (expansion != expansion_old && gamemode == commercial)
+        ExpDef.lastOn = (nerve ? expansion : 1) - 1;
 }
 
 //
@@ -4569,8 +4705,7 @@ static void gp_deadzone_cvars_func2(char *cmd, char *parms)
         C_Output(removenewlines(consolecmds[C_GetIndex(stringize(gp_deadzone_left))].description));
 
         if (gp_deadzone_left == gp_deadzone_left_default)
-            C_Output("It is currently set to its default of <b>%s%%</b>.",
-                striptrailingzero(gp_deadzone_left, 1));
+            C_Output("It is currently set to its default of <b>%s%%</b>.", striptrailingzero(gp_deadzone_left, 1));
         else
             C_Output("It is currently set to <b>%s%%</b> and its default is <b>%s%%</b>.",
                 striptrailingzero(gp_deadzone_left, 1), striptrailingzero(gp_deadzone_left_default, 1));
@@ -4580,14 +4715,16 @@ static void gp_deadzone_cvars_func2(char *cmd, char *parms)
         C_Output(removenewlines(consolecmds[C_GetIndex(stringize(gp_deadzone_right))].description));
 
         if (gp_deadzone_right == gp_deadzone_right_default)
-            C_Output("It is currently set to its default of <b>%s%%</b>.",
-                striptrailingzero(gp_deadzone_right, 1));
+            C_Output("It is currently set to its default of <b>%s%%</b>.", striptrailingzero(gp_deadzone_right, 1));
         else
             C_Output("It is currently set to <b>%s%%</b> and its default is <b>%s%%</b>.",
                 striptrailingzero(gp_deadzone_right, 1), striptrailingzero(gp_deadzone_right_default, 1));
     }
 }
 
+//
+// gp_sensitivity CVAR
+//
 static void gp_sensitivity_cvar_func2(char *cmd, char *parms)
 {
     const int   gp_sensitivity_old = gp_sensitivity;
@@ -4598,6 +4735,9 @@ static void gp_sensitivity_cvar_func2(char *cmd, char *parms)
         I_SetGamepadSensitivity();
 }
 
+//
+// gp_swapthumbsticks CVAR
+//
 static void gp_swapthumbsticks_cvar_func2(char *cmd, char *parms)
 {
     const int   gp_swapthumbsticks_old = gp_swapthumbsticks;
@@ -4606,32 +4746,6 @@ static void gp_swapthumbsticks_cvar_func2(char *cmd, char *parms)
 
     if (gp_swapthumbsticks != gp_swapthumbsticks_old)
         I_SetGamepadThumbSticks();
-}
-
-//
-// r_messagepos CVAR
-//
-static void r_messagepos_cvar_func2(char *cmd, char *parms)
-{
-    if (*parms)
-    {
-        if (!M_StringCompare(r_messagepos, parms))
-        {
-            r_messagepos = strdup(parms);
-            HU_GetMessagePosition();
-            M_SaveCVARs();
-        }
-    }
-    else
-    {
-        C_Output(removenewlines(consolecmds[C_GetIndex(stringize(r_messagepos))].description));
-
-        if (M_StringCompare(r_messagepos, r_messagepos_default))
-            C_Output("It is currently set to its default of <b>%s</b>.", r_messagepos);
-        else
-            C_Output("It is currently set to <b>%s</b> and its default is <b>%s</b>.",
-                r_messagepos, r_messagepos_default);
-    }
 }
 
 //
@@ -4665,26 +4779,27 @@ dboolean P_CheckAmmo(void);
 
 static dboolean player_cvars_func1(char *cmd, char *parms)
 {
-    return (int_cvars_func1(cmd, parms) && gamestate == GS_LEVEL && (!M_StringCompare(cmd, stringize(health))
-        || (!(viewplayer->cheats & CF_GODMODE) && !viewplayer->powers[pw_invulnerability])));
+    return (int_cvars_func1(cmd, parms) && gamestate == GS_LEVEL
+        && (!M_StringCompare(cmd, stringize(health)) || (!(viewplayer->cheats & CF_GODMODE)
+        && !viewplayer->powers[pw_invulnerability])));
 }
 
 static void player_cvars_func2(char *cmd, char *parms)
 {
     int value;
 
-    if (resettingall)
+    if (resettingcvar)
         return;
 
     if (M_StringCompare(cmd, stringize(ammo)))
     {
-        ammotype_t  ammotype = weaponinfo[viewplayer->readyweapon].ammo;
+        ammotype_t  ammotype = weaponinfo[viewplayer->readyweapon].ammotype;
 
         if (*parms)
         {
             sscanf(parms, "%10i", &value);
 
-            if (ammotype != am_noammo && value != viewplayer->ammo[ammotype] && viewplayer->playerstate == PST_LIVE)
+            if (ammotype != am_noammo && value != viewplayer->ammo[ammotype] && viewplayer->health > 0)
             {
                 if (value > viewplayer->ammo[ammotype])
                     P_AddBonus();
@@ -4697,8 +4812,7 @@ static void player_cvars_func2(char *cmd, char *parms)
         else
         {
             C_Output(removenewlines(consolecmds[C_GetIndex(stringize(ammo))].description));
-            C_Output("It is currently set to <b>%i</b>.",
-                (ammotype == am_noammo ? 0 : viewplayer->ammo[ammotype]));
+            C_Output("It is currently set to <b>%i</b>.", (ammotype == am_noammo ? 0 : viewplayer->ammo[ammotype]));
         }
     }
     else if (M_StringCompare(cmd, stringize(armor)))
@@ -4890,13 +5004,12 @@ static void r_dither_cvar_func2(char *cmd, char *parms)
 
         if ((value == 0 || value == 1) && value != r_dither)
         {
-            lumpindex_t lump;
-
             r_dither = !!value;
             M_SaveCVARs();
             R_InitColumnFunctions();
-            tranmap = ((lump = W_CheckNumForName("TRANMAP")) != -1 ? W_CacheLumpNum(lump) :
-                (r_dither ? tinttab25 : tinttab50));
+
+            if (W_CheckNumForName("TRANMAP") == -1)
+                tranmap = (r_dither ? tinttab25 : tinttab50);
         }
     }
     else
@@ -4922,12 +5035,12 @@ static void r_fixmaperrors_cvar_func2(char *cmd, char *parms)
     {
         const int   value = C_LookupValueFromAlias(parms, BOOLVALUEALIAS);
 
-        if (value == 0 || value == 1)
+        if ((value == 0 || value == 1) && value != r_fixmaperrors)
         {
             r_fixmaperrors = !!value;
             M_SaveCVARs();
 
-            if (r_fixmaperrors && gamestate == GS_LEVEL && !togglingvanilla && !resettingall)
+            if (r_fixmaperrors && gamestate == GS_LEVEL && !togglingvanilla && !resettingcvar)
                 C_Warning(PENDINGCHANGE);
         }
     }
@@ -4978,7 +5091,7 @@ static void r_gamma_cvar_func2(char *cmd, char *parms)
         if (value == INT_MIN)
             sscanf(parms, "%10f", &value);
 
-        if (value != INT_MIN && r_gamma != value)
+        if (value != INT_MIN && value != r_gamma)
         {
             r_gamma = BETWEENF(r_gamma_min, value, r_gamma_max);
             I_SetGamma(r_gamma);
@@ -5065,6 +5178,32 @@ static void r_lowpixelsize_cvar_func2(char *cmd, char *parms)
 }
 
 //
+// r_messagepos CVAR
+//
+static void r_messagepos_cvar_func2(char *cmd, char *parms)
+{
+    if (*parms)
+    {
+        if (!M_StringCompare(r_messagepos, parms))
+        {
+            r_messagepos = strdup(parms);
+            HU_GetMessagePosition();
+            M_SaveCVARs();
+        }
+    }
+    else
+    {
+        C_Output(removenewlines(consolecmds[C_GetIndex(stringize(r_messagepos))].description));
+
+        if (M_StringCompare(r_messagepos, r_messagepos_default))
+            C_Output("It is currently set to its default of <b>%s</b>.", r_messagepos);
+        else
+            C_Output("It is currently set to <b>%s</b> and its default is <b>%s</b>.",
+                r_messagepos, r_messagepos_default);
+    }
+}
+
+//
 // r_messagescale CVAR
 //
 static dboolean r_messagescale_cvar_func1(char *cmd, char *parms)
@@ -5078,7 +5217,7 @@ static void r_messagescale_cvar_func2(char *cmd, char *parms)
     {
         const int   value = C_LookupValueFromAlias(parms, SCALEVALUEALIAS);
 
-        if ((value == r_messagescale_small || value == r_messagescale_big) && r_messagescale != value)
+        if ((value == r_messagescale_small || value == r_messagescale_big) && value != r_messagescale)
         {
             r_messagescale = !!value;
             M_SaveCVARs();
@@ -5107,8 +5246,7 @@ static void r_screensize_cvar_func2(char *cmd, char *parms)
     {
         const int   value = parms[0] - '0';
 
-        if (strlen(parms) == 1 && value >= r_screensize_min && value <= r_screensize_max
-            && value != r_screensize)
+        if (strlen(parms) == 1 && value >= r_screensize_min && value <= r_screensize_max && value != r_screensize)
         {
             if (vid_widescreen || (returntowidescreen && gamestate != GS_LEVEL))
             {
@@ -5396,7 +5534,7 @@ static void skilllevel_cvar_func2(char *cmd, char *parms)
         pendinggameskill = skilllevel;
         NewDef.lastOn = skilllevel - 1;
 
-        if (gamestate == GS_LEVEL && !resettingall)
+        if (gamestate == GS_LEVEL && !resettingcvar)
             C_Warning(PENDINGCHANGE);
     }
 }
@@ -5468,7 +5606,7 @@ static void units_cvar_func2(char *cmd, char *parms)
     {
         const int   value = C_LookupValueFromAlias(parms, UNITSVALUEALIAS);
 
-        if ((value == 0 || value == 1) && units != value)
+        if ((value == 0 || value == 1) && value != units)
         {
             units = !!value;
             M_SaveCVARs();
