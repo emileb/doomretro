@@ -120,7 +120,7 @@ static void (*hudnumfunc)(int, int, patch_t *, byte *);
 static void (*godhudfunc)(int, int, patch_t *, byte *);
 
 static void (*althudfunc)(int, int, patch_t *, int, int);
-static void (*fillrectfunc)(int, int, int, int, int, int);
+static void (*fillrectfunc)(int, int, int, int, int, int, dboolean);
 
 static struct
 {
@@ -532,7 +532,7 @@ static void HU_DrawHUD(void)
 }
 
 #define ALTHUD_LEFT_X   21
-#define ALTHUD_RIGHT_X  (SCREENWIDTH - 181)
+#define ALTHUD_RIGHT_X  (SCREENWIDTH - 179)
 #define ALTHUD_Y        (SCREENHEIGHT - SBARHEIGHT - 37)
 
 #define WHITE           4
@@ -619,8 +619,8 @@ static void HU_AltInit(void)
         {
             int lump = W_GetNumForName(keypics[i].patchnamea);
 
-            altkeypics[i].color = (lumpinfo[lump]->wadfile->type == PWAD ? FindDominantColor(W_CacheLumpNum(lump)) :
-                nearestcolors[altkeypics[i].color]);
+            altkeypics[i].color = (lumpinfo[lump]->wadfile->type == PWAD ?
+                FindDominantColor(W_CacheLumpNum(lump)) : nearestcolors[altkeypics[i].color]);
         }
 
     altkeypics[0].patch = altkeypatch;
@@ -744,8 +744,8 @@ static void HU_DrawAltHUD(void)
 
     if (health > 100)
     {
-        fillrectfunc(0, ALTHUD_LEFT_X + 60, ALTHUD_Y + 13, 101, 8, color1);
-        fillrectfunc(0, ALTHUD_LEFT_X + 60, ALTHUD_Y + 13, MAX(1, health - 100) + (health == 200), 8, color2);
+        fillrectfunc(0, ALTHUD_LEFT_X + 60, ALTHUD_Y + 13, 101, 8, color1, true);
+        fillrectfunc(0, ALTHUD_LEFT_X + 60, ALTHUD_Y + 13, MAX(1, health - 100) + (health == 200), 8, color2, (health == 200));
         althudfunc(ALTHUD_LEFT_X + 40, ALTHUD_Y + 1, altleftpatch, WHITE, white);
         althudfunc(ALTHUD_LEFT_X + 60, ALTHUD_Y + 13, altendpatch, WHITE, color2);
         althudfunc(ALTHUD_LEFT_X + 60 + 98, ALTHUD_Y + 13, altmarkpatch, WHITE, color1);
@@ -753,7 +753,7 @@ static void HU_DrawAltHUD(void)
     }
     else
     {
-        fillrectfunc(0, ALTHUD_LEFT_X + 60, ALTHUD_Y + 13, MAX(1, health) + (health == 100), 8, color1);
+        fillrectfunc(0, ALTHUD_LEFT_X + 60, ALTHUD_Y + 13, MAX(1, health) + (health == 100), 8, color1, true);
         althudfunc(ALTHUD_LEFT_X + 40, ALTHUD_Y + 1, altleftpatch, WHITE, white);
         althudfunc(ALTHUD_LEFT_X + 60, ALTHUD_Y + 13, altendpatch, WHITE, color1);
         althudfunc(ALTHUD_LEFT_X + 60 + MAX(1, health) - (health < 100) - 2, ALTHUD_Y + 13, altmarkpatch, WHITE, color1);
@@ -769,11 +769,11 @@ static void HU_DrawAltHUD(void)
 
         if (armor > 100)
         {
-            fillrectfunc(0, ALTHUD_LEFT_X + 60, ALTHUD_Y + 2, 100 + 1, 4, color1);
-            fillrectfunc(0, ALTHUD_LEFT_X + 60, ALTHUD_Y + 2, armor - 100 + (armor == 200), 4, color2);
+            fillrectfunc(0, ALTHUD_LEFT_X + 60, ALTHUD_Y + 2, 100 + 1, 4, color1, true);
+            fillrectfunc(0, ALTHUD_LEFT_X + 60, ALTHUD_Y + 2, armor - 100 + (armor == 200), 4, color2, (armor == 200));
         }
         else
-            fillrectfunc(0, ALTHUD_LEFT_X + 60, ALTHUD_Y + 2, armor + (armor == 100), 4, color1);
+            fillrectfunc(0, ALTHUD_LEFT_X + 60, ALTHUD_Y + 2, armor + (armor == 100), 4, color1, true);
     }
     else
         althudfunc(ALTHUD_LEFT_X + 43, ALTHUD_Y, altarmpatch, WHITE, darkgray);
@@ -791,7 +791,7 @@ static void HU_DrawAltHUD(void)
             DrawAltHUDNumber(ALTHUD_RIGHT_X + 101 - AltHUDNumberWidth(ammo), ALTHUD_Y - 1, ammo);
             ammo = 100 * ammo / viewplayer->maxammo[ammotype];
             color1 = (ammo <= 15 ? yellow : white);
-            fillrectfunc(0, ALTHUD_RIGHT_X + 100 - ammo, ALTHUD_Y + 13, ammo + 1, 8, color1);
+            fillrectfunc(0, ALTHUD_RIGHT_X + 100 - ammo, ALTHUD_Y + 13, ammo + 1, 8, color1, true);
             althudfunc(ALTHUD_RIGHT_X, ALTHUD_Y + 13, altrightpatch, WHITE, white);
             althudfunc(ALTHUD_RIGHT_X + 100, ALTHUD_Y + 13, altendpatch, WHITE, color1);
             althudfunc(ALTHUD_RIGHT_X + 100 - ammo - 2, ALTHUD_Y + 13, altmarkpatch, WHITE, color1);
@@ -829,8 +829,9 @@ static void HU_DrawAltHUD(void)
         if (showkey)
         {
             altkeypic_t altkeypic = altkeypics[viewplayer->neededcard];
+            patch_t     *patch = altkeypic.patch;
 
-            althudfunc(keypic_x - SHORT(altkeypic.patch->width), ALTHUD_Y, altkeypic.patch, WHITE, altkeypic.color);
+            althudfunc(keypic_x, ALTHUD_Y, patch, WHITE, altkeypic.color);
         }
     }
     else
@@ -874,8 +875,8 @@ static void HU_DrawAltHUD(void)
 
     if (powerupbar > STARTFLASHING || (powerupbar & 8))
     {
-        fillrectfunc(0, ALTHUD_RIGHT_X, ALTHUD_Y + 26, 101, 2, darkgray);
-        fillrectfunc(0, ALTHUD_RIGHT_X, ALTHUD_Y + 26, powerupbar * 101 / max, 2, gray);
+        fillrectfunc(0, ALTHUD_RIGHT_X, ALTHUD_Y + 26, 101, 2, darkgray, false);
+        fillrectfunc(0, ALTHUD_RIGHT_X, ALTHUD_Y + 26, powerupbar * 101 / max, 2, gray, false);
     }
 }
 
@@ -1026,14 +1027,14 @@ void HU_Ticker(void)
             int y = (m_y + m_h / 2) >> MAPBITS;
 
             M_snprintf(buffer, sizeof(buffer), s_STSTR_MYPOS, direction, x, y,
-                R_PointInSubsector(x, y)->sector->floorheight / FRACUNIT);
+                R_PointInSubsector(x, y)->sector->floorheight >> FRACBITS);
         }
         else
         {
             int angle = (int)((double)viewangle * 90.0f / ANG90);
 
             M_snprintf(buffer, sizeof(buffer), s_STSTR_MYPOS, (angle == 360 ? 0 : angle),
-                viewx / FRACUNIT, viewy / FRACUNIT, viewplayer->mo->z / FRACUNIT);
+                viewx >> FRACBITS, viewy >> FRACBITS, viewplayer->mo->z >> FRACBITS);
         }
 
         HUlib_addMessageToSText(&w_message, 0, buffer);
