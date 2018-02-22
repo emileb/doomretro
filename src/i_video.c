@@ -1043,10 +1043,12 @@ void I_CreateExternalAutomap(dboolean output)
 
     if (!(maprenderer = SDL_CreateRenderer(mapwindow, -1, flags)))
         I_SDLError("SDL_CreateRenderer");
-#ifndef __ANDROID__
+#ifdef __ANDROID__
+    if( M_CheckParm("-android_aspect") )
+#endif
     if (SDL_RenderSetLogicalSize(maprenderer, SCREENWIDTH, SCREENHEIGHT) < 0)
         I_SDLError("SDL_RenderSetLogicalSize");
-#endif
+
     if (!(mapsurface = SDL_CreateRGBSurface(0, SCREENWIDTH, SCREENHEIGHT, 8, 0, 0, 0, 0)))
         I_SDLError("SDL_CreateRGBSurface");
 
@@ -1455,11 +1457,12 @@ static void SetVideoMode(dboolean output)
 #endif
     if (!(renderer = SDL_CreateRenderer(window, -1, rendererflags)))
         I_SDLError("SDL_CreateRenderer");
-
-#ifndef __ANDROID__
+#ifdef __ANDROID__
+    if( M_CheckParm("-android_aspect") )
+#endif
     if (SDL_RenderSetLogicalSize(renderer, SCREENWIDTH, SCREENWIDTH * 3 / 4) < 0)
         I_SDLError("SDL_RenderSetLogicalSize");
-#endif
+
 
     if (!SDL_GetRendererInfo(renderer, &rendererinfo))
     {
@@ -1697,10 +1700,12 @@ void I_ToggleWidescreen(dboolean toggle)
     {
         vid_widescreen = true;
 
-#ifndef __ANDROID__
+#ifdef __ANDROID__
+    if( M_CheckParm("-android_aspect") )
+#endif
         if (SDL_RenderSetLogicalSize(renderer, SCREENWIDTH, SCREENWIDTH * 10 / 16) < 0)
             I_SDLError("SDL_RenderSetLogicalSize");
-#endif
+
         src_rect.h = SCREENHEIGHT - SBARHEIGHT;
     }
     else
@@ -1709,10 +1714,12 @@ void I_ToggleWidescreen(dboolean toggle)
 
         if (gamestate == GS_LEVEL)
             ST_doRefresh();
-#ifndef __ANDROID__
+#ifdef __ANDROID__
+    if( M_CheckParm("-android_aspect") )
+#endif
         if (SDL_RenderSetLogicalSize(renderer, SCREENWIDTH, SCREENWIDTH * 3 / 4) < 0)
             I_SDLError("SDL_RenderSetLogicalSize");
-#endif
+
         src_rect.h = SCREENHEIGHT;
     }
 

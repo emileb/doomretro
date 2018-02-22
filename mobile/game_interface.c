@@ -297,15 +297,22 @@ void PortableInit(int argc,const char ** argv){
 }
 
 
+static float am_zoom = 0;
+static float am_pan_x = 0;
+static float am_pan_y = 0;
+
 void PortableAutomapControl(float zoom, float x, float y)
 {
-
+	am_zoom += zoom;
+	am_pan_x += x;
+	am_pan_y += y;
 }
 
 
 extern dboolean menuactive;
 extern dboolean paused;
 extern dboolean	messageNeedsInput;
+extern dboolean automapactive;
 
 
 touchscreemode_t PortableGetScreenMode()
@@ -318,7 +325,12 @@ touchscreemode_t PortableGetScreenMode()
             return TS_MENU;
     }
     else if(gamestate == GS_LEVEL)
-        return TS_GAME;
+    {
+        if(automapactive)
+            return TS_MAP;
+         else
+            return TS_GAME;
+    }
     else
         return TS_BLANK;
 }
@@ -342,6 +354,20 @@ void I_UpdateAndroid(void)
 
 		events_used++;
 	}
+}
+
+void Mobile_AM_controls(double *zoom, fixed_t *pan_x, fixed_t *pan_y )
+{
+	if (am_zoom)
+	{
+        *zoom = am_zoom * 10;
+		am_zoom = 0;
+	}
+
+	*pan_x += (fixed_t)(am_pan_x * 20000000);
+	*pan_y += -(fixed_t)(am_pan_y * 10000000);
+	am_pan_x = am_pan_y = 0;
+	//LOGI("zoom = %f",*zoom);
 }
 
 // From g_game.c
