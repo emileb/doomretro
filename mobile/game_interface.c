@@ -58,6 +58,7 @@ int add_choc_event(evtype_t type, int data1, int data2, int data3){
 }
 ///////////////////////
 
+static char* consoleCmd = NULL;
 
 extern int SDL_SendKeyboardKey(Uint8 state, SDL_Scancode scancode);
 
@@ -187,25 +188,32 @@ void PortableAction(int state, int action)
 			//key = key_menu_gamma;
 			break;
 		case PORT_ACT_WEAP1:
-			key = keyboardweapon1;
+			if( state )
+				consoleCmd = "+weapon1";
 			break;
 		case PORT_ACT_WEAP2:
-			key = keyboardweapon2;
+			if( state )
+				consoleCmd = "+weapon2";
 			break;
 		case PORT_ACT_WEAP3:
-			key = keyboardweapon3;
+			if( state )
+				consoleCmd = "+weapon3";
 			break;
 		case PORT_ACT_WEAP4:
-			key = keyboardweapon4;
+			if( state )
+				consoleCmd = "+weapon4";
 			break;
 		case PORT_ACT_WEAP5:
-			key = keyboardweapon5;
+			if( state )
+				consoleCmd = "+weapon5";
 			break;
 		case PORT_ACT_WEAP6:
-			key = keyboardweapon6;
+			if( state )
+				consoleCmd = "+weapon6";
 			break;
 		case PORT_ACT_WEAP7:
-			key = keyboardweapon7;
+			if( state )
+				consoleCmd = "+weapon7";
 			break;
         case PORT_ACT_CONSOLE:
             key = keyboardconsole;
@@ -349,10 +357,15 @@ void I_UpdateAndroid(void)
 	{
 		ev = &eventlist[events_used & (EVENTQUEUELENGTH-1)];
 
-
 		D_PostEvent(ev);
 
 		events_used++;
+	}
+
+	if( consoleCmd != NULL )
+	{
+		C_ExecuteInputString( consoleCmd );
+		consoleCmd = NULL;
 	}
 }
 
