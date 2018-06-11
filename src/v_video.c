@@ -272,16 +272,29 @@ void V_DrawShadowPatch(int x, int y, patch_t *patch)
             byte    *dest = desttop + ((column->topdelta * DY / 10) >> FRACBITS) * SCREENWIDTH;
             int     count = ((column->length * DY / 10) >> FRACBITS) + 1;
 
-            *dest = edge[*dest];
-            dest += SCREENWIDTH;
-
-            while (--count)
+            if (count == 1)
+                *dest = edge[*dest];
+            else if (count == 2)
             {
-                *dest = body[*dest];
+                *dest = edge[*dest];
                 dest += SCREENWIDTH;
+                *dest = edge[*dest];
+            }
+            else
+            {
+                count--;
+                *dest = edge[*dest];
+                dest += SCREENWIDTH;
+
+                while (--count)
+                {
+                    *dest = body[*dest];
+                    dest += SCREENWIDTH;
+                }
+
+                *dest = edge[*dest];
             }
 
-            *dest = edge[*dest];
             column = (column_t *)((byte *)column + column->length + 4);
         }
     }
@@ -643,7 +656,37 @@ void V_DrawAltHUDText(int x, int y, patch_t *patch, int color)
             while (count--)
             {
                 if (*source++ == WHITE)
-                    *dest = (r_hud_translucency ? tinttab60[(*dest << 8) + color] : color);
+                    *dest = color;
+
+                dest += SCREENWIDTH;
+            }
+
+            column = (column_t *)((byte *)column + column->length + 4);
+        }
+    }
+}
+
+void V_DrawTranslucentAltHUDText(int x, int y, patch_t *patch, int color)
+{
+    byte    *desttop = screens[0] + y * SCREENWIDTH + x;
+    int     w = SHORT(patch->width);
+
+    for (int col = 0; col < w; col++, desttop++)
+    {
+        column_t    *column = (column_t *)((byte *)patch + LONG(patch->columnofs[col]));
+        int         topdelta;
+
+        // step through the posts in a column
+        while ((topdelta = column->topdelta) != 0xFF)
+        {
+            byte    *source = (byte *)column + 3;
+            byte    *dest = desttop + topdelta * SCREENWIDTH;
+            int     count = column->length;
+
+            while (count--)
+            {
+                if (*source++ == WHITE)
+                    *dest = tinttab60[(*dest << 8) + color];
 
                 dest += SCREENWIDTH;
             }
@@ -1055,16 +1098,29 @@ void V_DrawFlippedShadowPatch(int x, int y, patch_t *patch)
             byte    *dest = desttop + ((column->topdelta * DY / 10) >> FRACBITS) * SCREENWIDTH;
             int     count = ((column->length * DY / 10) >> FRACBITS) + 1;
 
-            *dest = edge[*dest];
-            dest += SCREENWIDTH;
-
-            while (--count)
+            if (count == 1)
+                *dest = edge[*dest];
+            else if (count == 2)
             {
-                *dest = body[*dest];
+                *dest = edge[*dest];
                 dest += SCREENWIDTH;
+                *dest = edge[*dest];
+            }
+            else
+            {
+                count--;
+                *dest = edge[*dest];
+                dest += SCREENWIDTH;
+
+                while (--count)
+                {
+                    *dest = body[*dest];
+                    dest += SCREENWIDTH;
+                }
+
+                *dest = edge[*dest];
             }
 
-            *dest = edge[*dest];
             column = (column_t *)((byte *)column + column->length + 4);
         }
     }
@@ -1450,6 +1506,20 @@ void V_LowGraphicDetail(void)
         }
 }
 
+void V_InvertScreen(void)
+{
+    int w = viewwindowx + viewwidth;
+    int h = viewwindowy + viewheight;
+
+    for (int y = viewwindowy; y < h; y++)
+        for (int x = viewwindowx; x < w; x++)
+        {
+            byte    *dot = *screens + y * SCREENWIDTH + x;
+
+            *dot = colormaps[0][32 * 256 + *dot];
+        }
+}
+
 //
 // V_Init
 //
@@ -1458,9 +1528,6 @@ void V_Init(void)
     byte                *base = malloc(SCREENWIDTH * SCREENHEIGHT * 4);
     const SDL_version   *linked = IMG_Linked_Version();
     int                 p;
-#if defined(_WIN32) && !defined(PORTABILITY)
-    char                buffer[MAX_PATH];
-#endif
 
     if (linked->major != SDL_IMAGE_MAJOR_VERSION || linked->minor != SDL_IMAGE_MINOR_VERSION)
         I_Error("The wrong version of %s was found. %s requires v%i.%i.%i.",
@@ -1480,22 +1547,13 @@ void V_Init(void)
 
     GetPixelSize(true);
 
-#if defined(_WIN32) && !defined(PORTABILITY)
-    if (SUCCEEDED(SHGetFolderPath(NULL, CSIDL_MYPICTURES, NULL, SHGFP_TYPE_CURRENT, buffer)))
-        M_snprintf(screenshotfolder, sizeof(screenshotfolder), "%s"DIR_SEPARATOR_S PACKAGE_NAME, buffer);
-    else
-        M_snprintf(screenshotfolder, sizeof(screenshotfolder), "%s"DIR_SEPARATOR_S PACKAGE_NAME,
-            M_GetExecutableFolder());
-#else
-    M_snprintf(screenshotfolder, sizeof(screenshotfolder), "%s"DIR_SEPARATOR_S"screenshots", M_GetAppDataFolder());
-#endif
-
     if ((p = M_CheckParmWithArgs("-shotdir", 1, 1)))
-        M_snprintf(screenshotfolder, sizeof(screenshotfolder), myargv[p + 1]);
+        M_StringCopy(screenshotfolder, myargv[p + 1], sizeof(screenshotfolder));
+    else
+        M_snprintf(screenshotfolder, sizeof(screenshotfolder), "%s"DIR_SEPARATOR_S"screenshots", M_GetAppDataFolder());
 }
 
 char            lbmname1[MAX_PATH];
-char            lbmname2[MAX_PATH];
 char            lbmpath1[MAX_PATH];
 char            lbmpath2[MAX_PATH];
 
@@ -1588,8 +1646,8 @@ dboolean V_ScreenShot(void)
     {
         do
         {
-            M_snprintf(lbmname2, sizeof(lbmname2), "%s (%s).png", makevalidfilename(mapname), commify(count++));
-            M_snprintf(lbmpath2, sizeof(lbmpath2), "%s"DIR_SEPARATOR_S"%s", screenshotfolder, lbmname2);
+            M_snprintf(lbmpath2, sizeof(lbmpath2), "%s"DIR_SEPARATOR_S"%s (%s).png", screenshotfolder,
+                makevalidfilename(mapname), commify(count++));
         } while (M_FileExists(lbmpath2));
 
         V_SavePNG(maprenderer, lbmpath2);

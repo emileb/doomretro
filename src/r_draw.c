@@ -59,7 +59,7 @@ int         scaledviewwidth;
 int         viewheight;
 int         viewwindowx;
 int         viewwindowy;
-int         fuzztable[SCREENWIDTH * SCREENHEIGHT];
+int         fuzztable[SCREENWIDTH * (SCREENHEIGHT - SBARHEIGHT)];
 
 static byte *topleft0;
 static byte *topleft1;
@@ -193,22 +193,36 @@ void R_DrawColorColumn(void)
 
 void R_DrawShadowColumn(void)
 {
-    int         count = dc_yh - dc_yl + 1;
-    byte        *dest = topleft0 + dc_yl * SCREENWIDTH + dc_x;
-    const byte  *body = tinttab40 + dc_black;
-    const byte  *edge = tinttab25 + dc_black;
+    int     count = dc_yh - dc_yl + 1;
+    byte    *dest = topleft0 + dc_yl * SCREENWIDTH + dc_x;
 
-    *dest = edge[*dest];
-    dest += SCREENWIDTH;
-
-    while (--count)
+    if (count == 1)
+        *dest = tinttab25[*dest + dc_black];
+    else if (count == 2)
     {
-        *dest = body[*dest];
-        dest += SCREENWIDTH;
-    }
+        const byte  *edge = tinttab25 + dc_black;
 
-    if (dc_yh < dc_floorclip)
         *dest = edge[*dest];
+        dest += SCREENWIDTH;
+        *dest = edge[*dest];
+    }
+    else
+    {
+        const byte  *edge = tinttab25 + dc_black;
+        const byte  *body = tinttab40 + dc_black;
+
+        count--;
+        *dest = edge[*dest];
+        dest += SCREENWIDTH;
+
+        while (--count)
+        {
+            *dest = body[*dest];
+            dest += SCREENWIDTH;
+        }
+
+        *dest = (dc_yh == dc_floorclip ? body[*dest] : edge[*dest]);
+    }
 }
 
 void R_DrawFuzzyShadowColumn(void)
@@ -1295,6 +1309,16 @@ void R_InitBuffer(int width, int height)
 
     topleft0 = screens[0] + viewwindowy * SCREENWIDTH + viewwindowx;
     topleft1 = screens[1] + viewwindowy * SCREENWIDTH + viewwindowx;
+
+    for (int x = 0; x < SCREENWIDTH; x++)
+        fuzztable[x] = FUZZ(1, 2);
+
+    for (int y = 1; y < SCREENHEIGHT - SBARHEIGHT - 1; y++)
+        for (int x = 0; x < SCREENWIDTH; x++)
+            fuzztable[y * SCREENWIDTH + x] = FUZZ(0, 2);
+
+    for (int x = 0; x < SCREENWIDTH; x++)
+        fuzztable[SCREENHEIGHT - SBARHEIGHT - 1 + x] = FUZZ(0, 1);
 }
 
 //
@@ -1371,11 +1395,6 @@ void R_FillBackScreen(void)
 //
 void R_VideoErase(unsigned int ofs, int count)
 {
-    // LFB copy.
-    // This might not be a good idea if memcpy
-    //  is not optimal, e.g. byte by byte on
-    //  a 32bit CPU, as GNU GCC/Linux libc did
-    //  at one point.
     memcpy(screens[0] + ofs, screens[1] + ofs, count);
 }
 

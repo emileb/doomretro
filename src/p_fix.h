@@ -39,6 +39,8 @@
 #if !defined(__P_FIX_H__)
 #define __P_FIX_H__
 
+#include "m_fixed.h"
+
 #define DEFAULT 0x7FFF
 #define REMOVE  0
 
@@ -67,8 +69,8 @@ typedef struct
     char    *toptexture;
     char    *middletexture;
     char    *bottomtexture;
-    short   offset;
-    short   rowoffset;
+    fixed_t offset;
+    fixed_t rowoffset;
     int     flags;
     int     special;
     int     tag;

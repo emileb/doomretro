@@ -98,32 +98,32 @@
 #define METERSPERKILOMETER  1000
 #define FEETPERMILE         5280
 
-alias_t         aliases[MAXALIASES];
+alias_t             aliases[MAXALIASES];
 
-static int      ammo;
-static int      armor;
-static int      health;
+static int          ammo;
+static int          armor;
+static int          health;
 
-static int      mapcmdepisode;
-static int      mapcmdmap;
-static char     mapcmdlump[7];
+static int          mapcmdepisode;
+static int          mapcmdmap;
+static char         mapcmdlump[7];
 
-dboolean        executingalias = false;
-dboolean        vanilla = false;
-dboolean        resettingcvar = false;
-dboolean        togglingvanilla = false;
+dboolean            executingalias = false;
+dboolean            vanilla = false;
+dboolean            resettingcvar = false;
+dboolean            togglingvanilla = false;
 
-char            *version = version_default;
+char                *version = version_default;
 
-extern dboolean setsizeneeded;
-extern dboolean usemouselook;
-extern char     *packageconfig;
-extern int      st_palette;
-extern menu_t   EpiDef;
-extern menu_t   ExpDef;
-extern menu_t   LoadDef;
-extern menu_t   NewDef;
-extern menu_t   SaveDef;
+extern dboolean     setsizeneeded;
+extern dboolean     usemouselook;
+extern char         *packageconfig;
+extern int          st_palette;
+extern menu_t       EpiDef;
+extern menu_t       ExpDef;
+extern menu_t       LoadDef;
+extern menu_t       NewDef;
+extern menu_t       SaveDef;
 
 control_t controls[] =
 {
@@ -505,7 +505,7 @@ consolecmd_t consolecmds[] =
     CVAR_TIME(gametime, "", null_func1, time_cvars_func2,
         "The amount of time <i><b>"PACKAGE_NAME"</b></i> has been running."),
     CMD(give, "", give_cmd_func1, give_cmd_func2, true, GIVECMDFORMAT,
-        "Gives <b>ammo</b>, <b>armor</b>, <b>backpack</b>, <b>health</b>, <b>keys</b>,\n<b>weapons</b>, or <b>all</b> or certain <i>items</i> to the player."),
+        "Gives <b>ammo</b>, <b>armor</b>, <b>health</b>, <b>keys</b>, <b>weapons</b>, or <b>all</b>\nor certain <i>items</i> to the player."),
     CMD(god, "", alive_func1, god_cmd_func2, true, "[<b>on</b>|<b>off</b>]",
         "Toggles god mode."),
     CVAR_FLOAT(gp_deadzone_left, "", gp_deadzone_cvars_func1, gp_deadzone_cvars_func2, CF_PERCENT,
@@ -779,7 +779,7 @@ consolecmd_t consolecmds[] =
     CVAR_BOOL(weaponrecoil, "", bool_cvars_func1, bool_cvars_func2, BOOLVALUEALIAS,
         "Toggles the player's weapon recoiling when fired\nwhile using mouselook."),
     CVAR_BOOL(wipe, "", bool_cvars_func1, bool_cvars_func2, BOOLVALUEALIAS,
-        "Toggles wiping when transitioning between\nscreens."),
+        "Toggles the wipe effect when transitioning between\nscreens."),
 
     { "", "", null_func1, NULL, 0, 0, CF_NONE, NULL, 0, 0, 0, "", "" }
 };
@@ -1416,7 +1416,7 @@ void bind_cmd_func2(char *cmd, char *parms)
         }
     }
     else
-        C_Warning("<b>%s</b> is not a valid control.", parm1);
+        C_Warning("<b>%s</b> isn't a valid control.", parm1);
 
     if (mouselookcontrols != (keyboardmouselook || gamepadmouselook || mousemouselook != -1))
     {
@@ -1584,10 +1584,7 @@ static void condump_cmd_func2(char *cmd, char *parms)
                     len = (int)strlen(string);
 
                     if (console[i].type == warningstring)
-                    {
                         fputs("! ", file);
-                        len += 2;
-                    }
 
                     for (int inpos = 0; inpos < len; inpos++)
                     {
@@ -1857,7 +1854,7 @@ static void freeze_cmd_func2(char *cmd, char *parms)
 //
 static dboolean give_cmd_func1(char *cmd, char *parms)
 {
-    char    *parm = removespaces(parms);
+    char    *parm = removenonalpha(parms);
     int     num = -1;
 
     if (gamestate != GS_LEVEL)
@@ -1869,15 +1866,16 @@ static dboolean give_cmd_func1(char *cmd, char *parms)
     if (M_StringCompare(parm, "all") || M_StringCompare(parm, "everything")
         || M_StringCompare(parm, "health") || M_StringCompare(parm, "weapons")
         || M_StringCompare(parm, "ammo") || M_StringCompare(parm, "armor")
-        || M_StringCompare(parm, "armour") || M_StringCompare(parm, "keys"))
+        || M_StringCompare(parm, "armour") || M_StringCompare(parm, "keys")
+        || M_StringCompare(parm, "keycards") || M_StringCompare(parm, "skullkeys"))
         return true;
 
     sscanf(parm, "%10i", &num);
 
     for (int i = 0; i < NUMMOBJTYPES; i++)
-        if ((mobjinfo[i].flags & MF_SPECIAL) && (M_StringCompare(parm, removespaces(mobjinfo[i].name1))
-            || (*mobjinfo[i].name2 && M_StringCompare(parm, removespaces(mobjinfo[i].name2)))
-            || (*mobjinfo[i].name3 && M_StringCompare(parm, removespaces(mobjinfo[i].name3)))
+        if ((mobjinfo[i].flags & MF_SPECIAL) && (M_StringCompare(parm, removenonalpha(mobjinfo[i].name1))
+            || (*mobjinfo[i].name2 && M_StringCompare(parm, removenonalpha(mobjinfo[i].name2)))
+            || (*mobjinfo[i].name3 && M_StringCompare(parm, removenonalpha(mobjinfo[i].name3)))
             || (num == mobjinfo[i].doomednum && num != -1)))
             return true;
 
@@ -1886,7 +1884,7 @@ static dboolean give_cmd_func1(char *cmd, char *parms)
 
 static void give_cmd_func2(char *cmd, char *parms)
 {
-    char    *parm = removespaces(parms);
+    char    *parm = removenonalpha(parms);
 
     if (!*parm)
         C_Output("<b>%s</b> %s", cmd, GIVECMDFORMAT);
@@ -1894,38 +1892,135 @@ static void give_cmd_func2(char *cmd, char *parms)
     {
         if (M_StringCompare(parm, "all") || M_StringCompare(parm, "everything"))
         {
-            P_GiveBackpack(false, false);
-            P_GiveMegaHealth(false);
-            P_GiveAllWeapons();
-            P_GiveFullAmmo(false);
-            P_GiveArmor(blue_armor_class, false);
-            P_GiveAllCards();
-            C_HideConsole();
+            dboolean    result = false;
+
+            if (P_GiveBackpack(false, false))
+                result = true;
+
+            if (P_GiveMegaHealth(false))
+                result = true;
+
+            if (P_GiveAllWeapons())
+                result = true;
+
+            if (P_GiveFullAmmo(false))
+                result = true;
+
+            if (P_GiveArmor(blue_armor_class, false))
+                result = true;
+
+            if (P_GiveAllCardsInMap())
+                result = true;
+
+            if (result)
+            {
+                P_AddBonus();
+                S_StartSound(viewplayer->mo, sfx_itemup);
+                C_HideConsole();
+            }
+            else
+            {
+                C_Warning("The player already has everything.");
+                return;
+            }
         }
         else if (M_StringCompare(parm, "health"))
         {
-            P_GiveMegaHealth(false);
-            C_HideConsole();
+            if (P_GiveMegaHealth(false))
+            {
+                P_AddBonus();
+                S_StartSound(viewplayer->mo, sfx_itemup);
+                C_HideConsole();
+            }
+            else
+            {
+                C_Warning("The player already has full health.");
+                return;
+            }
         }
         else if (M_StringCompare(parm, "weapons"))
         {
-            P_GiveAllWeapons();
-            C_HideConsole();
+            if (P_GiveAllWeapons())
+            {
+                P_AddBonus();
+                S_StartSound(viewplayer->mo, sfx_itemup);
+                C_HideConsole();
+            }
+            else
+            {
+                C_Warning("The player already has all the weapons.");
+                return;
+            }
         }
         else if (M_StringCompare(parm, "ammo"))
         {
-            P_GiveFullAmmo(false);
-            C_HideConsole();
+            if (P_GiveFullAmmo(false))
+            {
+                P_AddBonus();
+                S_StartSound(viewplayer->mo, sfx_itemup);
+                C_HideConsole();
+            }
+            else
+            {
+                C_Warning("The player already has full ammo.");
+                return;
+            }
         }
         else if (M_StringCompare(parm, "armor") || M_StringCompare(parm, "armour"))
         {
-            P_GiveArmor(blue_armor_class, false);
-            C_HideConsole();
+            if (P_GiveArmor(blue_armor_class, false))
+            {
+                P_AddBonus();
+                S_StartSound(viewplayer->mo, sfx_itemup);
+                C_HideConsole();
+            }
+            else
+            {
+                C_Warning("The player already has full armor.");
+                return;
+            }
         }
         else if (M_StringCompare(parm, "keys"))
         {
-            P_GiveAllCards();
-            C_HideConsole();
+            if (P_GiveAllCards())
+            {
+                P_AddBonus();
+                S_StartSound(viewplayer->mo, sfx_itemup);
+                C_HideConsole();
+            }
+            else
+            {
+                C_Warning("The player already has all keycards and skull keys.");
+                return;
+            }
+        }
+        else if (M_StringCompare(parm, "keycards"))
+        {
+            if (P_GiveAllKeyCards())
+            {
+                P_AddBonus();
+                S_StartSound(viewplayer->mo, sfx_itemup);
+                C_HideConsole();
+            }
+            else
+            {
+                C_Warning("The player already has all keycards.");
+                return;
+            }
+        }
+        else if (M_StringCompare(parm, "skullkeys"))
+        {
+            if (P_GiveAllSkullKeys())
+            {
+                P_AddBonus();
+                S_StartSound(viewplayer->mo, sfx_itemup);
+                C_HideConsole();
+            }
+            else
+            {
+                C_Warning("The player already has all skull keys.");
+                return;
+            }
         }
         else
         {
@@ -1936,9 +2031,9 @@ static void give_cmd_func2(char *cmd, char *parms)
             for (int i = 0; i < NUMMOBJTYPES; i++)
             {
                 if ((mobjinfo[i].flags & MF_SPECIAL)
-                    && (M_StringCompare(parm, removespaces(mobjinfo[i].name1))
-                        || (*mobjinfo[i].name2 && M_StringCompare(parm, removespaces(mobjinfo[i].name2)))
-                        || (*mobjinfo[i].name3 && M_StringCompare(parm, removespaces(mobjinfo[i].name3)))
+                    && (M_StringCompare(parm, removenonalpha(mobjinfo[i].name1))
+                        || (*mobjinfo[i].name2 && M_StringCompare(parm, removenonalpha(mobjinfo[i].name2)))
+                        || (*mobjinfo[i].name3 && M_StringCompare(parm, removenonalpha(mobjinfo[i].name3)))
                         || (num == mobjinfo[i].doomednum && num != -1)))
                 {
                     static char buffer[128];
@@ -2137,7 +2232,7 @@ static dboolean kill_cmd_func1(char *cmd, char *parms)
 {
     if (gamestate == GS_LEVEL)
     {
-        char    *parm = removespaces(parms);
+        char    *parm = removenonalpha(parms);
 
         if (!*parm)
             return true;
@@ -2160,12 +2255,12 @@ static dboolean kill_cmd_func1(char *cmd, char *parms)
             killcmdtype = mobjinfo[i].doomednum;
 
             if (killcmdtype >= 0
-                && (M_StringCompare(parm, removespaces(mobjinfo[i].name1))
-                    || M_StringCompare(parm, removespaces(mobjinfo[i].plural1))
-                    || (*mobjinfo[i].name2 && M_StringCompare(parm, removespaces(mobjinfo[i].name2)))
-                    || (*mobjinfo[i].plural2 && M_StringCompare(parm, removespaces(mobjinfo[i].plural2)))
-                    || (*mobjinfo[i].name3 && M_StringCompare(parm, removespaces(mobjinfo[i].name3)))
-                    || (*mobjinfo[i].plural3 && M_StringCompare(parm, removespaces(mobjinfo[i].plural3)))
+                && (M_StringCompare(parm, removenonalpha(mobjinfo[i].name1))
+                    || M_StringCompare(parm, removenonalpha(mobjinfo[i].plural1))
+                    || (*mobjinfo[i].name2 && M_StringCompare(parm, removenonalpha(mobjinfo[i].name2)))
+                    || (*mobjinfo[i].plural2 && M_StringCompare(parm, removenonalpha(mobjinfo[i].plural2)))
+                    || (*mobjinfo[i].name3 && M_StringCompare(parm, removenonalpha(mobjinfo[i].name3)))
+                    || (*mobjinfo[i].plural3 && M_StringCompare(parm, removenonalpha(mobjinfo[i].plural3)))
                     || (num == killcmdtype && num != -1)))
             {
                 dboolean    kill = true;
@@ -2192,7 +2287,7 @@ void A_Fall(mobj_t *actor, player_t *player, pspdef_t *psp);
 
 static void kill_cmd_func2(char *cmd, char *parms)
 {
-    char        *parm = removespaces(parms);
+    char        *parm = removenonalpha(parms);
     static char buffer[1024];
 
     if (!*parm)
@@ -3741,12 +3836,13 @@ static void reset_cmd_func2(char *cmd, char *parms)
 static void C_VerifyResetAll(const int key)
 {
     messageToPrint = false;
+    SDL_StartTextInput();
 
     if (key == 'y')
     {
         resettingcvar = true;
 
-        // reset all cvars to default values
+        // reset all CVARs to default values
         for (int i = 0; *consolecmds[i].name; i++)
         {
             const int   flags = consolecmds[i].flags;
@@ -3886,6 +3982,7 @@ static void resetall_cmd_func2(char *cmd, char *parms)
     M_snprintf(buffer, sizeof(buffer), "Are you sure you want to reset all\nCVARs to their default values?\n\n%s",
         s_PRESSYN);
     M_StartMessage(buffer, C_VerifyResetAll, true);
+    SDL_StopTextInput();
 }
 
 //
@@ -4025,7 +4122,7 @@ mobj_t *P_SpawnMapThing(mapthing_t *mthing, int index, dboolean nomonsters);
 
 static dboolean spawn_cmd_func1(char *cmd, char *parms)
 {
-    char    *parm = removespaces(parms);
+    char    *parm = removenonalpha(parms);
 
     if (!*parm)
         return true;
@@ -4040,8 +4137,8 @@ static dboolean spawn_cmd_func1(char *cmd, char *parms)
         {
             spawncmdtype = mobjinfo[i].doomednum;
 
-            if (spawncmdtype >= 0 && (M_StringCompare(parm, removespaces(mobjinfo[i].name1))
-                || (*mobjinfo[i].name2 && M_StringCompare(parm, removespaces(mobjinfo[i].name2)))
+            if (spawncmdtype >= 0 && (M_StringCompare(parm, removenonalpha(mobjinfo[i].name1))
+                || (*mobjinfo[i].name2 && M_StringCompare(parm, removenonalpha(mobjinfo[i].name2)))
                 || (num == spawncmdtype && num != -1)))
                 return true;
         }
@@ -4052,7 +4149,7 @@ static dboolean spawn_cmd_func1(char *cmd, char *parms)
 
 static void spawn_cmd_func2(char *cmd, char *parms)
 {
-    char    *parm = removespaces(parms);
+    char    *parm = removenonalpha(parms);
 
     if (!*parm)
     {
@@ -4663,15 +4760,16 @@ static void expansion_cvar_func2(char *cmd, char *parms)
 //
 static dboolean gp_deadzone_cvars_func1(char *cmd, char *parms)
 {
-    float value;
+    float   value;
+    int     result;
 
     if (!*parms)
         return true;
 
-    if (parms[strlen(parms) - 1] == '%')
-        parms[strlen(parms) - 1] = '\0';
+    if ((result = sscanf(parms, "%10f%%", &value)) != 1)
+        result = sscanf(parms, "%10f", &value);
 
-    return sscanf(parms, "%10f", &value);
+    return !!result;
 }
 
 static void gp_deadzone_cvars_func2(char *cmd, char *parms)
@@ -4680,10 +4778,8 @@ static void gp_deadzone_cvars_func2(char *cmd, char *parms)
     {
         float   value = 0;
 
-        if (parms[strlen(parms) - 1] == '%')
-            parms[strlen(parms) - 1] = '\0';
-
-        sscanf(parms, "%10f", &value);
+        if (sscanf(parms, "%10f%%", &value) != 1)
+            sscanf(parms, "%10f", &value);
 
         if (M_StringCompare(cmd, stringize(gp_deadzone_left)))
         {
@@ -4776,7 +4872,7 @@ static void mouselook_cvar_func2(char *cmd, char *parms)
 //
 // ammo, armor and health CVARs
 //
-dboolean P_CheckAmmo(void);
+dboolean P_CheckAmmo(weapontype_t weapon);
 
 static dboolean player_cvars_func1(char *cmd, char *parms)
 {
@@ -4794,7 +4890,8 @@ static void player_cvars_func2(char *cmd, char *parms)
 
     if (M_StringCompare(cmd, stringize(ammo)))
     {
-        ammotype_t  ammotype = weaponinfo[viewplayer->readyweapon].ammotype;
+        weapontype_t    readyweapon = viewplayer->readyweapon;
+        ammotype_t      ammotype = weaponinfo[readyweapon].ammotype;
 
         if (*parms)
         {
@@ -4806,7 +4903,7 @@ static void player_cvars_func2(char *cmd, char *parms)
                     P_AddBonus();
 
                 viewplayer->ammo[ammotype] = MIN(value, viewplayer->maxammo[ammotype]);
-                P_CheckAmmo();
+                P_CheckAmmo(readyweapon);
                 C_HideConsole();
             }
         }
@@ -4828,6 +4925,10 @@ static void player_cvars_func2(char *cmd, char *parms)
                     P_AddBonus();
 
                 viewplayer->armorpoints = MIN(value, max_armor);
+
+                if (!viewplayer->armortype)
+                    viewplayer->armortype = GREENARMOR;
+
                 C_HideConsole();
             }
         }
@@ -5041,7 +5142,7 @@ static void r_fixmaperrors_cvar_func2(char *cmd, char *parms)
             r_fixmaperrors = !!value;
             M_SaveCVARs();
 
-            if (r_fixmaperrors && gamestate == GS_LEVEL && !togglingvanilla && !resettingcvar)
+            if (gamestate == GS_LEVEL && !togglingvanilla && !resettingcvar)
                 C_Warning(PENDINGCHANGE);
         }
     }
@@ -5185,10 +5286,12 @@ static void r_messagepos_cvar_func2(char *cmd, char *parms)
 {
     if (*parms)
     {
-        if (!M_StringCompare(r_messagepos, parms))
+        char    *parm = removespaces(parms);
+
+        if (!M_StringCompare(r_messagepos, parm))
         {
-            r_messagepos = strdup(parms);
-            HU_GetMessagePosition();
+            r_messagepos = strdup(parm);
+            HU_InitMessages();
             M_SaveCVARs();
         }
     }
@@ -5221,6 +5324,7 @@ static void r_messagescale_cvar_func2(char *cmd, char *parms)
         if ((value == r_messagescale_small || value == r_messagescale_big) && value != r_messagescale)
         {
             r_messagescale = !!value;
+            HU_InitMessages();
             M_SaveCVARs();
         }
     }
@@ -5447,10 +5551,8 @@ static dboolean s_volume_cvars_func1(char *cmd, char *parms)
     if (!*parms)
         return true;
 
-    if (parms[strlen(parms) - 1] == '%')
-        parms[strlen(parms) - 1] = '\0';
-
-    sscanf(parms, "%10i", &value);
+    if (sscanf(parms, "%10i%%", &value) != 1)
+        sscanf(parms, "%10i", &value);
 
     return ((M_StringCompare(cmd, stringize(s_musicvolume)) && value >= s_musicvolume_min
         && value <= s_musicvolume_max) || (M_StringCompare(cmd, stringize(s_sfxvolume))
@@ -5463,10 +5565,8 @@ static void s_volume_cvars_func2(char *cmd, char *parms)
     {
         int value = INT_MIN;
 
-        if (parms[strlen(parms) - 1] == '%')
-            parms[strlen(parms) - 1] = '\0';
-
-        sscanf(parms, "%10i", &value);
+        if (sscanf(parms, "%10i%%", &value) != 1)
+            sscanf(parms, "%10i", &value);
 
         if (M_StringCompare(cmd, stringize(s_musicvolume)) && s_musicvolume != value)
         {
@@ -5875,9 +5975,11 @@ static void vid_windowpos_cvar_func2(char *cmd, char *parms)
 {
     if (*parms)
     {
-        if (!M_StringCompare(vid_windowpos, parms))
+        char    *parm = removespaces(parms);
+
+        if (!M_StringCompare(vid_windowpos, parm))
         {
-            vid_windowpos = strdup(parms);
+            vid_windowpos = strdup(parm);
             GetWindowPosition();
             M_SaveCVARs();
 

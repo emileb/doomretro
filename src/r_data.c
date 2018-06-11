@@ -65,6 +65,8 @@ int         firstflat;
 static int  lastflat;
 int         numflats;
 
+static int  missingflatnum;
+
 int         firstspritelump;
 int         lastspritelump;
 
@@ -166,6 +168,18 @@ static byte greenonly3[256] =
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
 };
 
+static byte blueandgreen[256] =
+{
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+};
+
 #define DOOM1AND2   0
 #define DOOM1ONLY   1
 #define DOOM2ONLY   2
@@ -176,7 +190,7 @@ static struct
     int     game;
     byte    *mask;
 } brightmaps[] = {
-    { "COMP2",    DOOM1AND2, notgrayorbrown }, { "COMPSTA1", DOOM1AND2, notgray        },
+    { "COMP2",    DOOM1AND2, blueandgreen   }, { "COMPSTA1", DOOM1AND2, notgray        },
     { "COMPSTA2", DOOM1AND2, notgray        }, { "COMPUTE1", DOOM1AND2, notgrayorbrown },
     { "COMPUTE2", DOOM1AND2, notgrayorbrown }, { "COMPUTE3", DOOM1AND2, notgrayorbrown },
     { "EXITSIGN", DOOM1AND2, notgray        }, { "EXITSTON", DOOM1AND2, redonly        },
@@ -241,16 +255,17 @@ static void R_InitTextures(void)
     int                 j;
     int                 maptex_lump[2] = { -1, -1 };
     const int           *maptex1;
-    const int           *maptex2;
+    const int           *maptex2 = NULL;
     char                name[9];
     int                 names_lump;     // cph - new wad lump handling
     const char          *names;         // cph -
     const char          *name_p;        // const*'s
     int                 *patchlookup;
     int                 nummappatches;
-    int                 maxoff, maxoff2;
+    int                 maxoff;
+    int                 maxoff2 = 0;
     int                 numtextures1;
-    int                 numtextures2;
+    int                 numtextures2 = 0;
     const int           *directory;
 
     // Load the patch names from pnames.lmp.
@@ -258,7 +273,7 @@ static void R_InitTextures(void)
     names = W_CacheLumpNum((names_lump = W_GetNumForName("PNAMES")));
     nummappatches = LONG(*((const int *)names));
     name_p = names + 4;
-    patchlookup = malloc(nummappatches * sizeof(*patchlookup));   // killough
+    patchlookup = malloc(nummappatches * sizeof(*patchlookup)); // killough
 
     for (i = 0; i < nummappatches; i++)
     {
@@ -266,7 +281,7 @@ static void R_InitTextures(void)
         patchlookup[i] = W_CheckNumForName(name);
     }
 
-    W_UnlockLumpNum(names_lump);       // cph - release the lump
+    W_UnlockLumpNum(names_lump);                                // cph - release the lump
 
     // Load the map texture definitions from textures.lmp.
     // The data is contained in one or two lumps,
@@ -283,12 +298,6 @@ static void R_InitTextures(void)
         maptex2 = W_CacheLumpNum(maptex_lump[1]);
         numtextures2 = LONG(*maptex2);
         maxoff2 = W_LumpLength(maptex_lump[1]);
-    }
-    else
-    {
-        maptex2 = NULL;
-        numtextures2 = 0;
-        maxoff2 = 0;
     }
 
     numtextures = numtextures1 + numtextures2;
@@ -319,8 +328,8 @@ static void R_InitTextures(void)
 
         mtexture = (const maptexture_t *)((const byte *)maptex1 + offset);
 
-        texture = textures[i] = Z_Malloc(sizeof(texture_t) + sizeof(texpatch_t)
-            * (SHORT(mtexture->patchcount) - 1), PU_STATIC, 0);
+        texture = textures[i] = Z_Malloc(sizeof(texture_t) + sizeof(texpatch_t) * (SHORT(mtexture->patchcount) - 1),
+            PU_STATIC, 0);
 
         texture->width = SHORT(mtexture->width);
         texture->height = SHORT(mtexture->height);
@@ -348,9 +357,9 @@ static void R_InitTextures(void)
         textureheight[i] = texture->height << FRACBITS;
     }
 
-    free(patchlookup);          // killough
+    free(patchlookup);                                          // killough
 
-    for (i = 0; i < 2; i++)     // cph - release the TEXTUREx lumps
+    for (i = 0; i < 2; i++)                                     // cph - release the TEXTUREx lumps
         if (maptex_lump[i] != -1)
             W_UnlockLumpNum(maptex_lump[i]);
 
@@ -368,9 +377,9 @@ static void R_InitTextures(void)
 
     while (--i >= 0)
     {
-        j = W_LumpNameHash(textures[i]->name) % (unsigned int)numtextures;
+        j = W_LumpNameHash(textures[i]->name) % numtextures;
 
-        textures[i]->next = textures[j]->index; // Prepend to chain
+        textures[i]->next = textures[j]->index;                 // Prepend to chain
         textures[j]->index = i;
     }
 
@@ -411,6 +420,8 @@ static void R_InitFlats(void)
 
     for (int i = 0; i < numflats; i++)
         flattranslation[i] = i;
+
+    missingflatnum = R_FlatNumForName("-N0_TEX-");
 }
 
 //
@@ -640,8 +651,10 @@ int R_FlatNumForName(char *name)
 
     if (i == -1)
     {
-        C_Warning("The <b>%.8s</b> flat texture can't be found.", uppercase(name));
-        return skyflatnum;
+        if (*name != '-')
+            C_Warning("The <b>%.8s</b> flat texture can't be found.", uppercase(name));
+
+        return missingflatnum;
     }
 
     return (i - firstflat);
@@ -671,7 +684,7 @@ int R_CheckTextureNumForName(char *name)
 
     if (*name != '-')
     {
-        i = textures[W_LumpNameHash(name) % (unsigned int)numtextures]->index;
+        i = textures[W_LumpNameHash(name) % numtextures]->index;
 
         while (i >= 0 && strncasecmp(textures[i]->name, name, 8))
             i = textures[i]->next;
@@ -691,7 +704,9 @@ int R_TextureNumForName(char *name)
 
     if (i == -1)
     {
-        C_Warning("The <b>%.8s</b> texture can't be found.", uppercase(name));
+        if (*name != '-')
+            C_Warning("The <b>%.8s</b> texture can't be found.", uppercase(name));
+
         return 0;
     }
 

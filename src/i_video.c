@@ -1105,8 +1105,7 @@ void I_CreateExternalAutomap(dboolean output)
         const char  *displayname = SDL_GetDisplayName(am_displayindex);
 
         if (*displayname)
-            C_Output("Created an external automap on display %i called \"%s\".", am_displayindex + 1,
-                displayname);
+            C_Output("Created an external automap on display %i called \"%s\".", am_displayindex + 1, displayname);
         else
             C_Output("Created an external automap on display %i.", am_displayindex + 1);
     }
@@ -1146,10 +1145,8 @@ void GetWindowPosition(void)
     }
     else
     {
-        windowx = BETWEEN(displays[displayindex].x, x,
-            displays[displayindex].x + displays[displayindex].w - 50);
-        windowy = BETWEEN(displays[displayindex].y, y,
-            displays[displayindex].y + displays[displayindex].h - 50);
+        windowx = BETWEEN(displays[displayindex].x, x, displays[displayindex].x + displays[displayindex].w - 50);
+        windowy = BETWEEN(displays[displayindex].y, y, displays[displayindex].y + displays[displayindex].h - 50);
     }
 }
 
@@ -1158,9 +1155,14 @@ void GetWindowSize(void)
     int width = -1;
     int height = -1;
 
-    sscanf(vid_windowsize, "%10ix%10i", &width, &height);
-
-    if (width < ORIGINALWIDTH + windowborderwidth || height < ORIGINALWIDTH * 3 / 4 + windowborderheight)
+    if (sscanf(vid_windowsize, "%10ix%10i", &width, &height) != 2)
+    {
+        windowheight = SCREENHEIGHT + windowborderheight;
+        windowwidth = SCREENHEIGHT * 16 / 10 + windowborderwidth;
+        vid_windowsize = vid_windowsize_default;
+        M_SaveCVARs();
+    }
+    else if (width < ORIGINALWIDTH + windowborderwidth || height < ORIGINALWIDTH * 3 / 4 + windowborderheight)
     {
         char    size[16];
 
@@ -1206,19 +1208,17 @@ void GetScreenResolution(void)
         int width = -1;
         int height = -1;
 
-        sscanf(vid_screenresolution, "%10ix%10i", &width, &height);
-
-        if (width >= 0 && height >= 0 && ValidScreenMode(width, height))
-        {
-            screenwidth = width;
-            screenheight = height;
-        }
-        else
+        if (sscanf(vid_screenresolution, "%10ix%10i", &width, &height) != 2 || !ValidScreenMode(width, height))
         {
             screenwidth = 0;
             screenheight = 0;
             vid_screenresolution = vid_screenresolution_desktop;
             M_SaveCVARs();
+        }
+        else
+        {
+            screenwidth = width;
+            screenheight = height;
         }
     }
 }
@@ -1619,10 +1619,9 @@ static void SetVideoMode(dboolean output)
     if (output)
     {
         wadfile_t   *playpalwad = lumpinfo[W_CheckNumForName("PLAYPAL")]->wadfile;
-        dboolean    iwad = (playpalwad->type == IWAD);
 
         C_Output("Using the 256-color palette from the <b>PLAYPAL</b> lump in %s <b>%s</b>.",
-            (iwad ? "IWAD" : "PWAD"), playpalwad->path);
+            (playpalwad->type == IWAD ? "IWAD" : "PWAD"), playpalwad->path);
 
         if (gammaindex == 10)
             C_Output("Gamma correction is off.");

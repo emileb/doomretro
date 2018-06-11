@@ -145,19 +145,7 @@ char *M_GetAppDataFolder(void)
     char    *executableFolder = M_GetExecutableFolder();
 
 #if defined(_WIN32)
-
-#if !defined(PORTABILITY)
-    // On Windows, store generated application files in <username>\DOOM Retro.
-    TCHAR   buffer[MAX_PATH];
-
-    if (SUCCEEDED(SHGetFolderPath(NULL, CSIDL_PROFILE, NULL, 0, buffer)))
-        return M_StringJoin(buffer, DIR_SEPARATOR_S, PACKAGE_NAME, NULL);
-    else
-        return executableFolder;
-#else
     return executableFolder;
-#endif
-
 #else
     // On Linux and OS X, if ../share/doomretro doesn't exist then we're dealing with
     // a portable installation, and we write doomretro.cfg to the executable directory.
@@ -328,7 +316,7 @@ dboolean M_StrToInt(const char *str, unsigned int *result)
 //
 // Case-insensitive version of strstr()
 //
-char *M_StrCaseStr(char *haystack, char *needle)
+const char *M_StrCaseStr(const char *haystack, const char *needle)
 {
     int haystack_len = (int)strlen(haystack);
     int needle_len = (int)strlen(needle);
@@ -634,6 +622,29 @@ int numspaces(char *str)
 }
 
 char *removespaces(const char *input)
+{
+    char    *p;
+
+    if (!*input)
+        return "";
+
+    if ((p = malloc(strlen(input) + 1)))
+    {
+        char    *p2 = p;
+
+        while (*input != '\0')
+            if (!isspace((unsigned char)*input))
+                *p2++ = *input++;
+            else
+                input++;
+
+        *p2 = '\0';
+    }
+
+    return p;
+}
+
+char *removenonalpha(const char *input)
 {
     char    *p;
 

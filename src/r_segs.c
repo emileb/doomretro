@@ -55,6 +55,10 @@ static int          toptexture;
 static int          midtexture;
 static int          bottomtexture;
 
+static dboolean     missingtoptexture;
+static dboolean     missingmidtexture;
+static dboolean     missingbottomtexture;
+
 static fixed_t      toptexheight;
 static fixed_t      midtexheight;
 static fixed_t      bottomtexheight;
@@ -359,7 +363,7 @@ static void R_RenderSegLoop(void)
         if (segtextured)
         {
             // calculate texture offset and lighting
-            angle_t angle = MIN((rw_centerangle + xtoviewangle[rw_x]) >> ANGLETOFINESHIFT, FINEANGLES / 2 - 1);
+            const angle_t   angle = MIN((rw_centerangle + xtoviewangle[rw_x]) >> ANGLETOFINESHIFT, FINEANGLES / 2 - 1);
 
             texturecolumn = (rw_offset - FixedMul(finetangent[angle], rw_distance)) >> FRACBITS;
 
@@ -367,7 +371,7 @@ static void R_RenderSegLoop(void)
                 dc_colormap[0] = walllights[BETWEEN(0, rw_scale >> LIGHTSCALESHIFT, MAXLIGHTSCALE - 1)];
 
             dc_x = rw_x;
-            dc_iscale = 0xFFFFFFFFu / (unsigned int)rw_scale - SPARKLEFIX;
+            dc_iscale = 0xFFFFFFFFu / (unsigned int)rw_scale;
         }
 
         // draw the wall tiers
@@ -376,20 +380,27 @@ static void R_RenderSegLoop(void)
             // single sided line
             dc_yl = yl;
             dc_yh = yh;
-            dc_texturemid = rw_midtexturemid;
-            dc_source = R_GetTextureColumn(R_CacheTextureCompositePatchNum(midtexture), texturecolumn);
-            dc_texheight = midtexheight;
 
-            // [BH] apply brightmap
             if (midbrightmap)
             {
+                dc_source = R_GetTextureColumn(R_CacheTextureCompositePatchNum(midtexture), texturecolumn);
+                dc_texturemid = rw_midtexturemid;
+                dc_texheight = midtexheight;
                 dc_brightmap = midbrightmap;
                 bmapwallcolfunc();
+                R_UnlockTextureCompositePatchNum(midtexture);
             }
+            else if (missingmidtexture)
+                R_DrawColorColumn();
             else
+            {
+                dc_source = R_GetTextureColumn(R_CacheTextureCompositePatchNum(midtexture), texturecolumn);
+                dc_texturemid = rw_midtexturemid;
+                dc_texheight = midtexheight;
                 wallcolfunc();
+                R_UnlockTextureCompositePatchNum(midtexture);
+            }
 
-            R_UnlockTextureCompositePatchNum(midtexture);
             ceilingclip[rw_x] = viewheight;
             floorclip[rw_x] = -1;
         }
@@ -399,7 +410,7 @@ static void R_RenderSegLoop(void)
             if (toptexture)
             {
                 // top wall
-                int mid = MIN((int)(pixhigh >> heightbits), floorclip[rw_x] - 1);
+                const int   mid = MIN((int)(pixhigh >> heightbits), floorclip[rw_x] - 1);
 
                 pixhigh += pixhighstep;
 
@@ -407,20 +418,29 @@ static void R_RenderSegLoop(void)
                 {
                     dc_yl = yl;
                     dc_yh = mid;
-                    dc_texturemid = rw_toptexturemid + (dc_yl - centery + 1) * SPARKLEFIX;
-                    dc_source = R_GetTextureColumn(R_CacheTextureCompositePatchNum(toptexture), texturecolumn);
-                    dc_texheight = toptexheight;
 
-                    // [BH] apply brightmap
                     if (topbrightmap)
                     {
+                        dc_source = R_GetTextureColumn(R_CacheTextureCompositePatchNum(toptexture), texturecolumn);
+                        dc_texturemid = rw_toptexturemid + (dc_yl - centery + 1) * SPARKLEFIX;
+                        dc_texheight = toptexheight;
+                        dc_iscale -= SPARKLEFIX;
                         dc_brightmap = topbrightmap;
                         bmapwallcolfunc();
+                        R_UnlockTextureCompositePatchNum(toptexture);
                     }
+                    else if (missingtoptexture)
+                        R_DrawColorColumn();
                     else
+                    {
+                        dc_source = R_GetTextureColumn(R_CacheTextureCompositePatchNum(toptexture), texturecolumn);
+                        dc_texturemid = rw_toptexturemid + (dc_yl - centery + 1) * SPARKLEFIX;
+                        dc_iscale -= SPARKLEFIX;
+                        dc_texheight = toptexheight;
                         wallcolfunc();
+                        R_UnlockTextureCompositePatchNum(toptexture);
+                    }
 
-                    R_UnlockTextureCompositePatchNum(toptexture);
                     ceilingclip[rw_x] = mid;
                 }
                 else
@@ -434,7 +454,7 @@ static void R_RenderSegLoop(void)
             if (bottomtexture)
             {
                 // bottom wall
-                int mid = MAX((int)((pixlow + heightunit - 1) >> heightbits), ceilingclip[rw_x] + 1);
+                const int   mid = MAX((int)((pixlow + heightunit - 1) >> heightbits), ceilingclip[rw_x] + 1);
 
                 pixlow += pixlowstep;
 
@@ -442,20 +462,29 @@ static void R_RenderSegLoop(void)
                 {
                     dc_yl = mid;
                     dc_yh = yh;
-                    dc_texturemid = rw_bottomtexturemid + (dc_yl - centery + 1) * SPARKLEFIX;
-                    dc_source = R_GetTextureColumn(R_CacheTextureCompositePatchNum(bottomtexture), texturecolumn);
-                    dc_texheight = bottomtexheight;
 
-                    // [BH] apply brightmap
                     if (bottombrightmap)
                     {
+                        dc_source = R_GetTextureColumn(R_CacheTextureCompositePatchNum(bottomtexture), texturecolumn);
                         dc_brightmap = bottombrightmap;
+                        dc_texturemid = rw_bottomtexturemid + (dc_yl - centery + 1) * SPARKLEFIX;
+                        dc_iscale -= SPARKLEFIX;
+                        dc_texheight = bottomtexheight;
                         bmapwallcolfunc();
+                        R_UnlockTextureCompositePatchNum(bottomtexture);
                     }
+                    else if (missingbottomtexture)
+                        R_DrawColorColumn();
                     else
+                    {
+                        dc_source = R_GetTextureColumn(R_CacheTextureCompositePatchNum(bottomtexture), texturecolumn);
+                        dc_texturemid = rw_bottomtexturemid + (dc_yl - centery + 1) * SPARKLEFIX;
+                        dc_iscale -= SPARKLEFIX;
+                        dc_texheight = bottomtexheight;
                         wallcolfunc();
+                        R_UnlockTextureCompositePatchNum(bottomtexture);
+                    }
 
-                    R_UnlockTextureCompositePatchNum(bottomtexture);
                     floorclip[rw_x] = mid;
                 }
                 else
@@ -508,13 +537,13 @@ static fixed_t R_ScaleFromGlobalAngle(angle_t visangle)
 //
 void R_StoreWallRange(const int start, const int stop)
 {
-    int64_t  dx, dy;
-    int64_t  dx1, dy1;
-    int64_t  len;
-    int      worldtop;
-    int      worldbottom;
-    int      worldhigh;
-    int      worldlow;
+    int64_t dx, dy;
+    int64_t dx1, dy1;
+    int64_t len;
+    int     worldtop;
+    int     worldbottom;
+    int     worldhigh;
+    int     worldlow;
     side_t  *sidedef;
 
     linedef = curline->linedef;
@@ -558,8 +587,8 @@ void R_StoreWallRange(const int start, const int stop)
 
     // killough 1/6/98, 2/1/98: remove limit on openings
     {
-        size_t          pos = lastopening - openings;
-        size_t          need = (rw_stopx - start) * sizeof(*lastopening) + pos;
+        const size_t    pos = lastopening - openings;
+        const size_t    need = (rw_stopx - start) * sizeof(*lastopening) + pos;
         static size_t   maxopenings;
 
         if (need > maxopenings)
@@ -638,12 +667,19 @@ void R_StoreWallRange(const int start, const int stop)
     if (!backsector)
     {
         // single sided line
-        midtexture = texturetranslation[sidedef->midtexture];
-        midtexheight = ((linedef->r_flags & RF_MID_TILE) ? 0 : textureheight[midtexture] >> FRACBITS);
-        midbrightmap = (usebrightmaps && !nobrightmap[midtexture] ? brightmap[midtexture] : NULL);
-        rw_midtexturemid = ((linedef->flags & ML_DONTPEGBOTTOM) ? frontsector->interpfloorheight
-            + textureheight[midtexture] - viewz : worldtop);
-        rw_midtexturemid += FixedMod(sidedef->rowoffset, textureheight[midtexture]);
+        if ((missingmidtexture = sidedef->missingmidtexture))
+            midtexture = 1;
+        else
+        {
+            fixed_t height;
+
+            midtexture = texturetranslation[sidedef->midtexture];
+            height = textureheight[midtexture];
+            midtexheight = ((linedef->r_flags & RF_MID_TILE) ? 0 : height >> FRACBITS);
+            midbrightmap = (usebrightmaps && !nobrightmap[midtexture] ? brightmap[midtexture] : NULL);
+            rw_midtexturemid = ((linedef->flags & ML_DONTPEGBOTTOM) ? frontsector->interpfloorheight + height - viewz : worldtop)
+                + FixedMod(sidedef->rowoffset, height);
+        }
 
         // a single sided line is terminal, so it must mark ends
         markfloor = true;
@@ -737,22 +773,37 @@ void R_StoreWallRange(const int start, const int stop)
         if (worldhigh < worldtop)
         {
             // top texture
-            toptexture = texturetranslation[sidedef->toptexture];
-            toptexheight = ((linedef->r_flags & RF_TOP_TILE) ? 0 : textureheight[toptexture] >> FRACBITS);
-            topbrightmap = (usebrightmaps && !nobrightmap[toptexture] ? brightmap[toptexture] : NULL);
-            rw_toptexturemid = ((linedef->flags & ML_DONTPEGTOP) ? worldtop :
-                backsector->interpceilingheight + textureheight[toptexture] - viewz);
-            rw_toptexturemid += FixedMod(sidedef->rowoffset, textureheight[toptexture]);
+            if ((missingtoptexture = sidedef->missingtoptexture))
+                toptexture = 1;
+            else
+            {
+                fixed_t height;
+
+                toptexture = texturetranslation[sidedef->toptexture];
+                height = textureheight[toptexture];
+                toptexheight = ((linedef->r_flags & RF_TOP_TILE) ? 0 : height >> FRACBITS);
+                topbrightmap = (usebrightmaps && !nobrightmap[toptexture] ? brightmap[toptexture] : NULL);
+                rw_toptexturemid = ((linedef->flags & ML_DONTPEGTOP) ? worldtop : backsector->interpceilingheight + height - viewz)
+                    + FixedMod(sidedef->rowoffset, height);
+            }
         }
 
         if (worldlow > worldbottom)
         {
             // bottom texture
-            bottomtexture = texturetranslation[sidedef->bottomtexture];
-            bottomtexheight = ((linedef->r_flags & RF_BOT_TILE) ? 0 : textureheight[bottomtexture] >> FRACBITS);
-            bottombrightmap = (usebrightmaps && !nobrightmap[bottomtexture] ? brightmap[bottomtexture] : NULL);
-            rw_bottomtexturemid = ((linedef->flags & ML_DONTPEGBOTTOM) ? worldtop : worldlow - liquidoffset);
-            rw_bottomtexturemid += FixedMod(sidedef->rowoffset, textureheight[bottomtexture]);
+            if ((missingbottomtexture = sidedef->missingbottomtexture))
+                bottomtexture = 1;
+            else
+            {
+                fixed_t height;
+
+                bottomtexture = texturetranslation[sidedef->bottomtexture];
+                height = textureheight[bottomtexture];
+                bottomtexheight = ((linedef->r_flags & RF_BOT_TILE) ? 0 : height >> FRACBITS);
+                bottombrightmap = (usebrightmaps && !nobrightmap[bottomtexture] ? brightmap[bottomtexture] : NULL);
+                rw_bottomtexturemid = ((linedef->flags & ML_DONTPEGBOTTOM) ? worldtop : worldlow - liquidoffset)
+                    + FixedMod(sidedef->rowoffset, height);
+            }
         }
 
         // allocate space for masked texture tables

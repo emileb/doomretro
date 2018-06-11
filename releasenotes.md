@@ -1,3 +1,68 @@
+### DOOM Retro v2.6.9
+
+* The targets of monsters will now be restored correctly when loading a savegame.
+* The player’s view will no longer go past the floor or ceiling in some rare instances.
+* A bug has been fixed whereby the player would fire their weapon when the game was unpaused using the <kbd>PAUSE</kbd> key.
+
+---
+
+###### Thursday, March 29, 2018
+
+### DOOM Retro v2.6.8
+
+* *DOOM Retro* now uses [*SDL v2.0.8*](http://libsdl.org) and [*SDL_image v2.0.3*](http://libsdl.org/SDL_image).
+* Optimizations have been made to further improve the overall performance and stability of *DOOM Retro*.
+* Improvements have been made to how both sprites and the shadows they cast are rendered.
+* Minor changes have been made to text that is output to the console.
+* Player messages can no longer be present in screenshots taken using the <kbd>PRINTSCREEN</kbd> key.
+* Spectres and the shadows they cast are now displayed correctly when the `r_textures` CVAR is `off`.
+* Further improvements have been made to the support of `DEHACKED` and `MAPINFO` lumps.
+* The player’s face is no longer updated in either the status bar or the default widescreen HUD when freeze mode is on.
+* The screen is now rendered correctly while the player has an invulnerability power-up and the `r_textures` CVAR is `off`.
+* A bug has been fixed whereby some map-specific fixes enabled using the `r_fixmaperrors` CVAR weren’t being applied.
+* Hanging corpses no longer bob up and down if above liquid.
+* Corpses can no longer trigger line specials when sliding over them.
+* Fixing a bug present in *Vanilla DOOM*, monsters will no longer momentarily freeze when trying to open certain locked doors.
+* The correct map names will now be displayed when playing [*Freedoom*](http://freedoom.github.io/).
+* An error will no longer occur when trying to load [*HacX: Twitch ’n Kill*](http://www.drnostromo.com/hacx/).
+* The screen will now fade to black upon quitting from either [*Freedoom*](http://freedoom.github.io/) or [*HacX: Twitch ’n Kill*](http://www.drnostromo.com/hacx/).
+* Liquid sectors are now rendered slightly higher when the `r_liquid_bob` CVAR is `on` to improve the bottom edge of surrounding tileable wall textures.
+* Projectiles will now pass through map decorations when the `infiniteheight` CVAR is `off`.
+* Corpses in liquid no longer bob up and down in time with each other.
+* The positioning of the monsters in *DOOM II’s* cast sequence has been improved when the `r_fixspriteoffsets` CVAR is `on`.
+* The underscores in the message displayed when using the `IDBEHOLD` cheat now align correctly.
+* A bug has been fixed whereby savegames could become corrupted in some rare instances.
+* A bug present in *Vanilla DOOM* has been fixed whereby certain switches wouldn’t turn on when used by the player.
+* Repeatable switches that are adjacent to a moving sector will no longer make a second sound when they turn off.
+* The alternate widescreen HUD and player messages are now black rather than white when the player has the invulnerability power-up or the `r_textures` CVAR is `off`.
+* The `vid_screenresolution` and `vid_windowsize` CVARs are now validated better at startup and when changed in the console.
+* Player messages will now always be positioned correctly when the `r_messagepos` CVAR is changed from its default of `(3,2)`.
+* The map title in the automap is now always positioned correctly when the `r_messagescale` CVAR is `small`.
+
+---
+
+###### Friday, February 23, 2018
+
+### DOOM Retro v2.6.7
+
+* Optimizations have been made to further improve the overall performance and stability of *DOOM Retro*.
+* The format of savegames has changed, breaking compatibility with previous versions of *DOOM Retro*.
+* A bug has been fixed whereby skull keys picked up by the player wouldn’t be displayed in the status bar in some instances.
+* Entering `give keys` in the console will now give the player all keycards and skull keys, rather than just those present in the current map.
+* Entering `give keycards` or `give skullkeys` in the console will now give the player all keycards or all skull keys.
+* Minor changes have been made to text that is output to the console.
+* Walls, ceilings and floors with missing textures will now be rendered in white rather than not at all.
+* A bug has been fixed whereby some skies weren’t being rendered correctly when the `mouselook` CVAR was `off`.
+* Blood splats are now lit correctly when the `r_textures` CVAR is `off`.
+* The brightmap of the `COMP2` texture has been improved.
+* As [originally intended in *Vanilla DOOM*](https://doomwiki.org/wiki/Sound_cutoffs#DSFLAMST), the `DSFLAMST` sound effect will now be played when an arch-vile attacks the player or another monster.
+* The AI of monsters has been improved when on or next to a lift.
+* How far away a monster is vertically from the player during its melee attack is no longer taken into account if the `infiniteheight` CVAR is `on`.
+
+---
+
+###### Friday, February 9, 2018
+
 ### DOOM Retro v2.6.6
 
 * Optimizations have been made to further improve the overall performance and stability of *DOOM Retro*.

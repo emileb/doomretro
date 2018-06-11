@@ -484,8 +484,13 @@ static dboolean PIT_CheckThing(mobj_t *thing)
     // missiles can hit other things
     if (tmflags & MF_MISSILE)
     {
+        int height = thing->info->projectilepassheight;
+
+        if (!height || infiniteheight)
+            height = thing->height;
+
         // see if it went over/under
-        if (tmthing->z > thing->z + thing->height)
+        if (tmthing->z > thing->z + height)
             return true;        // overhead
 
         if (tmthing->z + tmthing->height < thing->z)
@@ -916,8 +921,7 @@ dboolean P_TryMove(mobj_t *thing, fixed_t x, fixed_t y, dboolean dropoff)
             || (floatok = true, !(flags & MF_TELEPORT) && tmceilingz - thing->z < thing->height)
             // too big a step up
             || (!(flags & MF_TELEPORT) && tmfloorz - thing->z > 24 * FRACUNIT))
-            return (tmunstuck && !(ceilingline && untouched(ceilingline))
-                    && !(floorline && untouched(floorline)));
+            return (tmunstuck && !(ceilingline && untouched(ceilingline)) && !(floorline && untouched(floorline)));
 
         if (!(flags & (MF_DROPOFF | MF_FLOAT)))
         {

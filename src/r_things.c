@@ -367,7 +367,7 @@ static void R_BlastShadowColumn(const rcolumn_t *column)
     while (numposts--)
     {
         const rpost_t   *post = &column->posts[numposts];
-        int64_t         topscreen = shadowtopscreen + spryscale * post->topdelta + 1;
+        int64_t         topscreen = shadowtopscreen + spryscale * post->topdelta;
 
         if ((dc_yh = MIN((int)(((topscreen + post->length * spryscale) >> FRACBITS) / 10 + shadowshift), dc_floorclip)) >= 0)
             if ((dc_yl = MAX(dc_ceilingclip, (int)(((topscreen + FRACUNIT) >> FRACBITS) / 10 + shadowshift))) <= dc_yh)
@@ -384,10 +384,10 @@ static void R_BlastSpriteColumn(const rcolumn_t *column)
     {
         const rpost_t   *post = &column->posts[numposts];
         const int       topdelta = post->topdelta;
-        const int64_t   topscreen = sprtopscreen + spryscale * topdelta + 1;
+        const int64_t   topscreen = sprtopscreen + spryscale * topdelta;
 
-        if ((dc_yh = MIN((int)((topscreen + post->length * spryscale) >> FRACBITS), dc_floorclip)) >= 0)
-            if ((dc_yl = MAX(dc_ceilingclip, (int)((topscreen + FRACUNIT) >> FRACBITS))) <= dc_yh)
+        if ((dc_yh = MIN((int)((topscreen + post->length * spryscale - 256) >> FRACBITS), dc_floorclip)) >= 0)
+            if ((dc_yl = MAX(dc_ceilingclip, (int)((topscreen + FRACUNIT + 512) >> FRACBITS))) <= dc_yh)
             {
                 dc_texturefrac = dc_texturemid - (topdelta << FRACBITS)
                     + FixedMul((dc_yl - centery) << FRACBITS, dc_iscale);
@@ -428,7 +428,7 @@ static void R_BlastBloodSplatColumn(const rcolumn_t *column)
         const rpost_t   *post = &column->posts[numposts];
 
         // calculate unclipped screen coordinates for post
-        const int64_t   topscreen = sprtopscreen + spryscale * post->topdelta + 1;
+        const int64_t   topscreen = sprtopscreen + spryscale * post->topdelta;
 
         if ((dc_yh = MIN((int)((topscreen + spryscale * post->length) >> FRACBITS), dc_floorclip)) >= 0)
             if ((dc_yl = MAX(dc_ceilingclip, (int)((topscreen + FRACUNIT) >> FRACBITS))) <= dc_yh)
@@ -570,7 +570,8 @@ static void R_DrawBloodSplatVisSprite(const bloodsplatvissprite_t *vis)
     const rcolumn_t *columns = R_CachePatchNum(id)->columns;
 
     colfunc = vis->colfunc;
-    dc_blood = tinttab75 + (vis->colormap[vis->blood] << 8);
+    dc_colormap[0] = vis->colormap;
+    dc_blood = tinttab75 + (dc_colormap[0][vis->blood] << 8);
     spryscale = vis->scale;
     sprtopscreen = centeryfrac - FixedMul(vis->texturemid, spryscale);
     fuzzpos = 0;
@@ -1107,10 +1108,10 @@ void R_DrawPlayerSprites(void)
         V_FillRect(1, viewwindowx, viewwindowy, viewwidth, viewheight, 251, false);
 
         if (weapon->state)
-            R_DrawPlayerSprite(weapon, true, altered);
+            R_DrawPlayerSprite(weapon, true, (weapon->state->dehacked || altered));
 
         if (flash->state)
-            R_DrawPlayerSprite(flash, true, altered);
+            R_DrawPlayerSprite(flash, true, (flash->state->dehacked || altered));
 
         if (pausesprites)
             R_DrawPausedFuzzColumns();
@@ -1127,10 +1128,10 @@ void R_DrawPlayerSprites(void)
             muzzleflash = true;
 
         if (weapon->state)
-            R_DrawPlayerSprite(weapon, false, altered);
+            R_DrawPlayerSprite(weapon, false, (weapon->state->dehacked || altered));
 
         if (flash->state)
-            R_DrawPlayerSprite(flash, false, altered);
+            R_DrawPlayerSprite(flash, false, (flash->state->dehacked || altered));
     }
 }
 

@@ -51,13 +51,14 @@
 
 extern patch_t  *consolefont[CONSOLEFONTSIZE];
 extern patch_t  *degree;
+extern int      message_x;
 extern int      white;
 
 static void HUlib_clearTextLine(hu_textline_t *t)
 {
     t->len = 0;
     t->l[0] = '\0';
-    t->needsupdate = true;
+    t->needsupdate = 1;
 }
 
 void HUlib_initTextLine(hu_textline_t *t, int x, int y, patch_t **f, int sc)
@@ -167,10 +168,13 @@ static struct
     { 'z',  'j',  -2 }, {  0 ,   0 ,   0 }
 };
 
+void (*althudtextfunc)(int, int, patch_t *, int);
+
 static void HUlib_drawAltHUDTextLine(hu_textline_t *l)
 {
     unsigned char   prevletter = '\0';
     int             x = HU_ALTHUDMSGX;
+    int             color = (((viewplayer->fixedcolormap == INVERSECOLORMAP) ^ (!r_textures)) ? colormaps[0][32 * 256 + white] : white);
 
     for (int i = 0; i < l->len; i++)
     {
@@ -199,7 +203,7 @@ static void HUlib_drawAltHUDTextLine(hu_textline_t *l)
             j++;
         }
 
-        V_DrawAltHUDText(x, HU_ALTHUDMSGY, patch, white);
+        althudtextfunc(x, HU_ALTHUDMSGY, patch, color);
         x += SHORT(patch->width);
         prevletter = letter;
     }
@@ -323,13 +327,12 @@ void HUlib_drawTextLine(hu_textline_t *l, dboolean external)
         for (int y1 = 0; y1 < 4; y1++)
             for (int x1 = 0; x1 < ORIGINALWIDTH; x1++)
             {
-                unsigned char   src = (automapactive && !vid_widescreen ? underscores2[y1 * ORIGINALWIDTH + x1] :
-                                    underscores1[y1 * ORIGINALWIDTH + x1]);
+                unsigned char   src = underscores[y1 * ORIGINALWIDTH + x1];
 
                 for (int y2 = 0; y2 < scale; y2++)
                     for (int x2 = 0; x2 < scale; x2++)
                     {
-                        byte    *dest = &tempscreen[((8 + y1) * scale + y2) * SCREENWIDTH + x1 * scale + x2];
+                        byte    *dest = &tempscreen[((l->y + y1 + 7) * scale + y2) * SCREENWIDTH + (l->x + x1 - 3) * scale + x2];
 
                         if (src == 251)
                             *dest = 0;
@@ -340,8 +343,8 @@ void HUlib_drawTextLine(hu_textline_t *l, dboolean external)
     }
 
     // [BH] draw entire message from buffer onto screen with translucency
-    maxy = y + 10;
-    maxx = (l->x + tw + 1);
+    maxy = y + 11;
+    maxx = l->x + tw + 1;
 
     if (r_messagescale == r_messagescale_big)
     {
@@ -424,7 +427,7 @@ static void HUlib_addLineToSText(hu_stext_t *s)
         s->l[i].needsupdate = 4;
 }
 
-void HUlib_addMessageToSText(hu_stext_t *s, char *prefix, char *msg)
+void HUlib_addMessageToSText(hu_stext_t *s, const char *prefix, const char *msg)
 {
     HUlib_addLineToSText(s);
 

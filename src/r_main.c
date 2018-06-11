@@ -522,7 +522,7 @@ void R_InitColumnFunctions(void)
     else
     {
         basecolfunc = R_DrawColorColumn;
-        fuzzcolfunc = R_DrawColorColumn;
+        fuzzcolfunc = R_DrawTranslucentColor50Column;
         transcolfunc = R_DrawColorColumn;
         wallcolfunc = R_DrawColorColumn;
         bmapwallcolfunc = R_DrawColorColumn;
@@ -778,7 +778,7 @@ static void R_SetupFrame(void)
     psprscalelight = c_psprscalelight[cm];
     drawbloodsplats = (r_blood != r_blood_none && r_bloodsplats_max && !vanilla);
 
-    if (viewplayer->fixedcolormap)
+    if (viewplayer->fixedcolormap && r_textures)
     {
         // killough 3/20/98: localize scalelightfixed (readability/optimization)
         static lighttable_t *scalelightfixed[MAXLIGHTSCALE];
@@ -828,5 +828,8 @@ void R_RenderPlayerView(void)
         R_RenderBSPNode(numnodes - 1);  // head node is the last node output
         R_DrawPlanes();
         R_DrawMasked();
+
+        if (!r_textures && viewplayer->fixedcolormap == INVERSECOLORMAP)
+            V_InvertScreen();
     }
 }

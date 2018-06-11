@@ -65,7 +65,7 @@ char *M_GetAppDataFolder(void);
 
 char *M_GetExecutableFolder(void);
 dboolean M_StrToInt(const char *str, unsigned int *result);
-char *M_StrCaseStr(char *haystack, char *needle);
+const char *M_StrCaseStr(const char *haystack, const char *needle);
 dboolean M_StringCopy(char *dest, const char *src, const size_t dest_size);
 char *M_StringReplace(char *haystack, char *needle, char *replacement);
 char *M_StringJoin(char *s, ...);
@@ -85,6 +85,7 @@ dboolean wildcard(char *input, char *pattern);
 int gcd(int a, int b);
 int numspaces(char *str);
 char *removespaces(const char *input);
+char *removenonalpha(const char *input);
 char *trimwhitespace(char *input);
 char *removenewlines(const char *str);
 char *makevalidfilename(const char *input);

@@ -467,7 +467,7 @@ void D_PageDrawer(void)
 //
 void D_FadeScreen(void)
 {
-    if (W_CheckMultipleLumps("COLORMAP") > 1)
+    if (W_CheckMultipleLumps("COLORMAP") > 1 && !FREEDOOM && !hacx)
         return;
 
     for (int i = 0; i < 11; i++)
@@ -505,6 +505,7 @@ void D_DoAdvanceTitle(void)
     if (!titlesequence)
     {
         pagetic = 3 * TICRATE;
+        I_Sleep(250);
         splashscreen = true;
     }
     else if (titlesequence == 1)
@@ -516,6 +517,9 @@ void D_DoAdvanceTitle(void)
 
             if (alwaysrun)
                 C_StrCVAROutput(stringize(alwaysrun), "on");
+
+            if (!TITLEPIC && !devparm)
+                M_StartControlPanel();
         }
 
         if (pagelump == creditlump)
@@ -528,9 +532,6 @@ void D_DoAdvanceTitle(void)
         {
             I_SetPalette(playpal);
             splashscreen = false;
-
-            if (!TITLEPIC && !devparm)
-                M_StartControlPanel();
         }
 
         M_SetWindowCaption();
@@ -1586,7 +1587,7 @@ static void D_ProcessDehInWad(void)
     if (chexdeh || M_CheckParm("-nodeh"))
         return;
 
-    if (hacx)
+    if (hacx || FREEDOOM)
     {
         for (int i = 0; i < numlumps; i++)
             if (!strncasecmp(lumpinfo[i]->name, "DEHACKED", 8))
@@ -2013,7 +2014,8 @@ static void D_DoomMainSetup(void)
 
     C_Init();
 
-    if ((startloadgame = ((p = M_CheckParmWithArgs("-loadgame", 1, 1)) ? atoi(myargv[p + 1]) : -1)) >= 0)
+    if ((startloadgame = ((p = M_CheckParmWithArgs("-loadgame", 1, 1)) ? atoi(myargv[p + 1]) : -1)) >= 0
+        && startloadgame <= 5)
     {
         I_InitKeyboard();
 

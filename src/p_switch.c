@@ -51,7 +51,8 @@ static int  *switchlist;        // killough
 static int  max_numswitches;    // killough
 static int  numswitches;        // killough
 
-button_t    buttonlist[MAXBUTTONS];
+button_t    *buttonlist = NULL;
+int         maxbuttons = MAXBUTTONS;
 
 //
 // P_InitSwitchList()
@@ -117,76 +118,83 @@ void P_InitSwitchList(void)
     numswitches = index / 2;
     switchlist[index] = -1;
     W_UnlockLumpNum(lump);
+
+    buttonlist = calloc(maxbuttons, sizeof(*buttonlist));
 }
 
 //
-// Start a button counting down till it turns off.
+// Start a button counting down until it turns off.
 //
-void P_StartButton(line_t *line, bwhere_e w, int texture, int time)
+void P_StartButton(line_t *line, bwhere_e where, int texture, int time)
 {
     // See if button is already pressed
-    for (int i = 0; i < MAXBUTTONS; i++)
+    for (int i = 0; i < maxbuttons; i++)
         if (buttonlist[i].btimer && buttonlist[i].line == line)
             return;
 
-    for (int i = 0; i < MAXBUTTONS; i++)
+    for (int i = 0; i < maxbuttons; i++)
         if (!buttonlist[i].btimer)
         {
             buttonlist[i].line = line;
-            buttonlist[i].where = w;
+            buttonlist[i].where = where;
             buttonlist[i].btexture = texture;
             buttonlist[i].btimer = time;
             buttonlist[i].soundorg = &line->soundorg;
             return;
         }
 
-    I_Error("P_StartButton: no button slots left!");
+    // [crispy] remove MAXBUTTONS limit
+    maxbuttons *= 2;
+    buttonlist = I_Realloc(buttonlist, sizeof(*buttonlist) * maxbuttons);
+    memset(buttonlist + maxbuttons / 2, 0, sizeof(*buttonlist) * (maxbuttons - maxbuttons / 2));
+    P_StartButton(line, where, texture, time);
 }
 
 //
 // Function that changes wall texture.
 // Tell it if switch is ok to use again (true=yes, it's a button).
 //
-void P_ChangeSwitchTexture(line_t *line, dboolean useAgain)
+void P_ChangeSwitchTexture(line_t *line, dboolean useagain)
 {
-    int         i;
-    short       *texture = NULL;
-    short       *ttop = &sides[line->sidenum[0]].toptexture;
-    short       *tmid = &sides[line->sidenum[0]].midtexture;
-    short       *tbot = &sides[line->sidenum[0]].bottomtexture;
-    bwhere_e    position = 0;
+    int     sidenum = line->sidenum[0];
+    short   *toptexture = &sides[sidenum].toptexture;
+    short   *midtexture = &sides[sidenum].midtexture;
+    short   *bottomtexture = &sides[sidenum].bottomtexture;
 
-    if (!useAgain)
+    if (!useagain)
         line->special = 0;
 
-    for (i = 0; i < numswitches * 2; i++)
-        if (switchlist[i] == *ttop)
+    for (int i = 0; i < numswitches * 2; i++)
+    {
+        bwhere_e    where = nowhere;
+
+        if (switchlist[i] == *bottomtexture)
         {
-            texture = ttop;
-            position = top;
-            break;
-        }
-        else if (switchlist[i] == *tmid)
-        {
-            texture = tmid;
-            position = middle;
-            break;
-        }
-        else if (switchlist[i] == *tbot)
-        {
-            texture = tbot;
-            position = bottom;
-            break;
+            where = bottom;
+            *bottomtexture = switchlist[i ^ 1];
         }
 
-    if (!texture)
-        return;
+        if (switchlist[i] == *midtexture)
+        {
+            where = middle;
+            *midtexture = switchlist[i ^ 1];
+        }
 
-    *texture = switchlist[i ^ 1];
-    S_StartSectorSound(&line->soundorg, sfx_swtchn);
+        if (switchlist[i] == *toptexture)
+        {
+            where = top;
+            *toptexture = switchlist[i ^ 1];
+        }
 
-    if (useAgain)
-        P_StartButton(line, position, switchlist[i], BUTTONTIME);
+        if (where != nowhere)
+        {
+            if (useagain)
+                P_StartButton(line, where, switchlist[i], BUTTONTIME);
+
+            S_StartSectorSound(&line->soundorg, sfx_swtchn);
+            break;
+        }
+    }
 }
 
 //
@@ -206,7 +214,7 @@ dboolean P_UseSpecialLine(mobj_t *thing, line_t *line, int side)
         dboolean (*linefunc)(line_t *line) = NULL;
 
         // check each range of generalized linedefs
-        if ((unsigned int)line->special >= GenFloorBase)
+        if (line->special >= GenFloorBase)
         {
             if (!thing->player)
                 if ((line->special & FloorChange) || !(line->special & FloorModel))
@@ -217,7 +225,7 @@ dboolean P_UseSpecialLine(mobj_t *thing, line_t *line, int side)
 
             linefunc = EV_DoGenFloor;
         }
-        else if ((unsigned int)line->special >= GenCeilingBase)
+        else if (line->special >= GenCeilingBase)
         {
             if (!thing->player)
                 if ((line->special & CeilingChange) || !(line->special & CeilingModel))
@@ -225,7 +233,7 @@ dboolean P_UseSpecialLine(mobj_t *thing, line_t *line, int side)
 
             linefunc = EV_DoGenCeiling;
         }
-        else if ((unsigned int)line->special >= GenDoorBase)
+        else if (line->special >= GenDoorBase)
         {
             if (!thing->player)
             {
@@ -238,7 +246,7 @@ dboolean P_UseSpecialLine(mobj_t *thing, line_t *line, int side)
 
             linefunc = EV_DoGenDoor;
         }
-        else if ((unsigned int)line->special >= GenLockedBase)
+        else if (line->special >= GenLockedBase)
         {
             if (!thing->player)
                 return false;                           // monsters disallowed from unlocking doors
@@ -248,7 +256,7 @@ dboolean P_UseSpecialLine(mobj_t *thing, line_t *line, int side)
 
             linefunc = EV_DoGenLockedDoor;
         }
-        else if ((unsigned int)line->special >= GenLiftBase)
+        else if (line->special >= GenLiftBase)
         {
             if (!thing->player)
                 if (!(line->special & LiftMonster))
@@ -256,7 +264,7 @@ dboolean P_UseSpecialLine(mobj_t *thing, line_t *line, int side)
 
             linefunc = EV_DoGenLift;
         }
-        else if ((unsigned int)line->special >= GenStairsBase)
+        else if (line->special >= GenStairsBase)
         {
             if (!thing->player)
                 if (!(line->special & StairMonster))
@@ -264,7 +272,7 @@ dboolean P_UseSpecialLine(mobj_t *thing, line_t *line, int side)
 
             linefunc = EV_DoGenStairs;
         }
-        else if ((unsigned int)line->special >= GenCrusherBase)
+        else if (line->special >= GenCrusherBase)
         {
             if (!thing->player)
                 if (!(line->special & CrusherMonster))
@@ -337,16 +345,6 @@ dboolean P_UseSpecialLine(mobj_t *thing, line_t *line, int side)
     switch (line->special)
     {
         // MANUALS
-        case DR_Door_OpenWaitClose_AlsoMonsters:
-        case DR_Door_Blue_OpenWaitClose:
-        case DR_Door_Yellow_OpenWaitClose:
-        case DR_Door_Red_OpenWaitClose:
-
-        case D1_Door_OpenStay:
-        case D1_Door_Blue_OpenStay:
-        case D1_Door_Red_OpenStay:
-        case D1_Door_Yellow_OpenStay:
-
         case DR_Door_OpenWaitClose_Fast:
             if (nomonsters && (line->flags & ML_TRIGGER666))
             {
@@ -357,7 +355,25 @@ dboolean P_UseSpecialLine(mobj_t *thing, line_t *line, int side)
                 line->flags &= ~ML_TRIGGER666;
             }
 
+            EV_VerticalDoor(line, thing);
+            break;
+
+        case D1_Door_Blue_OpenStay:
+        case D1_Door_Red_OpenStay:
+        case D1_Door_Yellow_OpenStay:
+            if (!thing->player)
+                return false;
+
+            EV_VerticalDoor(line, thing);
+            break;
+
+        case DR_Door_Blue_OpenWaitClose:
+        case DR_Door_Yellow_OpenWaitClose:
+        case DR_Door_Red_OpenWaitClose:
+
+        case DR_Door_OpenWaitClose_AlsoMonsters:
         case D1_Door_OpenStay_Fast:
+        case D1_Door_OpenStay:
             EV_VerticalDoor(line, thing);
             break;
 

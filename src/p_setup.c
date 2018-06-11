@@ -136,7 +136,7 @@ int             numdecorations;
 // BLOCKMAP
 // Created from axis aligned bounding box
 // of the map, a rectangular array of
-// blocks of size ...
+// blocks of size...
 // Used to speed up collision detection
 // by spatial subdivision in 2D.
 //
@@ -211,7 +211,7 @@ dboolean            r_fixmaperrors = r_fixmaperrors_default;
 
 static int          current_episode = -1;
 static int          current_map = -1;
-static int          samelevel;
+static dboolean     samelevel;
 
 mapformat_t         mapformat;
 
@@ -363,7 +363,7 @@ static void P_LoadSegs(int lump)
             li->frontsector = sides[ldef->sidenum[side]].sector;
         else
         {
-            C_Warning("The front of seg %s has no sidedef.", commify(i));
+            C_Warning("The %s of seg %s has no sidedef.", (side ? "back" : "front"), commify(i));
             li->frontsector = NULL;
         }
 
@@ -424,7 +424,7 @@ static void P_LoadSegs(int lump)
 
                         if (devparm)
                             C_Warning("The top texture of linedef %s has been changed to <b>%s</b>.",
-                                commify(linefix[j].linedef), linefix[j].toptexture);
+                                commify(linedef), linefix[j].toptexture);
                     }
 
                     if (*linefix[j].middletexture)
@@ -433,7 +433,7 @@ static void P_LoadSegs(int lump)
 
                         if (devparm)
                             C_Warning("The middle texture of linedef %s has been changed to <b>%s</b>.",
-                                commify(linefix[j].linedef), linefix[j].middletexture);
+                                commify(linedef), linefix[j].middletexture);
                     }
 
                     if (*linefix[j].bottomtexture)
@@ -442,7 +442,7 @@ static void P_LoadSegs(int lump)
 
                         if (devparm)
                             C_Warning("The bottom texture of linedef %s has been changed to <b>%s</b>.",
-                                commify(linefix[j].linedef), linefix[j].bottomtexture);
+                                commify(linedef), linefix[j].bottomtexture);
                     }
 
                     if (linefix[j].offset != DEFAULT)
@@ -451,8 +451,8 @@ static void P_LoadSegs(int lump)
                         li->sidedef->textureoffset = 0;
 
                         if (devparm)
-                            C_Warning("The offset of linedef %s has been changed to %s.",
-                                commify(linefix[j].linedef), commify(linefix[j].offset));
+                            C_Warning("The horizontal texture offset of linedef %s has been changed to %s.",
+                                commify(linedef), commify(linefix[j].offset));
                     }
 
                     if (linefix[j].rowoffset != DEFAULT)
@@ -460,8 +460,8 @@ static void P_LoadSegs(int lump)
                         li->sidedef->rowoffset = SHORT(linefix[j].rowoffset) << FRACBITS;
 
                         if (devparm)
-                            C_Warning("The row offset of linedef %s has been changed to %s.",
-                                commify(linefix[j].linedef), commify(linefix[j].rowoffset));
+                            C_Warning("The vertical texture offset of linedef %s has been changed to %s.",
+                                commify(linedef), commify(linefix[j].rowoffset));
                     }
 
                     if (linefix[j].flags != DEFAULT)
@@ -473,7 +473,7 @@ static void P_LoadSegs(int lump)
 
                         if (devparm)
                             C_Warning("The flags of linedef %s have been changed to %s.",
-                                commify(linefix[j].linedef), commify(li->linedef->flags));
+                                commify(linedef), commify(li->linedef->flags));
                     }
                     if (linefix[j].special != DEFAULT)
                     {
@@ -481,7 +481,7 @@ static void P_LoadSegs(int lump)
 
                         if (devparm)
                             C_Warning("The special of linedef %s has been changed to %s.",
-                                commify(linefix[j].linedef), commify(linefix[j].special));
+                                commify(linedef), commify(linefix[j].special));
                     }
 
                     if (linefix[j].tag != DEFAULT)
@@ -490,7 +490,7 @@ static void P_LoadSegs(int lump)
 
                         if (devparm)
                             C_Warning("The tag of linedef %s has been changed to %s.",
-                                commify(linefix[j].linedef), commify(linefix[j].tag));
+                                commify(linedef), commify(linefix[j].tag));
                     }
 
                     break;
@@ -560,7 +560,7 @@ static void P_LoadSegs_V4(int lump)
             li->frontsector = sides[ldef->sidenum[side]].sector;
         else
         {
-            C_Warning("The front of seg %s has no sidedef.", commify(i));
+            C_Warning("The %s of seg %s has no sidedef.", (side ? "back" : "front"), commify(i));
             li->frontsector = NULL;
         }
 
@@ -724,7 +724,7 @@ static void P_LoadSectors(int lump)
 
                     if (sectorfix[j].special != DEFAULT)
                     {
-                        ss->special = SHORT(sectorfix[j].special) << FRACBITS;
+                        ss->special = SHORT(sectorfix[j].special);
 
                         if (devparm)
                             C_Warning("The special of sector %s has been changed to %s.",
@@ -919,7 +919,7 @@ static void P_LoadZSegs(const byte *data)
             li->frontsector = sides[ldef->sidenum[side]].sector;
         else
         {
-            C_Warning("The front of seg %s has no sidedef.", commify(i));
+            C_Warning("The %s of seg %s has no sidedef.", (side ? "back" : "front"), commify(i));
             li->frontsector = NULL;
         }
 
@@ -1357,8 +1357,11 @@ static void P_LoadSideDefs2(int lump)
             default:
                 // normal cases
                 sd->midtexture = R_TextureNumForName(msd->midtexture);
+                sd->missingmidtexture = (R_CheckTextureNumForName(msd->midtexture) == -1);
                 sd->toptexture = R_TextureNumForName(msd->toptexture);
+                sd->missingtoptexture = (R_CheckTextureNumForName(msd->toptexture) == -1);
                 sd->bottomtexture = R_TextureNumForName(msd->bottomtexture);
+                sd->missingbottomtexture = (R_CheckTextureNumForName(msd->bottomtexture) == -1);
                 break;
         }
     }
@@ -1560,8 +1563,7 @@ static void P_CreateBlockMap(void)
 
                 // Increase size of allocated list if necessary
                 if (bp->n >= bp->nalloc)
-                    bp->list = I_Realloc(bp->list, (bp->nalloc = bp->nalloc ? bp->nalloc * 2 : 8)
-                        * sizeof(*bp->list));
+                    bp->list = I_Realloc(bp->list, (bp->nalloc = bp->nalloc ? bp->nalloc * 2 : 8) * sizeof(*bp->list));
 
                 // Add linedef to end of list
                 bp->list[bp->n++] = i;
@@ -1962,8 +1964,8 @@ void P_MapName(int ep, int map)
     switch (gamemission)
     {
         case doom:
-            M_snprintf(mapnum, sizeof(mapnum), "E%iM%i%s", ep, map, ((E1M4B && ep == 1 && map == 4)
-                || (E1M8B && ep == 1 && map == 8) ? "B" : ""));
+            M_snprintf(mapnum, sizeof(mapnum), "E%iM%i%s", ep, map,
+                ((E1M4B && ep == 1 && map == 4) || (E1M8B && ep == 1 && map == 8) ? "B" : ""));
 
             if (*mapinfoname)
                 M_snprintf(maptitle, sizeof(maptitle), "%s: %s", mapnum, mapinfoname);
@@ -2185,7 +2187,7 @@ void P_SetupLevel(int ep, int map)
         || (nerve && gamemission == doom2)) && !FREEDOOM);
 
     leveltime = 0;
-    animatedliquiddiff = FRACUNIT;
+    animatedliquiddiff = FRACUNIT * 2;
     animatedliquidxdir = M_RandomInt(-1, 1) * FRACUNIT / 12;
     animatedliquidydir = M_RandomInt(-1, 1) * FRACUNIT / 12;
 
@@ -2402,7 +2404,7 @@ static void InitMapInfo(void)
 
                         case MCMD_NEXT:
                         {
-                            int nextepisode = -1;
+                            int nextepisode = 1;
                             int nextmap = -1;
 
                             SC_MustGetString();
@@ -2414,7 +2416,6 @@ static void InitMapInfo(void)
 
                                 if (gamemode == commercial)
                                 {
-                                    nextepisode = 1;
                                     sscanf(mapnum, "MAP0%1i", &nextmap);
 
                                     if (nextmap == -1)
@@ -2463,7 +2464,7 @@ static void InitMapInfo(void)
 
                         case MCMD_SECRETNEXT:
                         {
-                            int nextepisode = -1;
+                            int nextepisode = 1;
                             int nextmap = -1;
 
                             SC_MustGetString();
@@ -2475,7 +2476,6 @@ static void InitMapInfo(void)
 
                                 if (gamemode == commercial)
                                 {
-                                    nextepisode = 1;
                                     sscanf(mapnum, "MAP0%1i", &nextmap);
 
                                     if (nextmap == -1)
@@ -2492,8 +2492,10 @@ static void InitMapInfo(void)
                         case MCMD_SKY1:
                             SC_MustGetString();
                             info->sky1texture = R_TextureNumForName(sc_String);
-                            SC_MustGetNumber();
-                            info->sky1scrolldelta = sc_Number << 8;
+
+                            if (SC_GetNumber())
+                                info->sky1scrolldelta = sc_Number << 8;
+
                             break;
 
                         case MCMD_TITLEPATCH:

@@ -657,9 +657,9 @@ void P_MobjThinker(mobj_t *mobj)
 void P_SetShadowColumnFunction(mobj_t *mobj)
 {
     if (r_shadows_translucency)
-        mobj->shadowcolfunc = ((mobj->flags & MF_FUZZ) ? R_DrawFuzzyShadowColumn : R_DrawShadowColumn);
+        mobj->shadowcolfunc = ((mobj->flags & MF_FUZZ) && r_textures ? R_DrawFuzzyShadowColumn : R_DrawShadowColumn);
     else
-        mobj->shadowcolfunc = ((mobj->flags & MF_FUZZ) ? R_DrawSolidFuzzyShadowColumn : R_DrawSolidShadowColumn);
+        mobj->shadowcolfunc = ((mobj->flags & MF_FUZZ) && r_textures ? R_DrawSolidFuzzyShadowColumn : R_DrawSolidShadowColumn);
 }
 
 //
@@ -672,6 +672,7 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
     mobjinfo_t  *info = &mobjinfo[type];
     sector_t    *sector;
     static int  prevx, prevy;
+    static int  prevbob;
     int         height = (z == ONCEILINGZ && type != MT_KEEN && info->projectilepassheight ?
                     info->projectilepassheight : info->height);
 
@@ -727,16 +728,11 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 
     sector = mobj->subsector->sector;
     mobj->dropoffz =           // killough 11/98: for tracking dropoffs
-    mobj->floorz = sector->interpfloorheight;
-    mobj->ceilingz = sector->interpceilingheight;
+    mobj->floorz = sector->floorheight;
+    mobj->ceilingz = sector->ceilingheight;
 
     // [BH] initialize bobbing things
-    if (!(mobj->flags2 & MF2_NOLIQUIDBOB))
-    {
-        static int  prevbob;
-
-        mobj->floatbob = prevbob = (x == prevx && y == prevy ? prevbob : M_Random());
-    }
+    mobj->floatbob = prevbob = (x == prevx && y == prevy ? prevbob : M_Random());
 
     mobj->z = (z == ONFLOORZ ? mobj->floorz : (z == ONCEILINGZ ? mobj->ceilingz - mobj->height : z));
 
@@ -748,7 +744,7 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
     mobj->thinker.function = (type == MT_MUSICSOURCE ? MusInfoThinker : P_MobjThinker);
     P_AddThinker(&mobj->thinker);
 
-    if (!(mobj->flags2 & MF2_NOFOOTCLIP) && sector->isliquid && !sector->heightsec)
+    if (!(mobj->flags & MF_SPAWNCEILING) && !(mobj->flags2 & MF2_NOFOOTCLIP) && sector->isliquid && !sector->heightsec)
         mobj->flags2 |= MF2_FEETARECLIPPED;
 
     prevx = x;
@@ -1016,6 +1012,9 @@ mobj_t *P_SpawnMapThing(mapthing_t *mthing, int index, dboolean nomonsters)
     else
         bit = 1 << (gameskill - 1);
 
+    if (!(mthing->options & (MTF_EASY | MTF_NORMAL | MTF_HARD)))
+        C_Warning("Thing %i at (%i,%i) has no skill flags set.", index, mthing->x, mthing->y);
+
     if (!(mthing->options & bit))
         return NULL;
 
@@ -1276,8 +1275,7 @@ void P_SpawnBloodSplat(fixed_t x, fixed_t y, int blood, int maxheight, mobj_t *t
     {
         sector_t    *sec = R_PointInSubsector(x, y)->sector;
 
-        if (!sec->isliquid && sec->interpfloorheight <= maxheight
-            && sec->interpfloorheight != sec->interpceilingheight && sec->floorpic != skyflatnum)
+        if (!sec->isliquid && sec->interpfloorheight <= maxheight && sec->floorpic != skyflatnum)
         {
             bloodsplat_t    *splat = malloc(sizeof(*splat));
             int             patch = firstbloodsplatlump + (M_Random() & 7);

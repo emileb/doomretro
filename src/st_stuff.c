@@ -117,7 +117,6 @@
 #define ST_ARMSX            111
 #define ST_ARMSY            172
 #define ST_ARMSBGX          104
-#define ST_ARMSBGY          168
 #define ST_ARMSXSPACE       12
 #define ST_ARMSYSPACE       10
 
@@ -206,10 +205,6 @@ static st_number_t          w_ready;
 // health widget
 static st_percent_t         w_health;
 
-// arms background
-static st_binicon_t         w_armsbg;
-static st_binicon_t         w_armsbg2;
-
 // weapon ownership widgets
 static st_multicon_t        w_arms[6];
 
@@ -249,6 +244,8 @@ int                         st_facecount;
 
 // current face index, used by w_faces
 int                         st_faceindex;
+
+static dboolean             shotguns;
 
 // holds key-type for each key box on bar
 static int                  keyboxes[3];
@@ -397,9 +394,15 @@ static void ST_refreshBackground(void)
     if (st_statusbaron)
     {
         if (STBAR >= 3 || r_detail == r_detail_low)
+        {
             V_DrawPatch(ST_X, 0, 4, sbar);
+            V_DrawPatch(ST_ARMSBGX + hacx * 4, 0, 4, armsbg);
+        }
         else
+        {
             V_DrawBigPatch(ST_X, 0, 4, sbar2);
+            V_DrawBigPatch(ST_ARMSBGX * 2, 0, 4, armsbg2);
+        }
 
         V_CopyRect(ST_X, 0, 4, ST_WIDTH, SBARHEIGHT, ST_X, ST_Y, 0);
     }
@@ -525,7 +528,8 @@ dboolean ST_Responder(event_t *ev)
                 ammogiven = P_GiveFullAmmo(false);
 
                 // [BH] show evil grin if player was given any new weapons
-                if (weaponsgiven && !(viewplayer->cheats & CF_GODMODE) && !viewplayer->powers[pw_invulnerability])
+                if (weaponsgiven && !(viewplayer->cheats & CF_GODMODE) && !viewplayer->powers[pw_invulnerability]
+                    && (!vid_widescreen || (r_hud && !r_althud)))
                 {
                     st_facecount = ST_EVILGRINCOUNT;
                     st_faceindex = ST_calcPainOffset() + ST_EVILGRINOFFSET;
@@ -585,10 +589,11 @@ dboolean ST_Responder(event_t *ev)
 
                 // [BH] only give the player the keycards or skull keys from the
                 //  current level, and note if any keys given
-                keysgiven = P_GiveAllCards();
+                keysgiven = P_GiveAllCardsInMap();
 
                 // [BH] show evil grin if player was given any new weapons
-                if (weaponsgiven && !(viewplayer->cheats & CF_GODMODE) && !viewplayer->powers[pw_invulnerability])
+                if (weaponsgiven && !(viewplayer->cheats & CF_GODMODE) && !viewplayer->powers[pw_invulnerability]
+                    && (!vid_widescreen || (r_hud && !r_althud)))
                 {
                     st_facecount = ST_EVILGRINCOUNT;
                     st_faceindex = ST_calcPainOffset() + ST_EVILGRINOFFSET;
@@ -1241,29 +1246,32 @@ static void ST_updateWidgets(void)
     {
         keyboxes[i] = (viewplayer->cards[i] > 0 ? i : -1);
 
-        if (viewplayer->cards[i + 3] > 0 && viewplayer->cards[i + 3] < viewplayer->cards[i])
+        if (viewplayer->cards[i + 3] > 0 && viewplayer->cards[i + 3] > viewplayer->cards[i])
             keyboxes[i] = i + 3;
     }
 
     // refresh everything if this is him coming back to life
     // [BH] but only if not paused and no menu
-    if (!paused && !menuactive && !consoleactive)
+    if (!freeze && !paused && !menuactive && !consoleactive)
         ST_updateFaceWidget();
 }
 
 void ST_Ticker(void)
 {
-    st_randomnumber = M_Random();
-
-    if (!vid_widescreen)
+    if (!freeze)
     {
-        ST_updateWidgets();
-        st_oldhealth = viewplayer->health;
-    }
-    else if (r_hud && !r_althud && !paused && !menuactive && !consoleactive)
-    {
-        ST_updateFaceWidget();
-        st_oldhealth = viewplayer->health;
+        if (!vid_widescreen)
+        {
+            st_randomnumber = M_Random();
+            ST_updateWidgets();
+            st_oldhealth = viewplayer->health;
+        }
+        else if (r_hud && !r_althud && !paused && !menuactive && !consoleactive)
+        {
+            st_randomnumber = M_Random();
+            ST_updateFaceWidget();
+            st_oldhealth = viewplayer->health;
+        }
     }
 
     // [BH] action the IDCLEV cheat after a small delay to allow its player message to display
@@ -1326,10 +1334,7 @@ static void ST_drawWidgets(dboolean refresh)
     STlib_updatePercent(&w_health, refresh);
     STlib_updatePercent(&w_armor, refresh);
 
-    if (STBAR >= 3 || r_detail == r_detail_low)
-        STlib_updateBinIcon(&w_armsbg, refresh);
-    else
-        STlib_updateBigBinIcon(&w_armsbg2, refresh);
+    shotguns = (viewplayer->weaponowned[wp_shotgun] || viewplayer->weaponowned[wp_supershotgun]);
 
     // [BH] manually draw arms numbers
     //  changes:
@@ -1538,55 +1543,45 @@ static void ST_createWidgets(void)
 {
     // ready weapon ammo
     STlib_initNum(&w_ready, ST_AMMOX, ST_AMMOY + (STBAR != 2 && !BTSX), tallnum,
-        &viewplayer->ammo[weaponinfo[viewplayer->readyweapon].ammotype], &st_statusbaron, ST_AMMOWIDTH);
+        &viewplayer->ammo[weaponinfo[viewplayer->readyweapon].ammotype], ST_AMMOWIDTH);
 
     // the last weapon type
     w_ready.data = viewplayer->readyweapon;
 
     // health percentage
-    STlib_initPercent(&w_health, ST_HEALTHX, ST_HEALTHY + (STBAR != 2 && !BTSX), tallnum, &viewplayer->health,
-        &st_statusbaron, tallpercent);
-
-    // arms background
-    STlib_initBinIcon(&w_armsbg, ST_ARMSBGX + hacx * 4, ST_ARMSBGY, armsbg, &st_statusbaron, &st_statusbaron);
-    STlib_initBinIcon(&w_armsbg2, ST_ARMSBGX * 2, ST_ARMSBGY * 2, armsbg2, &st_statusbaron, &st_statusbaron);
+    STlib_initPercent(&w_health, ST_HEALTHX, ST_HEALTHY + (STBAR != 2 && !BTSX), tallnum, &viewplayer->health, tallpercent);
 
     // weapons owned
     armsnum = (gamemode == shareware ? 4 : 6);
 
     for (int i = 0; i < armsnum; i++)
         STlib_initMultIcon(&w_arms[i], ST_ARMSX + (i % 3) * ST_ARMSXSPACE, ST_ARMSY + i / 3 * ST_ARMSYSPACE,
-            arms[i], (i == 1 ? &viewplayer->shotguns : &viewplayer->weaponowned[i + 1]), &st_statusbaron);
+            arms[i], (i == 1 ? (int *)&shotguns : &viewplayer->weaponowned[i + 1]));
 
     // faces
-    STlib_initMultIcon(&w_faces, ST_FACESX, ST_FACESY, faces, &st_faceindex, &st_statusbaron);
+    STlib_initMultIcon(&w_faces, ST_FACESX, ST_FACESY, faces, &st_faceindex);
 
     // armor percentage
-    STlib_initPercent(&w_armor, ST_ARMORX, ST_ARMORY + (STBAR != 2 && !BTSX), tallnum, &viewplayer->armorpoints,
-        &st_statusbaron, tallpercent);
+    STlib_initPercent(&w_armor, ST_ARMORX, ST_ARMORY + (STBAR != 2 && !BTSX), tallnum, &viewplayer->armorpoints, tallpercent);
 
     // keyboxes 0-2
-    STlib_initMultIcon(&w_keyboxes[0], ST_KEY0X + (STBAR >= 3), ST_KEY0Y, keys, &keyboxes[0], &st_statusbaron);
-    STlib_initMultIcon(&w_keyboxes[1], ST_KEY1X + (STBAR >= 3), ST_KEY1Y, keys, &keyboxes[1], &st_statusbaron);
-    STlib_initMultIcon(&w_keyboxes[2], ST_KEY2X + (STBAR >= 3), ST_KEY2Y, keys, &keyboxes[2], &st_statusbaron);
+    STlib_initMultIcon(&w_keyboxes[0], ST_KEY0X + (STBAR >= 3), ST_KEY0Y, keys, &keyboxes[0]);
+    STlib_initMultIcon(&w_keyboxes[1], ST_KEY1X + (STBAR >= 3), ST_KEY1Y, keys, &keyboxes[1]);
+    STlib_initMultIcon(&w_keyboxes[2], ST_KEY2X + (STBAR >= 3), ST_KEY2Y, keys, &keyboxes[2]);
 
     usesmallnums = ((!STYSNUM0 && STBAR == 2) || gamemode == shareware);
 
     // ammo count (all four kinds)
-    STlib_initNum(&w_ammo[0], ST_AMMO0X, ST_AMMO0Y, shortnum, &viewplayer->ammo[0], &st_statusbaron, ST_AMMO0WIDTH);
-    STlib_initNum(&w_ammo[1], ST_AMMO1X, ST_AMMO1Y, shortnum, &viewplayer->ammo[1], &st_statusbaron, ST_AMMO1WIDTH);
-    STlib_initNum(&w_ammo[2], ST_AMMO2X, ST_AMMO2Y, shortnum, &viewplayer->ammo[2], &st_statusbaron, ST_AMMO2WIDTH);
-    STlib_initNum(&w_ammo[3], ST_AMMO3X, ST_AMMO3Y, shortnum, &viewplayer->ammo[3], &st_statusbaron, ST_AMMO3WIDTH);
+    STlib_initNum(&w_ammo[am_clip], ST_AMMO0X, ST_AMMO0Y, shortnum, &viewplayer->ammo[am_clip], ST_AMMO0WIDTH);
+    STlib_initNum(&w_ammo[am_shell], ST_AMMO1X, ST_AMMO1Y, shortnum, &viewplayer->ammo[am_shell], ST_AMMO1WIDTH);
+    STlib_initNum(&w_ammo[am_cell], ST_AMMO2X, ST_AMMO2Y, shortnum, &viewplayer->ammo[am_cell], ST_AMMO2WIDTH);
+    STlib_initNum(&w_ammo[am_misl], ST_AMMO3X, ST_AMMO3Y, shortnum, &viewplayer->ammo[am_misl], ST_AMMO3WIDTH);
 
     // max ammo count (all four kinds)
-    STlib_initNum(&w_maxammo[0], ST_MAXAMMO0X, ST_MAXAMMO0Y, shortnum, &viewplayer->maxammo[0], &st_statusbaron,
-        ST_MAXAMMO0WIDTH);
-    STlib_initNum(&w_maxammo[1], ST_MAXAMMO1X, ST_MAXAMMO1Y, shortnum, &viewplayer->maxammo[1], &st_statusbaron,
-        ST_MAXAMMO1WIDTH);
-    STlib_initNum(&w_maxammo[2], ST_MAXAMMO2X, ST_MAXAMMO2Y, shortnum, &viewplayer->maxammo[2], &st_statusbaron,
-        ST_MAXAMMO2WIDTH);
-    STlib_initNum(&w_maxammo[3], ST_MAXAMMO3X, ST_MAXAMMO3Y, shortnum, &viewplayer->maxammo[3], &st_statusbaron,
-        ST_MAXAMMO3WIDTH);
+    STlib_initNum(&w_maxammo[am_clip], ST_MAXAMMO0X, ST_MAXAMMO0Y, shortnum, &viewplayer->maxammo[am_clip], ST_MAXAMMO0WIDTH);
+    STlib_initNum(&w_maxammo[am_shell], ST_MAXAMMO1X, ST_MAXAMMO1Y, shortnum, &viewplayer->maxammo[am_shell], ST_MAXAMMO1WIDTH);
+    STlib_initNum(&w_maxammo[am_cell], ST_MAXAMMO2X, ST_MAXAMMO2Y, shortnum, &viewplayer->maxammo[am_cell], ST_MAXAMMO2WIDTH);
+    STlib_initNum(&w_maxammo[am_misl], ST_MAXAMMO3X, ST_MAXAMMO3Y, shortnum, &viewplayer->maxammo[am_misl], ST_MAXAMMO3WIDTH);
 }
 
 static dboolean st_stopped = true;

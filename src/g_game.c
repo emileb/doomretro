@@ -486,7 +486,6 @@ static void G_ResetPlayer(void)
     viewplayer->armortype = NOARMOR;
     viewplayer->preferredshotgun = wp_shotgun;
     viewplayer->fistorchainsaw = wp_fist;
-    viewplayer->shotguns = false;
     memset(viewplayer->weaponowned, false, sizeof(viewplayer->weaponowned));
     memset(viewplayer->ammo, false, sizeof(viewplayer->ammo));
     G_SetInitialWeapon();
@@ -503,9 +502,6 @@ void G_DoLoadLevel(void)
     char    *author = P_GetMapAuthor(map);
 
     HU_DrawDisk();
-
-    R_InitSkyMap();
-    R_InitColumnFunctions();
 
     if (timer)
         countdown = timer * 60 * TICRATE;
@@ -567,6 +563,9 @@ void G_DoLoadLevel(void)
         C_Print(titlestring, mapnumandtitle);
 
     P_SetupLevel(ep, gamemap);
+
+    R_InitSkyMap();
+    R_InitColumnFunctions();
 
     st_facecount = 0;
 
@@ -916,6 +915,7 @@ void G_Ticker(void)
                 {
                     HU_ClearMessages();
                     D_Display();
+                    D_Display();
                 }
 
                 G_DoScreenShot();
@@ -938,9 +938,7 @@ void G_Ticker(void)
         switch (viewplayer->cmd.buttons & BT_SPECIALMASK)
         {
             case BTS_PAUSE:
-                paused ^= 1;
-
-                if (paused)
+                if ((paused = !paused))
                 {
                     S_PauseSound();
 
@@ -968,6 +966,7 @@ void G_Ticker(void)
 
                     I_SetPalette((byte *)W_CacheLumpName("PLAYPAL") + st_palette * 768);
                 }
+
                 break;
 
             case BTS_SAVEGAME:
@@ -975,6 +974,8 @@ void G_Ticker(void)
                 gameaction = ga_savegame;
                 break;
         }
+
+        viewplayer->cmd.buttons = 0;
     }
 
     // Have we just finished displaying an intermission screen?
@@ -1061,7 +1062,6 @@ void G_PlayerReborn(void)
     viewplayer->health = initial_health;
     viewplayer->preferredshotgun = wp_shotgun;
     viewplayer->fistorchainsaw = wp_fist;
-    viewplayer->shotguns = false;
 
     G_SetInitialWeapon();
 
@@ -1199,12 +1199,11 @@ static void G_DoCompleted(void)
     else if (mapwindow)
         AM_clearFB();
 
-    if (chex)
-        if (gamemap == 5)
-        {
-            gameaction = ga_victory;
-            return;
-        }
+    if (chex && gamemap == 5)
+    {
+        gameaction = ga_victory;
+        return;
+    }
 
     if (gamemode != commercial)
     {
@@ -1441,11 +1440,15 @@ void G_DoLoadGame(void)
     gameaction = ga_nothing;
 
     if (!(save_stream = fopen(savename, "rb")))
+    {
+        C_Warning("<b>%s</b> couldn't be found.", savename);
         return;
+    }
 
     if (!P_ReadSaveGameHeader(savedescription))
     {
         fclose(save_stream);
+        C_Warning("<b>%s</b> isn't a valid savegame.", savename);
         return;
     }
 

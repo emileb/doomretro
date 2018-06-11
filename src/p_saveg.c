@@ -50,8 +50,16 @@
 #include "z_zone.h"
 
 #define SAVEGAME_EOF    0x1D
+#define TARGETLIMIT     4192
 
-FILE    *save_stream;
+FILE        *save_stream;
+
+static int  thingindex;
+static int  targets[TARGETLIMIT];
+static int  tracers[TARGETLIMIT];
+static int  lastenemies[TARGETLIMIT];
+static int  soundtargets[TARGETLIMIT];
+static int  attacker;
 
 // Get the filename of a temporary file to write the savegame to. After
 // the file has been successfully saved, it will be renamed to the
@@ -155,23 +163,12 @@ static void saveg_write_pad(void)
         saveg_write8(0);
 }
 
-// Pointers
-static void *saveg_readp(void)
-{
-    return (void *)(intptr_t)saveg_read32();
-}
-
-static void saveg_writep(void *p)
-{
-    saveg_write32((intptr_t)p);
-}
-
 // Enum values are 32-bit integers.
 #define saveg_read_enum     saveg_read32
 #define saveg_write_enum    saveg_write32
 
-#define saveg_read_bool     saveg_read32
-#define saveg_write_bool    saveg_write32
+#define saveg_read_bool     saveg_read8
+#define saveg_write_bool    saveg_write8
 
 //
 // Structure read/write functions
@@ -198,9 +195,9 @@ static void saveg_write_mapthing_t(mapthing_t *str)
     saveg_write16(str->options);
 }
 
-static uintptr_t P_ThingToIndex(mobj_t *thing)
+static int P_ThingToIndex(mobj_t *thing)
 {
-    uintptr_t   i = 0;
+    int i = 0;
 
     if (!thing)
         return 0;
@@ -216,9 +213,9 @@ static uintptr_t P_ThingToIndex(mobj_t *thing)
     return 0;
 }
 
-static mobj_t *P_IndexToThing(uintptr_t index)
+static mobj_t *P_IndexToThing(int index)
 {
-    uintptr_t   i = 0;
+    int i = 0;
 
     if (!index)
         return NULL;
@@ -257,7 +254,7 @@ static void saveg_read_mobj_t(mobj_t *str)
     str->health = saveg_read32();
     str->movedir = saveg_read32();
     str->movecount = saveg_read32();
-    str->target = (mobj_t *)saveg_readp();
+    targets[thingindex] = saveg_read32();
     str->reactiontime = saveg_read32();
     str->threshold = saveg_read32();
 
@@ -266,15 +263,12 @@ static void saveg_read_mobj_t(mobj_t *str)
         str->player = viewplayer;
         str->player->mo = str;
     }
-    else
-        str->player = NULL;
 
     saveg_read_mapthing_t(&str->spawnpoint);
-    str->tracer = (mobj_t *)saveg_readp();
-    str->lastenemy = (mobj_t *)saveg_readp();
+    tracers[thingindex] = saveg_read32();
+    lastenemies[thingindex] = saveg_read32();
     str->floatbob = saveg_read32();
     str->shadowoffset = saveg_read32();
-    str->touching_sectorlist = NULL;
     str->gear = saveg_read16();
     str->bloodsplats = saveg_read32();
     str->blood = saveg_read32();
@@ -312,13 +306,13 @@ static void saveg_write_mobj_t(mobj_t *str)
     saveg_write32(str->health);
     saveg_write32(str->movedir);
     saveg_write32(str->movecount);
-    saveg_writep((void *)P_ThingToIndex(str->target));
+    saveg_write32(P_ThingToIndex(str->target));
     saveg_write32(str->reactiontime);
     saveg_write32(str->threshold);
     saveg_write_bool(!!str->player);
     saveg_write_mapthing_t(&str->spawnpoint);
-    saveg_writep((void *)P_ThingToIndex(str->tracer));
-    saveg_writep((void *)P_ThingToIndex(str->lastenemy));
+    saveg_write32(P_ThingToIndex(str->tracer));
+    saveg_write32(P_ThingToIndex(str->lastenemy));
     saveg_write32(str->floatbob);
     saveg_write32(str->shadowoffset);
     saveg_write16(str->gear);
@@ -379,9 +373,9 @@ static void saveg_write_ticcmd_t(ticcmd_t *str)
 //
 static void saveg_read_pspdef_t(pspdef_t *str)
 {
-    int state = saveg_read32();
+    int state;
 
-    str->state = (state > 0 ? &states[state] : NULL);
+    str->state = ((state = saveg_read32()) > 0 ? &states[state] : NULL);
     str->tics = saveg_read32();
     str->sx = saveg_read32();
     str->sy = saveg_read32();
@@ -403,7 +397,6 @@ extern int cardsfound;
 //
 static void saveg_read_player_t(void)
 {
-    viewplayer->mo = (mobj_t *)saveg_readp();
     viewplayer->playerstate = (playerstate_t)saveg_read_enum();
     saveg_read_ticcmd_t(&viewplayer->cmd);
     viewplayer->viewz = saveg_read32();
@@ -434,8 +427,6 @@ static void saveg_read_player_t(void)
     for (int i = 0; i < NUMWEAPONS; i++)
         viewplayer->weaponowned[i] = saveg_read32();
 
-    viewplayer->shotguns = (viewplayer->weaponowned[wp_shotgun] || viewplayer->weaponowned[wp_supershotgun]);
-
     for (int i = 0; i < NUMAMMO; i++)
         viewplayer->ammo[i] = saveg_read32();
 
@@ -449,19 +440,15 @@ static void saveg_read_player_t(void)
     viewplayer->killcount = saveg_read32();
     viewplayer->itemcount = saveg_read32();
     viewplayer->secretcount = saveg_read32();
-    viewplayer->message = (char *)saveg_readp();
     viewplayer->damagecount = saveg_read32();
     viewplayer->bonuscount = saveg_read32();
-    viewplayer->attacker = (mobj_t *)saveg_readp();
+    attacker = saveg_read32();
     viewplayer->extralight = saveg_read32();
     viewplayer->fixedcolormap = saveg_read32();
-
-    for (int i = 0; i < NUMPSPRITES; i++)
-        saveg_read_pspdef_t(&viewplayer->psprites[i]);
-
+    saveg_read_pspdef_t(&viewplayer->psprites[ps_weapon]);
+    saveg_read_pspdef_t(&viewplayer->psprites[ps_flash]);
     viewplayer->didsecret = saveg_read_bool();
     viewplayer->preferredshotgun = (weapontype_t)saveg_read_enum();
-    viewplayer->shotguns = saveg_read32();
     viewplayer->fistorchainsaw = (weapontype_t)saveg_read_enum();
     viewplayer->invulnbeforechoppers = saveg_read_bool();
     viewplayer->chainsawbeforechoppers = saveg_read_bool();
@@ -501,7 +488,6 @@ static void saveg_read_player_t(void)
 
 static void saveg_write_player_t(void)
 {
-    saveg_writep(viewplayer->mo);
     saveg_write_enum(viewplayer->playerstate);
     saveg_write_ticcmd_t(&viewplayer->cmd);
     saveg_write32(viewplayer->viewz);
@@ -542,19 +528,15 @@ static void saveg_write_player_t(void)
     saveg_write32(viewplayer->killcount);
     saveg_write32(viewplayer->itemcount);
     saveg_write32(viewplayer->secretcount);
-    saveg_writep(viewplayer->message);
     saveg_write32(viewplayer->damagecount);
     saveg_write32(viewplayer->bonuscount);
-    saveg_writep((void *)P_ThingToIndex(viewplayer->attacker));
+    saveg_write32(P_ThingToIndex(viewplayer->attacker));
     saveg_write32(viewplayer->extralight);
     saveg_write32(viewplayer->fixedcolormap);
-
-    for (int i = 0; i < NUMPSPRITES; i++)
-        saveg_write_pspdef_t(&viewplayer->psprites[i]);
-
+    saveg_write_pspdef_t(&viewplayer->psprites[ps_weapon]);
+    saveg_write_pspdef_t(&viewplayer->psprites[ps_flash]);
     saveg_write_bool(viewplayer->didsecret);
     saveg_write_enum(viewplayer->preferredshotgun);
-    saveg_write32(viewplayer->shotguns);
     saveg_write32(viewplayer->fistorchainsaw);
     saveg_write_bool(viewplayer->invulnbeforechoppers);
     saveg_write_bool(viewplayer->chainsawbeforechoppers);
@@ -623,6 +605,8 @@ static void saveg_write_ceiling_t(ceiling_t *str)
 //
 static void saveg_read_vldoor_t(vldoor_t *str)
 {
+    int line;
+
     str->type = (vldoor_e)saveg_read_enum();
     str->sector = sectors + saveg_read32();
     str->topheight = saveg_read32();
@@ -630,7 +614,7 @@ static void saveg_read_vldoor_t(vldoor_t *str)
     str->direction = saveg_read32();
     str->topwait = saveg_read32();
     str->topcountdown = saveg_read32();
-    str->line = lines + saveg_read32();
+    str->line = ((line = saveg_read32()) >= 0 ? lines + line : NULL);
     str->lighttag = saveg_read32();
 }
 
@@ -643,7 +627,7 @@ static void saveg_write_vldoor_t(vldoor_t *str)
     saveg_write32(str->direction);
     saveg_write32(str->topwait);
     saveg_write32(str->topcountdown);
-    saveg_write32(str->line->id);
+    saveg_write32(str->line ? str->line->id : -1);
     saveg_write32(str->lighttag);
 }
 
@@ -864,7 +848,9 @@ static void saveg_write_pusher_t(pusher_t *str)
 
 static void saveg_read_button_t(button_t *str)
 {
-    str->line = lines + saveg_read32();
+    int line;
+
+    str->line = ((line = saveg_read32()) >= 0 ? lines + line : NULL);
     str->where = (bwhere_e)saveg_read_enum();
     str->btexture = saveg_read32();
     str->btimer = saveg_read32();
@@ -872,7 +858,7 @@ static void saveg_read_button_t(button_t *str)
 
 static void saveg_write_button_t(button_t *str)
 {
-    saveg_write32(str->line->id);
+    saveg_write32((str->line ? str->line->id : -1));
     saveg_write_enum(str->where);
     saveg_write32(str->btexture);
     saveg_write32(str->btimer);
@@ -1000,7 +986,7 @@ void P_ArchiveWorld(void)
         saveg_write16(sec->lightlevel);
         saveg_write16(sec->special);
         saveg_write16(sec->tag);
-        saveg_writep((void *)P_ThingToIndex(sec->soundtarget));
+        saveg_write32(P_ThingToIndex(sec->soundtarget));
     }
 
     // do lines
@@ -1024,6 +1010,9 @@ void P_ArchiveWorld(void)
             saveg_write16(si->toptexture);
             saveg_write16(si->bottomtexture);
             saveg_write16(si->midtexture);
+            saveg_write_bool(si->missingtoptexture);
+            saveg_write_bool(si->missingbottomtexture);
+            saveg_write_bool(si->missingmidtexture);
         }
     }
 }
@@ -1049,7 +1038,7 @@ void P_UnArchiveWorld(void)
         sec->ceilingdata = NULL;
         sec->floordata = NULL;
         sec->lightingdata = NULL;
-        sec->soundtarget = (mobj_t *)saveg_readp();
+        soundtargets[MIN(i, TARGETLIMIT - 1)] = saveg_read32();
         sec->isliquid = isliquid[sec->floorpic];
     }
 
@@ -1074,6 +1063,9 @@ void P_UnArchiveWorld(void)
             si->toptexture = saveg_read16();
             si->bottomtexture = saveg_read16();
             si->midtexture = saveg_read16();
+            si->missingtoptexture = saveg_read_bool();
+            si->missingbottomtexture = saveg_read_bool();
+            si->missingmidtexture = saveg_read_bool();
         }
     }
 
@@ -1129,12 +1121,11 @@ static void P_SetNewTarget(mobj_t **mop, mobj_t *targ)
 void P_UnArchiveThinkers(void)
 {
     thinker_t   *currentthinker = thinkercap.next;
-    thinker_t   *next;
 
     // remove all the current thinkers
     while (currentthinker != &thinkercap)
     {
-        next = currentthinker->next;
+        thinker_t   *next = currentthinker->next;
 
         if (currentthinker->function == P_MobjThinker || currentthinker->function == MusInfoThinker)
         {
@@ -1164,6 +1155,7 @@ void P_UnArchiveThinkers(void)
     }
 
     r_bloodsplats_total = 0;
+    thingindex = 0;
 
     // read in saved thinkers
     while (1)
@@ -1190,6 +1182,7 @@ void P_UnArchiveThinkers(void)
                 mobj->altcolfunc = mobj->info->altcolfunc;
                 P_SetShadowColumnFunction(mobj);
                 P_AddThinker(&mobj->thinker);
+                thingindex = MIN(thingindex + 1, TARGETLIMIT - 1);
                 break;
             }
 
@@ -1213,7 +1206,7 @@ void P_UnArchiveThinkers(void)
             }
 
             default:
-                I_Error("P_UnArchiveThinkers: Unknown tclass %i in savegame", tclass);
+                I_Error("This savegame is invalid.");
         }
     }
 }
@@ -1221,20 +1214,24 @@ void P_UnArchiveThinkers(void)
 void P_RestoreTargets(void)
 {
     sector_t    *sec = sectors;
+    int         targetlimit = MIN(numsectors, TARGETLIMIT - 1);
 
-    for (int i = 0; i < numsectors; i++, sec++)
-        P_SetNewTarget(&sec->soundtarget, P_IndexToThing((uintptr_t)sec->soundtarget));
+    P_SetNewTarget(&viewplayer->attacker, P_IndexToThing(attacker));
+
+    for (int i = 0; i < targetlimit; i++, sec++)
+        P_SetNewTarget(&sec->soundtarget, P_IndexToThing(soundtargets[i]));
+
+    thingindex = 0;
 
     for (thinker_t *th = thinkerclasscap[th_mobj].cnext; th != &thinkerclasscap[th_mobj]; th = th->cnext)
     {
         mobj_t  *mo = (mobj_t *)th;
 
-        P_SetNewTarget(&mo->target, P_IndexToThing((uintptr_t)mo->target));
-        P_SetNewTarget(&mo->tracer, P_IndexToThing((uintptr_t)mo->tracer));
-        P_SetNewTarget(&mo->lastenemy, P_IndexToThing((uintptr_t)mo->lastenemy));
+        P_SetNewTarget(&mo->target, P_IndexToThing(targets[thingindex]));
+        P_SetNewTarget(&mo->tracer, P_IndexToThing(tracers[thingindex]));
+        P_SetNewTarget(&mo->lastenemy, P_IndexToThing(lastenemies[thingindex]));
+        thingindex = MIN(thingindex + 1, TARGETLIMIT - 1);
     }
-
-    P_SetNewTarget(&viewplayer->attacker, P_IndexToThing((uintptr_t)viewplayer->attacker));
 }
 
 //
@@ -1242,8 +1239,8 @@ void P_RestoreTargets(void)
 //
 void P_ArchiveSpecials(void)
 {
-    int         i;
-    button_t    *button_ptr;
+    int         i = maxbuttons;
+    button_t    *button_ptr = buttonlist;
 
     // save off the current thinkers
     for (thinker_t *th = thinkerclasscap[th_misc].cnext; th != &thinkerclasscap[th_misc]; th = th->cnext)
@@ -1366,9 +1363,6 @@ void P_ArchiveSpecials(void)
         }
     }
 
-    button_ptr = buttonlist;
-    i = MAXBUTTONS;
-
     do
     {
         if (button_ptr->btimer)
@@ -1385,7 +1379,7 @@ void P_ArchiveSpecials(void)
     saveg_write8(tc_endspecials);
 }
 
-void P_StartButton(line_t *line, bwhere_e w, int texture, int time);
+void P_StartButton(line_t *line, bwhere_e where, int texture, int time);
 
 //
 // P_UnArchiveSpecials
@@ -1542,7 +1536,7 @@ void P_UnArchiveSpecials(void)
             }
 
             default:
-                I_Error("P_UnarchiveSpecials: unknown tclass %i in savegame", tclass);
+                I_Error("This savegame is invalid.");
         }
     }
 }
@@ -1554,7 +1548,6 @@ void P_ArchiveMap(void)
 {
     saveg_write_bool(automapactive);
     saveg_write32(markpointnum);
-    saveg_write32(pathpointnum);
 
     if (markpointnum)
         for (int i = 0; i < markpointnum; i++)
@@ -1562,6 +1555,8 @@ void P_ArchiveMap(void)
             saveg_write32(markpoints[i].x);
             saveg_write32(markpoints[i].y);
         }
+
+    saveg_write32(pathpointnum);
 
     if (pathpointnum)
         for (int i = 0; i < pathpointnum; i++)
@@ -1576,20 +1571,12 @@ void P_ArchiveMap(void)
 //
 void P_UnArchiveMap(void)
 {
-    automapactive = saveg_read_bool();
-    markpointnum = saveg_read32();
-    pathpointnum = saveg_read32();
-
-    if (automapactive || mapwindow)
+    if ((automapactive = saveg_read_bool()) || mapwindow)
         AM_Start(automapactive);
 
-    if (markpointnum)
+    if ((markpointnum = saveg_read32()))
     {
-        while (markpointnum >= markpointnum_max)
-        {
-            markpointnum_max = (markpointnum_max ? (markpointnum_max << 1) : 16);
-            markpoints = I_Realloc(markpoints, markpointnum_max * sizeof(*markpoints));
-        }
+        markpoints = I_Realloc(markpoints, markpointnum * sizeof(*markpoints));
 
         for (int i = 0; i < markpointnum; i++)
         {
@@ -1598,13 +1585,9 @@ void P_UnArchiveMap(void)
         }
     }
 
-    if (pathpointnum)
+    if ((pathpointnum = saveg_read32()))
     {
-        while (pathpointnum >= pathpointnum_max)
-        {
-            pathpointnum_max = (pathpointnum_max ? (pathpointnum_max << 1) : 16);
-            pathpoints = I_Realloc(pathpoints, pathpointnum_max * sizeof(*pathpoints));
-        }
+        pathpoints = I_Realloc(pathpoints, pathpointnum * sizeof(*pathpoints));
 
         for (int i = 0; i < pathpointnum; i++)
         {
