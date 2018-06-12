@@ -185,7 +185,7 @@ void PortableAction(int state, int action)
 			PortableKeyEvent(state, SDL_SCANCODE_F9, 0);
 			break;
 		case PORT_ACT_GAMMA:
-			//key = key_menu_gamma;
+			PortableKeyEvent(state, SDL_SCANCODE_F11, 0);
 			break;
 		case PORT_ACT_WEAP1:
 			if( state )
