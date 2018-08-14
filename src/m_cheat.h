@@ -85,5 +85,4 @@ extern cheatseq_t   cheat_clev;
 extern cheatseq_t   cheat_clev_xy;
 extern cheatseq_t   cheat_mypos;
 extern cheatseq_t   cheat_amap;
-
 #endif

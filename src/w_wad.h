@@ -54,17 +54,16 @@
 #define PWAD 2
 
 typedef struct lumpinfo_s lumpinfo_t;
-typedef int lumpindex_t;
 
 struct lumpinfo_s
 {
     char        name[9];
     int         size;
-    void        *data;
+    void        *cache;
 
     // killough 1/31/98: hash table fields, used for ultra-fast hash table lookup
     int         index;
-    lumpindex_t next;
+    int         next;
 
     int         position;
 
@@ -79,18 +78,18 @@ char *GetCorrectCase(char *path);
 wadfile_t *W_AddFile(char *filename, dboolean automatic);
 int W_WadType(char *filename);
 
-lumpindex_t W_CheckNumForName(const char *name);
+int W_CheckNumForName(const char *name);
 
-lumpindex_t W_RangeCheckNumForName(lumpindex_t min, lumpindex_t max, const char *name);
-lumpindex_t W_GetNumForName(const char *name);
-lumpindex_t W_GetNumForName2(const char *name);
+int W_RangeCheckNumForName(int min, int max, const char *name);
+int W_GetNumForName(const char *name);
+int W_GetNumForName2(const char *name);
 
 int W_CheckMultipleLumps(const char *name);
 
-int W_LumpLength(lumpindex_t lump);
-void W_ReadLump(lumpindex_t lump, void *dest);
+int W_LumpLength(int lump);
+void W_ReadLump(int lump, void *dest);
 
-void *W_CacheLumpNum(lumpindex_t lump);
+void *W_CacheLumpNum(int lumpnum);
 
 #define W_CacheLumpName(name)   W_CacheLumpNum(W_GetNumForName(name))
 #define W_CacheLumpName2(name)  W_CacheLumpNum(W_GetNumForName2(name))
@@ -99,9 +98,9 @@ void W_Init(void);
 
 unsigned int W_LumpNameHash(const char *s);
 
-void W_UnlockLumpNum(lumpindex_t lump);
+void W_ReleaseLumpNum(int lumpnum);
 
-#define W_UnlockLumpName(name)  W_UnlockLumpNum(W_GetNumForName(name))
+#define W_ReleaseLumpName(name) W_ReleaseLumpNum(W_GetNumForName(name))
 
 GameMission_t IWADRequiredByPWAD(char *pwadname);
 dboolean HasDehackedLump(const char *pwadname);

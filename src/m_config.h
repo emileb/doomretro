@@ -65,6 +65,7 @@ extern dboolean     autoaim;
 extern dboolean     autoload;
 extern dboolean     autouse;
 extern dboolean     centerweapon;
+extern int          con_backcolor;
 extern dboolean     con_obituaries;
 extern dboolean     con_timestamps;
 extern int          episode;
@@ -96,6 +97,7 @@ extern int          r_bloodsplats_max;
 extern int          r_bloodsplats_total;
 extern dboolean     r_bloodsplats_translucency;
 extern dboolean     r_brightmaps;
+extern int          r_color;
 extern dboolean     r_corpses_color;
 extern dboolean     r_corpses_mirrored;
 extern dboolean     r_corpses_moreblood;
@@ -137,6 +139,7 @@ extern int          s_musicvolume;
 extern dboolean     s_randommusic;
 extern dboolean     s_randompitch;
 extern int          s_sfxvolume;
+extern dboolean     s_stereo;
 extern int          savegame;
 extern int          skilllevel;
 extern unsigned int stat_barrelsexploded;
@@ -268,7 +271,7 @@ enum
 #define am_gridsize_default                     "128x128"
 
 #define am_gridcolor_min                        0
-#define am_gridcolor_default                    7
+#define am_gridcolor_default                    6
 #define am_gridcolor_max                        255
 
 #define am_markcolor_min                        0
@@ -319,13 +322,17 @@ enum
 
 #define centerweapon_default                    true
 
+#define con_backcolor_min                       0
+#define con_backcolor_default                   12
+#define con_backcolor_max                       255
+
 #define con_obituaries_default                  true
 
 #define con_timestamps_default                  true
 
 #define episode_min                             1
 #define episode_default                         1
-#define episode_max                             4
+#define episode_max                             5
 
 #define expansion_min                           1
 #define expansion_default                       1
@@ -380,7 +387,7 @@ enum
 #define m_novertical_default                    true
 
 #define m_sensitivity_min                       0
-#define m_sensitivity_default                   32
+#define m_sensitivity_default                   16
 #define m_sensitivity_max                       128
 
 #define messages_default                        false
@@ -415,6 +422,10 @@ enum
 
 #define r_brightmaps_default                    true
 
+#define r_color_min                             0
+#define r_color_default                         100
+#define r_color_max                             100
+
 #define r_corpses_color_default                 true
 
 #define r_corpses_mirrored_default              true
@@ -444,7 +455,7 @@ enum
 #define r_fov_max                               135
 
 #define r_gamma_min                             gammalevels[0]
-#define r_gamma_default                         0.75f
+#define r_gamma_default                         0.90f
 #define r_gamma_max                             gammalevels[GAMMALEVELS - 1]
 
 #define r_homindicator_default                  false
@@ -514,6 +525,8 @@ enum
 #define s_sfxvolume_default                     100
 #define s_sfxvolume_max                         100
 
+#define s_stereo_default                        true
+
 #define savegame_min                            1
 #define savegame_default                        1
 #define savegame_max                            6
@@ -536,7 +549,7 @@ enum
 
 #define version_default                         PACKAGE_VERSIONSTRING
 
-#define vid_capfps_min                          35
+#define vid_capfps_min                          1
 #define vid_capfps_default                      200
 #define vid_capfps_max                          1000
 
@@ -557,6 +570,9 @@ enum
 #define vid_pillarboxes_default                 false
 
 #define vid_scaleapi_direct3d                   "direct3d"
+#if defined(__MACOSX__)
+#define vid_scaleapi_metal                      "metal"
+#endif
 #define vid_scaleapi_opengl                     "opengl"
 #if !defined(_WIN32)
 #define vid_scaleapi_opengles                   "opengles"
@@ -610,6 +626,7 @@ enum
 #define GAMEPADBACK_DEFAULT                     0
 #define GAMEPADFIRE_DEFAULT                     GAMEPAD_RIGHT_TRIGGER
 #define GAMEPADFORWARD_DEFAULT                  0
+#define GAMEPADJUMP_DEFAULT                     0
 #define GAMEPADLEFT_DEFAULT                     0
 #define GAMEPADMENU_DEFAULT                     GAMEPAD_START
 #define GAMEPADMOUSELOOK_DEFAULT                0
@@ -638,6 +655,7 @@ enum
 #define KEYDOWN_DEFAULT                         KEY_DOWNARROW
 #define KEYDOWN2_DEFAULT                        's'
 #define KEYFIRE_DEFAULT                         KEY_CTRL
+#define KEYJUMP_DEFAULT                         0
 #define KEYLEFT_DEFAULT                         KEY_LEFTARROW
 #define KEYMOUSELOOK_DEFAULT                    0
 #ifdef __ANDROID__
@@ -673,6 +691,7 @@ enum
 
 #define MOUSEFIRE_DEFAULT                       0
 #define MOUSEFORWARD_DEFAULT                    -1
+#define MOUSEJUMP_DEFAULT                       -1
 #define MOUSEMOUSELOOK_DEFAULT                  -1
 #define MOUSENEXTWEAPON_DEFAULT                 MOUSE_WHEELDOWN
 #define MOUSEPREVWEAPON_DEFAULT                 MOUSE_WHEELUP

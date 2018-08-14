@@ -184,10 +184,10 @@ void I_PrintWindowsVersion(void)
             else if (info.dwMajorVersion == 10)
                 infoname = (info.wProductType == VER_NT_WORKSTATION ? "10" : "Server 2016");
 
-            C_Output("Running on %s <i><b>Microsoft Windows %s%s%s%s%ws%s (Build %i)</b></i>.", bits, infoname,
-                (*typename ? " " : ""), (*typename ? typename : ""), (wcslen(info.szCSDVersion) ? " (" : ""),
+            C_Output("Running on %s <i><b>Microsoft Windows %s%s%s%s%ws%s (Build %s)</b></i>.", bits, infoname,
+                (*typename ? " " : ""), typename, (wcslen(info.szCSDVersion) ? " (" : ""),
                 (wcslen(info.szCSDVersion) ? info.szCSDVersion : L""), (wcslen(info.szCSDVersion) ? ")" : ""),
-                info.dwBuildNumber);
+                commify(info.dwBuildNumber));
         }
     }
 }
@@ -197,8 +197,8 @@ void I_PrintSystemInfo(void)
 {
     int cores = SDL_GetCPUCount();
 
-    C_Output("There %s %i logical core%s and %sMB of system RAM.", (cores > 1 ? "are" : "is"), cores,
-        (cores > 1 ? "s" : ""), commify(SDL_GetSystemRAM()));
+    C_Output("There %s %i logical core%s and %sGB of system RAM.", (cores > 1 ? "are" : "is"), cores,
+        (cores > 1 ? "s" : ""), commify(SDL_GetSystemRAM() / 1000));
 }
 
 //

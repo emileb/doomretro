@@ -36,6 +36,7 @@
 ========================================================================
 */
 
+#include "doomstat.h"
 #include "p_local.h"
 #include "p_tick.h"
 #include "s_sound.h"
@@ -115,8 +116,6 @@ dboolean EV_Teleport(line_t *line, int side, mobj_t *thing)
                         player->momx = 0;
                         player->momy = 0;
 
-                        player->lookdir = 0;
-                        player->oldlookdir = 0;
                         player->recoil = 0;
                         player->oldrecoil = 0;
                     }
@@ -234,8 +233,8 @@ dboolean EV_SilentLineTeleport(line_t *line, int side, mobj_t *thing, dboolean r
         if (l != line && l->backsector)
         {
             // Get the thing's position along the source linedef
-            fixed_t     pos = ABS(line->dx) > ABS(line->dy) ? FixedDiv(thing->x - line->v1->x, line->dx) :
-                            FixedDiv(thing->y - line->v1->y, line->dy);
+            fixed_t     pos = (ABS(line->dx) > ABS(line->dy) ? FixedDiv(thing->x - line->v1->x, line->dx) :
+                            FixedDiv(thing->y - line->v1->y, line->dy));
 
             // Get the angle between the two linedefs, for rotating
             // orientation and momentum. Rotate 180 degrees, and flip

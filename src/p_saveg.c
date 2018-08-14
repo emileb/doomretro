@@ -39,6 +39,7 @@
 #include "am_map.h"
 #include "c_console.h"
 #include "doomstat.h"
+#include "g_game.h"
 #include "i_system.h"
 #include "m_config.h"
 #include "m_misc.h"
@@ -358,6 +359,7 @@ static void saveg_read_ticcmd_t(ticcmd_t *str)
     str->sidemove = saveg_read8();
     str->angleturn = saveg_read16();
     str->buttons = saveg_read8();
+    str->lookdir = saveg_read32();
 }
 
 static void saveg_write_ticcmd_t(ticcmd_t *str)
@@ -366,6 +368,7 @@ static void saveg_write_ticcmd_t(ticcmd_t *str)
     saveg_write8(str->sidemove);
     saveg_write16(str->angleturn);
     saveg_write8(str->buttons);
+    saveg_write32(str->lookdir);
 }
 
 //
@@ -458,6 +461,7 @@ static void saveg_read_player_t(void)
     viewplayer->oldlookdir = saveg_read32();
     viewplayer->recoil = saveg_read32();
     viewplayer->oldrecoil = saveg_read32();
+    viewplayer->jumptics = saveg_read32();
 
     if (!mouselook)
     {
@@ -546,6 +550,7 @@ static void saveg_write_player_t(void)
     saveg_write32(viewplayer->oldlookdir);
     saveg_write32(viewplayer->recoil);
     saveg_write32(viewplayer->oldrecoil);
+    saveg_write32(viewplayer->jumptics);
     saveg_write32(viewplayer->damageinflicted);
     saveg_write32(viewplayer->damagereceived);
     saveg_write32(viewplayer->cheated);
@@ -886,7 +891,14 @@ void P_WriteSaveGameHeader(char *description)
 
     saveg_write8(gameskill);
     saveg_write8(gameepisode);
-    saveg_write8(gamemap);
+
+    if (M_StringCompare(mapnum, "E1M4B"))
+        saveg_write8(10);
+    else if (M_StringCompare(mapnum, "E1M8B"))
+        saveg_write8(11);
+    else
+        saveg_write8(gamemap);
+
     saveg_write8(gamemission);
     saveg_write8((leveltime >> 16) & 0xFF);
     saveg_write8((leveltime >> 8) & 0xFF);
@@ -922,6 +934,18 @@ dboolean P_ReadSaveGameHeader(char *description)
     gameskill = (skill_t)saveg_read8();
     gameepisode = saveg_read8();
     gamemap = saveg_read8();
+
+    if (gamemap == 10)
+    {
+        gamemap = 4;
+        M_StringCopy(speciallumpname, "E1M4B", 6);
+    }
+    else if (gamemap == 11)
+    {
+        gamemap = 8;
+        M_StringCopy(speciallumpname, "E1M8B", 6);
+    }
+
     saveg_read8();
 
     // get the times
@@ -1039,7 +1063,6 @@ void P_UnArchiveWorld(void)
         sec->floordata = NULL;
         sec->lightingdata = NULL;
         soundtargets[MIN(i, TARGETLIMIT - 1)] = saveg_read32();
-        sec->isliquid = isliquid[sec->floorpic];
     }
 
     // do lines
@@ -1068,8 +1091,6 @@ void P_UnArchiveWorld(void)
             si->missingmidtexture = saveg_read_bool();
         }
     }
-
-    P_SetLifts();
 }
 
 //
@@ -1158,7 +1179,7 @@ void P_UnArchiveThinkers(void)
     thingindex = 0;
 
     // read in saved thinkers
-    while (1)
+    while (true)
     {
         byte    tclass = saveg_read8();
 
@@ -1387,7 +1408,7 @@ void P_StartButton(line_t *line, bwhere_e where, int texture, int time);
 void P_UnArchiveSpecials(void)
 {
     // read in saved thinkers
-    while (1)
+    while (true)
     {
         byte    tclass = saveg_read8();
 

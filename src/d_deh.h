@@ -420,6 +420,7 @@ extern char     *s_M_EPISODE1;
 extern char     *s_M_EPISODE2;
 extern char     *s_M_EPISODE3;
 extern char     *s_M_EPISODE4;
+extern char     *s_M_EPISODE5;
 extern char     *s_M_WHICHEXPANSION;
 extern char     *s_M_EXPANSION1;
 extern char     *s_M_EXPANSION2;
@@ -443,6 +444,7 @@ extern char     *s_M_SOUNDVOLUME;
 extern char     *s_M_SFXVOLUME;
 extern char     *s_M_MUSICVOLUME;
 extern char     *s_M_PAUSED;
+extern char     *s_M_MORE;
 
 extern char     *s_CAPTION_SHAREWARE;
 extern char     *s_CAPTION_REGISTERED;

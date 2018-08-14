@@ -84,7 +84,6 @@ void M_Init(void);
 // does nothing if menu is already up.
 void M_StartControlPanel(void);
 void M_ClearMenus(void);
-void M_ShowHelp(void);
 void M_EndingGame(void);
 void M_ChangeGamma(dboolean shift);
 
@@ -98,6 +97,8 @@ int M_CountSaveGames(void);
 
 void M_StartMessage(char *string, void *routine, dboolean input);
 
+void M_ShowHelp(int choice);
+
 extern dboolean messageToPrint;
 
 extern int      gamepadmenu;
@@ -108,5 +109,6 @@ extern dboolean firstevent;
 extern byte     grays[256];
 extern dboolean returntowidescreen;
 extern dboolean startingnewgame;
+extern dboolean inhelpscreens;
 
 #endif

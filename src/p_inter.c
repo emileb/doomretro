@@ -74,8 +74,8 @@ dboolean        species_infighting;
 
 // a weapon is found with two clip loads,
 // a big item has five clip loads
-int             maxammo[NUMAMMO] = { 200, 50, 300, 50 };
-int             clipammo[NUMAMMO] = { 10, 4, 20, 1 };
+int             maxammo[NUMAMMO] =  { 200, 50, 300, 50 };
+int             clipammo[NUMAMMO] = {  10,  4,  20,  1 };
 
 dboolean        con_obituaries = con_obituaries_default;
 dboolean        r_mirroredweapons = r_mirroredweapons_default;
@@ -310,7 +310,9 @@ static dboolean P_GiveWeapon(weapontype_t weapon, dboolean dropped, dboolean sta
     {
         gaveweapon = true;
         viewplayer->weaponowned[weapon] = true;
-        viewplayer->pendingweapon = weapon;
+
+        if (weaponinfo[weapon].priority == -1 || weaponinfo[weapon].priority > weaponinfo[viewplayer->readyweapon].priority)
+            viewplayer->pendingweapon = weapon;
     }
 
     if (gaveammo && ammotype == weaponinfo[viewplayer->readyweapon].ammotype)
@@ -684,6 +686,7 @@ dboolean P_GivePower(int power)
 {
     static const int tics[NUMPOWERS] =
     {
+        /* pw_none            */ 0,
         /* pw_invulnerability */ INVULNTICS,
         /* pw_strength        */ 1,
         /* pw_invisibility    */ INVISTICS,
@@ -725,10 +728,9 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, dboolean message, dbo
 {
     fixed_t     delta;
     int         sound = sfx_itemup;
-    int         weaponowned;
-    int         ammo;
     static int  prevsound;
     static int  prevtic;
+    int         temp;
 
     if (freeze)
         return;
@@ -1020,15 +1022,15 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, dboolean message, dbo
 
         // clip
         case SPR_CLIP:
-            if (!(ammo = P_GiveAmmo(am_clip, !(special->flags & MF_DROPPED), stat)))
+            if (!(temp = P_GiveAmmo(am_clip, !(special->flags & MF_DROPPED), stat)))
                 return;
 
             if (message)
             {
-                if (ammo == clipammo[am_clip] || deh_strlookup[p_GOTCLIP].assigned == 2 || hacx)
+                if (temp == clipammo[am_clip] || deh_strlookup[p_GOTCLIP].assigned == 2 || hacx)
                     HU_PlayerMessage(s_GOTCLIP, false);
                 else
-                    HU_PlayerMessage((ammo == clipammo[am_clip] / 2 ? s_GOTHALFCLIP : s_GOTCLIPX2), false);
+                    HU_PlayerMessage((temp == clipammo[am_clip] / 2 ? s_GOTHALFCLIP : s_GOTCLIPX2), false);
             }
 
             break;
@@ -1045,12 +1047,12 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, dboolean message, dbo
 
         // rocket
         case SPR_ROCK:
-            if (!(ammo = P_GiveAmmo(am_misl, 1, stat)))
+            if (!(temp = P_GiveAmmo(am_misl, 1, stat)))
                 return;
 
             if (message)
             {
-                if (ammo == clipammo[am_misl] || deh_strlookup[p_GOTROCKET].assigned == 2 || hacx)
+                if (temp == clipammo[am_misl] || deh_strlookup[p_GOTROCKET].assigned == 2 || hacx)
                     HU_PlayerMessage(s_GOTROCKET, false);
                 else
                     HU_PlayerMessage(s_GOTROCKETX2, false);
@@ -1070,12 +1072,12 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, dboolean message, dbo
 
         // cell
         case SPR_CELL:
-            if (!(ammo = P_GiveAmmo(am_cell, 1, stat)))
+            if (!(temp = P_GiveAmmo(am_cell, 1, stat)))
                 return;
 
             if (message)
             {
-                if (ammo == clipammo[am_cell] || deh_strlookup[p_GOTCELL].assigned == 2 || hacx)
+                if (temp == clipammo[am_cell] || deh_strlookup[p_GOTCELL].assigned == 2 || hacx)
                     HU_PlayerMessage(s_GOTCELL, false);
                 else
                     HU_PlayerMessage(s_GOTCELLX2, false);
@@ -1095,12 +1097,12 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, dboolean message, dbo
 
         // shells
         case SPR_SHEL:
-            if (!(ammo = P_GiveAmmo(am_shell, 1, stat)))
+            if (!(temp = P_GiveAmmo(am_shell, 1, stat)))
                 return;
 
             if (message)
             {
-                if (ammo == clipammo[am_shell] || deh_strlookup[p_GOTSHELLS].assigned == 2 || hacx)
+                if (temp == clipammo[am_shell] || deh_strlookup[p_GOTSHELLS].assigned == 2 || hacx)
                     HU_PlayerMessage(s_GOTSHELLS, false);
                 else
                     HU_PlayerMessage(s_GOTSHELLSX2, false);
@@ -1187,12 +1189,12 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, dboolean message, dbo
 
         // shotgun
         case SPR_SHOT:
-            weaponowned = viewplayer->weaponowned[wp_shotgun];
+            temp = viewplayer->weaponowned[wp_shotgun];
 
             if (!P_GiveWeapon(wp_shotgun, (special->flags & MF_DROPPED), stat))
                 return;
 
-            if (!weaponowned)
+            if (!temp)
                 viewplayer->preferredshotgun = wp_shotgun;
 
             if (message)
@@ -1203,12 +1205,12 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, dboolean message, dbo
 
         // super shotgun
         case SPR_SGN2:
-            weaponowned = viewplayer->weaponowned[wp_supershotgun];
+            temp = viewplayer->weaponowned[wp_supershotgun];
 
             if (!P_GiveWeapon(wp_supershotgun, (special->flags & MF_DROPPED), stat))
                 return;
 
-            if (!weaponowned)
+            if (!temp)
                 viewplayer->preferredshotgun = wp_supershotgun;
 
             if (message)
@@ -1218,7 +1220,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, dboolean message, dbo
             break;
 
         default:
-            return;
+            break;
     }
 
     if ((special->flags & MF_COUNTITEM) && stat)
@@ -1230,11 +1232,11 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, dboolean message, dbo
     P_RemoveMobj(special);
     P_AddBonus();
 
-    if (sound == prevsound && gametic == prevtic)
+    if (sound == prevsound && gametime == prevtic)
         return;
 
     prevsound = sound;
-    prevtic = gametic;
+    prevtic = gametime;
     S_StartSound(viewplayer->mo, sound);
 }
 
@@ -1324,11 +1326,9 @@ void P_UpdateKillStat(mobjtype_t type, int value)
 void P_KillMobj(mobj_t *target, mobj_t *inflicter, mobj_t *source)
 {
     dboolean    gibbed;
-    mobjtype_t  item;
     mobjtype_t  type = target->type;
     mobjinfo_t  *info = &mobjinfo[type];
-    mobj_t      *mo;
-    int         gibhealth;
+    int         gibhealth = info->gibhealth;
 
     target->flags &= ~(MF_SHOOTABLE | MF_FLOAT | MF_SKULLFLY);
 
@@ -1342,6 +1342,7 @@ void P_KillMobj(mobj_t *target, mobj_t *inflicter, mobj_t *source)
         target->flags &= ~MF_NOGRAVITY;
 
     target->flags |= (MF_CORPSE | MF_DROPOFF);
+    target->flags2 &= ~MF2_PASSMOBJ;
     target->height >>= 2;
 
     // killough 8/29/98: remove from threaded list
@@ -1352,7 +1353,7 @@ void P_KillMobj(mobj_t *target, mobj_t *inflicter, mobj_t *source)
         if (!(target->flags & MF_FUZZ))
             target->bloodsplats = CORPSEBLOODSPLATS;
 
-        if (r_corpses_mirrored && type != MT_CHAINGUY && type != MT_CYBORG)
+        if (r_corpses_mirrored && (type != MT_CHAINGUY && type != MT_CYBORG))
         {
             static int  prev;
             int         r = M_RandomInt(1, 10);
@@ -1395,15 +1396,13 @@ void P_KillMobj(mobj_t *target, mobj_t *inflicter, mobj_t *source)
         P_DropWeapon();
 
         if (automapactive)
-            AM_Stop();          // don't die in auto map, switch view prior to dying
+            AM_Stop();          // don't die in automap, switch view prior to dying
 
         viewplayer->deaths++;
         stat_deaths = SafeAdd(stat_deaths, 1);
     }
     else
         target->flags2 &= ~MF2_NOLIQUIDBOB;
-
-    gibhealth = info->gibhealth;
 
     if ((gibbed = (gibhealth < 0 && target->health < gibhealth && info->xdeathstate)))
         P_SetMobjState(target, info->xdeathstate);
@@ -1431,8 +1430,8 @@ void P_KillMobj(mobj_t *target, mobj_t *inflicter, mobj_t *source)
             if (inflicter && inflicter->type == MT_BARREL && type != MT_BARREL)
             {
                 if (target->player)
-                    C_Obituary("%s %s %s by an exploding barrel.", titlecase(playername),
-                        (defaultplayername ? "were" : "was"), (gibbed ? "gibbed" : "killed"));
+                    C_Obituary("%s %s %s by an exploding barrel.", titlecase(playername), (defaultplayername ? "were" : "was"),
+                        (gibbed ? "gibbed" : "killed"));
                 else
                     C_Obituary("%s %s was %s by an exploding barrel.", (isvowel(name[0]) ? "An" : "A"), name,
                         (gibbed ? "gibbed" : "killed"));
@@ -1448,10 +1447,9 @@ void P_KillMobj(mobj_t *target, mobj_t *inflicter, mobj_t *source)
                         weaponinfo[readyweapon].description);
                 else
                     C_Obituary("%s %s %s%s with %s %s%s.", titlecase(playername),
-                        (type == MT_BARREL ? "exploded" : (gibbed ? "gibbed" : "killed")),
-                        (isvowel(name[0]) ? "an " : "a "), name, (defaultplayername ? "your" : "their"),
-                        (readyweapon == wp_fist && source->player->powers[pw_strength] ? "berserk " : ""),
-                        weaponinfo[readyweapon].description);
+                        (type == MT_BARREL ? "exploded" : (gibbed ? "gibbed" : "killed")), (isvowel(name[0]) ? "an " : "a "), name,
+                        (defaultplayername ? "your" : "their"), weaponinfo[readyweapon].description,
+                        (readyweapon == wp_fist && source->player->powers[pw_strength] ? " while berserk" : ""));
 
             }
             else
@@ -1470,8 +1468,7 @@ void P_KillMobj(mobj_t *target, mobj_t *inflicter, mobj_t *source)
                     else
                         C_Obituary("%s %s %s %s%s.", (isvowel(sourcename[0]) ? "An" : "A"), sourcename,
                             (type == MT_BARREL ? "exploded" : (gibbed ? "gibbed" : "killed")),
-                            (source->type == target->type ? "another " : (isvowel(name[0]) ? "an " : "a ")),
-                            name);
+                            (source->type == target->type ? "another " : (isvowel(name[0]) ? "an " : "a ")), name);
 
                 }
             }
@@ -1479,66 +1476,45 @@ void P_KillMobj(mobj_t *target, mobj_t *inflicter, mobj_t *source)
         else if (target->player)
         {
             sector_t    *sector = target->player->mo->subsector->sector;
-            char        *liquid = "";
 
-            if (sector->isliquid)
+            if (sector->ceilingdata && sector->ceilingheight - sector->floorheight < VIEWHEIGHT)
+                C_Obituary("%s %s crushed to death.", titlecase(playername), (defaultplayername ? "were" : "was"));
+            else
             {
-                short   floorpic = sector->floorpic;
+                if (sector->terraintype != SOLID)
+                {
+                    char    *liquids[] = { "", "nukage", "water", "lava", "blood", "slime" };
 
-                if (floorpic >= nukagestart && floorpic <= nukageend)
-                    liquid = " in nukage";
-                else if ((floorpic >= fwaterstart && floorpic <= fwaterend)
-                    || (floorpic >= swaterstart && floorpic <= swaterend))
-                    liquid = " in water";
-                else if (floorpic >= lavastart && floorpic <= lavaend)
-                    liquid = " in lava";
-                else if (floorpic >= bloodstart && floorpic <= bloodend)
-                    liquid = " in blood";
-                else if (floorpic >= slimestart && floorpic <= slimeend)
-                    liquid = " in slime";
+                    C_Obituary("%s died in %s.", titlecase(playername), liquids[sector->terraintype]);
+                }
+                else
+                    C_Obituary("%s blew %s up.", titlecase(playername), (defaultplayername ? "yourself" : "themselves"));
             }
-
-            C_Obituary("%s %s %s%s.", titlecase(playername), (gibbed ? "gibbed" : "killed"),
-                (defaultplayername ? "yourself" : "themselves"), liquid);
         }
     }
 
     // Drop stuff.
     // This determines the kind of object spawned during the death frame of a thing.
-    switch (type)
+    if (info->droppeditem)
     {
-        case MT_WOLFSS:
-        case MT_POSSESSED:
-            item = MT_CLIP;
-            break;
+        mobj_t  *mo;
 
-        case MT_SHOTGUY:
-            item = MT_SHOTGUN;
-            break;
+        if (tossdrop)
+        {
+            mo = P_SpawnMobj(target->x, target->y, target->floorz + target->height * 3 / 2 - 3 * FRACUNIT, info->droppeditem);
+            mo->momx = M_NegRandom() << 8;
+            mo->momy = M_NegRandom() << 8;
+            mo->momz = FRACUNIT * 2 + (M_Random() << 10);
+        }
+        else
+            mo = P_SpawnMobj(target->x, target->y, ONFLOORZ, info->droppeditem);
 
-        case MT_CHAINGUY:
-            item = MT_CHAINGUN;
-            break;
+        mo->angle = target->angle + (M_NegRandom() << 20);
+        mo->flags |= MF_DROPPED;    // special versions of items
 
-        default:
-            return;
+        if (r_mirroredweapons && (M_Random() & 1))
+            mo->flags2 |= MF2_MIRRORED;
     }
-
-    if (tossdrop)
-    {
-        mo = P_SpawnMobj(target->x, target->y, target->floorz + target->height * 3 / 2 - 3 * FRACUNIT, item);
-        mo->momx = M_NegRandom() << 8;
-        mo->momy = M_NegRandom() << 8;
-        mo->momz = FRACUNIT * 2 + (M_Random() << 10);
-    }
-    else
-        mo = P_SpawnMobj(target->x, target->y, ONFLOORZ, item);
-
-    mo->angle = target->angle + (M_NegRandom() << 20);
-    mo->flags |= MF_DROPPED;    // special versions of items
-
-    if (r_mirroredweapons && (M_Random() & 1))
-        mo->flags2 |= MF2_MIRRORED;
 }
 
 dboolean P_CheckMeleeRange(mobj_t *actor);

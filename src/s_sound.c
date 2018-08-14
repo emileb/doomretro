@@ -58,7 +58,7 @@
 // Distance to origin when sounds should be maxed out.
 // This should relate to movement clipping resolution
 // (see BLOCKMAP handling).
-// In the source code release: (160*FRACUNIT). Changed back to the
+// In the source code release: (160 * FRACUNIT). Changed back to the
 // Vanilla value of 200 (why was this changed?)
 #define S_CLOSE_DIST    200
 
@@ -70,7 +70,7 @@
 
 #define NORM_SEP        128
 
-#define TIDNUM(x)       ((int)(x->id & 0xFFFF)) // thing identifier
+#define TIDNUM(x)       (int)(x->id & 0xFFFF)   // thing identifier
 
 typedef struct
 {
@@ -82,8 +82,6 @@ typedef struct
 
     // handle of the sound being played
     int             handle;
-
-    int             pitch;
 } channel_t;
 
 // [crispy] "sound objects" hold the coordinates of removed map objects
@@ -102,6 +100,7 @@ int                 s_musicvolume = s_musicvolume_default;
 dboolean            s_randommusic = s_randommusic_default;
 dboolean            s_randompitch = s_randompitch_default;
 int                 s_sfxvolume = s_sfxvolume_default;
+dboolean            s_stereo = s_stereo_default;
 
 // Maximum volume of a sound effect.
 // Internal default is max out of 0-31.
@@ -132,9 +131,8 @@ static void InitSfxModule(void)
 {
     if (I_InitSound())
     {
-        C_Output("Sound effects will play at a sample rate of %.1fkHz on %i channels%s.", SAMPLERATE / 1000.0f,
-            s_channels, (M_StringCompare(SDL_GetCurrentAudioDriver(), "directsound") ?
-            " using the <i><b>DirectSound</b></i> API" : ""));
+        C_Output("Sound effects will play at a sample rate of %.1fkHz on %i channels%s.", SAMPLERATE / 1000.0f, s_channels,
+            (M_StringCompare(SDL_GetCurrentAudioDriver(), "directsound") ? " using the <i><b>DirectSound</b></i> API" : ""));
         return;
     }
 
@@ -161,8 +159,7 @@ void S_Init(void)
 {
     if (M_CheckParm("-nosound"))
     {
-        C_Output("A <b>-nosound</b> parameter was found on the command-line. Both sound effects and music "
-            "have been disabled.");
+        C_Output("A <b>-nosound</b> parameter was found on the command-line. Both sound effects and music have been disabled.");
         nomusic = true;
         nosfx = true;
     }
@@ -191,12 +188,27 @@ void S_Init(void)
         // Allocating the internal channels for mixing
         // (the maximum number of sounds rendered
         // simultaneously) within zone memory.
-        channels = Z_Calloc(s_channels, sizeof(channel_t), PU_STATIC, NULL);
-        sobjs = Z_Malloc(s_channels * sizeof(sobj_t), PU_STATIC, NULL);
+        channels = Z_Calloc(s_channels_max, sizeof(channel_t), PU_STATIC, NULL);
+        sobjs = Z_Malloc(s_channels_max * sizeof(sobj_t), PU_STATIC, NULL);
 
-        // Note that sounds have not been cached (yet).
+        // [BH] precache all SFX
         for (int i = 1; i < NUMSFX; i++)
-            S_sfx[i].lumpnum = -1;
+        {
+            sfxinfo_t   *sfx = &S_sfx[i];
+            char        namebuf[9];
+
+            if (sfx->link)
+                sfx = sfx->link;
+
+            M_snprintf(namebuf, sizeof(namebuf), "ds%s", sfx->name);
+
+            if ((sfx->lumpnum = W_CheckNumForName(namebuf)) >= 0)
+                if (!CacheSFX(sfx))
+                {
+                    C_Warning("The <b>%s</b> lump isn't a valid sound effect and won't be played.", uppercase(namebuf));
+                    sfx->lumpnum = -1;
+                }
+        }
     }
 
     if (!nomusic)
@@ -276,15 +288,15 @@ static int S_GetMusicNum(void)
         int spmus[] =
         {
             // Song - Who? - Where?
-            mus_e3m4,           // American     e4m1
-            mus_e3m2,           // Romero       e4m2
-            mus_e3m3,           // Shawn        e4m3
-            mus_e1m5,           // American     e4m4
-            mus_e2m7,           // Tim          e4m5
-            mus_e2m4,           // Romero       e4m6
-            mus_e2m6,           // J.Anderson   e4m7 CHIRON.WAD
-            mus_e2m5,           // Shawn        e4m8
-            mus_e1m9            // Tim          e4m9
+            mus_e3m4,   // American     E4M1
+            mus_e3m2,   // Romero       E4M2
+            mus_e3m3,   // Shawn        E4M3
+            mus_e1m5,   // American     E4M4
+            mus_e2m7,   // Tim          E4M5
+            mus_e2m4,   // Romero       E4M6
+            mus_e2m6,   // J.Anderson   E4M7 CHIRON.WAD
+            mus_e2m5,   // Shawn        E4M8
+            mus_e1m9    // Tim          E4M9
         };
 
         if (gameepisode < 4)
@@ -350,8 +362,7 @@ static int S_GetChannel(mobj_t *origin, sfxinfo_t *sfxinfo)
 
     // Find an open channel
     for (cnum = 0; cnum < s_channels && channels[cnum].sfxinfo; cnum++)
-        if (origin && channels[cnum].origin == origin
-            && channels[cnum].sfxinfo->singularity == sfxinfo->singularity)
+        if (origin && channels[cnum].origin == origin && channels[cnum].sfxinfo->singularity == sfxinfo->singularity)
         {
             S_StopChannel(cnum);
             break;
@@ -386,12 +397,8 @@ static int S_GetChannel(mobj_t *origin, sfxinfo_t *sfxinfo)
 static dboolean S_AdjustSoundParams(mobj_t *listener, fixed_t x, fixed_t y, int *vol, int *sep)
 {
     fixed_t dist = 0;
-    fixed_t adx;
-    fixed_t ady;
+    fixed_t adx, ady;
     angle_t angle;
-
-    if (nosfx || !listener)
-        return false;
 
     // calculate the distance to sound origin and clip it if necessary
     // killough 11/98: scale coordinates down before calculations start
@@ -404,6 +411,15 @@ static dboolean S_AdjustSoundParams(mobj_t *listener, fixed_t x, fixed_t y, int 
 
     if (adx)
         dist = FixedDiv(adx, finesine[(tantoangle[FixedDiv(ady, adx) >> DBITS] + ANG90) >> ANGLETOFINESHIFT]);
+
+    // killough 11/98: handle zero-distance as special case
+    if (!dist)
+    {
+        *sep = NORM_SEP;
+        *vol = snd_SfxVolume;
+
+        return (*vol > 0);
+    }
 
     if (dist > S_CLIPPING_DIST)
         return false;
@@ -418,7 +434,8 @@ static dboolean S_AdjustSoundParams(mobj_t *listener, fixed_t x, fixed_t y, int 
     angle >>= ANGLETOFINESHIFT;
 
     // stereo separation
-    *sep = NORM_SEP - FixedMul(S_STEREO_SWING, finesine[angle]);
+    if (s_stereo)
+        *sep = NORM_SEP - FixedMul(S_STEREO_SWING, finesine[angle]);
 
     // volume calculation
     *vol = (dist < S_CLOSE_DIST ? snd_SfxVolume : snd_SfxVolume * (S_CLIPPING_DIST - dist) / S_ATTENUATOR);
@@ -426,11 +443,11 @@ static dboolean S_AdjustSoundParams(mobj_t *listener, fixed_t x, fixed_t y, int 
     return (*vol > 0);
 }
 
-static void S_StartSoundAtVolume(mobj_t *origin, int sfx_id, int pitch, int volume)
+ void S_StartSoundAtVolume(mobj_t *origin, int sfx_id, int pitch, int volume)
 {
     sfxinfo_t   *sfx = &S_sfx[sfx_id];
     mobj_t      *mo = viewplayer->mo;
-    int         sep;
+    int         sep = NORM_SEP;
     int         cnum;
     int         handle;
 
@@ -449,18 +466,17 @@ static void S_StartSoundAtVolume(mobj_t *origin, int sfx_id, int pitch, int volu
             volume = snd_SfxVolume;
     }
 
-    // Check to see if it is audible, and if not, modify the parms
-    if (!origin || origin == mo)
-        sep = NORM_SEP;
-    else if (!S_AdjustSoundParams(mo, origin->x, origin->y, &volume, &sep))
+    if (sfx->lumpnum == -1)
         return;
-    else if (origin->x == mo->x && origin->y == mo->y)
-        sep = NORM_SEP;
+
+    // Check to see if it is audible, and if not, modify the parms
+    if (origin && origin != mo)
+        if (!S_AdjustSoundParams(mo, origin->x, origin->y, &volume, &sep))
+            return;
 
     // kill old sound
     for (cnum = 0; cnum < s_channels; cnum++)
-        if (channels[cnum].sfxinfo && channels[cnum].sfxinfo->singularity == sfx->singularity
-            && channels[cnum].origin == origin)
+        if (channels[cnum].sfxinfo && channels[cnum].sfxinfo->singularity == sfx->singularity && channels[cnum].origin == origin)
         {
             S_StopChannel(cnum);
             break;
@@ -470,19 +486,10 @@ static void S_StartSoundAtVolume(mobj_t *origin, int sfx_id, int pitch, int volu
     if ((cnum = S_GetChannel(origin, sfx)) < 0)
         return;
 
-    // Get lumpnum if necessary
-    // killough 2/28/98: make missing sounds non-fatal
-    if (sfx->lumpnum < 0 && (sfx->lumpnum = I_GetSfxLumpNum(sfx)) < 0)
-        return;
-
-    // Assigns the handle to one of the channels in the
-    //  mix/output buffer.
+    // Assigns the handle to one of the channels in the mix/output buffer.
     // e6y: [Fix] Crash with zero-length sounds.
     if ((handle = I_StartSound(sfx, cnum, volume, sep, pitch)) != -1)
-    {
         channels[cnum].handle = handle;
-        channels[cnum].pitch = pitch;
-    }
 }
 
 void S_StartSound(mobj_t *mobj, int sfx_id)
@@ -531,42 +538,42 @@ void S_UpdateSounds(mobj_t *listener)
         channel_t   *c = &channels[cnum];
         sfxinfo_t   *sfx = c->sfxinfo;
 
-        if (sfx)
+        if (!sfx)
+            continue;
+
+        if (I_SoundIsPlaying(c->handle))
         {
-            if (I_SoundIsPlaying(c->handle))
+            // initialize parameters
+            int     volume = snd_SfxVolume;
+            mobj_t  *origin;
+
+            if (sfx->link)
             {
-                // initialize parameters
-                int     volume = snd_SfxVolume;
-                int     sep = NORM_SEP;
-                mobj_t  *origin = c->origin;
+                volume += sfx->volume;
 
-                if (sfx->link)
+                if (volume < 1)
                 {
-                    volume += sfx->volume;
-
-                    if (volume < 1)
-                    {
-                        S_StopChannel(cnum);
-                        continue;
-                    }
-                    else if (volume > snd_SfxVolume)
-                        volume = snd_SfxVolume;
+                    S_StopChannel(cnum);
+                    continue;
                 }
-
-                // check non-local sounds for distance clipping
-                //  or modify their parms
-                if (origin && listener != origin)
-                {
-                    if (!S_AdjustSoundParams(listener, origin->x, origin->y, &volume, &sep))
-                        S_StopChannel(cnum);
-                    else
-                        I_UpdateSoundParams(c->handle, volume, sep);
-                }
+                else if (volume > snd_SfxVolume)
+                    volume = snd_SfxVolume;
             }
-            else
-                // if channel is allocated but sound has stopped, free it
-                S_StopChannel(cnum);
+
+            // check non-local sounds for distance clipping or modify their parms
+            if ((origin = c->origin) && listener != origin)
+            {
+                int sep = NORM_SEP;
+
+                if (!S_AdjustSoundParams(listener, origin->x, origin->y, &volume, &sep))
+                    S_StopChannel(cnum);
+                else
+                    I_UpdateSoundParams(c->handle, volume, sep);
+            }
         }
+        else
+            // if channel is allocated but sound has stopped, free it
+            S_StopChannel(cnum);
     }
 }
 
@@ -647,7 +654,7 @@ void S_StopMusic(void)
 
         I_StopSong();
         I_UnRegisterSong(mus_playing->handle);
-        W_UnlockLumpNum(mus_playing->lumpnum);
+        W_ReleaseLumpNum(mus_playing->lumpnum);
         mus_playing->data = NULL;
         mus_playing = NULL;
     }

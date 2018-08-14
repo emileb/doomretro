@@ -47,12 +47,14 @@
 #include "z_zone.h"
 
 // killough 2/8/98: Remove switch limit
-static int  *switchlist;        // killough
-static int  max_numswitches;    // killough
-static int  numswitches;        // killough
+static int          *switchlist;        // killough
+static int          max_numswitches;    // killough
+static int          numswitches;        // killough
 
-button_t    *buttonlist = NULL;
-int         maxbuttons = MAXBUTTONS;
+button_t            *buttonlist = NULL;
+int                 maxbuttons = MAXBUTTONS;
+
+extern texture_t    **textures;
 
 //
 // P_InitSwitchList()
@@ -86,8 +88,7 @@ void P_InitSwitchList(void)
     for (int i = 0; ; i++)
     {
         if (index + 1 >= max_numswitches)
-            switchlist = I_Realloc(switchlist, sizeof(*switchlist) * (max_numswitches = (max_numswitches ?
-                max_numswitches * 2 : 8)));
+            switchlist = I_Realloc(switchlist, sizeof(*switchlist) * (max_numswitches = (max_numswitches ? max_numswitches * 2 : 8)));
 
         if (SHORT(alphSwitchList[i].episode) <= episode)    // jff 5/11/98 endianness
         {
@@ -100,24 +101,34 @@ void P_InitSwitchList(void)
             // Ignore switches referencing unknown texture names, instead of exiting.
             // Warn if either one is missing, but only add if both are valid.
             if ((texture1 = R_CheckTextureNumForName(alphSwitchList[i].name1)) == -1)
-                C_Warning("Switch %i in the <b>SWITCHES</b> lump has an unknown texture of <b>%s</b>.", i,
-                    alphSwitchList[i].name1);
+                C_Warning("Switch %i in the <b>SWITCHES</b> lump has an unknown texture of <b>%s</b>.", i, alphSwitchList[i].name1);
 
             if ((texture2 = R_CheckTextureNumForName(alphSwitchList[i].name2)) == -1)
-                C_Warning("Switch %i in the <b>SWITCHES</b> lump has an unknown texture of <b>%s</b>.", i,
-                    alphSwitchList[i].name2);
+                C_Warning("Switch %i in the <b>SWITCHES</b> lump has an unknown texture of <b>%s</b>.", i, alphSwitchList[i].name2);
 
             if (texture1 != -1 && texture2 != -1)
             {
+                texture_t   *texture;
+
                 switchlist[index++] = texture1;
                 switchlist[index++] = texture2;
+
+                texture = textures[texture1];
+
+                for (int j = 0; j < texture->patchcount; j++)
+                    W_CacheLumpNum(texture->patches[j].patch);
+
+                texture = textures[texture2];
+
+                for (int j = 0; j < texture->patchcount; j++)
+                    W_CacheLumpNum(texture->patches[j].patch);
             }
         }
     }
 
     numswitches = index / 2;
     switchlist[index] = -1;
-    W_UnlockLumpNum(lump);
+    W_ReleaseLumpNum(lump);
 
     buttonlist = calloc(maxbuttons, sizeof(*buttonlist));
 }
@@ -208,6 +219,7 @@ dboolean P_UseSpecialLine(mobj_t *thing, line_t *line, int side)
         return false;
 
     // jff 02/04/98 add check here for generalized floor/ceil mover
+    if (line->special >= GenCrusherBase)
     {
         // pointer to line function is NULL by default, set non-null if
         // line special is push or switch generalized linedef type
@@ -272,7 +284,7 @@ dboolean P_UseSpecialLine(mobj_t *thing, line_t *line, int side)
 
             linefunc = EV_DoGenStairs;
         }
-        else if (line->special >= GenCrusherBase)
+        else
         {
             if (!thing->player)
                 if (!(line->special & CrusherMonster))
@@ -379,7 +391,7 @@ dboolean P_UseSpecialLine(mobj_t *thing, line_t *line, int side)
 
         // Switches
         case S1_Stairs_RaiseBy8:
-            if (EV_BuildStairs(line, build8))
+            if (EV_BuildStairs(line, FLOORSPEED / 4, 8 * FRACUNIT, false))
                 P_ChangeSwitchTexture(line, false);
 
             break;
@@ -443,7 +455,7 @@ dboolean P_UseSpecialLine(mobj_t *thing, line_t *line, int side)
             break;
 
         case S1_Door_OpenWaitClose:
-            if (EV_DoDoor(line, doorNormal))
+            if (EV_DoDoor(line, doorNormal, VDOORSPEED))
                 P_ChangeSwitchTexture(line, false);
 
             break;
@@ -467,7 +479,7 @@ dboolean P_UseSpecialLine(mobj_t *thing, line_t *line, int side)
             break;
 
         case S1_Door_CloseStay:
-            if (EV_DoDoor(line, doorClose))
+            if (EV_DoDoor(line, doorClose, VDOORSPEED))
                 P_ChangeSwitchTexture(line, false);
 
             break;
@@ -495,25 +507,25 @@ dboolean P_UseSpecialLine(mobj_t *thing, line_t *line, int side)
             break;
 
         case S1_Door_OpenStay:
-            if (EV_DoDoor(line, doorOpen))
+            if (EV_DoDoor(line, doorOpen, VDOORSPEED))
                 P_ChangeSwitchTexture(line, false);
 
             break;
 
         case S1_Door_OpenWaitClose_Fast:
-            if (EV_DoDoor(line, doorBlazeRaise))
+            if (EV_DoDoor(line, doorBlazeRaise, VDOORSPEED * 4))
                 P_ChangeSwitchTexture(line, false);
 
             break;
 
         case S1_Door_OpenStay_Fast:
-            if (EV_DoDoor(line, doorBlazeOpen))
+            if (EV_DoDoor(line, doorBlazeOpen, VDOORSPEED * 4))
                 P_ChangeSwitchTexture(line, false);
 
             break;
 
         case S1_Door_CloseStay_Fast:
-            if (EV_DoDoor(line, doorBlazeClose))
+            if (EV_DoDoor(line, doorBlazeClose, VDOORSPEED * 4))
                 P_ChangeSwitchTexture(line, false);
 
             break;
@@ -525,7 +537,7 @@ dboolean P_UseSpecialLine(mobj_t *thing, line_t *line, int side)
             break;
 
         case S1_Stairs_RaiseBy16_Fast:
-            if (EV_BuildStairs(line, turbo16))
+            if (EV_BuildStairs(line, FLOORSPEED * 4, 16 * FRACUNIT, true))
                 P_ChangeSwitchTexture(line, false);
 
             break;
@@ -539,7 +551,7 @@ dboolean P_UseSpecialLine(mobj_t *thing, line_t *line, int side)
         case S1_Door_Blue_OpenStay_Fast:
         case S1_Door_Red_OpenStay_Fast:
         case S1_Door_Yellow_OpenStay_Fast:
-            if (EV_DoLockedDoor(line, doorBlazeOpen, thing))
+            if (EV_DoLockedDoor(line, doorBlazeOpen, thing, VDOORSPEED * 4))
                 P_ChangeSwitchTexture(line, false);
 
             break;
@@ -648,7 +660,7 @@ dboolean P_UseSpecialLine(mobj_t *thing, line_t *line, int side)
             break;
 
         case S1_Door_CloseWaitOpen_30Seconds:
-            if (EV_DoDoor(line, doorClose30ThenOpen))
+            if (EV_DoDoor(line, doorClose30ThenOpen, VDOORSPEED))
                 P_ChangeSwitchTexture(line, false);
 
             break;
@@ -817,7 +829,7 @@ dboolean P_UseSpecialLine(mobj_t *thing, line_t *line, int side)
             break;
 
         case SR_Door_CloseWaitOpen_30Seconds:
-            if (EV_DoDoor(line, doorClose30ThenOpen))
+            if (EV_DoDoor(line, doorClose30ThenOpen, VDOORSPEED))
                 P_ChangeSwitchTexture(line, true);
 
             break;
@@ -871,20 +883,20 @@ dboolean P_UseSpecialLine(mobj_t *thing, line_t *line, int side)
             break;
 
         case SR_Stairs_RaiseBy8:
-            if (EV_BuildStairs(line, build8))
+            if (EV_BuildStairs(line, FLOORSPEED / 4, 8 * FRACUNIT, false))
                 P_ChangeSwitchTexture(line, true);
 
             break;
 
         case SR_Stairs_RaiseBy16_Fast:
-            if (EV_BuildStairs(line, turbo16))
+            if (EV_BuildStairs(line, FLOORSPEED * 4, 16 * FRACUNIT, true))
                 P_ChangeSwitchTexture(line, true);
 
             break;
 
         // Buttons (retriggerable switches)
         case SR_Door_CloseStay:
-            if (EV_DoDoor(line, doorClose))
+            if (EV_DoDoor(line, doorClose, VDOORSPEED))
                 P_ChangeSwitchTexture(line, true);
 
             break;
@@ -908,7 +920,7 @@ dboolean P_UseSpecialLine(mobj_t *thing, line_t *line, int side)
             break;
 
         case SR_Door_OpenStay:
-            if (EV_DoDoor(line, doorOpen))
+            if (EV_DoDoor(line, doorOpen, VDOORSPEED))
                 P_ChangeSwitchTexture(line, true);
 
             break;
@@ -920,7 +932,7 @@ dboolean P_UseSpecialLine(mobj_t *thing, line_t *line, int side)
             break;
 
         case SR_Door_OpenWaitClose:
-            if (EV_DoDoor(line, doorNormal))
+            if (EV_DoDoor(line, doorNormal, VDOORSPEED))
                 P_ChangeSwitchTexture(line, true);
             else if (thing->player)
                 S_StartSound(thing, sfx_oof);
@@ -970,19 +982,19 @@ dboolean P_UseSpecialLine(mobj_t *thing, line_t *line, int side)
             break;
 
         case SR_Door_OpenWaitClose_Fast:
-            if (EV_DoDoor(line, doorBlazeRaise))
+            if (EV_DoDoor(line, doorBlazeRaise, VDOORSPEED * 4))
                 P_ChangeSwitchTexture(line, true);
 
             break;
 
         case SR_Door_OpenStay_Fast:
-            if (EV_DoDoor(line, doorBlazeOpen))
+            if (EV_DoDoor(line, doorBlazeOpen, VDOORSPEED * 4))
                 P_ChangeSwitchTexture(line, true);
 
             break;
 
         case SR_Door_CloseStay_Fast:
-            if (EV_DoDoor(line, doorBlazeClose))
+            if (EV_DoDoor(line, doorBlazeClose, VDOORSPEED * 4))
                 P_ChangeSwitchTexture(line, true);
 
             break;
@@ -1002,7 +1014,7 @@ dboolean P_UseSpecialLine(mobj_t *thing, line_t *line, int side)
         case SR_Door_Blue_OpenStay_Fast:
         case SR_Door_Red_OpenStay_Fast:
         case SR_Door_Yellow_OpenStay_Fast:
-            if (EV_DoLockedDoor(line, doorBlazeOpen, thing))
+            if (EV_DoLockedDoor(line, doorBlazeOpen, thing, VDOORSPEED * 4))
                 P_ChangeSwitchTexture(line, true);
 
             break;

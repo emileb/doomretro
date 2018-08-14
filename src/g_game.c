@@ -81,6 +81,7 @@ skill_t         gameskill;
 int             pendinggameskill;
 int             gameepisode;
 int             gamemap;
+char            speciallumpname[6] = "";
 
 dboolean        paused;
 dboolean        sendpause;              // send a pause event next tic
@@ -88,7 +89,6 @@ static dboolean sendsave;               // send a save event next tic
 
 dboolean        viewactive;
 
-int             gametic;
 int             gametime;
 int             totalkills;             // for intermission
 int             totalitems;
@@ -168,7 +168,7 @@ gameaction_t    loadaction = ga_nothing;
 
 unsigned int    stat_mapscompleted = 0;
 
-extern dboolean barreltics;
+extern dboolean barrelms;
 extern int      st_palette;
 extern int      pagetic;
 extern dboolean transferredsky;
@@ -249,16 +249,12 @@ void G_BuildTiccmd(ticcmd_t *cmd)
         return;
 
     strafe = (gamekeydown[keyboardstrafe] || mousebuttons[mousestrafe] || (gamepadbuttons & gamepadstrafe));
-
-    run = (gamekeydown[keyboardrun] ^ !!mousebuttons[mouserun] ^ (!!(gamepadbuttons & gamepadrun)) ^ alwaysrun);
-
-    usemouselook = (mouselook || gamekeydown[keyboardmouselook] || mousebuttons[mousemouselook]
-        || (gamepadbuttons & gamepadmouselook));
+    run = (gamekeydown[keyboardrun] ^ mousebuttons[mouserun] ^ (!!(gamepadbuttons & gamepadrun)) ^ alwaysrun);
+    usemouselook = (mouselook || gamekeydown[keyboardmouselook] || mousebuttons[mousemouselook] || (gamepadbuttons & gamepadmouselook));
 
     // use two stage accelerative turning
     // on the keyboard
-    if (gamekeydown[keyboardright] || gamekeydown[keyboardleft] || (gamepadbuttons & gamepadleft)
-        || (gamepadbuttons & gamepadright))
+    if (gamekeydown[keyboardright] || gamekeydown[keyboardleft] || (gamepadbuttons & gamepadleft) || (gamepadbuttons & gamepadright))
         turnheld++;
     else
         turnheld = 0;
@@ -275,45 +271,46 @@ void G_BuildTiccmd(ticcmd_t *cmd)
     else
     {
         if (gamekeydown[keyboardright] || (gamepadbuttons & gamepadright))
-            cmd->angleturn -= angleturn[turnheld < SLOWTURNTICS ? 2 : run];
+            cmd->angleturn -= angleturn[(turnheld < SLOWTURNTICS ? 2 : run)];
         else if (gamepadthumbRX > 0)
             cmd->angleturn -= (int)(gamepadangleturn[run] * gamepadthumbRXright * gamepadsensitivity);
 
         if (gamekeydown[keyboardleft] || (gamepadbuttons & gamepadleft))
-            cmd->angleturn += angleturn[turnheld < SLOWTURNTICS ? 2 : run];
+            cmd->angleturn += angleturn[(turnheld < SLOWTURNTICS ? 2 : run)];
         else if (gamepadthumbRX < 0)
             cmd->angleturn += (int)(gamepadangleturn[run] * gamepadthumbRXleft * gamepadsensitivity);
     }
 
-    if (usemouselook)
+    if (usemouselook && gamepadthumbRY)
     {
-        if (gamepadthumbRY < 0)
-            cmd->lookdir = (int)(48 * gamepadthumbRYup * gamepadsensitivity);
-        else if (gamepadthumbRY > 0)
-            cmd->lookdir = (int)(48 * gamepadthumbRYdown * gamepadsensitivity);
+        if (gp_invertyaxis)
+            gamepadthumbRY = -gamepadthumbRY;
+
+        cmd->lookdir = (int)(48 * (gamepadthumbRY < 0 ? gamepadthumbRYup : gamepadthumbRYdown) * gamepadsensitivity);
     }
 
     if (gamekeydown[keyboardforward] || gamekeydown[keyboardforward2] || (gamepadbuttons & gamepadforward))
-        forward += forwardmove[run];
+        forward = forwardmove[run];
     else if (gamepadthumbLY < 0)
-        forward += (int)(forwardmove[run] * gamepadthumbLYup);
+        forward = (int)(forwardmove[run] * gamepadthumbLYup);
 
     if (gamekeydown[keyboardback] || gamekeydown[keyboardback2] || (gamepadbuttons & gamepadback))
         forward -= forwardmove[run];
     else if (gamepadthumbLY > 0)
         forward -= (int)(forwardmove[run] * gamepadthumbLYdown);
 
-    if (gamekeydown[keyboardstraferight] || gamekeydown[keyboardstraferight2]
-        || (gamepadbuttons & gamepadstraferight))
-        side += sidemove[run];
+    if (gamekeydown[keyboardstraferight] || gamekeydown[keyboardstraferight2] || (gamepadbuttons & gamepadstraferight))
+        side = sidemove[run];
     else if (gamepadthumbLX > 0)
-        side += (int)(sidemove[run] * gamepadthumbLXright);
+        side = (int)(sidemove[run] * gamepadthumbLXright);
 
-    if (gamekeydown[keyboardstrafeleft] || gamekeydown[keyboardstrafeleft2]
-        || (gamepadbuttons & gamepadstrafeleft))
+    if (gamekeydown[keyboardstrafeleft] || gamekeydown[keyboardstrafeleft2] || (gamepadbuttons & gamepadstrafeleft))
         side -= sidemove[run];
     else if (gamepadthumbLX < 0)
         side -= (int)(sidemove[run] * gamepadthumbLXleft);
+
+    if ((gamekeydown[keyboardjump] || mousebuttons[mousejump] || (gamepadbuttons & gamepadjump)) && !nojump)
+        cmd->buttons |= BT_JUMP;
 
     // buttons
     if (skipaction)
@@ -327,12 +324,11 @@ void G_BuildTiccmd(ticcmd_t *cmd)
             || (gamepadbuttons & (gamepaduse | gamepaduse2)))
         {
             cmd->buttons |= BT_USE;
-            dclicks = 0;        // clear double clicks if hit use button
+            dclicks = 0;                // clear double clicks if hit use button
         }
     }
 
     if (!idclev && !idmus)
-    {
         for (int i = 0; i < NUMWEAPONKEYS; i++)
         {
             int key = *weapon_keys[i];
@@ -355,7 +351,6 @@ void G_BuildTiccmd(ticcmd_t *cmd)
                 }
             }
         }
-    }
 
     if (mousebuttons[mouseforward])
         forward += forwardmove[run];
@@ -472,7 +467,7 @@ static void G_SetInitialWeapon(void)
     }
 
     for (int i = 0; i < NUMAMMO; i++)
-        viewplayer->maxammo[i] = (gamemode == shareware && i == am_cell ? 0 : maxammo[i]);
+        viewplayer->maxammo[i] = maxammo[i];
 }
 
 //
@@ -487,7 +482,7 @@ static void G_ResetPlayer(void)
     viewplayer->preferredshotgun = wp_shotgun;
     viewplayer->fistorchainsaw = wp_fist;
     memset(viewplayer->weaponowned, false, sizeof(viewplayer->weaponowned));
-    memset(viewplayer->ammo, false, sizeof(viewplayer->ammo));
+    memset(viewplayer->ammo, 0, sizeof(viewplayer->ammo));
     G_SetInitialWeapon();
     viewplayer->backpack = false;
 }
@@ -497,9 +492,8 @@ static void G_ResetPlayer(void)
 //
 void G_DoLoadLevel(void)
 {
-    int     ep;
-    int     map = (gameepisode - 1) * 10 + gamemap;
-    char    *author = P_GetMapAuthor(map);
+    int ep;
+    int map = (gameepisode - 1) * 10 + gamemap;
 
     HU_DrawDisk();
 
@@ -553,16 +547,11 @@ void G_DoLoadLevel(void)
     // died.
     P_FreeSecNodeList();
 
-    C_AddConsoleDivider();
     ep = (gamemode == commercial ? (gamemission == pack_nerve ? 2 : 1) : gameepisode);
     P_MapName(ep, gamemap);
 
-    if (*author)
-        C_Print(titlestring, "%s by %s", mapnumandtitle, author);
-    else
-        C_Print(titlestring, mapnumandtitle);
-
     P_SetupLevel(ep, gamemap);
+    HU_InitMessages();
 
     R_InitSkyMap();
     R_InitColumnFunctions();
@@ -592,8 +581,7 @@ void G_DoLoadLevel(void)
 void G_ToggleAlwaysRun(evtype_t type)
 {
 #if defined(_WIN32)
-    alwaysrun = (keyboardalwaysrun == KEY_CAPSLOCK && type == ev_keydown ?
-        (GetKeyState(VK_CAPITAL) & 0x0001) : !alwaysrun);
+    alwaysrun = (keyboardalwaysrun == KEY_CAPSLOCK && type == ev_keydown ? (GetKeyState(VK_CAPITAL) & 0x0001) : !alwaysrun);
 #else
     alwaysrun = !alwaysrun;
 #endif
@@ -643,8 +631,7 @@ dboolean G_Responder(event_t *ev)
                 || (ev->type == ev_gamepad
                     && gamepadwait < I_GetTime()
                     && gamepadbuttons
-                    && !(gamepadbuttons & (GAMEPAD_DPAD_UP | GAMEPAD_DPAD_DOWN |
-                        GAMEPAD_DPAD_LEFT | GAMEPAD_DPAD_RIGHT))))
+                    && !(gamepadbuttons & (GAMEPAD_DPAD_UP | GAMEPAD_DPAD_DOWN | GAMEPAD_DPAD_LEFT | GAMEPAD_DPAD_RIGHT))))
             && !keydown)
         {
             keydown = ev->data1;
@@ -786,8 +773,7 @@ dboolean G_Responder(event_t *ev)
                         G_NextWeapon();
                     else if (mouseprevweapon == MOUSE_WHEELDOWN)
                         G_PrevWeapon();
-
-                    if (mouseactionlist[MOUSE_WHEELDOWN][0])
+                    else if (mouseactionlist[MOUSE_WHEELDOWN][0])
                         C_ExecuteInputString(mouseactionlist[MOUSE_WHEELDOWN]);
                 }
                 else if (ev->data1 > 0)
@@ -796,8 +782,7 @@ dboolean G_Responder(event_t *ev)
                         G_NextWeapon();
                     else if (mouseprevweapon == MOUSE_WHEELUP)
                         G_PrevWeapon();
-
-                    if (mouseactionlist[MOUSE_WHEELUP][0])
+                    else if (mouseactionlist[MOUSE_WHEELUP][0])
                         C_ExecuteInputString(mouseactionlist[MOUSE_WHEELUP]);
                 }
             }
@@ -930,7 +915,7 @@ void G_Ticker(void)
     // get commands, check consistency,
     // and build new consistency check
     cmd = &viewplayer->cmd;
-    memcpy(cmd, &netcmds[gametic % BACKUPTICS], sizeof(ticcmd_t));
+    memcpy(cmd, &localcmds[gametime % BACKUPTICS], sizeof(ticcmd_t));
 
     // check for special buttons
     if (viewplayer->cmd.buttons & BT_SPECIAL)
@@ -1067,7 +1052,7 @@ void G_PlayerReborn(void)
 
     markpointnum = 0;
     infight = false;
-    barreltics = 0;
+    barrelms = 0;
 }
 
 //
@@ -1165,8 +1150,6 @@ void G_SecretExitLevel(void)
 extern int      episode;
 extern menu_t   EpiDef;
 
-void ST_doRefresh(void);
-
 static void G_DoCompleted(void)
 {
     int map = (gameepisode - 1) * 10 + gamemap;
@@ -1178,19 +1161,19 @@ static void G_DoCompleted(void)
 
     I_UpdateBlitFunc(false);
 
+    if (vid_widescreen)
+    {
+        I_ToggleWidescreen(false);
+        returntowidescreen = true;
+        ST_Drawer(false, true);
+    }
+
     // [BH] allow the exit switch to turn on before the screen wipes
     viewplayer->mo->momx = 0;
     viewplayer->mo->momy = 0;
     viewplayer->mo->momz = 0;
     R_RenderPlayerView();
     I_Sleep(700);
-
-    if (vid_widescreen)
-    {
-        I_ToggleWidescreen(false);
-        returntowidescreen = true;
-        ST_doRefresh();
-    }
 
     G_PlayerFinishLevel();      // take away cards and stuff
 
@@ -1367,8 +1350,6 @@ static void G_DoCompleted(void)
 
     C_CCMDOutput("exitmap");
 
-    C_AddConsoleDivider();
-
     WI_Start(&wminfo);
 }
 
@@ -1442,13 +1423,14 @@ void G_DoLoadGame(void)
     if (!(save_stream = fopen(savename, "rb")))
     {
         C_Warning("<b>%s</b> couldn't be found.", savename);
+        loadaction = ga_nothing;
         return;
     }
 
     if (!P_ReadSaveGameHeader(savedescription))
     {
         fclose(save_stream);
-        C_Warning("<b>%s</b> isn't a valid savegame.", savename);
+        loadaction = ga_nothing;
         return;
     }
 
@@ -1504,8 +1486,7 @@ void G_LoadedGameMessage(void)
     {
         static char buffer[1024];
 
-        M_snprintf(buffer, sizeof(buffer), (loadaction == ga_autoloadgame ? s_GGAUTOLOADED : s_GGLOADED),
-            titlecase(savedescription));
+        M_snprintf(buffer, sizeof(buffer), (loadaction == ga_autoloadgame ? s_GGAUTOLOADED : s_GGLOADED), titlecase(savedescription));
         HU_PlayerMessage(buffer, false);
         message_dontfuckwithme = true;
     }
@@ -1708,7 +1689,7 @@ void G_InitNew(skill_t skill, int ep, int map)
     if (map > 9 && gamemode != commercial)
         map = 9;
 
-    // [BH] Fix demon speed bug. See doomwiki.org/wiki/Demon_speed_bug.
+    // [BH] Fix <https://doomwiki.org/wiki/Demon_speed_bug>.
     G_SetFastParms(fastparm || skill == sk_nightmare);
 
     // force player to be initialized upon first level load
@@ -1721,7 +1702,8 @@ void G_InitNew(skill_t skill, int ep, int map)
     gamemap = map;
     gameskill = skill;
 
-    C_CCMDOutput("newgame");
+    if (consolestrings && M_StringStartsWith(console[consolestrings - 1].string, "idclev"))
+        C_CCMDOutput("newgame");
 
     G_DoLoadLevel();
 }

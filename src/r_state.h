@@ -108,7 +108,6 @@ extern side_t       *sides;
 extern int          numtextures;
 
 extern int          numthings;
-
 extern int          numdecorations;
 
 typedef enum
@@ -122,6 +121,7 @@ extern mapformat_t  mapformat;
 
 extern dboolean     boomlinespecials;
 extern dboolean     blockmaprecreated;
+extern dboolean     nojump;
 
 //
 // POV data.

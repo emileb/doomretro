@@ -87,6 +87,7 @@ extern skill_t          gameskill;
 extern int              pendinggameskill;
 extern int              gameepisode;
 extern int              gamemap;
+extern char             speciallumpname[6];
 
 extern dboolean         freeze;
 
@@ -189,7 +190,6 @@ extern gamestate_t      gamestate;
 //  according to user inputs. Partly load from
 //  WAD, partly set at startup time.
 
-extern int              gametic;
 extern int              gametime;
 extern struct tm        *gamestarttime;
 
@@ -216,6 +216,6 @@ extern gamestate_t      wipegamestate;
 //  as well as tracking projectiles etc.
 extern int              skyflatnum;
 
-extern ticcmd_t         netcmds[BACKUPTICS];
+extern ticcmd_t         localcmds[BACKUPTICS];
 
 #endif

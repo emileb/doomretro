@@ -78,7 +78,6 @@
 typedef enum
 {
     ANIM_ALWAYS,
-    ANIM_RANDOM,
     ANIM_LEVEL
 } animenum_t;
 
@@ -105,14 +104,8 @@ typedef struct
     point_t     loc;
 
     // ALWAYS: n/a,
-    // RANDOM: period deviation (<256),
     // LEVEL: level
     int         data1;
-
-    // ALWAYS: n/a,
-    // RANDOM: random base period,
-    // LEVEL: n/a
-    int         data2;
 
     // actual graphics for frames of animations
     patch_t     *p[3];
@@ -124,9 +117,6 @@ typedef struct
 
     // next frame number to animate
     int         ctr;
-
-    // used by RANDOM and LEVEL when animating
-    int         state;
 } anim_t;
 
 static point_t lnodes[NUMEPISODES][NUMMAPS] =
@@ -176,8 +166,7 @@ static point_t lnodes[NUMEPISODES][NUMMAPS] =
 // Using patches saves a lot of space,
 //  as they replace 320x200 full screen frames.
 //
-#define ANIM(type, period, nanims, x, y, nexttic) \
-            { (type), (period), (nanims), { (x), (y) }, (nexttic), 0, { NULL, NULL, NULL }, 0, 0, 0 }
+#define ANIM(type, period, nanims, x, y, nexttic)   { (type), (period), (nanims), { (x), (y) }, (nexttic) }
 
 static anim_t epsd0animinfo[] =
 {
@@ -405,8 +394,7 @@ static void WI_drawLF(void)
 
         if (W_CheckMultipleLumps(name) > 1 && !nerve)
         {
-            V_DrawPatchWithShadow((ORIGINALWIDTH - SHORT(lnames[wbs->last]->width)) / 2 + 1, y + 1,
-                lnames[wbs->last], false);
+            V_DrawPatchWithShadow((ORIGINALWIDTH - SHORT(lnames[wbs->last]->width)) / 2 + 1, y + 1, lnames[wbs->last], false);
             y += SHORT(lnames[wbs->last]->height) + 2;
         }
         else
@@ -452,8 +440,7 @@ static void WI_drawEL(void)
             M_snprintf(name, sizeof(name), "WILV%i%i", wbs->epsd, wbs->next);
 
         if (W_CheckMultipleLumps(name) > 1 && !nerve)
-            V_DrawPatchWithShadow((ORIGINALWIDTH - SHORT(lnames[wbs->next]->width)) / 2 + 1, y + 1,
-                lnames[wbs->next], false);
+            V_DrawPatchWithShadow((ORIGINALWIDTH - SHORT(lnames[wbs->next]->width)) / 2 + 1, y + 1, lnames[wbs->next], false);
         else
             WI_drawWILV(y, nextmapname);
     }
@@ -506,8 +493,6 @@ static void WI_initAnimatedBack(void)
         // specify the next time to draw it
         if (a->type == ANIM_ALWAYS)
             a->nexttic = bcnt + 1 + (M_Random() % a->period);
-        else if (a->type == ANIM_RANDOM)
-            a->nexttic = bcnt + 1 + a->data2 + (M_Random() % a->data1);
         else if (a->type == ANIM_LEVEL)
             a->nexttic = bcnt + 1;
     }
@@ -534,17 +519,6 @@ static void WI_updateAnimatedBack(void)
                         a->ctr = 0;
 
                     a->nexttic = bcnt + a->period;
-                    break;
-
-                case ANIM_RANDOM:
-                    if (++a->ctr == a->nanims)
-                    {
-                        a->ctr = -1;
-                        a->nexttic = bcnt + a->data2 + (M_Random() % a->data1);
-                    }
-                    else
-                        a->nexttic = bcnt + a->period;
-
                     break;
 
                 case ANIM_LEVEL:
@@ -787,12 +761,28 @@ static int  sp_state;
 
 static void WI_initStats(void)
 {
+    const int   tabs[8] = { 65, 0, 0, 0, 0, 0, 0, 0 };
+
     state = StatCount;
     acceleratestage = 0;
     sp_state = 1;
-    cnt_kills = cnt_items = cnt_secret = -1;
-    cnt_time = cnt_par = -1;
+    cnt_kills = -1;
+    cnt_items = -1;
+    cnt_secret = -1;
+    cnt_time = -1;
+    cnt_par = -1;
     cnt_pause = TICRATE;
+
+    C_TabbedOutput(tabs, "Kills\t<b>%i%%</b>", (wbs->skills * 100) / wbs->maxkills);
+    C_TabbedOutput(tabs, "Items\t<b>%i%%</b>", (wbs->sitems * 100) / wbs->maxitems);
+
+    if (totalsecret)
+        C_TabbedOutput(tabs, "Secrets\t<b>%i%%</b>", (wbs->ssecret * 100) / wbs->maxsecret);
+
+    C_TabbedOutput(tabs, "Time\t<b>%.2i:%.2i</b>", wbs->stime / TICRATE / 60, wbs->stime / TICRATE % 60);
+
+    if (wbs->partime)
+        C_TabbedOutput(tabs, "Par\t<b>%.2i:%.2i</b>", wbs->partime / TICRATE / 60, wbs->partime / TICRATE % 60);
 
     WI_initAnimatedBack();
 }
@@ -956,39 +946,34 @@ static void WI_drawStats(void)
 
     if (wbs->partime)
     {
-        V_DrawPatchWithShadow(ORIGINALWIDTH / 2 + SP_TIMEX + (BTSX ? 0 : SP_TIMEX - FREEDOOM * 17 + 3),
-            SP_TIMEY + 1, par, false);
+        V_DrawPatchWithShadow(ORIGINALWIDTH / 2 + SP_TIMEX + (BTSX ? 0 : SP_TIMEX - FREEDOOM * 17 + 3), SP_TIMEY + 1, par, false);
         WI_drawTime(ORIGINALWIDTH - SP_TIMEX - 2 - (BTSX || FREEDOOM) * 17, SP_TIMEY, cnt_par);
     }
 }
 
 void WI_checkForAccelerate(void)
 {
-    if (!menuactive && !paused && !consoleactive)
+    const Uint8 *keystate = SDL_GetKeyboardState(NULL);
+
+    if ((viewplayer->cmd.buttons & BT_ATTACK) || keystate[SDL_SCANCODE_RETURN] || keystate[SDL_SCANCODE_KP_ENTER])
     {
-        const Uint8 *keystate = SDL_GetKeyboardState(NULL);
+        if (!viewplayer->attackdown)
+            acceleratestage = 1;
 
-        if ((viewplayer->cmd.buttons & BT_ATTACK) || keystate[SDL_SCANCODE_RETURN]
-            || keystate[SDL_SCANCODE_KP_ENTER])
-        {
-            if (!viewplayer->attackdown)
-                acceleratestage = 1;
-
-            viewplayer->attackdown = true;
-        }
-        else
-            viewplayer->attackdown = false;
-
-        if (viewplayer->cmd.buttons & BT_USE)
-        {
-            if (!viewplayer->usedown)
-                acceleratestage = 1;
-
-            viewplayer->usedown = true;
-        }
-        else
-            viewplayer->usedown = false;
+        viewplayer->attackdown = true;
     }
+    else
+        viewplayer->attackdown = false;
+
+    if ((viewplayer->cmd.buttons & BT_USE) || keystate[SDL_SCANCODE_SPACE])
+    {
+        if (!viewplayer->usedown)
+            acceleratestage = 1;
+
+        viewplayer->usedown = true;
+    }
+    else
+        viewplayer->usedown = false;
 }
 
 // Updates stuff each tick
@@ -1143,8 +1128,7 @@ static void WI_loadData(void)
     // Background image
     if (gamemode == commercial || (gamemode == retail && wbs->epsd == 3))
     {
-        M_StringCopy(bg_lumpname, (DMENUPIC && W_CheckMultipleLumps("INTERPIC") == 1 ? "DMENUPIC" : "INTERPIC"),
-            sizeof(bg_lumpname));
+        M_StringCopy(bg_lumpname, (DMENUPIC && W_CheckMultipleLumps("INTERPIC") == 1 ? "DMENUPIC" : "INTERPIC"), sizeof(bg_lumpname));
         bg_lumpname[8] = '\0';
     }
     else
@@ -1155,7 +1139,7 @@ static void WI_loadData(void)
 
 static void WI_unloadCallback(char *name, patch_t **variable)
 {
-    W_UnlockLumpName(name);
+    W_ReleaseLumpName(name);
     *variable = NULL;
 }
 

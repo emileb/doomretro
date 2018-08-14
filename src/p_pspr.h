@@ -51,6 +51,7 @@
 // i.e. the Thing Attributes table
 // and the Frame Sequence table.
 #include "info.h"
+#include "states.h"
 
 //
 // Frame flags:
@@ -75,8 +76,7 @@ typedef struct
 {
     state_t *state; // a NULL state means not active
     int     tics;
-    fixed_t sx;
-    fixed_t sy;
+    fixed_t sx, sy;
 } pspdef_t;
 
 #endif

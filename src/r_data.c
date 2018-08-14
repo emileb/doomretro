@@ -281,7 +281,7 @@ static void R_InitTextures(void)
         patchlookup[i] = W_CheckNumForName(name);
     }
 
-    W_UnlockLumpNum(names_lump);                                // cph - release the lump
+    W_ReleaseLumpNum(names_lump);                                // cph - release the lump
 
     // Load the map texture definitions from textures.lmp.
     // The data is contained in one or two lumps,
@@ -328,8 +328,7 @@ static void R_InitTextures(void)
 
         mtexture = (const maptexture_t *)((const byte *)maptex1 + offset);
 
-        texture = textures[i] = Z_Malloc(sizeof(texture_t) + sizeof(texpatch_t) * (SHORT(mtexture->patchcount) - 1),
-            PU_STATIC, 0);
+        texture = textures[i] = Z_Malloc(sizeof(texture_t) + sizeof(texpatch_t) * (SHORT(mtexture->patchcount) - 1), PU_STATIC, 0);
 
         texture->width = SHORT(mtexture->width);
         texture->height = SHORT(mtexture->height);
@@ -361,7 +360,7 @@ static void R_InitTextures(void)
 
     for (i = 0; i < 2; i++)                                     // cph - release the TEXTUREx lumps
         if (maptex_lump[i] != -1)
-            W_UnlockLumpNum(maptex_lump[i]);
+            W_ReleaseLumpNum(maptex_lump[i]);
 
     // Create translation table for global animation.
     // killough 4/9/98: make column offsets 32-bit;
@@ -534,8 +533,8 @@ static void R_InitSpriteLumps(void)
     {
         mobjinfo[MT_HEAD].flags2 |= MF2_DONTMAP;
         mobjinfo[MT_INV].flags2 &= ~MF2_TRANSLUCENT_33;
-        mobjinfo[MT_INS].flags2 &= ~(MF2_TRANSLUCENT_33 | MF2_FLOATBOB | MF2_NOFOOTCLIP);
-        mobjinfo[MT_MISC14].flags2 &= ~(MF2_FLOATBOB | MF2_NOFOOTCLIP);
+        mobjinfo[MT_INS].flags2 &= ~(MF2_TRANSLUCENT_33 | MF2_FLOATBOB);
+        mobjinfo[MT_MISC14].flags2 &= ~MF2_FLOATBOB;
         mobjinfo[MT_BFG].flags2 &= ~MF2_TRANSLUCENT;
         mobjinfo[MT_HEAD].blood = MT_BLOOD;
         mobjinfo[MT_BRUISER].blood = MT_BLOOD;
@@ -578,9 +577,8 @@ static void R_InitColormaps(void)
     dc_colormap[1] = colormaps[0] = W_CacheLumpName("COLORMAP");
 
     colormapwad = lumpinfo[W_CheckNumForName("COLORMAP")]->wadfile;
-    C_Output("Using %s colormap%s from the <b>COLORMAP</b> lump in %s <b>%s</b>.",
-        (numcolormaps == 1 ? "the" : commify(numcolormaps)), (numcolormaps == 1 ? "" : "s"),
-        (colormapwad->type == IWAD ? "IWAD" : "PWAD"), colormapwad->path);
+    C_Output("Using %s colormap%s from the <b>COLORMAP</b> lump in %s <b>%s</b>.", (numcolormaps == 1 ? "the" : commify(numcolormaps)),
+        (numcolormaps == 1 ? "" : "s"), (colormapwad->type == IWAD ? "IWAD" : "PWAD"), colormapwad->path);
 
     // [BH] There's a typo in dcolors.c, the source code of the utility id
     // Software used to construct the palettes and colormaps for DOOM (see
@@ -719,42 +717,34 @@ int R_TextureNumForName(char *name)
 //
 // Totally rewritten by Lee Killough to use less memory,
 // to avoid using alloca(), and to improve performance.
-// cph - new wad lump handling, calls cache functions but acquires no locks
-
-static inline void precache_lump(int l)
-{
-    W_CacheLumpNum(l);
-    W_UnlockLumpNum(l);
-}
-
 void R_PrecacheLevel(void)
 {
-    byte    *hitlist = malloc(MAX(numtextures, MAX(numflats, NUMSPRITES)));
+    dboolean    *hitlist = malloc(sizeof(dboolean) * MAX(numtextures, numflats));
 
     if (!hitlist)
         return;
 
     // Precache flats.
-    memset(hitlist, 0, numflats);
+    memset(hitlist, false, numflats);
 
     for (int i = 0; i < numsectors; i++)
     {
-        hitlist[sectors[i].floorpic] = 1;
-        hitlist[sectors[i].ceilingpic] = 1;
+        hitlist[sectors[i].floorpic] = true;
+        hitlist[sectors[i].ceilingpic] = true;
     }
 
     for (int i = 0; i < numflats; i++)
         if (hitlist[i])
-            precache_lump(firstflat + i);
+            W_CacheLumpNum(firstflat + i);
 
     // Precache textures.
-    memset(hitlist, 0, numtextures);
+    memset(hitlist, false, numtextures);
 
     for (int i = 0; i < numsides; i++)
     {
-        hitlist[sides[i].toptexture] = 1;
-        hitlist[sides[i].midtexture] = 1;
-        hitlist[sides[i].bottomtexture] = 1;
+        hitlist[sides[i].toptexture] = true;
+        hitlist[sides[i].midtexture] = true;
+        hitlist[sides[i].bottomtexture] = true;
     }
 
     // Sky texture is always present.
@@ -763,7 +753,7 @@ void R_PrecacheLevel(void)
     //  while the sky texture is stored like
     //  a wall texture, with an episode dependent
     //  name.
-    hitlist[skytexture] = 1;
+    hitlist[skytexture] = true;
 
     for (int i = 0; i < numtextures; i++)
         if (hitlist[i])
@@ -771,24 +761,8 @@ void R_PrecacheLevel(void)
             texture_t   *texture = textures[i];
 
             for (int j = 0; j < texture->patchcount; j++)
-                precache_lump(texture->patches[j].patch);
+                W_CacheLumpNum(texture->patches[j].patch);
         }
-
-    // Precache sprites.
-    memset(hitlist, 0, NUMSPRITES);
-
-    for (thinker_t *th = thinkerclasscap[th_mobj].cnext; th != &thinkerclasscap[th_mobj]; th = th->cnext)
-        hitlist[((mobj_t *)th)->sprite] = 1;
-
-    for (int i = 0; i < NUMSPRITES; i++)
-        if (hitlist[i])
-            for (int j = 0; j < sprites[i].numframes; j++)
-            {
-                short   *lump = sprites[i].spriteframes[j].lump;
-
-                for (int k = 0; k < 8; k++)
-                    precache_lump(firstspritelump + lump[k]);
-            }
 
     free(hitlist);
 }

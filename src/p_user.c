@@ -40,7 +40,10 @@
 #include "doomstat.h"
 #include "g_game.h"
 #include "i_gamepad.h"
+#include "info.h"
 #include "m_config.h"
+#include "m_random.h"
+#include "p_inter.h"
 #include "p_local.h"
 #include "s_sound.h"
 
@@ -71,7 +74,7 @@ void G_RemoveChoppers(void);
 // P_Thrust
 // Moves the given origin along a given angle.
 //
-static void P_Thrust(angle_t angle, fixed_t move)
+void P_Thrust(angle_t angle, fixed_t move)
 {
     viewplayer->mo->momx += FixedMul(move, finecosine[angle >>= ANGLETOFINESHIFT]);
     viewplayer->mo->momy += FixedMul(move, finesine[angle]);
@@ -108,10 +111,12 @@ void P_CalcHeight(void)
         // even if not on ground)
         fixed_t momx = viewplayer->momx;
         fixed_t momy = viewplayer->momy;
-        fixed_t bob = ((momx | momy) ? (FixedMul(momx, momx) + FixedMul(momy, momy)) >> 2 : 0);
+        fixed_t bob;
 
-        bob = FixedMul((bob ? MAX(MIN(bob, MAXBOB) * movebob / 100, MAXBOB * stillbob / 400) :
-            MAXBOB * stillbob / 400) / 2, finesine[(FINEANGLES / 20 * leveltime) & FINEMASK]);
+        if (momx | momy)
+            bob = MAX(MIN((FixedMul(momx, momx) + FixedMul(momy, momy)) >> 2, MAXBOB) * movebob / 100, MAXBOB * stillbob / 400) / 2;
+        else
+            bob = (MAXBOB * stillbob / 400) / 2;
 
         // move viewheight
         viewplayer->viewheight += viewplayer->deltaviewheight;
@@ -138,7 +143,7 @@ void P_CalcHeight(void)
                 viewplayer->deltaviewheight = 1;
         }
 
-        viewplayer->viewz = mo->z + viewplayer->viewheight + bob;
+        viewplayer->viewz = mo->z + viewplayer->viewheight + FixedMul(bob, finesine[(FINEANGLES / 20 * leveltime) & FINEMASK]);
     }
     else
         viewplayer->viewz = mo->z + viewplayer->viewheight;
@@ -148,7 +153,7 @@ void P_CalcHeight(void)
         dboolean    liquid = true;
 
         for (const struct msecnode_s *seclist = mo->touching_sectorlist; seclist; seclist = seclist->m_tnext)
-            if (!seclist->m_sector->isliquid)
+            if (seclist->m_sector->terraintype == SOLID)
             {
                 liquid = false;
                 break;
@@ -165,8 +170,8 @@ void P_CalcHeight(void)
             {
                 sector_t    *sector = mo->subsector->sector;
 
-                if (!P_IsSelfReferencingSector(sector) && (!sector->heightsec
-                    || mo->z + viewplayer->viewheight - FOOTCLIPSIZE >= sector->heightsec->floorheight))
+                if (!P_IsSelfReferencingSector(sector)
+                    && (!sector->heightsec || mo->z + viewplayer->viewheight - FOOTCLIPSIZE >= sector->heightsec->floorheight))
                     viewplayer->viewz -= FOOTCLIPSIZE;
             }
         }
@@ -182,10 +187,11 @@ void P_MovePlayer(void)
 {
     mobj_t      *mo = viewplayer->mo;
     ticcmd_t    *cmd = &viewplayer->cmd;
-    char        forwardmove = cmd->forwardmove;
-    char        sidemove = cmd->sidemove;
+    signed char forwardmove = cmd->forwardmove;
+    signed char sidemove = cmd->sidemove;
 
     mo->angle += cmd->angleturn << FRACBITS;
+    onground = (mo->z <= mo->floorz || (mo->flags2 & MF2_ONMOBJ));
 
     // killough 10/98:
     //
@@ -193,34 +199,28 @@ void P_MovePlayer(void)
     // anomalies. The thrust applied to bobbing is always the same strength on
     // ice, because the player still "works just as hard" to move, while the
     // thrust applied to the movement varies with 'movefactor'.
-    if (forwardmove | sidemove)                                                 // killough 10/98
+    if ((forwardmove | sidemove) && onground)
     {
-        if ((onground = (mo->z <= mo->floorz || (mo->flags2 & MF2_ONMOBJ))))    // killough 8/9/98
+        int     friction;
+        int     movefactor = P_GetMoveFactor(mo, &friction);
+        angle_t angle = mo->angle;
+
+        // killough 11/98:
+        // On sludge, make bobbing depend on efficiency.
+        // On ice, make it depend on effort.
+        int     bobfactor = (friction < ORIG_FRICTION ? movefactor : ORIG_FRICTION_FACTOR);
+
+        if (forwardmove)
         {
-            int     friction;
-            int     movefactor = P_GetMoveFactor(mo, &friction);
-            angle_t angle = mo->angle;
-
-            // killough 11/98:
-            // On sludge, make bobbing depend on efficiency.
-            // On ice, make it depend on effort.
-            int     bobfactor = (friction < ORIG_FRICTION ? movefactor : ORIG_FRICTION_FACTOR);
-
-            if (forwardmove)
-            {
-                P_Bob(angle, forwardmove * bobfactor);
-                P_Thrust(angle, forwardmove * movefactor);
-            }
-
-            if (sidemove)
-            {
-                P_Bob((angle -= ANG90), sidemove * bobfactor);
-                P_Thrust(angle, sidemove * movefactor);
-            }
+            P_Bob(angle, forwardmove * bobfactor);
+            P_Thrust(angle, forwardmove * movefactor);
         }
 
-        if (mo->state == states + S_PLAY)
-            P_SetMobjState(mo, S_PLAY_RUN1);
+        if (sidemove)
+        {
+            P_Bob((angle -= ANG90), sidemove * bobfactor);
+            P_Thrust(angle, sidemove * movefactor);
+        }
     }
 
     viewplayer->lookdir = BETWEEN(-LOOKDIRMAX * MLOOKUNIT, viewplayer->lookdir + cmd->lookdir, LOOKDIRMAX * MLOOKUNIT);
@@ -334,14 +334,15 @@ static void P_DeathThink(void)
     if (consoleactive)
         return;
 
-    if (((viewplayer->cmd.buttons & BT_USE) || ((viewplayer->cmd.buttons & BT_ATTACK)
-        && !viewplayer->damagecount && deathcount > TICRATE * 2) || gamekeydown[KEY_ENTER]))
+    if (((viewplayer->cmd.buttons & BT_USE) || gamekeydown[' '] || gamekeydown[KEY_ENTER]
+        || ((viewplayer->cmd.buttons & BT_ATTACK) && !viewplayer->damagecount && deathcount > TICRATE * 2)))
     {
         deathcount = 0;
         damagevibrationtics = 1;
         viewplayer->playerstate = PST_REBORN;
         facingkiller = false;
         skipaction = true;
+        gamekeydown[' '] = false;
     }
     else
         deathcount++;
@@ -389,6 +390,8 @@ void P_ResurrectPlayer(int health)
 
 void P_ChangeWeapon(weapontype_t newweapon)
 {
+    ammotype_t  ammotype = weaponinfo[newweapon].ammotype;
+
     if (newweapon == wp_fist)
     {
         if (viewplayer->readyweapon == wp_fist)
@@ -411,11 +414,7 @@ void P_ChangeWeapon(weapontype_t newweapon)
     }
 
     // Don't switch to a weapon without any or enough ammo.
-    else if (((newweapon == wp_pistol || newweapon == wp_chaingun) && !viewplayer->ammo[am_clip])
-        || (newweapon == wp_shotgun && !viewplayer->ammo[am_shell])
-        || (newweapon == wp_missile && !viewplayer->ammo[am_misl])
-        || (newweapon == wp_plasma && !viewplayer->ammo[am_cell])
-        || (newweapon == wp_bfg && viewplayer->ammo[am_cell] < bfgcells && bfgcells == BFGCELLS))
+    else if (ammotype != am_noammo && viewplayer->ammo[ammotype] < weaponinfo[newweapon].minammo)
         newweapon = wp_nochange;
 
     // Select the preferred shotgun.
@@ -423,12 +422,10 @@ void P_ChangeWeapon(weapontype_t newweapon)
     {
         if ((!viewplayer->weaponowned[wp_shotgun] || viewplayer->readyweapon == wp_shotgun)
             && viewplayer->weaponowned[wp_supershotgun] && viewplayer->ammo[am_shell] >= 2)
-            viewplayer->preferredshotgun = wp_supershotgun;
+            newweapon = viewplayer->preferredshotgun = wp_supershotgun;
         else if (viewplayer->readyweapon == wp_supershotgun
             || (viewplayer->preferredshotgun == wp_supershotgun && viewplayer->ammo[am_shell] == 1))
-            viewplayer->preferredshotgun = wp_shotgun;
-
-        newweapon = viewplayer->preferredshotgun;
+            newweapon = viewplayer->preferredshotgun = wp_shotgun;
     }
 
     if (newweapon != wp_nochange && newweapon != viewplayer->readyweapon && viewplayer->weaponowned[newweapon])
@@ -519,6 +516,9 @@ void P_PlayerThink(void)
         return;
     }
 
+    if (viewplayer->jumptics)
+        viewplayer->jumptics--;
+
     // Move around.
     // Reaction time is used to prevent movement for a bit after a teleport.
     if (mo->reactiontime)
@@ -545,6 +545,12 @@ void P_PlayerThink(void)
             P_PlayerInSpecialSector();
             break;
         }
+
+    if ((cmd->buttons & BT_JUMP) && (mo->floorz - mo->z <= 8 * FRACUNIT || (mo->flags2 & MF2_ONMOBJ)) && !viewplayer->jumptics)
+    {
+        mo->momz = JUMPHEIGHT;
+        viewplayer->jumptics = 18;
+    }
 
     // Check for weapon change.
 
@@ -594,6 +600,5 @@ void P_PlayerThink(void)
     if (viewplayer->powers[pw_invulnerability] > STARTFLASHING || (viewplayer->powers[pw_invulnerability] & 8))
         viewplayer->fixedcolormap = INVERSECOLORMAP;
     else
-        viewplayer->fixedcolormap = (viewplayer->powers[pw_infrared] > STARTFLASHING
-            || (viewplayer->powers[pw_infrared] & 8));
+        viewplayer->fixedcolormap = (viewplayer->powers[pw_infrared] > STARTFLASHING || (viewplayer->powers[pw_infrared] & 8));
 }

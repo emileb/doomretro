@@ -62,11 +62,11 @@
 //
 typedef struct
 {
-    dboolean    istexture;
-    int         picnum;
-    int         basepic;
-    int         numpics;
-    int         speed;
+    dboolean        istexture;
+    int             picnum;
+    int             basepic;
+    int             numpics;
+    int             speed;
 } anim_t;
 
 #if defined(_MSC_VER) || defined(__GNUC__)
@@ -78,10 +78,10 @@ typedef struct
 //
 typedef struct
 {
-    char    istexture;      // if false, it is a flat
-    char    endname[9];
-    char    startname[9];
-    int     speed;
+    signed char     istexture;              // if false, it is a flat
+    char            endname[9];
+    char            startname[9];
+    int             speed;
 } PACKEDATTR animdef_t;
 
 #if defined(_MSC_VER) || defined(__GNUC__)
@@ -90,15 +90,15 @@ typedef struct
 
 #define MAXANIMS    32
 
-unsigned int    stat_secretsrevealed = 0;
+unsigned int        stat_secretsrevealed = 0;
 
-dboolean        r_liquid_bob = r_liquid_bob_default;
+dboolean            r_liquid_bob = r_liquid_bob_default;
 
-fixed_t         animatedliquiddiff;
-fixed_t         animatedliquidxdir;
-fixed_t         animatedliquidydir;
-fixed_t         animatedliquidxoffs;
-fixed_t         animatedliquidyoffs;
+fixed_t             animatedliquiddiff;
+fixed_t             animatedliquidxdir;
+fixed_t             animatedliquidydir;
+fixed_t             animatedliquidxoffs;
+fixed_t             animatedliquidyoffs;
 
 fixed_t animatedliquiddiffs[64] =
 {
@@ -112,90 +112,45 @@ fixed_t animatedliquiddiffs[64] =
      4318,  4764,  5164,  5516,  5814,  6054,  6238,  6360
 };
 
-static anim_t   *lastanim;
-static anim_t   *anims;                 // new structure w/o limits -- killough
-static size_t   maxanims;
+static anim_t       *lastanim;
+static anim_t       *anims;                 // new structure w/o limits -- killough
+static size_t       maxanims;
+
+terraintype_t       *terraintypes;
+dboolean            *isteleport;
 
 // killough 3/7/98: Initialize generalized scrolling
 static void P_SpawnScrollers(void);
 static void P_SpawnFriction(void);      // phares 3/16/98
 static void P_SpawnPushers(void);       // phares 3/20/98
 
-extern int      numflats;
-extern dboolean canmodify;
-
-dboolean        *isliquid;
-dboolean        *isteleport;
-
-short           nukagestart;
-short           nukageend;
-short           fwaterstart;
-short           fwaterend;
-short           swaterstart;
-short           swaterend;
-short           lavastart;
-short           lavaend;
-short           bloodstart;
-short           bloodend;
-short           slimestart;
-short           slimeend;
+extern dboolean     canmodify;
+extern int          numflats;
+extern texture_t    **textures;
 
 //
 // P_InitPicAnims
 //
 void P_InitPicAnims(void)
 {
-    int size = (numflats + 1) * sizeof(dboolean);
+    int         size = (numflats + 1) * sizeof(dboolean);
 
-    isliquid = Z_Malloc(size, PU_STATIC, NULL);
-    isteleport = Z_Calloc(1, size, PU_STATIC, NULL);
-
-    // [BH] indicate obvious teleport textures for automap
-    if (BTSX)
-    {
-        isteleport[R_CheckFlatNumForName("SLIME05")] = true;
-        isteleport[R_CheckFlatNumForName("SLIME08")] = true;
-        isteleport[R_CheckFlatNumForName("SLIME09")] = true;
-        isteleport[R_CheckFlatNumForName("SLIME12")] = true;
-        isteleport[R_CheckFlatNumForName("SHNPRT02")] = true;
-        isteleport[R_CheckFlatNumForName("SHNPRT03")] = true;
-        isteleport[R_CheckFlatNumForName("SHNPRT04")] = true;
-        isteleport[R_CheckFlatNumForName("SHNPRT05")] = true;
-        isteleport[R_CheckFlatNumForName("SHNPRT06")] = true;
-        isteleport[R_CheckFlatNumForName("SHNPRT07")] = true;
-        isteleport[R_CheckFlatNumForName("SHNPRT08")] = true;
-        isteleport[R_CheckFlatNumForName("SHNPRT09")] = true;
-        isteleport[R_CheckFlatNumForName("SHNPRT10")] = true;
-        isteleport[R_CheckFlatNumForName("SHNPRT11")] = true;
-        isteleport[R_CheckFlatNumForName("SHNPRT12")] = true;
-        isteleport[R_CheckFlatNumForName("SHNPRT13")] = true;
-        isteleport[R_CheckFlatNumForName("SHNPRT14")] = true;
-        isteleport[R_CheckFlatNumForName("TELEPRT1")] = true;
-        isteleport[R_CheckFlatNumForName("TELEPRT2")] = true;
-        isteleport[R_CheckFlatNumForName("TELEPRT3")] = true;
-        isteleport[R_CheckFlatNumForName("TELEPRT4")] = true;
-        isteleport[R_CheckFlatNumForName("TELEPRT5")] = true;
-        isteleport[R_CheckFlatNumForName("TELEPRT6")] = true;
-    }
-    else
-    {
-        isteleport[R_CheckFlatNumForName("GATE1")] = true;
-        isteleport[R_CheckFlatNumForName("GATE2")] = true;
-        isteleport[R_CheckFlatNumForName("GATE3")] = true;
-        isteleport[R_CheckFlatNumForName("GATE4")] = true;
-    }
-}
-
-//
-// P_SetLiquids
-//
-void P_SetLiquids(void)
-{
     int         lump = W_GetNumForName("ANIMATED");
     animdef_t   *animdefs = W_CacheLumpNum(lump);
 
-    for (int i = 0; i < numflats; i++)
-        isliquid[i] = false;
+    short       nukagestart = R_CheckFlatNumForName("NUKAGE1");
+    short       nukageend = R_CheckFlatNumForName("NUKAGE3");
+    short       fwaterstart = R_CheckFlatNumForName("FWATER1");
+    short       fwaterend = R_CheckFlatNumForName("FWATER4");
+    short       swaterstart = R_CheckFlatNumForName("SWATER1");
+    short       swaterend = R_CheckFlatNumForName("SWATER4");
+    short       lavastart = R_CheckFlatNumForName("LAVA1");
+    short       lavaend = R_CheckFlatNumForName("LAVA4");
+    short       bloodstart = R_CheckFlatNumForName("BLOOD1");
+    short       bloodend = R_CheckFlatNumForName("BLOOD3");
+
+    terraintypes = Z_Calloc(1, size, PU_STATIC, NULL);
+    isteleport = Z_Calloc(1, size, PU_STATIC, NULL);
 
     // Init animation
     lastanim = anims;
@@ -235,8 +190,17 @@ void P_SetLiquids(void)
             lastanim->numpics = lastanim->picnum - lastanim->basepic + 1;
             lastanim->istexture = false;
 
-            for (int j = 0; j < lastanim->numpics; j++)
-                isliquid[lastanim->basepic + j] = true;
+            for (int j = lastanim->basepic; j < lastanim->basepic + lastanim->numpics; j++)
+                if (j >= nukagestart && j <= nukageend)
+                    terraintypes[j] = NUKAGE;
+                else if ((j >= fwaterstart && j <= fwaterend) || (j >= swaterstart && j <= swaterend))
+                    terraintypes[j] = WATER;
+                else if (j >= lavastart && j <= lavaend)
+                    terraintypes[j] = LAVA;
+                else if (j >= bloodstart && j <= bloodend)
+                    terraintypes[j] = BLOOD;
+                else
+                    terraintypes[j] = SLIME;
         }
 
         if (lastanim->numpics < 2)
@@ -250,13 +214,12 @@ void P_SetLiquids(void)
         lastanim++;
     }
 
-    W_UnlockLumpNum(lump);
+    W_ReleaseLumpNum(lump);
 
     // [BH] parse DRCOMPAT lump to find animated textures that are not liquid in current wad
     SC_Open("DRCOMPAT");
 
     while (SC_GetString())
-    {
         if (M_StringCompare(sc_String, "NOLIQUID"))
         {
             int lump;
@@ -266,32 +229,74 @@ void P_SetLiquids(void)
             SC_MustGetString();
 
             if (lump >= 0 && M_StringCompare(leafname(lumpinfo[firstflat + lump]->wadfile->path), sc_String))
-                isliquid[lump] = false;
+                terraintypes[lump] = SOLID;
         }
-    }
 
     SC_Close();
+
+    // [BH] indicate obvious teleport textures for automap
+    if (BTSX)
+    {
+        isteleport[R_CheckFlatNumForName("SLIME05")] = true;
+        isteleport[R_CheckFlatNumForName("SLIME08")] = true;
+        isteleport[R_CheckFlatNumForName("SLIME09")] = true;
+        isteleport[R_CheckFlatNumForName("SLIME12")] = true;
+        isteleport[R_CheckFlatNumForName("SHNPRT02")] = true;
+        isteleport[R_CheckFlatNumForName("SHNPRT03")] = true;
+        isteleport[R_CheckFlatNumForName("SHNPRT04")] = true;
+        isteleport[R_CheckFlatNumForName("SHNPRT05")] = true;
+        isteleport[R_CheckFlatNumForName("SHNPRT06")] = true;
+        isteleport[R_CheckFlatNumForName("SHNPRT07")] = true;
+        isteleport[R_CheckFlatNumForName("SHNPRT08")] = true;
+        isteleport[R_CheckFlatNumForName("SHNPRT09")] = true;
+        isteleport[R_CheckFlatNumForName("SHNPRT10")] = true;
+        isteleport[R_CheckFlatNumForName("SHNPRT11")] = true;
+        isteleport[R_CheckFlatNumForName("SHNPRT12")] = true;
+        isteleport[R_CheckFlatNumForName("SHNPRT13")] = true;
+        isteleport[R_CheckFlatNumForName("SHNPRT14")] = true;
+        isteleport[R_CheckFlatNumForName("TELEPRT1")] = true;
+        isteleport[R_CheckFlatNumForName("TELEPRT2")] = true;
+        isteleport[R_CheckFlatNumForName("TELEPRT3")] = true;
+        isteleport[R_CheckFlatNumForName("TELEPRT4")] = true;
+        isteleport[R_CheckFlatNumForName("TELEPRT5")] = true;
+        isteleport[R_CheckFlatNumForName("TELEPRT6")] = true;
+    }
+    else
+    {
+        isteleport[R_CheckFlatNumForName("GATE1")] = true;
+        isteleport[R_CheckFlatNumForName("GATE2")] = true;
+        isteleport[R_CheckFlatNumForName("GATE3")] = true;
+        isteleport[R_CheckFlatNumForName("GATE4")] = true;
+    }
+
+    for (anim_t *anim = anims; anim < lastanim; anim++)
+        for (int i = anim->basepic; i < anim->basepic + anim->numpics; i++)
+        {
+            if (anim->istexture)
+            {
+                texture_t   *texture = textures[i];
+
+                for (int j = 0; j < texture->patchcount; j++)
+                    W_CacheLumpNum(texture->patches[j].patch);
+            }
+            else
+                W_CacheLumpNum(firstflat + i);
+        }
+}
+
+//
+// P_SetLiquids
+//
+void P_SetLiquids(void)
+{
     numliquid = 0;
 
     for (int i = 0; i < numsectors; i++)
-        if (isliquid[sectors[i].floorpic])
+        if (terraintypes[sectors[i].floorpic] != SOLID)
         {
-            sectors[i].isliquid = true;
+            sectors[i].terraintype = terraintypes[sectors[i].floorpic];
             numliquid++;
         }
-
-    nukagestart = R_CheckFlatNumForName("NUKAGE1");
-    nukageend = R_CheckFlatNumForName("NUKAGE3");
-    fwaterstart = R_CheckFlatNumForName("FWATER1");
-    fwaterend = R_CheckFlatNumForName("FWATER4");
-    swaterstart = R_CheckFlatNumForName("SWATER1");
-    swaterend = R_CheckFlatNumForName("SWATER4");
-    lavastart = R_CheckFlatNumForName("LAVA1");
-    lavaend = R_CheckFlatNumForName("LAVA4");
-    bloodstart = R_CheckFlatNumForName("BLOOD1");
-    bloodend = R_CheckFlatNumForName("BLOOD3");
-    slimestart = R_CheckFlatNumForName("SLIME01");
-    slimeend = R_CheckFlatNumForName("SLIME12");
 }
 
 //
@@ -663,13 +668,13 @@ fixed_t P_FindShortestTextureAround(int secnum)
     for (int i = 0; i < linecount; i++)
         if (twoSided(secnum, i))
         {
-            const side_t    *side;
+            short   texture;
 
-            if ((side = getSide(secnum, i, 0))->bottomtexture > 0 && textureheight[side->bottomtexture] < minsize)
-                minsize = textureheight[side->bottomtexture];
+            if ((texture = getSide(secnum, i, 0)->bottomtexture) > 0 && textureheight[texture] < minsize)
+                minsize = textureheight[texture];
 
-            if ((side = getSide(secnum, i, 1))->bottomtexture > 0 && textureheight[side->bottomtexture] < minsize)
-                minsize = textureheight[side->bottomtexture];
+            if ((texture = getSide(secnum, i, 1)->bottomtexture) > 0 && textureheight[texture] < minsize)
+                minsize = textureheight[texture];
         }
 
     return minsize;
@@ -696,13 +701,13 @@ fixed_t P_FindShortestUpperAround(int secnum)
     for (int i = 0; i < linecount; i++)
         if (twoSided(secnum, i))
         {
-            const side_t    *side;
+            short   texture;
 
-            if ((side = getSide(secnum, i, 0))->toptexture > 0 && textureheight[side->toptexture] < minsize)
-                minsize = textureheight[side->toptexture];
+            if ((texture = getSide(secnum, i, 0)->toptexture) > 0 && textureheight[texture] < minsize)
+                minsize = textureheight[texture];
 
-            if ((side = getSide(secnum, i, 1))->toptexture > 0 && textureheight[side->toptexture] < minsize)
-                minsize = textureheight[side->toptexture];
+            if ((texture = getSide(secnum, i, 1)->toptexture) > 0 && textureheight[texture] < minsize)
+                minsize = textureheight[texture];
         }
 
     return minsize;
@@ -1052,8 +1057,7 @@ dboolean P_SectorHasLightSpecial(sector_t *sec)
 {
     short   special = sec->special;
 
-    return (special && special != Secret && special != Door_CloseStay_After30sec
-        && special != Door_OpenClose_OpensAfter5Min);
+    return (special && special != Secret && special != Door_CloseStay_After30sec && special != Door_OpenClose_OpensAfter5Min);
 }
 
 //
@@ -1303,7 +1307,7 @@ void P_CrossSpecialLine(line_t *line, int side, mobj_t *thing)
     {
         // Triggers
         case W1_Door_OpenStay:
-            if (EV_DoDoor(line, doorOpen))
+            if (EV_DoDoor(line, doorOpen, VDOORSPEED))
             {
                 line->special = 0;
 
@@ -1320,7 +1324,7 @@ void P_CrossSpecialLine(line_t *line, int side, mobj_t *thing)
 
                         case 4:
                             junk.tag = 666;
-                            EV_DoDoor(&junk, doorBlazeOpen);
+                            EV_DoDoor(&junk, doorBlazeOpen, VDOORSPEED * 4);
                             break;
                     }
 
@@ -1331,13 +1335,13 @@ void P_CrossSpecialLine(line_t *line, int side, mobj_t *thing)
             break;
 
         case W1_Door_CloseStay:
-            if (EV_DoDoor(line, doorClose))
+            if (EV_DoDoor(line, doorClose, VDOORSPEED))
                 line->special = 0;
 
             break;
 
         case W1_Door_OpenWaitClose:
-            if (EV_DoDoor(line, doorNormal))
+            if (EV_DoDoor(line, doorNormal, VDOORSPEED))
                 line->special = 0;
 
             break;
@@ -1360,7 +1364,7 @@ void P_CrossSpecialLine(line_t *line, int side, mobj_t *thing)
             break;
 
         case W1_Stairs_RaiseBy8:
-            if (EV_BuildStairs(line, build8))
+            if (EV_BuildStairs(line, FLOORSPEED / 4, 8 * FRACUNIT, false))
                 line->special = 0;
 
             break;
@@ -1384,7 +1388,7 @@ void P_CrossSpecialLine(line_t *line, int side, mobj_t *thing)
             break;
 
         case W1_Door_CloseWaitOpen:
-            if (EV_DoDoor(line, doorClose30ThenOpen))
+            if (EV_DoDoor(line, doorClose30ThenOpen, VDOORSPEED))
                 line->special = 0;
 
             break;
@@ -1502,7 +1506,7 @@ void P_CrossSpecialLine(line_t *line, int side, mobj_t *thing)
             break;
 
         case W1_Stairs_RaiseBy16_Fast:
-            if (EV_BuildStairs(line, turbo16))
+            if (EV_BuildStairs(line, FLOORSPEED * 4, 16 * FRACUNIT, true))
                 line->special = 0;
 
             break;
@@ -1514,19 +1518,19 @@ void P_CrossSpecialLine(line_t *line, int side, mobj_t *thing)
             break;
 
         case W1_Door_OpenWaitClose_Fast:
-            if (EV_DoDoor(line, doorBlazeRaise))
+            if (EV_DoDoor(line, doorBlazeRaise, VDOORSPEED * 4))
                 line->special = 0;
 
             break;
 
         case W1_Door_OpenStay_Fast:
-            if (EV_DoDoor(line, doorBlazeOpen))
+            if (EV_DoDoor(line, doorBlazeOpen, VDOORSPEED * 4))
                 line->special = 0;
 
             break;
 
         case W1_Door_CloseStay_Fast:
-            if (EV_DoDoor(line, doorBlazeClose))
+            if (EV_DoDoor(line, doorBlazeClose, VDOORSPEED * 4))
                 line->special = 0;
 
             break;
@@ -1580,11 +1584,11 @@ void P_CrossSpecialLine(line_t *line, int side, mobj_t *thing)
             break;
 
         case WR_Door_CloseStay:
-            EV_DoDoor(line, doorClose);
+            EV_DoDoor(line, doorClose, VDOORSPEED);
             break;
 
         case WR_Door_CloseStayOpen:
-            EV_DoDoor(line, doorClose30ThenOpen);
+            EV_DoDoor(line, doorClose30ThenOpen, VDOORSPEED);
             break;
 
         case WR_Crusher_StartWithFastDamage:
@@ -1616,7 +1620,7 @@ void P_CrossSpecialLine(line_t *line, int side, mobj_t *thing)
             break;
 
         case WR_Door_OpenStay:
-            EV_DoDoor(line, doorOpen);
+            EV_DoDoor(line, doorOpen, VDOORSPEED);
             break;
 
         case WR_Floor_StartMovingUpAndDown:
@@ -1632,7 +1636,7 @@ void P_CrossSpecialLine(line_t *line, int side, mobj_t *thing)
             break;
 
         case WR_Door_OpenWaitClose:
-            EV_DoDoor(line, doorNormal);
+            EV_DoDoor(line, doorNormal, VDOORSPEED);
             break;
 
         case WR_Floor_RaiseToLowestCeiling:
@@ -1668,15 +1672,15 @@ void P_CrossSpecialLine(line_t *line, int side, mobj_t *thing)
             break;
 
         case WR_Door_OpenWaitClose_Fast:
-            EV_DoDoor(line, doorBlazeRaise);
+            EV_DoDoor(line, doorBlazeRaise, VDOORSPEED * 4);
             break;
 
         case WR_Door_OpenStay_Fast:
-            EV_DoDoor(line, doorBlazeOpen);
+            EV_DoDoor(line, doorBlazeOpen, VDOORSPEED * 4);
             break;
 
         case WR_Door_CloseStay_Fast:
-            EV_DoDoor(line, doorBlazeClose);
+            EV_DoDoor(line, doorBlazeClose, VDOORSPEED * 4);
             break;
 
         case WR_Lift_LowerWaitRaise_Fast:
@@ -1839,11 +1843,11 @@ void P_CrossSpecialLine(line_t *line, int side, mobj_t *thing)
             break;
 
         case WR_Stairs_RaiseBy8:
-            EV_BuildStairs(line, build8);
+            EV_BuildStairs(line, FLOORSPEED / 4, 8 * FRACUNIT, false);
             break;
 
         case WR_Stairs_RaiseBy16_Fast:
-            EV_BuildStairs(line, turbo16);
+            EV_BuildStairs(line, FLOORSPEED * 4, 16 * FRACUNIT, true);
             break;
 
         case WR_Floor_RaiseDonut_ChangesTexture:
@@ -2043,7 +2047,7 @@ void P_ShootSpecialLine(mobj_t *thing, line_t *line)
             break;
 
         case G1_Door_OpenStay:
-            if (EV_DoDoor(line, doorOpen))
+            if (EV_DoDoor(line, doorOpen, VDOORSPEED))
             {
                 P_ChangeSwitchTexture(line, true);
                 line->special = 0;
@@ -2377,15 +2381,13 @@ void P_SpawnSpecials(void)
     if (p)
     {
         P_SetTimer(atoi(myargv[p + 1]));
-        C_Output("A <b>-timer</b> parameter was found on the command-line. "
-            "The time limit for each map is %i minutes.", timer);
+        C_Output("A <b>-timer</b> parameter was found on the command-line. The time limit for each map is %i minutes.", timer);
     }
 
     if (M_CheckParm("-avg"))
     {
         P_SetTimer(20);
-        C_Output("An <b>-avg</b> parameter was found on the command-line. "
-            "The time limit for each map is %i minutes.", timer);
+        C_Output("An <b>-avg</b> parameter was found on the command-line. The time limit for each map is %i minutes.", timer);
     }
 
     // Init special SECTORs.

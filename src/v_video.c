@@ -49,6 +49,7 @@
 #include "i_system.h"
 #include "m_argv.h"
 #include "m_config.h"
+#include "m_menu.h"
 #include "m_misc.h"
 #include "m_random.h"
 #include "r_main.h"
@@ -100,22 +101,6 @@ static const int    _fuzzrange[3] = { -SCREENWIDTH, 0, SCREENWIDTH };
 
 extern int          fuzztable[SCREENWIDTH * SCREENHEIGHT];
 extern dboolean     vanilla;
-
-//
-// V_CopyRect
-//
-void V_CopyRect(int srcx, int srcy, int srcscrn, int width, int height, int destx, int desty, int destscrn)
-{
-    byte    *src = screens[srcscrn] + srcy * SCREENWIDTH + srcx;
-    byte    *dest = screens[destscrn] + desty * SCREENWIDTH + destx;
-
-    while (height--)
-    {
-        memcpy(dest, src, width);
-        src += SCREENWIDTH;
-        dest += SCREENWIDTH;
-    }
-}
 
 //
 // V_FillRect
@@ -480,8 +465,7 @@ void V_DrawConsoleTextPatch(int x, int y, patch_t *patch, int color, int backgro
                         if (*source)
                         {
                             if (italics)
-                                *(dest + italicize[height]) = (!tinttab ? color :
-                                    tinttab[(color << 8) + *(dest + italicize[height])]);
+                                *(dest + italicize[height]) = (!tinttab ? color : tinttab[(color << 8) + *(dest + italicize[height])]);
                             else
                                 *dest = (!tinttab ? color : tinttab[(color << 8) + *dest]);
                         }
@@ -501,7 +485,7 @@ void V_DrawConsoleTextPatch(int x, int y, patch_t *patch, int color, int backgro
     }
 }
 
-void V_DrawConsolePatch(int x, int y, patch_t *patch)
+void V_DrawConsolePatch(int x, int y, patch_t *patch, int color1a, int color1b, int color2a, int color2b)
 {
     byte    *desttop = screens[0] + y * SCREENWIDTH + x;
     int     w = SHORT(patch->width);
@@ -524,7 +508,14 @@ void V_DrawConsolePatch(int x, int y, patch_t *patch)
                 int height = topdelta + length - count;
 
                 if (y + height > CONSOLETOP && *source)
-                    *dest = tinttab50[(nearestcolors[*source] << 8) + *dest];
+                {
+                    if (*source == color1a)
+                        *dest = tinttab50[(color1b << 8) + *dest];
+                    else if (*source == color2a)
+                        *dest = tinttab50[(color2b << 8) + *dest];
+                    else
+                        *dest = tinttab50[(nearestcolors[*source] << 8) + *dest];
+                }
 
                 source++;
                 dest += SCREENWIDTH;
@@ -1089,8 +1080,7 @@ void V_DrawFlippedShadowPatch(int x, int y, patch_t *patch)
 
     for (int col = 0; col < w; col += DXI, desttop++)
     {
-        column_t    *column = (column_t *)((byte *)patch
-                        + LONG(patch->columnofs[SHORT(patch->width) - 1 - (col >> FRACBITS)]));
+        column_t    *column = (column_t *)((byte *)patch + LONG(patch->columnofs[SHORT(patch->width) - 1 - (col >> FRACBITS)]));
 
         // step through the posts in a column
         while (column->topdelta != 0xFF)
@@ -1139,8 +1129,7 @@ void V_DrawFlippedSolidShadowPatch(int x, int y, patch_t *patch)
 
     for (int col = 0; col < w; col += DXI, desttop++)
     {
-        column_t    *column = (column_t *)((byte *)patch
-                        + LONG(patch->columnofs[SHORT(patch->width) - 1 - (col >> FRACBITS)]));
+        column_t    *column = (column_t *)((byte *)patch + LONG(patch->columnofs[SHORT(patch->width) - 1 - (col >> FRACBITS)]));
 
         // step through the posts in a column
         while (column->topdelta != 0xFF)
@@ -1175,8 +1164,7 @@ void V_DrawFlippedSpectreShadowPatch(int x, int y, patch_t *patch)
 
     for (int col = 0; col < w; col += DXI, desttop++)
     {
-        column_t    *column = (column_t *)((byte *)patch
-                        + LONG(patch->columnofs[SHORT(patch->width) - 1 - (col >> FRACBITS)]));
+        column_t    *column = (column_t *)((byte *)patch + LONG(patch->columnofs[SHORT(patch->width) - 1 - (col >> FRACBITS)]));
 
         // step through the posts in a column
         while (column->topdelta != 0xFF)
@@ -1217,8 +1205,7 @@ void V_DrawFlippedSolidSpectreShadowPatch(int x, int y, patch_t *patch)
 
     for (int col = 0; col < w; col += DXI, desttop++)
     {
-        column_t    *column = (column_t *)((byte *)patch
-                        + LONG(patch->columnofs[SHORT(patch->width) - 1 - (col >> FRACBITS)]));
+        column_t    *column = (column_t *)((byte *)patch + LONG(patch->columnofs[SHORT(patch->width) - 1 - (col >> FRACBITS)]));
 
         // step through the posts in a column
         while (column->topdelta != 0xFF)
@@ -1257,8 +1244,7 @@ void V_DrawFlippedTranslucentRedPatch(int x, int y, patch_t *patch)
 
     for (int col = 0; col < w; col += DXI, desttop++)
     {
-        column_t    *column = (column_t *)((byte *)patch
-                        + LONG(patch->columnofs[SHORT(patch->width) - 1 - (col >> FRACBITS)]));
+        column_t    *column = (column_t *)((byte *)patch + LONG(patch->columnofs[SHORT(patch->width) - 1 - (col >> FRACBITS)]));
 
         // step through the posts in a column
         while (column->topdelta != 0xFF)
@@ -1327,8 +1313,7 @@ void V_DrawFlippedFuzzPatch(int x, int y, patch_t *patch)
 
     for (int col = 0; col < w; col += DXI, desttop++)
     {
-        column_t    *column = (column_t *)((byte *)patch
-                        + LONG(patch->columnofs[SHORT(patch->width) - 1 - (col >> FRACBITS)]));
+        column_t    *column = (column_t *)((byte *)patch + LONG(patch->columnofs[SHORT(patch->width) - 1 - (col >> FRACBITS)]));
 
         while (column->topdelta != 0xFF)
         {
@@ -1452,19 +1437,19 @@ void V_DrawPixel(int x, int y, byte color, dboolean shadow)
     if (color == 251)
     {
         if (shadow)
-        {
-            *dest = tinttab50[*dest];
-            *(dest + 1) = tinttab50[*(dest + 1)];
-            *(dest + SCREENWIDTH) = tinttab50[*(dest + SCREENWIDTH)];
-            *(dest + SCREENWIDTH + 1) = tinttab50[*(dest + SCREENWIDTH + 1)];
-        }
+            for (int yy = 0; yy < SCREENSCALE * SCREENWIDTH; yy += SCREENWIDTH)
+                for (int xx = 0; xx < SCREENSCALE; xx++)
+                {
+                    byte    *dot = dest + yy + xx;
+
+                    *dot = tinttab50[*dot];
+                }
     }
     else if (color && color != 32)
     {
-        *dest = color;
-        *(dest + 1) = color;
-        *(dest + SCREENWIDTH) = color;
-        *(dest + SCREENWIDTH + 1) = color;
+        for (int yy = 0; yy < SCREENSCALE * SCREENWIDTH; yy += SCREENWIDTH)
+            for (int xx = 0; xx < SCREENSCALE; xx++)
+                *(dest + yy + xx) = color;
     }
 }
 
@@ -1473,9 +1458,8 @@ void GetPixelSize(dboolean reset)
     int width = -1;
     int height = -1;
 
-    sscanf(r_lowpixelsize, "%10ix%10i", &width, &height);
-
-    if (width > 0 && width <= SCREENWIDTH && height > 0 && height <= SCREENHEIGHT && (width >= 2 || height >= 2))
+    if (sscanf(r_lowpixelsize, "%10ix%10i", &width, &height) == 2
+        && width > 0 && width <= SCREENWIDTH && height > 0 && height <= SCREENHEIGHT && (width >= 2 || height >= 2))
     {
         pixelwidth = width;
         pixelheight = height * SCREENWIDTH;
@@ -1557,7 +1541,6 @@ char            lbmname1[MAX_PATH];
 char            lbmpath1[MAX_PATH];
 char            lbmpath2[MAX_PATH];
 
-extern dboolean inhelpscreens;
 extern char     maptitle[128];
 extern dboolean splashscreen;
 extern int      titlesequence;
@@ -1613,8 +1596,7 @@ dboolean V_ScreenShot(void)
             break;
 
         case GS_TITLESCREEN:
-            M_StringCopy(mapname, (splashscreen ? "Splash" : (titlesequence == 1 ? "Credits" : "Title")),
-                sizeof(mapname));
+            M_StringCopy(mapname, (splashscreen ? "Splash" : (titlesequence == 1 ? "Credits" : "Title")), sizeof(mapname));
             break;
 
         default:
@@ -1646,8 +1628,8 @@ dboolean V_ScreenShot(void)
     {
         do
         {
-            M_snprintf(lbmpath2, sizeof(lbmpath2), "%s"DIR_SEPARATOR_S"%s (%s).png", screenshotfolder,
-                makevalidfilename(mapname), commify(count++));
+            M_snprintf(lbmpath2, sizeof(lbmpath2), "%s"DIR_SEPARATOR_S"%s (%s).png", screenshotfolder, makevalidfilename(mapname),
+                commify(count++));
         } while (M_FileExists(lbmpath2));
 
         V_SavePNG(maprenderer, lbmpath2);

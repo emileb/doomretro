@@ -42,6 +42,7 @@
 #include "i_swap.h"
 #include "i_system.h"
 #include "m_config.h"
+#include "m_menu.h"
 #include "p_local.h"
 #include "v_video.h"
 #include "w_wad.h"
@@ -91,7 +92,6 @@ dboolean                r_playersprites = r_playersprites_default;
 
 extern fixed_t          animatedliquiddiff;
 extern dboolean         drawbloodsplats;
-extern dboolean         inhelpscreens;
 extern dboolean         notranslucency;
 extern dboolean         SHT2A0;
 extern dboolean         skippsprinterp;
@@ -171,7 +171,7 @@ static void R_InstallSpriteLump(const lumpinfo_t *lump, const int lumpnum, const
 
 static void R_InitSpriteDefs(void)
 {
-    const size_t    numentries = lastspritelump - firstspritelump + 1;
+    size_t  numentries = lastspritelump - firstspritelump + 1;
 
     struct
     {
@@ -253,7 +253,7 @@ static void R_InitSpriteDefs(void)
                             break;
 
                         case 1:
-                            // must have all 8 frames
+                            // must have all 16 frames
                             for (int rot = 0; rot < 16; rot += 2)
                             {
                                 if (sprtemp[frame].lump[rot + 1] == -1)
@@ -275,8 +275,7 @@ static void R_InitSpriteDefs(void)
 
                             for (int rot = 0; rot < 16; rot++)
                                 if (sprtemp[frame].lump[rot] == -1)
-                                    I_Error("R_InitSprites: Frame %c of sprite %.8s is missing rotations",
-                                        frame + 'A', sprnames[i]);
+                                    I_Error("R_InitSprites: Frame %c of sprite %.8s is missing rotations", frame + 'A', sprnames[i]);
 
                             break;
                     }
@@ -358,7 +357,7 @@ static int64_t  shadowtopscreen;
 static int64_t  shadowshift;
 int             fuzzpos;
 
-void (*shadowcolfunc)(void);
+static void (*shadowcolfunc)(void);
 
 static void R_BlastShadowColumn(const rcolumn_t *column)
 {
@@ -696,7 +695,7 @@ static void R_ProjectSprite(mobj_t *thing)
     tx -= (flip ? width - offset : offset);
 
     // off the right side?
-    if ((x1 = (centerxfrac + FixedMul(tx, xscale)) >> FRACBITS) > viewwidth)
+    if ((x1 = (centerxfrac + FixedMul(tx, xscale)) >> FRACBITS) >= viewwidth)
         return;
 
     // off the left side
@@ -716,8 +715,7 @@ static void R_ProjectSprite(mobj_t *thing)
 
         if (phs)
         {
-            if (viewz < phs->interpfloorheight ?
-                fz >= heightsec->interpfloorheight : gzt < heightsec->interpfloorheight)
+            if (viewz < phs->interpfloorheight ? fz >= heightsec->interpfloorheight : gzt < heightsec->interpfloorheight)
                 return;
 
             if (viewz > phs->interpceilingheight ?
@@ -844,7 +842,7 @@ static void R_ProjectBloodSplat(const bloodsplat_t *splat)
     tx -= (width >> 1);
 
     // off the right side?
-    if ((x1 = (centerxfrac + FRACUNIT / 2 + FixedMul(tx, xscale)) >> FRACBITS) > viewwidth)
+    if ((x1 = (centerxfrac + FRACUNIT / 2 + FixedMul(tx, xscale)) >> FRACBITS) >= viewwidth)
         return;
 
     // off the left side
@@ -927,7 +925,7 @@ void R_AddSprites(sector_t *sec, int lightlevel)
 
     spritelights = scalelight[MIN((lightlevel >> LIGHTSEGSHIFT) + extralight, LIGHTLEVELS - 1)];
     floorheight = sec->interpfloorheight;
-    drawshadows = (r_shadows && !fixedcolormap && !sec->isliquid && sec->floorpic != skyflatnum);
+    drawshadows = (r_shadows && !fixedcolormap && sec->terraintype == SOLID && sec->floorpic != skyflatnum);
 
     if (drawbloodsplats && floorheight - FRACUNIT <= viewz)
     {
@@ -1145,9 +1143,6 @@ static void R_DrawBloodSplatSprite(const bloodsplatvissprite_t *splat)
     const int   x1 = splat->x1;
     const int   x2 = splat->x2;
 
-    if (x1 > x2)
-        return;
-
     // initialize the clipping arrays
     for (int i = x1; i <= x2; i++)
     {
@@ -1167,8 +1162,7 @@ static void R_DrawBloodSplatSprite(const bloodsplatvissprite_t *splat)
         if (ds->x1 > x2 || ds->x2 < x1 || (!silhouette && !ds->maskedtexturecol))
             continue;       // does not cover bloodsplat
 
-        if (ds->maxscale < splat->scale
-            || (ds->minscale < splat->scale && !R_PointOnSegSide(splat->gx, splat->gy, ds->curline)))
+        if (ds->maxscale < splat->scale || (ds->minscale < splat->scale && !R_PointOnSegSide(splat->gx, splat->gy, ds->curline)))
             continue;       // seg is behind bloodsplat
 
         // clip this piece of the bloodsplat
@@ -1258,9 +1252,6 @@ static void R_DrawSprite(const vissprite_t *spr)
     const int   x1 = spr->x1;
     const int   x2 = spr->x2;
 
-    if (x1 > x2)
-        return;
-
     // initialize the clipping arrays
     for (int i = x1; i <= x2; i++)
     {
@@ -1280,8 +1271,7 @@ static void R_DrawSprite(const vissprite_t *spr)
         if (ds->x1 > x2 || ds->x2 < x1 || (!silhouette && !ds->maskedtexturecol))
             continue;       // does not cover sprite
 
-        if (ds->maxscale < spr->scale
-            || (ds->minscale < spr->scale && !R_PointOnSegSide(spr->gx, spr->gy, ds->curline)))
+        if (ds->maxscale < spr->scale || (ds->minscale < spr->scale && !R_PointOnSegSide(spr->gx, spr->gy, ds->curline)))
         {
             // masked mid texture?
             if (ds->maskedtexturecol)
@@ -1377,16 +1367,16 @@ void R_DrawMasked(void)
     // draw all blood splats
     i = num_bloodsplatvissprite;
 
-    while (i > 0)
-        R_DrawBloodSplatSprite(&bloodsplatvissprites[--i]);
+    while (i-- > 0)
+        R_DrawBloodSplatSprite(&bloodsplatvissprites[i]);
 
     R_SortVisSprites();
 
     // draw all other vissprites back to front
     i = num_vissprite;
 
-    while (i > 0)
-        R_DrawSprite(vissprite_ptrs[--i]);
+    while (i-- > 0)
+        R_DrawSprite(vissprite_ptrs[i]);
 
     // render any remaining masked mid textures
     for (drawseg_t *ds = ds_p; ds-- > drawsegs;)

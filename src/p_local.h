@@ -48,6 +48,7 @@
 
 #define VIEWHEIGHT          (41 * FRACUNIT)
 #define DEADVIEWHEIGHT      (6 * FRACUNIT)
+#define JUMPHEIGHT          (9 * FRACUNIT)
 
 #define DEADLOOKDIR         128
 
@@ -142,14 +143,16 @@ void P_SpawnPuff(fixed_t x, fixed_t y, fixed_t z, angle_t angle);
 void P_SpawnSmokeTrail(fixed_t x, fixed_t y, fixed_t z, angle_t angle);
 void P_SpawnBlood(fixed_t x, fixed_t y, fixed_t z, angle_t angle, int damage, mobj_t *target);
 void P_SpawnBloodSplat(fixed_t x, fixed_t y, int blood, int maxheight, mobj_t *target);
+void P_CheckMissileSpawn(mobj_t *th);
 mobj_t *P_SpawnMissile(mobj_t *source, mobj_t *dest, mobjtype_t type);
 void P_SpawnPlayerMissile(mobj_t *source, mobjtype_t type);
 void P_ExplodeMissile(mobj_t *mo);
-void P_InitExtraMobjs(void);
 
 //
 // P_ENEMY
 //
+#define BARRELMS    1500
+
 void P_NoiseAlert(mobj_t *target);
 
 //
@@ -239,7 +242,7 @@ fixed_t P_AimLineAttack(mobj_t *t1, angle_t angle, fixed_t distance);
 
 void P_LineAttack(mobj_t *t1, angle_t angle, fixed_t distance, fixed_t slope, int damage);
 
-void P_RadiusAttack(mobj_t *spot, mobj_t *source, int damage);
+void P_RadiusAttack(mobj_t *spot, mobj_t *source, int damage, dboolean vertical);
 
 int P_GetMoveFactor(const mobj_t *mo, int *frictionp);      // killough 8/28/98
 int P_GetFriction(const mobj_t *mo, int *frictionfactor);   // killough 8/28/98

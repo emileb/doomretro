@@ -74,12 +74,6 @@ typedef struct
 #pragma pack(pop)
 #endif
 
-static struct
-{
-    void            *cache;
-    unsigned int    locks;
-} *cachelump;
-
 // Location of each lump on disk.
 lumpinfo_t          **lumpinfo;
 int                 numlumps;
@@ -104,16 +98,12 @@ static dboolean IsFreedoom(const char *iwadname)
 
         // Determine game mode from levels present
         // Must be a full set for whichever mode is present
-        for (header.numlumps = LONG(header.numlumps); header.numlumps && fread(&lump, sizeof(lump), 1, fp);
-            header.numlumps--)
-        {
-            if (*n == 'F' && n[1] == 'R' && n[2] == 'E' && n[3] == 'E'
-                && n[4] == 'D' && n[5] == 'O' && n[6] == 'O' && n[7] == 'M')
+        for (header.numlumps = LONG(header.numlumps); header.numlumps && fread(&lump, sizeof(lump), 1, fp); header.numlumps--)
+            if (n[0] == 'F' && n[1] == 'R' && n[2] == 'E' && n[3] == 'E' && n[4] == 'D' && n[5] == 'O' && n[6] == 'O' && n[7] == 'M')
             {
                 result = true;
                 break;
             }
-        }
     }
 
     fclose(fp);
@@ -160,7 +150,7 @@ wadfile_t *W_AddFile(char *filename, dboolean automatic)
     lumpinfo_t      *filelumps;
 
     // open the file and add to directory
-    wadfile_t   *wadfile = W_OpenFile(filename);
+    wadfile_t       *wadfile = W_OpenFile(filename);
 
     if (!wadfile)
         return NULL;
@@ -177,8 +167,7 @@ wadfile_t *W_AddFile(char *filename, dboolean automatic)
     if (strncmp(header.identification, "IWAD", 4) && strncmp(header.identification, "PWAD", 4))
         I_Error("Wad file %s doesn't have an IWAD or PWAD id.", filename);
 
-    wadfile->type = (!strncmp(header.identification, "IWAD", 4)
-        || M_StringCompare(leafname(filename), "DOOM2.WAD") ? IWAD : PWAD);
+    wadfile->type = (!strncmp(header.identification, "IWAD", 4) || M_StringCompare(leafname(filename), "DOOM2.WAD") ? IWAD : PWAD);
 
     header.numlumps = LONG(header.numlumps);
     header.infotableofs = LONG(header.infotableofs);
@@ -196,14 +185,14 @@ wadfile_t *W_AddFile(char *filename, dboolean automatic)
 
     filerover = fileinfo;
 
-    for (lumpindex_t i = startlump; i < numlumps; i++)
+    for (int i = startlump; i < numlumps; i++)
     {
-        lumpinfo_t *lump_p = &filelumps[i - startlump];
+        lumpinfo_t  *lump_p = &filelumps[i - startlump];
 
         lump_p->wadfile = wadfile;
         lump_p->position = LONG(filerover->filepos);
         lump_p->size = LONG(filerover->size);
-        lump_p->data = NULL;
+        lump_p->cache = NULL;
         strncpy(lump_p->name, filerover->name, 8);
         lumpinfo[i] = lump_p;
 
@@ -212,9 +201,8 @@ wadfile_t *W_AddFile(char *filename, dboolean automatic)
 
     free(fileinfo);
 
-    C_Output("%s %s lump%s from %s <b>%s</b>.", (automatic ? "Automatically added" : "Added"),
-        commify(numlumps - startlump), (numlumps - startlump == 1 ? "" : "s"),
-        (wadfile->type == IWAD ? "IWAD" : "PWAD"), wadfile->path);
+    C_Output("%s %s lump%s from %s <b>%s</b>.", (automatic ? "Automatically added" : "Added"), commify(numlumps - startlump),
+        (numlumps - startlump == 1 ? "" : "s"), (wadfile->type == IWAD ? "IWAD" : "PWAD"), wadfile->path);
 
     if (!packagewadadded)
     {
@@ -231,7 +219,7 @@ wadfile_t *W_AddFile(char *filename, dboolean automatic)
 // Must be mod'ed with table size.
 // Can be used for any 8-character names.
 // by Lee Killough
-unsigned W_LumpNameHash(const char *s)
+unsigned int W_LumpNameHash(const char *s)
 {
     unsigned int    hash;
 
@@ -265,16 +253,12 @@ dboolean HasDehackedLump(const char *pwadname)
 
         // Determine game mode from levels present
         // Must be a full set for whichever mode is present
-        for (header.numlumps = LONG(header.numlumps); header.numlumps && fread(&lump, sizeof(lump), 1, fp);
-            header.numlumps--)
-        {
-            if (*n == 'D' && n[1] == 'E' && n[2] == 'H' && n[3] == 'A'
-                && n[4] == 'C' && n[5] == 'K' && n[6] == 'E' && n[7] == 'D')
+        for (header.numlumps = LONG(header.numlumps); header.numlumps && fread(&lump, sizeof(lump), 1, fp); header.numlumps--)
+            if (n[0] == 'D' && n[1] == 'E' && n[2] == 'H' && n[3] == 'A' && n[4] == 'C' && n[5] == 'K' && n[6] == 'E' && n[7] == 'D')
             {
                 result = true;
                 break;
             }
-        }
     }
 
     fclose(fp);
@@ -282,7 +266,8 @@ dboolean HasDehackedLump(const char *pwadname)
     return result;
 }
 
-char *iwadsrequired[] = {
+char *iwadsrequired[] =
+{
     "doom.wad",
     "doom2.wad",
     "tnt.wad",
@@ -309,14 +294,11 @@ GameMission_t IWADRequiredByPWAD(char *pwadname)
 
     fseek(fp, LONG(header.infotableofs), SEEK_SET);
 
-    for (header.numlumps = LONG(header.numlumps); header.numlumps && fread(&lump, sizeof(lump), 1, fp);
-        header.numlumps--)
-    {
-        if (*n == 'E' && n[2] == 'M' && !n[4])
+    for (header.numlumps = LONG(header.numlumps); header.numlumps && fread(&lump, sizeof(lump), 1, fp); header.numlumps--)
+        if (n[0] == 'E' && isdigit(n[1]) && n[2] == 'M' && isdigit(n[3]) && n[4] == '\0')
             result = doom;
-        else if (*n == 'M' && n[1] == 'A' && n[2] == 'P' && !n[5])
+        else if (n[0] == 'M' && n[1] == 'A' && n[2] == 'P' && isdigit(n[3]) && isdigit(n[4]) && n[5] == '\0')
             result = doom2;
-    }
 
     fclose(fp);
 
@@ -324,8 +306,7 @@ GameMission_t IWADRequiredByPWAD(char *pwadname)
     {
         if (M_StringCompare(leaf, "pl2.wad") || M_StringCompare(leaf, "plut3.wad"))
             result = pack_plut;
-        else if (M_StringCompare(leaf, "tntr.wad") || M_StringCompare(leaf, "tnt-ren.wad")
-            || M_StringCompare(leaf, "resist.wad"))
+        else if (M_StringCompare(leaf, "tntr.wad") || M_StringCompare(leaf, "tnt-ren.wad") || M_StringCompare(leaf, "resist.wad"))
             result = pack_tnt;
     }
 
@@ -371,7 +352,7 @@ int W_WadType(char *filename)
 // just as much work as simply doing the string comparisons with the new
 // algorithm, which minimizes the expected number of comparisons to under 2.
 //
-lumpindex_t W_CheckNumForName(const char *name)
+int W_CheckNumForName(const char *name)
 {
     // Hash function maps the name to one of possibly numlump chains.
     // It has been tuned so that the average chain length never exceeds 2.
@@ -395,7 +376,7 @@ int W_CheckMultipleLumps(const char *name)
     if (FREEDOOM || hacx)
         return 3;
 
-    for (lumpindex_t i = numlumps - 1; i >= 0; i--)
+    for (int i = numlumps - 1; i >= 0; i--)
         if (!strncasecmp(lumpinfo[i]->name, name, 8))
             count++;
 
@@ -407,9 +388,9 @@ int W_CheckMultipleLumps(const char *name)
 // Linear Search that checks for a lump number ONLY
 // inside a range, not all lumps.
 //
-lumpindex_t W_RangeCheckNumForName(lumpindex_t min, lumpindex_t max, const char *name)
+int W_RangeCheckNumForName(int min, int max, const char *name)
 {
-    for (lumpindex_t i = min; i <= max; i++)
+    for (int i = min; i <= max; i++)
         if (!strncasecmp(lumpinfo[i]->name, name, 8))
             return i;
 
@@ -418,13 +399,13 @@ lumpindex_t W_RangeCheckNumForName(lumpindex_t min, lumpindex_t max, const char 
 
 void W_Init(void)
 {
-    for (lumpindex_t i = 0; i < numlumps; i++)
+    for (int i = 0; i < numlumps; i++)
         lumpinfo[i]->index = -1;                       // mark slots empty
 
     // Insert nodes to the beginning of each chain, in first-to-last
     // lump order, so that the last lump of a given name appears first
     // in any chain, observing pwad ordering rules. killough
-    for (lumpindex_t i = 0; i < numlumps; i++)
+    for (int i = 0; i < numlumps; i++)
     {
         // hash function:
         int j = W_LumpNameHash(lumpinfo[i]->name) % numlumps;
@@ -432,19 +413,15 @@ void W_Init(void)
         lumpinfo[i]->next = lumpinfo[j]->index;       // Prepend to list
         lumpinfo[j]->index = i;
     }
-
-    // set up caching
-    if (!(cachelump = calloc(sizeof(*cachelump), numlumps)))
-        I_Error ("W_Init: Couldn't allocate lumpcache");
 }
 
 //
 // W_GetNumForName
 // Calls W_CheckNumForName, but bombs out if not found.
 //
-lumpindex_t W_GetNumForName(const char *name)
+int W_GetNumForName(const char *name)
 {
-    lumpindex_t i = W_CheckNumForName(name);
+    int i = W_CheckNumForName(name);
 
     if (i < 0)
         I_Error("W_GetNumForName: %s not found!", name);
@@ -453,9 +430,9 @@ lumpindex_t W_GetNumForName(const char *name)
 }
 
 // Go forwards rather than backwards so we get lump from IWAD and not PWAD
-lumpindex_t W_GetNumForName2(const char *name)
+int W_GetNumForName2(const char *name)
 {
-    lumpindex_t i;
+    int i;
 
     for (i = 0; i < numlumps; i++)
         if (!strncasecmp(lumpinfo[i]->name, name, 8))
@@ -471,7 +448,7 @@ lumpindex_t W_GetNumForName2(const char *name)
 // W_LumpLength
 // Returns the buffer size needed to load the given lump.
 //
-int W_LumpLength(lumpindex_t lump)
+int W_LumpLength(int lump)
 {
     if (lump >= numlumps)
         I_Error("W_LumpLength: %i >= numlumps", lump);
@@ -484,7 +461,7 @@ int W_LumpLength(lumpindex_t lump)
 // Loads the lump into the given buffer,
 //  which must be >= W_LumpLength().
 //
-void W_ReadLump(lumpindex_t lump, void *dest)
+void W_ReadLump(int lump, void *dest)
 {
     size_t      c;
     lumpinfo_t  *l = lumpinfo[lump];
@@ -498,28 +475,17 @@ void W_ReadLump(lumpindex_t lump, void *dest)
         I_Error("W_ReadLump: only read %zd of %i on lump %i", c, l->size, lump);
 }
 
-void *W_CacheLumpNum(lumpindex_t lump)
+void *W_CacheLumpNum(int lumpnum)
 {
-    const int   locks = 1;
+    lumpinfo_t  *lump = lumpinfo[lumpnum];
 
-    if (!cachelump[lump].cache)         // read the lump in
-        W_ReadLump(lump, Z_Malloc(W_LumpLength(lump), PU_CACHE, &cachelump[lump].cache));
+    if (!lump->cache)
+        W_ReadLump(lumpnum, Z_Malloc(lump->size, PU_CACHE, &lump->cache));
 
-    // cph - if wasn't locked but now is, tell z_zone to hold it
-    if (!cachelump[lump].locks && locks)
-        Z_ChangeTag(cachelump[lump].cache, PU_STATIC);
-
-    cachelump[lump].locks += locks;
-
-    return cachelump[lump].cache;
+    return lump->cache;
 }
 
-void W_UnlockLumpNum(lumpindex_t lump)
+void W_ReleaseLumpNum(int lumpnum)
 {
-    const int   unlocks = 1;
-
-    cachelump[lump].locks -= unlocks;
-
-    if (unlocks && !cachelump[lump].locks)
-        Z_ChangeTag(cachelump[lump].cache, PU_CACHE);
+    Z_ChangeTag(lumpinfo[lumpnum]->cache, PU_CACHE);
 }

@@ -139,9 +139,7 @@ static dboolean CheckIfPatch(int lump)
     width = SHORT(patch->width);
     height = SHORT(patch->height);
 
-    result = (height > 0 && height <= 16384 && width > 0 && width <= 16384 && width < size / 4);
-
-    if (result)
+    if ((result = (height > 0 && height <= 16384 && width > 0 && width <= 16384 && width < size / 4)))
     {
         // The dimensions seem like they might be valid for a patch, so
         // check the column directory for extra security. All columns
@@ -160,7 +158,7 @@ static dboolean CheckIfPatch(int lump)
         }
     }
 
-    W_UnlockLumpNum(lump);
+    W_ReleaseLumpNum(lump);
     return result;
 }
 
@@ -180,8 +178,7 @@ static void createPatch(int id)
     int                 numPostsUsedSoFar;
 
     if (!CheckIfPatch(patchNum))
-        I_Error("createPatch: Unknown patch format %s.",
-            (patchNum < numlumps ? lumpinfo[patchNum]->name : NULL));
+        I_Error("createPatch: Unknown patch format %s.", (patchNum < numlumps ? lumpinfo[patchNum]->name : NULL));
 
     oldPatch = (const patch_t *)W_CacheLumpNum(patchNum);
 
@@ -311,7 +308,7 @@ static void createPatch(int id)
         }
     }
 
-    W_UnlockLumpNum(patchNum);
+    W_ReleaseLumpNum(patchNum);
     free(numPostsInColumn);
 }
 
@@ -410,7 +407,7 @@ static void createTextureCompositePatch(int id)
             }
         }
 
-        W_UnlockLumpNum(patchNum);
+        W_ReleaseLumpNum(patchNum);
     }
 
     postsDataSize = numPostsTotal * sizeof(rpost_t);
@@ -425,8 +422,7 @@ static void createTextureCompositePatch(int id)
     composite_patch->posts = (rpost_t *)((unsigned char *)composite_patch->columns + columnsDataSize);
 
     // sanity check that we've got all the memory allocated we need
-    assert((((byte *)composite_patch->posts + numPostsTotal * sizeof(rpost_t))
-        - (byte *)composite_patch->data) == dataSize);
+    assert((((byte *)composite_patch->posts + numPostsTotal * sizeof(rpost_t)) - (byte *)composite_patch->data) == dataSize);
 
     memset(composite_patch->pixels, 0xFF, composite_patch->width * composite_patch->height);
 
@@ -521,7 +517,7 @@ static void createTextureCompositePatch(int id)
             }
         }
 
-        W_UnlockLumpNum(patchNum);
+        W_ReleaseLumpNum(patchNum);
     }
 
     for (int x = 0; x < texture->width; x++)

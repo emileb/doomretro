@@ -38,6 +38,7 @@
 
 #include "doomstat.h"
 #include "i_system.h"
+#include "info.h"
 #include "m_bbox.h"
 #include "m_config.h"
 #include "m_random.h"
@@ -146,9 +147,8 @@ static dboolean PIT_StompThing(mobj_t *thing)
 // Returns the friction associated with a particular mobj.
 int P_GetFriction(const mobj_t *mo, int *frictionfactor)
 {
-    int             friction = ORIG_FRICTION;
-    int             movefactor = ORIG_FRICTION_FACTOR;
-    const sector_t  *sec;
+    int friction = ORIG_FRICTION;
+    int movefactor = ORIG_FRICTION_FACTOR;
 
     // Assign the friction value to objects on the floor, non-floating,
     // and clipped. Normally the object's friction value is kept at
@@ -159,13 +159,17 @@ int P_GetFriction(const mobj_t *mo, int *frictionfactor)
     // friction value (muddy has precedence over icy).
     if (!(mo->flags & (MF_NOCLIP | MF_NOGRAVITY)))
         for (const msecnode_t *m = mo->touching_sectorlist; m; m = m->m_tnext)
-            if (((sec = m->m_sector)->special & FRICTION_MASK)
+        {
+            const sector_t  *sec = m->m_sector;
+
+            if ((sec->special & FRICTION_MASK)
                 && (sec->friction < friction || friction == ORIG_FRICTION)
                 && (mo->z <= sec->floorheight || (sec->heightsec && mo->z <= sec->heightsec->floorheight)))
             {
                 friction = sec->friction;
                 movefactor = sec->movefactor;
             }
+        }
 
     if (frictionfactor)
         *frictionfactor = movefactor;
@@ -273,7 +277,7 @@ dboolean P_TeleportMove(mobj_t *thing, fixed_t x, fixed_t y, fixed_t z, dboolean
     P_SetThingPosition(thing);
 
     // [BH] check if new sector is liquid and clip/unclip feet as necessary
-    if (!(thing->flags2 & MF2_NOFOOTCLIP) && newsec->isliquid)
+    if ((thing->flags2 & MF2_FOOTCLIP) && newsec->terraintype != SOLID)
         thing->flags2 |= MF2_FEETARECLIPPED;
     else
         thing->flags2 &= ~MF2_FEETARECLIPPED;
@@ -356,8 +360,7 @@ static dboolean PIT_CheckLine(line_t *ld)
     if (!ld->backsector)                                // one sided line
     {
         blockline = ld;
-        return (tmunstuck && !untouched(ld)
-            && FixedMul(tmx - tmthing->x, ld->dy) > FixedMul(tmy - tmthing->y, ld->dx));
+        return (tmunstuck && !untouched(ld) && FixedMul(tmx - tmthing->x, ld->dy) > FixedMul(tmy - tmthing->y, ld->dx));
     }
 
     if (!(tmthing->flags & MF_MISSILE))
@@ -460,14 +463,14 @@ static dboolean PIT_CheckThing(mobj_t *thing)
     // check if a mobj passed over/under another object
     if ((tmthing->flags2 & MF2_PASSMOBJ) && !infiniteheight)
     {
-        if (tmthing->z >= thing->z + thing->height)
+        if (tmthing->z >= thing->z + thing->height && !(thing->flags & MF_SPECIAL))
             return true;        // over thing
-        else if (tmthing->z + tmthing->height <= thing->z)
+        else if (tmthing->z + tmthing->height <= thing->z && !(thing->flags & MF_SPECIAL))
             return true;        // under thing
     }
 
     // check for skulls slamming into things
-    if ((tmflags & MF_SKULLFLY) && (flags & MF_SOLID))
+    if ((tmflags & MF_SKULLFLY) && ((flags & MF_SOLID) || infiniteheight))
     {
         P_DamageMobj(thing, tmthing, tmthing, ((M_Random() & 7) + 1) * tmthing->info->damage, true);
 
@@ -571,7 +574,7 @@ static dboolean PIT_CheckThing(mobj_t *thing)
 
     // [BH] don't hit if either thing is a corpse, which may still be solid if
     // they are still going through their death sequence.
-    if (!(thing->flags2 & MF2_RESURRECTING) && ((flags & MF_CORPSE) || (tmflags & MF_CORPSE)))
+    if (!(thing->flags2 & MF2_RESURRECTING) && (corpse || (tmflags & MF_CORPSE)))
         return true;
 
     // RjY
@@ -709,7 +712,7 @@ dboolean P_CheckPosition(mobj_t *thing, fixed_t x, fixed_t y)
     int         xh;
     int         yl;
     int         yh;
-    subsector_t *newsubsec;
+    sector_t    *newsec;
     fixed_t     radius = thing->radius;
 
     tmthing = thing;
@@ -722,7 +725,7 @@ dboolean P_CheckPosition(mobj_t *thing, fixed_t x, fixed_t y)
     tmbbox[BOXRIGHT] = x + radius;
     tmbbox[BOXLEFT] = x - radius;
 
-    newsubsec = R_PointInSubsector(x, y);
+    newsec = R_PointInSubsector(x, y)->sector;
     floorline = NULL;                           // killough 8/1/98
     blockline = NULL;
     ceilingline = NULL;
@@ -733,8 +736,8 @@ dboolean P_CheckPosition(mobj_t *thing, fixed_t x, fixed_t y)
 
     // the base floor/ceiling is from the subsector that contains the
     // point. Any contacted lines the step closer together will adjust them
-    tmfloorz = tmdropoffz = newsubsec->sector->floorheight;
-    tmceilingz = newsubsec->sector->ceilingheight;
+    tmfloorz = tmdropoffz = newsec->floorheight;
+    tmceilingz = newsec->ceilingheight;
     validcount++;
     numspechit = 0;
 
@@ -789,7 +792,7 @@ mobj_t *P_CheckOnmobj(mobj_t * thing)
     int         xh;
     int         yl;
     int         yh;
-    subsector_t *newsubsec;
+    sector_t    *newsec;
     fixed_t     x = thing->x;
     fixed_t     y = thing->y;
     mobj_t      oldmo = *thing; // save the old mobj before the fake zmovement
@@ -808,13 +811,13 @@ mobj_t *P_CheckOnmobj(mobj_t * thing)
     tmbbox[BOXRIGHT] = x + radius;
     tmbbox[BOXLEFT] = x - radius;
 
-    newsubsec = R_PointInSubsector(x, y);
+    newsec = R_PointInSubsector(x, y)->sector;
     ceilingline = NULL;
 
     // the base floor/ceiling is from the subsector that contains the
     // point. Any contacted lines the step closer together will adjust them
-    tmfloorz = tmdropoffz = newsubsec->sector->floorheight;
-    tmceilingz = newsubsec->sector->ceilingheight;
+    tmfloorz = tmdropoffz = newsec->floorheight;
+    tmceilingz = newsec->ceilingheight;
 
     validcount++;
     numspechit = 0;
@@ -936,8 +939,8 @@ dboolean P_TryMove(mobj_t *thing, fixed_t x, fixed_t y, dboolean dropoff)
         }
 
         // killough 11/98: prevent falling objects from going up too many steps
-        if ((thing->flags2 & MF2_FALLING) && tmfloorz - thing->z > FixedMul(thing->momx, thing->momx)
-            + FixedMul(thing->momy, thing->momy))
+        if ((thing->flags2 & MF2_FALLING)
+            && tmfloorz - thing->z > FixedMul(thing->momx, thing->momx) + FixedMul(thing->momy, thing->momy))
             return false;
     }
 
@@ -955,7 +958,7 @@ dboolean P_TryMove(mobj_t *thing, fixed_t x, fixed_t y, dboolean dropoff)
 
     P_SetThingPosition(thing);
 
-    if (thing->player)
+    if (thing->player && thing->player->mo == thing)
     {
         fixed_t dist = (fixed_t)hypot((x - oldx) >> FRACBITS, (y - oldy) >> FRACBITS);
 
@@ -967,7 +970,7 @@ dboolean P_TryMove(mobj_t *thing, fixed_t x, fixed_t y, dboolean dropoff)
     }
 
     // [BH] check if new sector is liquid and clip/unclip feet as necessary
-    if (!(thing->flags2 & MF2_NOFOOTCLIP) && thing->subsector->sector->isliquid)
+    if ((thing->flags2 & MF2_FOOTCLIP) && thing->subsector->sector->terraintype != SOLID)
         thing->flags2 |= MF2_FEETARECLIPPED;
     else
         thing->flags2 &= ~MF2_FEETARECLIPPED;
@@ -1034,8 +1037,7 @@ static dboolean PIT_ApplyTorque(line_t *ld)
             // increased, the momentum gradually decreases to 0 for
             // the same amount of pseudotorque, so that oscillations
             // are prevented, yet it has a chance to reach equilibrium.
-            dist = FixedDiv(FixedMul(dist, (mo->gear < OVERDRIVE ? y << -(mo->gear - OVERDRIVE) :
-                y >> (mo->gear - OVERDRIVE))), x);
+            dist = FixedDiv(FixedMul(dist, (mo->gear < OVERDRIVE ? y << -(mo->gear - OVERDRIVE) : y >> (mo->gear - OVERDRIVE))), x);
 
             // Apply momentum away from the pivot linedef.
             x = FixedMul(ld->dy, dist);
@@ -1114,17 +1116,18 @@ void P_ApplyTorque(mobj_t *mo)
 static dboolean P_ThingHeightClip(mobj_t *thing)
 {
     dboolean    onfloor = (thing->z == thing->floorz);
-    fixed_t     oldfloorz = thing->floorz; // haleyjd
+    fixed_t     oldfloorz = thing->floorz;      // haleyjd
     int         flags2 = thing->flags2;
+    player_t    *player = thing->player;
 
     P_CheckPosition(thing, thing->x, thing->y);
 
     // what about stranding a monster partially off an edge?
     thing->floorz = tmfloorz;
     thing->ceilingz = tmceilingz;
-    thing->dropoffz = tmdropoffz;         // killough 11/98: remember dropoffs
+    thing->dropoffz = tmdropoffz;               // killough 11/98: remember dropoffs
 
-    if ((flags2 & MF2_FEETARECLIPPED) && r_liquid_bob && !thing->player)
+    if ((flags2 & MF2_FEETARECLIPPED) && r_liquid_bob && !player)
         thing->z = thing->floorz;
     else if (flags2 & MF2_FLOATBOB)
     {
@@ -1140,8 +1143,8 @@ static dboolean P_ThingHeightClip(mobj_t *thing)
         thing->z = thing->floorz;
 
         // [BH] immediately update player's view
-        if (thing->player)
-            P_CalcHeight();
+        if (player)
+            player->viewz = MIN(player->mo->z + player->viewheight, player->mo->ceilingz - 4 * FRACUNIT);
 
         // killough 11/98: Possibly upset balance of objects hanging off ledges
         if ((flags2 & MF2_FALLING) && thing->gear >= MAXGEAR)
@@ -1189,7 +1192,8 @@ static void P_HitSlideLine(line_t *ld)
     // Check for the special cases of horz or vert walls.
 
     // killough 10/98: only bounce if hit hard (prevents wobbling)
-    icyfloor = (P_ApproxDistance(tmxmove, tmymove) > 4 * FRACUNIT && slidemo->z <= slidemo->floorz
+    icyfloor = (P_ApproxDistance(tmxmove, tmymove) > 4 * FRACUNIT
+        && slidemo->z <= slidemo->floorz
         && P_GetFriction(slidemo, NULL) > ORIG_FRICTION);
 
     if (ld->slopetype == ST_HORIZONTAL)
@@ -1569,14 +1573,13 @@ static dboolean PTR_ShootTraverse(intercept_t *in)
 
             if (!li->backsector)
             {
-                if (FixedDiv(openbottom - shootz, dist) <= aimslope
-                    && FixedDiv(opentop - shootz, dist) >= aimslope)
+                if (FixedDiv(openbottom - shootz, dist) <= aimslope && FixedDiv(opentop - shootz, dist) >= aimslope)
                     return true;      // shot continues
             }
             else
             {
                 if ((li->frontsector->interpfloorheight == li->backsector->interpfloorheight
-                        || FixedDiv(openbottom - shootz, dist) <= aimslope)
+                    || FixedDiv(openbottom - shootz, dist) <= aimslope)
                     && (li->frontsector->interpceilingheight == li->backsector->interpceilingheight
                         || FixedDiv(opentop - shootz, dist) >= aimslope))
                     return true;      // shot continues
@@ -1608,7 +1611,7 @@ static dboolean PTR_ShootTraverse(intercept_t *in)
 
                 if (z < floorz && distz)
                 {
-                    if (sector->isliquid || sector->floorpic == skyflatnum)
+                    if (sector->terraintype != SOLID || sector->floorpic == skyflatnum)
                         return false;
 
                     frac = -FixedDiv(FixedMul(frac, shootz - floorz), distz);
@@ -1630,8 +1633,7 @@ static dboolean PTR_ShootTraverse(intercept_t *in)
         }
 
         // Spawn bullet puffs.
-        P_SpawnPuff(dlTrace.x + FixedMul(dlTrace.dx, frac), dlTrace.y + FixedMul(dlTrace.dy, frac), z,
-            shootangle);
+        P_SpawnPuff(dlTrace.x + FixedMul(dlTrace.dx, frac), dlTrace.y + FixedMul(dlTrace.dy, frac), z, shootangle);
 
         hitwall = true;
 
@@ -1742,6 +1744,10 @@ void P_LineAttack(mobj_t *t1, angle_t angle, fixed_t distance, fixed_t slope, in
     x2 = t1->x + (distance >> FRACBITS) * finecosine[angle];
     y2 = t1->y + (distance >> FRACBITS) * finesine[angle];
     shootz = t1->z + (t1->height >> 1) + 8 * FRACUNIT;
+
+    if (t1->flags2 & MF2_FEETARECLIPPED)
+        shootz -= FOOTCLIPSIZE;
+
     attackrange = distance;
     aimslope = slope;
 
@@ -1762,8 +1768,7 @@ static dboolean PTR_UseTraverse(intercept_t *in)
     {
         sector_t    *backsector = line->backsector;
 
-        if (backsector && backsector->ceilingdata
-            && backsector->interpfloorheight != backsector->interpceilingheight)
+        if (backsector && backsector->ceilingdata && backsector->interpfloorheight != backsector->interpceilingheight)
             return false;
     }
 
@@ -1846,6 +1851,7 @@ void P_UseLines(void)
 static mobj_t   *bombsource;
 static mobj_t   *bombspot;
 static int      bombdamage;
+static dboolean bombvertical;
 
 //
 // PIT_RadiusAttack
@@ -1862,8 +1868,6 @@ static dboolean PIT_RadiusAttack(mobj_t *thing)
         && !(thing->flags & MF_CORPSE))
         return true;
 
-    // Boss spider and cyborg
-    // take no damage from concussion.
     type = thing->type;
 
     if (type == MT_CYBORG || type == MT_SPIDER)
@@ -1871,7 +1875,7 @@ static dboolean PIT_RadiusAttack(mobj_t *thing)
 
     dist = MAX(ABS(thing->x - bombspot->x), ABS(thing->y - bombspot->y)) - thing->radius;
 
-    if (type == MT_BOSSBRAIN)
+    if (!bombvertical || type == MT_BOSSBRAIN)
     {
         // [BH] if killing boss in DOOM II MAP30, use old code that
         //  doesn't use z height in blast radius
@@ -1920,7 +1924,7 @@ static dboolean PIT_RadiusAttack(mobj_t *thing)
 // P_RadiusAttack
 // Source is the creature that caused the explosion at spot.
 //
-void P_RadiusAttack(mobj_t *spot, mobj_t *source, int damage)
+void P_RadiusAttack(mobj_t *spot, mobj_t *source, int damage, dboolean vertical)
 {
     fixed_t dist = (damage + MAXRADIUS) << FRACBITS;
     int     yh = (spot->y + dist - bmaporgy) >> MAPBLOCKSHIFT;
@@ -1931,6 +1935,7 @@ void P_RadiusAttack(mobj_t *spot, mobj_t *source, int damage)
     bombspot = spot;
     bombsource = source;
     bombdamage = damage;
+    bombvertical = vertical;
 
     for (int y = yl; y <= yh; y++)
         for (int x = xl; x <= xh; x++)
@@ -1962,7 +1967,7 @@ static void PIT_ChangeSector(mobj_t *thing)
     int flags = thing->flags;
     int flags2 = thing->flags2;
 
-    if (isliquidsector && !(flags2 & MF2_NOFOOTCLIP) && !(flags & MF_SPAWNCEILING))
+    if (isliquidsector && (flags2 & MF2_FOOTCLIP) && !(flags & MF_SPAWNCEILING))
         thing->flags2 |= MF2_FEETARECLIPPED;
     else
         thing->flags2 &= ~MF2_FEETARECLIPPED;
@@ -2067,8 +2072,9 @@ dboolean P_ChangeSector(sector_t *sector, dboolean crunch)
 
     nofit = false;
     crushchange = crunch;
+    sector->terraintype = terraintypes[sector->floorpic];
 
-    if ((isliquidsector = sector->isliquid = isliquid[sector->floorpic]))
+    if ((isliquidsector = (sector->terraintype != SOLID)))
     {
         bloodsplat_t    *splat = sector->splatlist;
 

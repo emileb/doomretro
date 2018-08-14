@@ -58,6 +58,9 @@ extern dboolean returntowidescreen;
 extern dboolean vanilla;
 extern dboolean togglingvanilla;
 
+void alias_cmd_func2(char *cmd, char *parms);
+void bind_cmd_func2(char *cmd, char *parms);
+
 #define CONFIG_VARIABLE_INT(name, set)              { #name, &name, DEFAULT_INT,           set          }
 #define CONFIG_VARIABLE_INT_UNSIGNED(name, set)     { #name, &name, DEFAULT_INT_UNSIGNED,  set          }
 #define CONFIG_VARIABLE_INT_PERCENT(name, set)      { #name, &name, DEFAULT_INT_PERCENT,   set          }
@@ -96,6 +99,7 @@ static default_t cvars[] =
     CONFIG_VARIABLE_INT          (autoload,                                          BOOLVALUEALIAS    ),
     CONFIG_VARIABLE_INT          (autouse,                                           BOOLVALUEALIAS    ),
     CONFIG_VARIABLE_INT          (centerweapon,                                      BOOLVALUEALIAS    ),
+    CONFIG_VARIABLE_INT          (con_backcolor,                                     NOVALUEALIAS      ),
     CONFIG_VARIABLE_INT          (con_obituaries,                                    BOOLVALUEALIAS    ),
     CONFIG_VARIABLE_INT          (con_timestamps,                                    BOOLVALUEALIAS    ),
     CONFIG_VARIABLE_INT          (episode,                                           NOVALUEALIAS      ),
@@ -126,6 +130,7 @@ static default_t cvars[] =
     CONFIG_VARIABLE_INT          (r_bloodsplats_max,                                 NOVALUEALIAS      ),
     CONFIG_VARIABLE_INT          (r_bloodsplats_translucency,                        BOOLVALUEALIAS    ),
     CONFIG_VARIABLE_INT          (r_brightmaps,                                      BOOLVALUEALIAS    ),
+    CONFIG_VARIABLE_INT_PERCENT  (r_color,                                           NOVALUEALIAS      ),
     CONFIG_VARIABLE_INT          (r_corpses_color,                                   BOOLVALUEALIAS    ),
     CONFIG_VARIABLE_INT          (r_corpses_mirrored,                                BOOLVALUEALIAS    ),
     CONFIG_VARIABLE_INT          (r_corpses_moreblood,                               BOOLVALUEALIAS    ),
@@ -167,6 +172,7 @@ static default_t cvars[] =
     CONFIG_VARIABLE_INT          (s_randommusic,                                     BOOLVALUEALIAS    ),
     CONFIG_VARIABLE_INT          (s_randompitch,                                     BOOLVALUEALIAS    ),
     CONFIG_VARIABLE_INT_PERCENT  (s_sfxvolume,                                       NOVALUEALIAS      ),
+    CONFIG_VARIABLE_INT          (s_stereo,                                          BOOLVALUEALIAS    ),
     CONFIG_VARIABLE_INT          (savegame,                                          NOVALUEALIAS      ),
     CONFIG_VARIABLE_INT          (skilllevel,                                        NOVALUEALIAS      ),
     CONFIG_VARIABLE_INT_PERCENT  (stillbob,                                          NOVALUEALIAS      ),
@@ -324,7 +330,7 @@ void M_SaveCVARs(void)
                     }
 
                 if (!flag)
-                    fputs(commify(*(int *)cvars[i].location), file);
+                    fputs(commify(v), file);
 
                 break;
             }
@@ -347,7 +353,7 @@ void M_SaveCVARs(void)
                     }
 
                 if (!flag)
-                    fprintf(file, "%s%%", commify(*(int *)cvars[i].location));
+                    fprintf(file, "%s%%", commify(v));
 
                 break;
             }
@@ -366,7 +372,18 @@ void M_SaveCVARs(void)
                     }
 
                 if (!flag)
-                    fputs(striptrailingzero(*(float *)cvars[i].location, 2), file);
+                {
+                    static char buf[128];
+                    int         len;
+
+                    M_snprintf(buf, sizeof(buf), "%.2f", v);
+                    len = (int)strlen(buf);
+
+                    if (len >= 2 && buf[len - 1] == '0' && buf[len - 2] == '0')
+                        buf[len - 1] = '\0';
+
+                    fputs(buf, file);
+                }
 
                 break;
             }
@@ -385,7 +402,7 @@ void M_SaveCVARs(void)
                     }
 
                 if (!flag)
-                    fprintf(file, "%s%%", striptrailingzero(*(float *)cvars[i].location, 1));
+                    fprintf(file, "%s%%", striptrailingzero(v, 1));
 
                 break;
             }
@@ -394,7 +411,8 @@ void M_SaveCVARs(void)
                 if (M_StringCompare(*(char **)cvars[i].location, EMPTYVALUE))
                     fputs(*(char **)cvars[i].location, file);
                 else
-                    fprintf(file, "\"%s\"", *(char **)cvars[i].location);
+                    fprintf(file, "%s%s%s", (M_StringCompare(cvars[i].name, "version") ? "" : "\""),
+                        *(char **)cvars[i].location, (M_StringCompare(cvars[i].name, "version") ? "" : "\""));
 
                 break;
 
@@ -548,6 +566,9 @@ static void M_CheckCVARs(void)
     if (centerweapon != false && centerweapon != true)
         centerweapon = centerweapon_default;
 
+    if (con_backcolor < con_backcolor_min || con_backcolor > con_backcolor_max)
+        con_backcolor = con_backcolor_default;
+
     if (con_obituaries != false && con_obituaries != true)
         con_obituaries = con_obituaries_default;
 
@@ -621,6 +642,8 @@ static void M_CheckCVARs(void)
 
     if (r_brightmaps != false && r_brightmaps != true)
         r_brightmaps = r_brightmaps_default;
+
+    r_color = BETWEEN(r_color_min, r_color, r_color_max);
 
     if (r_corpses_color != false && r_corpses_color != true)
         r_corpses_color = r_corpses_color_default;
@@ -734,6 +757,10 @@ static void M_CheckCVARs(void)
 
     s_sfxvolume = BETWEEN(s_sfxvolume_min, s_sfxvolume, s_sfxvolume_max);
     sfxVolume = (s_sfxvolume * 31 + 50) / 100;
+
+    if (s_stereo != false && s_stereo != true)
+        s_stereo = s_stereo_default;
+
     savegame = BETWEEN(savegame_min, savegame, savegame_max);
     skilllevel = BETWEEN(skilllevel_min, skilllevel, skilllevel_max);
     stillbob = BETWEEN(stillbob_min, stillbob, stillbob_max);
@@ -747,7 +774,9 @@ static void M_CheckCVARs(void)
         units = units_default;
 
     version = version_default;
+
     vid_capfps = (vid_capfps < vid_capfps_min ? 0 : BETWEEN(vid_capfps_min, vid_capfps, vid_capfps_max));
+    vid_display = MAX(vid_display_min, vid_display);
 
     if (vid_fullscreen != false && vid_fullscreen != true)
         vid_fullscreen = vid_fullscreen_default;
@@ -755,6 +784,9 @@ static void M_CheckCVARs(void)
     vid_motionblur = BETWEEN(vid_motionblur_min, vid_motionblur, vid_motionblur_max);
 
     if (!M_StringCompare(vid_scaleapi, vid_scaleapi_direct3d)
+#if defined(__MACOSX__)
+        && !M_StringCompare(vid_scaleapi, vid_scaleapi_metal)
+#endif
         && !M_StringCompare(vid_scaleapi, vid_scaleapi_opengl)
 #if !defined(_WIN32)
         && !M_StringCompare(vid_scaleapi, vid_scaleapi_opengles)
@@ -791,9 +823,6 @@ static void M_CheckCVARs(void)
     if (wipe != false && wipe != true)
         wipe = wipe_default;
 }
-
-void alias_cmd_func2(char *cmd, char *parms);
-void bind_cmd_func2(char *cmd, char *parms);
 
 //
 // M_LoadCVARs

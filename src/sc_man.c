@@ -84,7 +84,7 @@ void SC_Close(void)
     if (ScriptOpen)
     {
         if (ScriptLumpNum >= 0)
-            W_UnlockLumpNum(ScriptLumpNum);
+            W_ReleaseLumpNum(ScriptLumpNum);
         else
             Z_Free(ScriptBuffer);
 
@@ -163,8 +163,7 @@ dboolean SC_GetString(void)
         ScriptPtr++;
     }
     else
-        while (*ScriptPtr > 32 && *ScriptPtr != ASCII_COMMENT1 && *ScriptPtr != ASCII_COMMENT2
-            && *(ScriptPtr + 1) != ASCII_COMMENT2)
+        while (*ScriptPtr > 32 && *ScriptPtr != ASCII_COMMENT1 && *ScriptPtr != ASCII_COMMENT2 && *(ScriptPtr + 1) != ASCII_COMMENT2)
         {
             *text++ = *ScriptPtr++;
 

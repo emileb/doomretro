@@ -49,6 +49,8 @@
 #include "v_data.h"
 #include "v_video.h"
 
+int M_StringWidth(char *string);
+
 extern patch_t  *consolefont[CONSOLEFONTSIZE];
 extern patch_t  *degree;
 extern int      message_x;
@@ -167,8 +169,6 @@ static struct
     { 'v',  ';',  -1 }, { 'v',  'j',  -2 }, { 'w',  'j',  -2 }, { 'x',  'j',  -2 },
     { 'z',  'j',  -2 }, {  0 ,   0 ,   0 }
 };
-
-void (*althudtextfunc)(int, int, patch_t *, int);
 
 static void HUlib_drawAltHUDTextLine(hu_textline_t *l)
 {

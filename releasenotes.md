@@ -1,3 +1,58 @@
+### DOOM Retro v2.7.1
+
+* The player will now move correctly when using a gamepad.
+* The `r_diskicon` CVAR will now be turned `on` when vanilla mode is enabled.
+* Minor changes have been made to text that is output to the console.
+* The `restartmap` CCMD will now restart the correct map when playing *E1M4B: Phobos Mission Control* or *E1M8B: Tech Gone Bad*.
+* The help screen’s background when pressing the <kbd>F1</kbd> key is now displayed better when using a custom colormap from a PWAD.
+
+---
+
+###### Friday, August 3, 2018
+
+### DOOM Retro v2.7
+
+* With John Romero’s express permission, [*E1M4B: Phobos Mission Control*](https://www.doomworld.com/idgames/levels/doom/Ports/d-f/e1m4b) and [*E1M8B: Tech Gone Bad*](https://www.doomworld.com/idgames/levels/doom/Ports/d-f/e1m8b) are now included with *DOOM Retro*. If either the *DOOM Registered* or *The Ultimate DOOM* IWADs are loaded, these maps may be played by entering `map E1M4B` or `map E1M8B` in the console.
+* *DOOM Retro’s* splash screen has been redesigned.
+* Extensive optimizations have been made to further improve the overall performance and stability of *DOOM Retro*.
+* The format of savegames has changed, breaking compatibility with previous versions of *DOOM Retro*.
+* Minor changes have been made to text that is output to the console.
+* Further improvements have been made to the console’s autocomplete feature.
+* The player can now jump once the new `+jump` action has been bound to a control using the `bind` CCMD.
+* Improvements have been made to *BOOM-*compatible translucent wall textures when the `r_dither` CVAR is `on`.
+* Further improvements have been made to the support of `DEHACKED` and `MAPINFO` lumps.
+* The console’s background has been given a slightly green tint and can now also be changed using the new `con_backcolor` CVAR. It is `12` by default.
+* The player is now also given all power-ups when entering `give all` in the console.
+* A bug has been fixed whereby entering `give cellpack` in the console would give the player a box of bullets instead.
+* The [*DOOM II* monster exclusion bug](https://doomwiki.org/wiki/Doom_II_monster_exclusion_bug) present in *Vanilla DOOM* has been fixed.
+* The `vid_widescreen` CVAR can now be changed in the console when not playing a game.
+* The `vid_capfps` CVAR can now be set to a value less than `35`.
+* Intermission and finale texts are now also output to the console.
+* The bottom of lost souls are now clipped when touching a liquid sector.
+* A bug has been fixed whereby the blood of monsters could be the wrong color in some rare instances.
+* The intensity of color on the screen can now be changed using the new `r_color` CVAR. It can be a value between `0%` (completely grayscale) and `100%` (the default). It is `100%` when vanilla mode is enabled.
+* The default of the `am_gridcolor` CVAR has been changed from `7` to `6`.
+* The default of the `m_sensitivity` CVAR has been changed from `32` to `16`.
+* The default of the `r_gamma` CVAR has been changed from `0.75` to `0.90`.
+* Improvements have been made to the effect when the player is near an exploding barrel and the `r_shake_barrels` CVAR is `on`.
+* The screen’s pillarboxes are now updated immediately when changing the `vid_pillarboxes` CVAR in the console.
+* A bug has been fixed whereby projectiles wouldn’t pass through some map decorations when the `infiniteheight` CVAR was `off`.
+* Restoring behavior present in *Vanilla DOOM*, lost souls will no longer pass through non-solid objects while attacking if the `infiniteheight` CVAR is `on`.
+* The `mapstats` CCMD now shows the total number of barrels in the current map.
+* Keycards and skull keys are now shown in the right hand corner of the widescreen HUD when the player has no armor.
+* The automap will now be shown in exactly the same colors as *Vanilla DOOM* when vanilla mode is enabled.
+* A bug has been fixed whereby entering an action as a parameter for the `unbind` CCMD wouldn’t unbind the controls that action was bound to.
+* If a gamepad with only one thumbstick is connected, movement will then be digital rather than analog and that one thumbstick will both turn the player left/right and move the player forward/back.
+* There is no longer any gap between the end of the player’s path and their arrow in the automap when the `am_path` CVAR is `on`.
+* <kbd>SPACE</kbd> can now be pressed to respawn the player, as well as advance the intermission and finale screens, even if the key isn’t bound to the `+use` action.
+* The direction the player is looking is no longer recentered vertically when they go through a teleport and the `mouselook` CVAR is `on`.
+* An obituary is now displayed when the player is crushed to death by a moving ceiling and the `con_obituaries` CVAR is `on`.
+* Whether sound effects are played in mono or stereo can now be changed using the new `s_stereo` CVAR. It is `on` by default and when vanilla mode is enabled.
+
+---
+
+###### Saturday, March 31, 2018
+
 ### DOOM Retro v2.6.9
 
 * The targets of monsters will now be restored correctly when loading a savegame.

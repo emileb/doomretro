@@ -57,6 +57,7 @@
 #include "p_tick.h"
 #include "s_sound.h"
 #include "sc_man.h"
+#include "sprites.h"
 #include "w_wad.h"
 #include "z_zone.h"
 
@@ -130,7 +131,6 @@ int             numsides;
 side_t          *sides;
 
 int             numthings;
-
 int             numdecorations;
 
 // BLOCKMAP
@@ -177,13 +177,13 @@ static char *mapcmdnames[] =
     "LIQUID",
     "MUSIC",
     "NEXT",
+    "NOBRIGHTMAP",
     "NOLIQUID",
     "PAR",
     "PISTOLSTART",
     "SECRETNEXT",
     "SKY1",
     "TITLEPATCH",
-    "NOBRIGHTMAP",
     NULL
 };
 
@@ -193,39 +193,40 @@ static int mapcmdids[] =
     MCMD_LIQUID,
     MCMD_MUSIC,
     MCMD_NEXT,
+    MCMD_NOBRIGHTMAP,
     MCMD_NOLIQUID,
     MCMD_PAR,
     MCMD_PISTOLSTART,
     MCMD_SECRETNEXT,
     MCMD_SKY1,
     MCMD_TITLEPATCH,
-    MCMD_NOBRIGHTMAP
 };
 
-dboolean            canmodify;
-dboolean            transferredsky;
-static lumpindex_t  RMAPINFO;
-static lumpindex_t  MAPINFO;
+dboolean        canmodify;
+dboolean        transferredsky;
+static int      RMAPINFO;
+static int      MAPINFO;
 
-dboolean            r_fixmaperrors = r_fixmaperrors_default;
+dboolean        r_fixmaperrors = r_fixmaperrors_default;
 
-static int          current_episode = -1;
-static int          current_map = -1;
-static dboolean     samelevel;
+static int      current_episode = -1;
+static int      current_map = -1;
+static dboolean samelevel;
 
-mapformat_t         mapformat;
+mapformat_t     mapformat;
 
-dboolean            boomlinespecials;
-dboolean            blockmaprecreated;
+dboolean        boomlinespecials;
+dboolean        blockmaprecreated;
+dboolean        nojump = false;
 
-extern fixed_t      animatedliquiddiff;
-extern fixed_t      animatedliquidxdir;
-extern fixed_t      animatedliquidydir;
-extern fixed_t      animatedliquidxoffs;
-extern fixed_t      animatedliquidyoffs;
+extern fixed_t  animatedliquiddiff;
+extern fixed_t  animatedliquidxdir;
+extern fixed_t  animatedliquidydir;
+extern fixed_t  animatedliquidxoffs;
+extern fixed_t  animatedliquidyoffs;
 
-extern menu_t       MainDef;
-extern menu_t       NewDef;
+extern menu_t   MainDef;
+extern menu_t   NewDef;
 
 static fixed_t GetOffset(vertex_t *v1, vertex_t *v2)
 {
@@ -302,7 +303,7 @@ static void P_LoadVertexes(int lump)
     }
 
     // Free buffer memory.
-    W_UnlockLumpNum(lump);
+    W_ReleaseLumpNum(lump);
 }
 
 //
@@ -331,7 +332,6 @@ static void P_LoadSegs(int lump)
 
         v1 = (unsigned short)SHORT(ml->v1);
         v2 = (unsigned short)SHORT(ml->v2);
-        li->angle = SHORT(ml->angle) << FRACBITS;
         linedef = (unsigned short)SHORT(ml->linedef);
 
         if (linedef >= numlines)
@@ -344,8 +344,7 @@ static void P_LoadSegs(int lump)
         // e6y: fix wrong side index
         if (side != 0 && side != 1)
         {
-            C_Warning("Seg %s has a wrong side index of %s. It has been changed to 1.",
-                commify(i), commify(side));
+            C_Warning("Seg %s has a wrong side index of %s. It has been changed to 1.", commify(i), commify(side));
             side = 1;
         }
 
@@ -498,7 +497,7 @@ static void P_LoadSegs(int lump)
             }
     }
 
-    W_UnlockLumpNum(lump);
+    W_ReleaseLumpNum(lump);
 }
 
 static void P_LoadSegs_V4(int lump)
@@ -525,9 +524,6 @@ static void P_LoadSegs_V4(int lump)
 
         v1 = ml->v1;
         v2 = ml->v2;
-
-        li->angle = SHORT(ml->angle) << FRACBITS;
-        li->offset = SHORT(ml->offset) << FRACBITS;
         linedef = (unsigned short)SHORT(ml->linedef);
 
         // e6y: check for wrong indexes
@@ -541,8 +537,7 @@ static void P_LoadSegs_V4(int lump)
         // e6y: fix wrong side index
         if (side != 0 && side != 1)
         {
-            C_Warning("Seg %s has a wrong side index of %s. It has been changed to 1.",
-                commify(i), commify(side));
+            C_Warning("Seg %s has a wrong side index of %s. It has been changed to 1.", commify(i), commify(side));
             side = 1;
         }
 
@@ -608,7 +603,7 @@ static void P_LoadSegs_V4(int lump)
             boomlinespecials = true;
     }
 
-    W_UnlockLumpNum(lump);
+    W_ReleaseLumpNum(lump);
 }
 
 //
@@ -630,7 +625,7 @@ static void P_LoadSubsectors(int lump)
         subsectors[i].firstline = (unsigned short)SHORT(data[i].firstseg);
     }
 
-    W_UnlockLumpNum(lump);
+    W_ReleaseLumpNum(lump);
 }
 
 static void P_LoadSubsectors_V4(int lump)
@@ -649,7 +644,7 @@ static void P_LoadSubsectors_V4(int lump)
         subsectors[i].firstline = (int)data[i].firstseg;
     }
 
-    W_UnlockLumpNum(lump);
+    W_ReleaseLumpNum(lump);
 }
 
 //
@@ -770,7 +765,7 @@ static void P_LoadSectors(int lump)
         }
     }
 
-    W_UnlockLumpNum(lump);
+    W_ReleaseLumpNum(lump);
 }
 
 //
@@ -815,8 +810,7 @@ static void P_LoadNodes(int lump)
                 // haleyjd 11/06/10: check for invalid subsector reference
                 if (no->children[j] >= numsubsectors)
                 {
-                    C_Warning("Node %s references an invalid subsector of %s.",
-                        commify(i), commify(no->children[j]));
+                    C_Warning("Node %s references an invalid subsector of %s.", commify(i), commify(no->children[j]));
                     no->children[j] = 0;
                 }
 
@@ -828,7 +822,7 @@ static void P_LoadNodes(int lump)
         }
     }
 
-    W_UnlockLumpNum(lump);
+    W_ReleaseLumpNum(lump);
 }
 
 static void P_LoadNodes_V4(int lump)
@@ -868,7 +862,7 @@ static void P_LoadNodes_V4(int lump)
         }
     }
 
-    W_UnlockLumpNum(lump);
+    W_ReleaseLumpNum(lump);
 }
 
 static void P_LoadZSegs(const byte *data)
@@ -900,8 +894,7 @@ static void P_LoadZSegs(const byte *data)
         // e6y: fix wrong side index
         if (side != 0 && side != 1)
         {
-            C_Warning("Seg %s has a wrong side index of %s. It has been changed to 1.",
-                commify(i), commify(side));
+            C_Warning("Seg %s has a wrong side index of %s. It has been changed to 1.", commify(i), commify(side));
             side = 1;
         }
 
@@ -935,7 +928,6 @@ static void P_LoadZSegs(const byte *data)
         li->v2 = &vertexes[v2];
 
         li->offset = GetOffset(li->v1, (side ? ldef->v2 : ldef->v1));
-        li->angle = R_PointToAngle2(segs[i].v1->x, segs[i].v1->y, segs[i].v2->x, segs[i].v2->y);
 
         if (li->linedef->special >= BOOMLINESPECIALS)
             boomlinespecials = true;
@@ -1063,7 +1055,7 @@ static void P_LoadZNodes(int lump)
         }
     }
 
-    W_UnlockLumpNum(lump);
+    W_ReleaseLumpNum(lump);
 }
 
 //
@@ -1073,7 +1065,9 @@ static void P_LoadThings(int lump)
 {
     const mapthing_t    *data = (const mapthing_t *)W_CacheLumpNum(lump);
 
-    numthings = W_LumpLength(lump) / sizeof(mapthing_t);
+    if (!data || !(numthings = W_LumpLength(lump) / sizeof(mapthing_t)))
+        I_Error("There are no things in this map.");
+
     M_Seed(numthings);
     numdecorations = 0;
 
@@ -1082,7 +1076,6 @@ static void P_LoadThings(int lump)
         mapthing_t  mt = data[i];
         dboolean    spawn = true;
 
-        // Do not spawn cool, new monsters if !commercial
         if (gamemode != commercial)
         {
             switch (SHORT(mt.type))
@@ -1103,7 +1096,7 @@ static void P_LoadThings(int lump)
         }
 
         if (!spawn)
-            break;
+            continue;   // [BH] Fix <https://doomwiki.org/wiki/Doom_II_monster_exclusion_bug>.
 
         // Do spawn all other stuff.
         mt.x = SHORT(mt.x);
@@ -1115,7 +1108,6 @@ static void P_LoadThings(int lump)
         // [BH] Apply any level-specific fixes.
         if (canmodify && r_fixmaperrors)
             for (int j = 0; thingfix[j].mission != -1; j++)
-            {
                 if (gamemission == thingfix[j].mission && gameepisode == thingfix[j].epsiode
                     && gamemap == thingfix[j].map && i == thingfix[j].thing && mt.type == thingfix[j].type
                     && mt.x == SHORT(thingfix[j].oldx) && mt.y == SHORT(thingfix[j].oldy))
@@ -1152,7 +1144,6 @@ static void P_LoadThings(int lump)
 
                     break;
                 }
-            }
 
         // Change each Wolfenstein SS into Zombiemen in BFG Edition
         if (mt.type == WolfensteinSS && bfgedition && !states[S_SSWV_STND].dehacked)
@@ -1163,7 +1154,7 @@ static void P_LoadThings(int lump)
     }
 
     M_Seed((unsigned int)time(NULL));
-    W_UnlockLumpNum(lump);
+    W_ReleaseLumpNum(lump);
 }
 
 //
@@ -1196,8 +1187,7 @@ static void P_LoadLineDefs(int lump)
 
         ld->tranlump = -1;   // killough 4/11/98: no translucency by default
 
-        ld->slopetype = (!ld->dx ? ST_VERTICAL : (!ld->dy ? ST_HORIZONTAL : (FixedDiv(ld->dy, ld->dx) > 0 ?
-            ST_POSITIVE : ST_NEGATIVE)));
+        ld->slopetype = (!ld->dx ? ST_VERTICAL : (!ld->dy ? ST_HORIZONTAL : (FixedDiv(ld->dy, ld->dx) > 0 ? ST_POSITIVE : ST_NEGATIVE)));
 
         if (v1->x < v2->x)
         {
@@ -1234,7 +1224,7 @@ static void P_LoadLineDefs(int lump)
             sides[*ld->sidenum].special = ld->special;
     }
 
-    W_UnlockLumpNum(lump);
+    W_ReleaseLumpNum(lump);
 }
 
 // killough 4/4/98: delay using sidedefs until they are loaded
@@ -1251,8 +1241,7 @@ static void P_LoadLineDefs2(void)
         for (int j = 0; j < 2; j++)
             if (ld->sidenum[j] != NO_INDEX && ld->sidenum[j] >= numsides)
             {
-                C_Warning("Linedef %s references an invalid sidedef of %s.",
-                    commify(i), commify(ld->sidenum[j]));
+                C_Warning("Linedef %s references an invalid sidedef of %s.", commify(i), commify(ld->sidenum[j]));
                 ld->sidenum[j] = NO_INDEX;
             }
 
@@ -1269,7 +1258,7 @@ static void P_LoadLineDefs2(void)
             C_Warning("Linedef %s has the two-sided flag set but has no second sidedef.", commify(i));
         }
 
-        ld->frontsector = sides[ld->sidenum[0]].sector;
+        ld->frontsector = (ld->sidenum[0] != NO_INDEX ? sides[ld->sidenum[0]].sector : 0);
         ld->backsector = (ld->sidenum[1] != NO_INDEX ? sides[ld->sidenum[1]].sector : 0);
 
         // killough 4/11/98: handle special types
@@ -1366,7 +1355,7 @@ static void P_LoadSideDefs2(int lump)
         }
     }
 
-    W_UnlockLumpNum(lump);
+    W_ReleaseLumpNum(lump);
 }
 
 //
@@ -1712,7 +1701,7 @@ static void RejectOverrun(int rejectlump, const byte **rejectmatrix)
         memset(newreject + length, 0, required - length);
 
         // unlock the original lump, it is no longer needed
-        W_UnlockLumpNum(rejectlump);
+        W_ReleaseLumpNum(rejectlump);
     }
 }
 
@@ -1723,7 +1712,7 @@ static void P_LoadReject(int lumpnum)
 {
     // dump any old cached reject lump, then cache the new one
     if (rejectlump != -1)
-        W_UnlockLumpNum(rejectlump);
+        W_ReleaseLumpNum(rejectlump);
 
     rejectlump = lumpnum + ML_REJECT;
     rejectmatrix = W_CacheLumpNum(rejectlump);
@@ -1929,15 +1918,19 @@ static void P_CalcSegsLength(void)
     for (int i = 0; i < numsegs; i++)
     {
         seg_t   *li = segs + i;
-        int64_t dx = (int64_t)li->v2->x - li->v1->x;
-        int64_t dy = (int64_t)li->v2->y - li->v1->y;
 
-        li->length = (int64_t)sqrt((double)dx * dx + (double)dy * dy) >> 1;
+        li->dx = (int64_t)li->v2->x - li->v1->x;
+        li->dy = (int64_t)li->v2->y - li->v1->y;
 
-        // [crispy] re-calculate angle used for rendering
+        li->length = (int64_t)sqrt((double)li->dx * li->dx + (double)li->dy * li->dy) >> 1;
+
+        // [BH] recalculate angle used for rendering. Fixes <https://doomwiki.org/wiki/Bad_seg_angle>.
         li->angle = R_PointToAngleEx2(li->v1->x, li->v1->y, li->v2->x, li->v2->y);
 
-        li->fakecontrast = (!dy ? -LIGHTBRIGHT : (!dx ? LIGHTBRIGHT : 0));
+        li->fakecontrast = (!li->dy ? -LIGHTBRIGHT : (!li->dx ? LIGHTBRIGHT : 0));
+
+        li->dx >>= 1;
+        li->dy >>= 1;
     }
 }
 
@@ -1965,7 +1958,8 @@ void P_MapName(int ep, int map)
     {
         case doom:
             M_snprintf(mapnum, sizeof(mapnum), "E%iM%i%s", ep, map,
-                ((E1M4B && ep == 1 && map == 4) || (E1M8B && ep == 1 && map == 8) ? "B" : ""));
+                (((E1M4B || speciallumpname[0] != '\0') && ep == 1 && map == 4)
+                    || ((E1M8B || speciallumpname[0] != '\0') && ep == 1 && map == 8) ? "B" : ""));
 
             if (*mapinfoname)
                 M_snprintf(maptitle, sizeof(maptitle), "%s: %s", mapnum, mapinfoname);
@@ -2053,15 +2047,13 @@ void P_MapName(int ep, int map)
 
     if (strlen(maptitle) >= 4)
     {
-        if (toupper(maptitle[0]) == 'M' && toupper(maptitle[1]) == 'A' && toupper(maptitle[2]) == 'P'
-            && isdigit(maptitle[3]))
+        if (toupper(maptitle[0]) == 'M' && toupper(maptitle[1]) == 'A' && toupper(maptitle[2]) == 'P' && isdigit(maptitle[3]))
         {
             maptitle[0] = 'M';
             maptitle[1] = 'A';
             maptitle[2] = 'P';
         }
-        else if (toupper(maptitle[0]) == 'E' && isdigit(maptitle[1]) && toupper(maptitle[2]) == 'M'
-            && isdigit(maptitle[3]))
+        else if (toupper(maptitle[0]) == 'E' && isdigit(maptitle[1]) && toupper(maptitle[2]) == 'M' && isdigit(maptitle[3]))
         {
             maptitle[0] = 'E';
             maptitle[2] = 'M';
@@ -2115,15 +2107,14 @@ static mapformat_t P_CheckMapFormat(int lumpnum)
     {
         if (!memcmp(nodes, "xNd4\0\0\0\0", 8))
             format = DEEPBSP;
-        else if (!memcmp(nodes, "XNOD", 4) && !W_LumpLength(lumpnum + ML_SEGS)
-            && W_LumpLength(lumpnum + ML_NODES) >= 12)
+        else if (!memcmp(nodes, "XNOD", 4) && !W_LumpLength(lumpnum + ML_SEGS) && W_LumpLength(lumpnum + ML_NODES) >= 12)
             format = ZDBSPX;
         else if (!memcmp(nodes, "ZNOD", 4))
             I_Error("Compressed ZDBSP nodes are not supported.");
     }
 
     if (nodes)
-        W_UnlockLumpNum(b);
+        W_ReleaseLumpNum(b);
 
     return format;
 }
@@ -2136,8 +2127,9 @@ extern dboolean massacre;
 //
 void P_SetupLevel(int ep, int map)
 {
-    char    lumpname[6];
-    int     lumpnum;
+    char        lumpname[6];
+    int         lumpnum;
+    static int  prevlumpnum = -1;
 
     totalkills = 0;
     totalitems = 0;
@@ -2154,12 +2146,6 @@ void P_SetupLevel(int ep, int map)
     // will be set by player think.
     viewplayer->viewz = 1;
 
-    if (!(samelevel = (map == current_map && ep == current_episode)))
-    {
-        viewplayer->cheats &= ~CF_ALLMAP;
-        viewplayer->cheats &= ~CF_ALLMAP_THINGS;
-    }
-
     idclev = false;
 
     Z_FreeTags(PU_LEVEL, PU_PURGELEVEL - 1);
@@ -2167,24 +2153,38 @@ void P_SetupLevel(int ep, int map)
     if (rejectlump != -1)
     {
         // cph - unlock the reject table
-        W_UnlockLumpNum(rejectlump);
+        W_ReleaseLumpNum(rejectlump);
         rejectlump = -1;
     }
 
     P_InitThinkers();
 
     // find map name
-    if (gamemode == commercial)
-        M_snprintf(lumpname, sizeof(lumpname), "MAP%02i", map);
+    if (speciallumpname[0] != '\0')
+    {
+        lumpnum = W_GetNumForName(speciallumpname);
+        M_StringCopy(lumpname, speciallumpname, sizeof(lumpname));
+        speciallumpname[0] = '\0';
+    }
     else
-        M_snprintf(lumpname, sizeof(lumpname), "E%iM%i", ep, map);
+    {
+        if (gamemode == commercial)
+            M_snprintf(lumpname, sizeof(lumpname), "MAP%02i", map);
+        else
+            M_snprintf(lumpname, sizeof(lumpname), "E%iM%i", ep, map);
 
-    lumpnum = (nerve && gamemission == doom2 ? W_GetNumForName2(lumpname) : W_GetNumForName(lumpname));
+        lumpnum = (nerve && gamemission == doom2 ? W_GetNumForName2(lumpname) : W_GetNumForName(lumpname));
+    }
+
+    if (!(samelevel = (lumpnum == prevlumpnum)))
+    {
+        viewplayer->cheats &= ~CF_ALLMAP;
+        viewplayer->cheats &= ~CF_ALLMAP_THINGS;
+    }
 
     mapformat = P_CheckMapFormat(lumpnum);
 
-    canmodify = ((W_CheckMultipleLumps(lumpname) == 1 || gamemission == pack_nerve
-        || (nerve && gamemission == doom2)) && !FREEDOOM);
+    canmodify = ((W_CheckMultipleLumps(lumpname) == 1 || gamemission == pack_nerve || (nerve && gamemission == doom2)) && !FREEDOOM);
 
     leveltime = 0;
     animatedliquiddiff = FRACUNIT * 2;
@@ -2261,6 +2261,7 @@ void P_SetupLevel(int ep, int map)
     P_SetLiquids();
     P_GetMapLiquids((ep - 1) * 10 + map);
     P_GetMapNoLiquids((ep - 1) * 10 + map);
+
     P_LoadThings(lumpnum + ML_THINGS);
 
     P_InitCards();
@@ -2278,6 +2279,18 @@ void P_SetupLevel(int ep, int map)
 
     if (gamemode != shareware)
         S_ParseMusInfo(lumpname);
+
+    if ((!consolestrings
+        || (!M_StringStartsWith(console[consolestrings - 1].string, "map ")
+            && !M_StringStartsWith(console[consolestrings - 1].string, "idclev")
+            && !M_StringCompare(console[consolestrings - 1].string, "restartmap")))
+        && ((consolestrings == 1
+            || (!M_StringStartsWith(console[consolestrings - 2].string, "map ")
+                && !M_StringStartsWith(console[consolestrings - 2].string, "idclev")))))
+        C_Input("map %s", lumpname);
+
+    C_AddConsoleDivider();
+    C_Print(titlestring, mapnumandtitle);
 }
 
 static int  liquidlumps;
@@ -2494,7 +2507,10 @@ static void InitMapInfo(void)
                             info->sky1texture = R_TextureNumForName(sc_String);
 
                             if (SC_GetNumber())
+                            {
                                 info->sky1scrolldelta = sc_Number << 8;
+                                SC_UnGet();
+                            }
 
                             break;
 
@@ -2507,14 +2523,18 @@ static void InitMapInfo(void)
 
             mapmax = MAX(map, mapmax);
         }
+        else if (SC_Compare("nojump"))
+            nojump = true;
     }
 
     SC_Close();
     mapcount = mapmax;
 
-    C_Output("Parsed %s line%s in the <b>%sMAPINFO</b> lump in %s <b>%s</b>.", commify(sc_Line),
-        (sc_Line > 0 ? "s" : ""), (RMAPINFO >= 0 ? "R" : ""), (lumpinfo[MAPINFO]->wadfile->type == IWAD ?
-        "IWAD" : "PWAD"), lumpinfo[MAPINFO]->wadfile->path);
+    C_Output("Parsed %s line%s in the <b>%sMAPINFO</b> lump in %s <b>%s</b>.", commify(sc_Line), (sc_Line > 0 ? "s" : ""),
+        (RMAPINFO >= 0 ? "R" : ""), (lumpinfo[MAPINFO]->wadfile->type == IWAD ? "IWAD" : "PWAD"), lumpinfo[MAPINFO]->wadfile->path);
+
+    if (nojump && (keyboardjump || gamepadjump || mousejump != -1))
+        C_Warning("Jumping has been disabled for this PWAD.");
 }
 
 static int QualifyMap(int map)
@@ -2524,15 +2544,15 @@ static int QualifyMap(int map)
 
 char *P_GetMapAuthor(int map)
 {
-    return (MAPINFO >= 0 && mapinfo[QualifyMap(map)].author[0] ? mapinfo[QualifyMap(map)].author :
-        (breach && map == 1 ? s_AUTHOR_BESTOR : ((E1M4B && map == 4) || (E1M8B && map == 8) ?
+    return (MAPINFO >= 0 && mapinfo[QualifyMap(map)].author[0] ? mapinfo[QualifyMap(map)].author : (breach && map == 1 ?
+        s_AUTHOR_BESTOR : (((E1M4B || speciallumpname[0] != '\0') && map == 4) || ((E1M8B || speciallumpname[0] != '\0') && map == 8) ?
         s_AUTHOR_ROMERO : "")));
 }
 
 void P_GetMapLiquids(int map)
 {
     for (int i = 0; i < liquidlumps; i++)
-        sectors[mapinfo[QualifyMap(map)].liquid[i]].isliquid = true;
+        sectors[mapinfo[QualifyMap(map)].liquid[i]].terraintype = WATER;
 }
 
 int P_GetMapMusic(int map)
@@ -2542,8 +2562,8 @@ int P_GetMapMusic(int map)
 
 char *P_GetMapName(int map)
 {
-    return (MAPINFO >= 0 ? mapinfo[QualifyMap(map)].name : (E1M4B && map == 4 ? s_CAPTION_E1M4B :
-        (E1M8B && map == 8 ? s_CAPTION_E1M8B : "")));
+    return (MAPINFO >= 0 ? mapinfo[QualifyMap(map)].name : ((E1M4B || speciallumpname[0] != '\0') && map == 4 ? s_CAPTION_E1M4B :
+        ((E1M8B || speciallumpname[0] != '\0') && map == 8 ? s_CAPTION_E1M8B : "")));
 }
 
 int P_GetMapNext(int map)
@@ -2554,7 +2574,7 @@ int P_GetMapNext(int map)
 void P_GetMapNoLiquids(int map)
 {
     for (int i = 0; i < noliquidlumps; i++)
-        sectors[mapinfo[QualifyMap(map)].noliquid[i]].isliquid = false;
+        sectors[mapinfo[QualifyMap(map)].noliquid[i]].terraintype = SOLID;
 }
 
 int P_GetMapPar(int map)

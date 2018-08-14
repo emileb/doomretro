@@ -131,7 +131,7 @@ static void R_RecalcLineFlags(line_t *linedef)
 {
     int c;
 
-    linedef->r_validcount = gametic;
+    linedef->r_validcount = gametime;
 
     if (!(linedef->flags & ML_TWOSIDED)
         || backsector->interpceilingheight <= frontsector->interpfloorheight
@@ -186,7 +186,7 @@ static void R_MaybeInterpolateSector(sector_t *sector)
 
     if (vid_capfps != TICRATE
         // Only if we moved the sector last tic.
-        && sector->oldgametic == gametic - 1)
+        && sector->oldgametime == gametime - 1)
     {
         // Interpolate between current and last floor/ceiling position.
         if (sector->floorheight != sector->oldfloorheight)
@@ -293,8 +293,7 @@ sector_t *R_FakeFlat(sector_t *sec, sector_t *tempsec, int *floorlightlevel, int
             if (ceilinglightlevel)
                 *ceilinglightlevel = (s->ceilinglightsec ? s->ceilinglightsec->lightlevel : s->lightlevel);
         }
-        else if (heightsec && viewz >= heightsec->interpceilingheight
-            && sec->interpceilingheight > s->interpceilingheight)
+        else if (heightsec && viewz >= heightsec->interpceilingheight && sec->interpceilingheight > s->interpceilingheight)
         {
             // Above-ceiling hack
             tempsec->interpceilingheight = s->interpceilingheight;
@@ -405,7 +404,7 @@ static void R_AddLine(seg_t *line)
         backsector = R_FakeFlat(backsector, &tempsec, NULL, NULL, true);
     }
 
-    if ((linedef = curline->linedef)->r_validcount != gametic)
+    if ((linedef = curline->linedef)->r_validcount != gametime)
         R_RecalcLineFlags(linedef);
 
     if (linedef->r_flags & RF_IGNORE)
@@ -583,7 +582,7 @@ void R_RenderBSPNode(int bspnum)
         R_RenderBSPNode(bsp->children[side]);
 
         // Possibly divide back space.
-        if (!R_CheckBBox(bsp->bbox[side ^= 1]))
+        if (!R_CheckBBox(bsp->bbox[(side ^= 1)]))
             return;
 
         bspnum = bsp->children[side];

@@ -42,6 +42,8 @@
 #include "doomstat.h"
 #include "g_game.h"
 #include "i_gamepad.h"
+#include "i_system.h"
+#include "i_timer.h"
 #include "m_bbox.h"
 #include "m_config.h"
 #include "m_misc.h"
@@ -51,24 +53,7 @@
 #include "p_tick.h"
 #include "s_sound.h"
 
-#define BARRELTICS  (2 * TICRATE)
 #define BARRELRANGE (512 * FRACUNIT)
-
-int barreltics = 0;
-
-typedef enum
-{
-    DI_EAST,
-    DI_NORTHEAST,
-    DI_NORTH,
-    DI_NORTHWEST,
-    DI_WEST,
-    DI_SOUTHWEST,
-    DI_SOUTH,
-    DI_SOUTHEAST,
-    DI_NODIR,
-    NUMDIRS
-} dirtype_t;
 
 static dirtype_t opposite[] =
 {
@@ -90,6 +75,8 @@ static dirtype_t diags[] =
     DI_SOUTHWEST,
     DI_SOUTHEAST
 };
+
+int barrelms = 0;
 
 void A_Fall(mobj_t *actor, player_t *player, pspdef_t *psp);
 
@@ -202,12 +189,11 @@ static dboolean P_CheckMissileRange(mobj_t *actor)
     if (actor->reactiontime)
         return false;                   // do not attack yet
 
-    dist = P_ApproxDistance(actor->x - target->x, actor->y - target->y) - 64 * FRACUNIT;
+    dist = (P_ApproxDistance(actor->x - target->x, actor->y - target->y) >> FRACBITS) - 64;
 
     if (!actor->info->meleestate)
-        dist -= 128 * FRACUNIT;         // no melee attack, so fire more
+        dist -= 128;                    // no melee attack, so fire more
 
-    dist >>= FRACBITS;
     type = actor->type;
 
     if (type == MT_VILE)
@@ -222,14 +208,18 @@ static dboolean P_CheckMissileRange(mobj_t *actor)
 
         dist >>= 1;
     }
-    else if (type == MT_CYBORG || type == MT_SPIDER || type == MT_SKULL)
+    else if (type == MT_CYBORG)
+    {
+        dist >>= 1;
+
+        if (dist > 160)
+            dist = 160;
+    }
+    else if (type == MT_SPIDER || type == MT_SKULL)
         dist >>= 1;
 
     if (dist > 200)
         dist = 200;
-
-    if (type == MT_CYBORG && dist > 160)
-        dist = 160;
 
     if (M_Random() < dist)
         return false;
@@ -275,13 +265,12 @@ extern int      numspechit;
 
 static dboolean P_Move(mobj_t *actor, dboolean dropoff) // killough 9/12/98
 {
-    fixed_t     tryx, tryy;
-    fixed_t     deltax, deltay;
-    fixed_t     origx, origy;
-    dboolean    try_ok;
-    int         movefactor;
-    int         friction = ORIG_FRICTION;
-    int         speed;
+    fixed_t tryx, tryy;
+    fixed_t deltax, deltay;
+    fixed_t origx, origy;
+    int     movefactor;
+    int     friction = ORIG_FRICTION;
+    int     speed;
 
     if (actor->movedir == DI_NODIR)
         return false;
@@ -298,21 +287,7 @@ static dboolean P_Move(mobj_t *actor, dboolean dropoff) // killough 9/12/98
     tryx = (origx = actor->x) + (deltax = speed * xspeed[actor->movedir]);
     tryy = (origy = actor->y) + (deltay = speed * yspeed[actor->movedir]);
 
-    try_ok = P_TryMove(actor, tryx, tryy, dropoff);
-
-    // killough 10/98:
-    // Let normal momentum carry them, instead of steptoeing them across ice.
-
-    if (try_ok && friction > ORIG_FRICTION)
-    {
-        actor->x = origx;
-        actor->y = origy;
-        movefactor *= FRACUNIT / ORIG_FRICTION_FACTOR / 4;
-        actor->momx += FixedMul(deltax, movefactor);
-        actor->momy += FixedMul(deltay, movefactor);
-    }
-
-    if (!try_ok)
+    if (!P_TryMove(actor, tryx, tryy, dropoff))
     {
         // open any specials
         int good;
@@ -354,9 +329,22 @@ static dboolean P_Move(mobj_t *actor, dboolean dropoff) // killough 9/12/98
         return (good && ((M_Random() >= 230) ^ (good & 1)));
     }
     else
+    {
         actor->flags &= ~MF_INFLOAT;
 
-    // killough 11/98: fall more slowly, under gravity, if felldown==true
+        // killough 10/98:
+        // Let normal momentum carry them, instead of steptoeing them across ice.
+        if (friction > ORIG_FRICTION)
+        {
+            actor->x = origx;
+            actor->y = origy;
+            movefactor *= FRACUNIT / ORIG_FRICTION_FACTOR / 4;
+            actor->momx += FixedMul(deltax, movefactor);
+            actor->momy += FixedMul(deltay, movefactor);
+        }
+    }
+
+    // killough 11/98: fall more slowly, under gravity, if felldown == true
     if (!(actor->flags & MF_FLOAT) && !felldown)
         actor->z = actor->floorz;
 
@@ -425,7 +413,7 @@ static dboolean P_TryWalk(mobj_t *actor)
 static void P_DoNewChaseDir(mobj_t *actor, fixed_t deltax, fixed_t deltay)
 {
     dirtype_t       d[2];
-    const dirtype_t olddir = (dirtype_t)actor->movedir;
+    const dirtype_t olddir = actor->movedir;
     const dirtype_t turnaround = opposite[olddir];
     dboolean        attempts[NUMDIRS - 1];
 
@@ -655,7 +643,6 @@ static dboolean P_LookForMonsters(mobj_t *actor)
 static dboolean P_LookForPlayers(mobj_t *actor, dboolean allaround)
 {
     mobj_t  *mo;
-    fixed_t dist;
 
     if (infight)
         // player is dead, look for monsters
@@ -679,15 +666,13 @@ static dboolean P_LookForPlayers(mobj_t *actor, dboolean allaround)
         return false;
     }
 
-    dist = P_ApproxDistance(mo->x - actor->x, mo->y - actor->y);
-
     if (!allaround)
     {
         const angle_t   an = R_PointToAngle2(actor->x, actor->y, mo->x, mo->y) - actor->angle;
 
         if (an > ANG90 && an < ANG270)
             // if real close, react anyway
-            if (dist > MELEERANGE)
+            if (P_ApproxDistance(mo->x - actor->x, mo->y - actor->y) > MELEERANGE)
             {
                 // Use last known enemy if no players sighted -- killough 2/15/98
                 if (actor->lastenemy && actor->lastenemy->health > 0)
@@ -704,7 +689,8 @@ static dboolean P_LookForPlayers(mobj_t *actor, dboolean allaround)
     if (mo->flags & MF_FUZZ)
     {
         // player is invisible
-        if (dist > 2 * MELEERANGE && P_ApproxDistance(mo->momx, mo->momy) < 5 * FRACUNIT)
+        if (P_ApproxDistance(mo->x - actor->x, mo->y - actor->y) > 2 * MELEERANGE
+            && P_ApproxDistance(mo->momx, mo->momy) < 5 * FRACUNIT)
             return false;       // player is sneaking - can't detect
 
         if (M_Random() < 225)
@@ -712,7 +698,9 @@ static dboolean P_LookForPlayers(mobj_t *actor, dboolean allaround)
     }
 
     P_SetTarget(&actor->target, mo);
+
     actor->threshold = 60;
+
     return true;
 }
 
@@ -737,7 +725,7 @@ void A_KeenDie(mobj_t *actor, player_t *player, pspdef_t *psp)
     }
 
     junk.tag = 666;
-    EV_DoDoor(&junk, doorOpen);
+    EV_DoDoor(&junk, doorOpen, VDOORSPEED);
 }
 
 //
@@ -1430,7 +1418,7 @@ void A_VileAttack(mobj_t *actor, player_t *player, pspdef_t *psp)
     // move the fire between the vile and the player
     fire->x = target->x - FixedMul(24 * FRACUNIT, finecosine[an]);
     fire->y = target->y - FixedMul(24 * FRACUNIT, finesine[an]);
-    P_RadiusAttack(fire, actor, 70);
+    P_RadiusAttack(fire, actor, 70, true);
 }
 
 //
@@ -1712,7 +1700,7 @@ void A_Explode(mobj_t *actor, player_t *player, pspdef_t *psp)
 
         if (mo->z <= mo->floorz && P_ApproxDistance(actor->x - mo->x, actor->y - mo->y) < BARRELRANGE)
         {
-            barreltics = BARRELTICS;
+            barrelms = I_GetTimeMS() + BARRELMS;
 
             if (gp_vibrate_barrels && vibrate)
             {
@@ -1722,7 +1710,7 @@ void A_Explode(mobj_t *actor, player_t *player, pspdef_t *psp)
         }
     }
 
-    P_RadiusAttack(actor, actor->target, 128);
+    P_RadiusAttack(actor, actor->target, 128, true);
 }
 
 //
@@ -1851,7 +1839,7 @@ void A_BossDeath(mobj_t *actor, player_t *player, pspdef_t *psp)
                 {
                     case 6:
                         junk.tag = 666;
-                        EV_DoDoor(&junk, doorBlazeOpen);
+                        EV_DoDoor(&junk, doorBlazeOpen, VDOORSPEED * 4);
                         return;
                         break;
 
@@ -2099,7 +2087,7 @@ void A_Die(mobj_t *actor, player_t *player, pspdef_t *psp)
 //
 void A_Detonate(mobj_t *actor, player_t *player, pspdef_t *psp)
 {
-    P_RadiusAttack(actor, actor->target, actor->info->damage);
+    P_RadiusAttack(actor, actor->target, actor->info->damage, false);
 }
 
 //
@@ -2237,3 +2225,4 @@ void A_LineEffect(mobj_t *actor, player_t *player, pspdef_t *psp)
     actor->state->misc1 = junk.special;
     actor->player = oldplayer;
 }
+

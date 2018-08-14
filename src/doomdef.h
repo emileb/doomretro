@@ -64,10 +64,10 @@
 //
 #if defined(__GNUC__)
 
-#if defined(__clang__)
-#define PACKEDATTR  __attribute__((packed))
+#if defined(_WIN32) && !defined(__clang__)
+#define PACKEDATTR __attribute__((packed,gcc_struct))
 #else
-#define PACKEDATTR  __attribute__((packed,gcc_struct))
+#define PACKEDATTR __attribute__((packed))
 #endif
 
 #else
@@ -97,6 +97,7 @@ typedef enum
     pack_tnt,           // TNT mission pack
     pack_plut,          // Plutonia pack
     pack_nerve,         // No Rest for the Living
+
     none
 } GameMission_t;
 
@@ -201,12 +202,14 @@ typedef enum
     am_cell,    // Plasma rifle, BFG.
     am_misl,    // Missile launcher.
     NUMAMMO,
-    am_noammo   // Unlimited for chainsaw/fist.
+
+    am_noammo
 } ammotype_t;
 
 // Power up artifacts.
 enum
 {
+    pw_none,
     pw_invulnerability,
     pw_strength,
     pw_invisibility,
@@ -223,10 +226,10 @@ enum
 //
 enum
 {
-    INVULNTICS =  30 * TICRATE,
-    INVISTICS  =  60 * TICRATE,
-    INFRATICS  = 120 * TICRATE,
-    IRONTICS   =  60 * TICRATE
+    INVULNTICS  =  30 * TICRATE,
+    INVISTICS   =  60 * TICRATE,
+    INFRATICS   = 120 * TICRATE,
+    IRONTICS    =  60 * TICRATE
 };
 
 #define STARTFLASHING           127
@@ -242,5 +245,4 @@ enum
 #define MORE_FRICTION_MOMENTUM  15000   // mud factor based on momentum
 #define ORIG_FRICTION           0xE800  // original value
 #define ORIG_FRICTION_FACTOR    2048    // original value
-
 #endif

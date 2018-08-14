@@ -51,6 +51,7 @@
 #include "p_local.h"
 #include "st_stuff.h"
 #include "v_video.h"
+#include "w_wad.h"
 #include "z_zone.h"
 
 // Automap colors
@@ -131,16 +132,16 @@ static byte *crosshaircolor;
 
 // how much zoom-in per tic
 // goes to 2x in 1 second
-#define M_ZOOMIN        ((int)((float)FRACUNIT * (1.00f + F_PANINC / 200.0f)))
+#define M_ZOOMIN        ((fixed_t)((double)FRACUNIT * (1.0 + F_PANINC / 200.0)))
 
 // how much zoom-out per tic
 // pulls out to 0.5x in 1 second
-#define M_ZOOMOUT       ((int)((float)FRACUNIT / (1.00f + F_PANINC / 200.0f)))
+#define M_ZOOMOUT       ((fixed_t)((double)FRACUNIT / (1.0 + F_PANINC / 200.0)))
 
 #define PLAYERRADIUS    (16 * (1 << MAPBITS))
 
 // translates between frame-buffer and map distances
-#define FTOM(x)         (fixed_t)(((uint64_t)((x) << FRACBITS) * scale_ftom) >> FRACBITS)
+#define FTOM(x)         (fixed_t)((((uint64_t)(x) << FRACBITS) * scale_ftom) >> FRACBITS)
 #define MTOF(x)         (fixed_t)((((uint64_t)(x) * scale_mtof) >> FRACBITS) >> FRACBITS)
 
 // translates between frame-buffer and map coordinates
@@ -171,14 +172,11 @@ fixed_t             m_x = INT_MAX, m_y = INT_MAX;
 static fixed_t      m_x2, m_y2;
 
 // width/height of window on map (map coords)
-fixed_t             m_w;
-fixed_t             m_h;
+fixed_t             m_w, m_h;
 
 // based on level size
-static fixed_t      min_x;
-static fixed_t      min_y;
-static fixed_t      max_x;
-static fixed_t      max_y;
+static fixed_t      min_x, min_y;
+static fixed_t      max_x, max_y;
 
 static fixed_t      min_scale_mtof;         // used to tell when to stop zooming out
 static fixed_t      max_scale_mtof;         // used to tell when to stop zooming in
@@ -280,8 +278,10 @@ static void AM_findMinMaxBoundaries(void)
     fixed_t a;
     fixed_t b;
 
-    min_x = min_y = INT_MAX;
-    max_x = max_y = INT_MIN;
+    min_x = INT_MAX;
+    min_y = INT_MAX;
+    max_x = INT_MIN;
+    max_y = INT_MIN;
 
     for (int i = 0; i < numvertexes; i++)
     {
@@ -372,9 +372,7 @@ void AM_getGridSize(void)
     int width = -1;
     int height = -1;
 
-    sscanf(am_gridsize, "%10ix%10i", &width, &height);
-
-    if (width >= 4 && width <= 4096 && height >= 4 && height <= 4096)
+    if (sscanf(am_gridsize, "%10ix%10i", &width, &height) == 2 && width >= 4 && width <= 4096 && height >= 4 && height <= 4096)
     {
         gridwidth = width << MAPBITS;
         gridheight = height << MAPBITS;
@@ -628,8 +626,7 @@ void AM_addToPath(void)
     const int   y = viewplayer->mo->y >> FRACTOMAPBITS;
 
     if (pathpointnum)
-        if (ABS(pathpoints[pathpointnum - 1].x - x) < FRACUNIT
-            && ABS(pathpoints[pathpointnum - 1].y - y) < FRACUNIT)
+        if (ABS(pathpoints[pathpointnum - 1].x - x) < FRACUNIT && ABS(pathpoints[pathpointnum - 1].y - y) < FRACUNIT)
             return;
 
     if (pathpointnum >= pathpointnum_max)
@@ -1086,7 +1083,7 @@ dboolean AM_Responder(const event_t *ev)
 //
 static void AM_rotate(fixed_t *x, fixed_t *y, angle_t angle)
 {
-    const fixed_t   cosine = finecosine[angle >>= ANGLETOFINESHIFT];
+    const fixed_t   cosine = finecosine[(angle >>= ANGLETOFINESHIFT)];
     const fixed_t   sine = finesine[angle];
     const fixed_t   temp = FixedMul(*x, cosine) - FixedMul(*y, sine);
 
@@ -1212,6 +1209,7 @@ void AM_Ticker(void)
 void AM_clearFB(void)
 {
     memset(mapscreen, backcolor, maparea);
+    return;
 }
 
 //
@@ -1334,8 +1332,7 @@ static __inline void PUTTRANSDOT(unsigned int x, unsigned int y, byte *color)
 //
 // Classic Bresenham w/ whatever optimizations needed for speed
 //
-static void AM_drawFline(int x0, int y0, int x1, int y1, byte *color,
-    void (*putdot)(unsigned int, unsigned int, byte *))
+static void AM_drawFline(int x0, int y0, int x1, int y1, byte *color, void (*putdot)(unsigned int, unsigned int, byte *))
 {
     int dx = x1 - x0;
     int dy = y1 - y0;
@@ -1557,19 +1554,19 @@ static void AM_drawWalls(void)
                     AM_rotatePoint(&l.b);
                 }
 
-                if ((special && (special == W1_Teleport || special == W1_ExitLevel
-                    || special == WR_Teleport || special == W1_ExitLevel_GoesToSecretLevel
-                    || special == W1_Teleport_AlsoMonsters_Silent_SameAngle
-                    || special == WR_Teleport_AlsoMonsters_Silent_SameAngle
-                    || special == W1_TeleportToLineWithSameTag_Silent_SameAngle
-                    || special == WR_TeleportToLineWithSameTag_Silent_SameAngle
-                    || special == W1_TeleportToLineWithSameTag_Silent_ReversedAngle
-                    || special == WR_TeleportToLineWithSameTag_Silent_ReversedAngle))
-                    && ((flags & ML_TELEPORTTRIGGERED) || cheating
-                        || (backsector && isteleport[backsector->floorpic])))
+                if ((special
+                    && (special == W1_Teleport
+                        || special == W1_ExitLevel
+                        || special == WR_Teleport || special == W1_ExitLevel_GoesToSecretLevel
+                        || special == W1_Teleport_AlsoMonsters_Silent_SameAngle
+                        || special == WR_Teleport_AlsoMonsters_Silent_SameAngle
+                        || special == W1_TeleportToLineWithSameTag_Silent_SameAngle
+                        || special == WR_TeleportToLineWithSameTag_Silent_SameAngle
+                        || special == W1_TeleportToLineWithSameTag_Silent_ReversedAngle
+                        || special == WR_TeleportToLineWithSameTag_Silent_ReversedAngle))
+                    && ((flags & ML_TELEPORTTRIGGERED) || cheating || (backsector && isteleport[backsector->floorpic])))
                 {
-                    if (cheating || (mapped && !secret && backsector
-                        && backsector->ceilingheight != backsector->floorheight))
+                    if (cheating || (mapped && !secret && backsector && backsector->ceilingheight != backsector->floorheight))
                     {
                         AM_drawMline(l.a.x, l.a.y, l.b.x, l.b.y, teleportercolor);
                         continue;
@@ -1609,8 +1606,8 @@ static void AM_drawWalls(void)
     }
 }
 
-static void AM_drawLineCharacter(const mline_t *lineguy, const int lineguylines, const fixed_t scale,
-    angle_t angle, byte color, fixed_t x, fixed_t y)
+static void AM_drawLineCharacter(const mline_t *lineguy, const int lineguylines, const fixed_t scale, angle_t angle, byte color,
+    fixed_t x, fixed_t y)
 {
     for (int i = 0; i < lineguylines; i++)
     {
@@ -1643,8 +1640,8 @@ static void AM_drawLineCharacter(const mline_t *lineguy, const int lineguylines,
     }
 }
 
-static void AM_drawTransLineCharacter(const mline_t *lineguy, const int lineguylines, const fixed_t scale,
-    angle_t angle, byte *color, const fixed_t x, const fixed_t y)
+static void AM_drawTransLineCharacter(const mline_t *lineguy, const int lineguylines, const fixed_t scale, angle_t angle, byte *color,
+    const fixed_t x, const fixed_t y)
 {
     for (int i = 0; i < lineguylines; i++)
     {
@@ -1771,8 +1768,7 @@ static void AM_drawThings(void)
                 if (pass && !enemies)
                     break;
 
-                if (pass == ((thing->flags & (MF_SHOOTABLE | MF_CORPSE)) == MF_SHOOTABLE ? (!pass ?
-                    enemies++ : enemies--), 0 : 1))
+                if (pass == ((thing->flags & (MF_SHOOTABLE | MF_CORPSE)) == MF_SHOOTABLE ? (!pass ? enemies++ : enemies--), 0 : 1))
                 {
                     thing = thing->snext;
                     continue;
@@ -1859,7 +1855,7 @@ static void AM_drawMarks(void)
             digits++;
 
         x += (digits - 1) * MARKWIDTH / 2;
-        x -= (number > 1 && number % 10 == 1);
+        x -= (number % 10 == 1);
         x -= (number / 10 == 1);
 
         do
@@ -1899,12 +1895,18 @@ static void AM_drawPath(void)
 {
     if (pathpointnum >= 1)
     {
+        mpoint_t    player;
+
+        player.x = viewplayer->mo->x >> FRACTOMAPBITS;
+        player.y = viewplayer->mo->y >> FRACTOMAPBITS;
+
         if (am_rotatemode)
         {
+            mpoint_t    end;
+
             for (int i = 1; i < pathpointnum; i++)
             {
                 mpoint_t    start;
-                mpoint_t    end;
 
                 start.x = pathpoints[i - 1].x;
                 start.y = pathpoints[i - 1].y;
@@ -1916,8 +1918,13 @@ static void AM_drawPath(void)
 
                 AM_rotatePoint(&start);
                 AM_rotatePoint(&end);
-
                 AM_drawMline2(start.x, start.y, end.x, end.y, &pathcolor);
+            }
+
+            if (pathpointnum > 1 && !freeze && !(viewplayer->cheats & MF_NOCLIP))
+            {
+                AM_rotatePoint(&player);
+                AM_drawMline2(end.x, end.y, player.x, player.y, &pathcolor);
             }
         }
         else
@@ -1925,8 +1932,10 @@ static void AM_drawPath(void)
             for (int i = 1; i < pathpointnum; i++)
                 if (ABS(pathpoints[i - 1].x - pathpoints[i].x) <= FRACUNIT * 4
                     && ABS(pathpoints[i - 1].y - pathpoints[i].y) <= FRACUNIT * 4)
-                    AM_drawMline2(pathpoints[i - 1].x, pathpoints[i - 1].y, pathpoints[i].x, pathpoints[i].y,
-                        &pathcolor);
+                    AM_drawMline2(pathpoints[i - 1].x, pathpoints[i - 1].y, pathpoints[i].x, pathpoints[i].y, &pathcolor);
+
+            if (pathpointnum > 1 && !freeze && !(viewplayer->cheats & MF_NOCLIP))
+                AM_drawMline2(pathpoints[pathpointnum - 1].x, pathpoints[pathpointnum - 1].y, player.x, player.y, &pathcolor);
         }
     }
 }

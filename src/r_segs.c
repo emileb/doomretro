@@ -299,7 +299,7 @@ void R_RenderMaskedSegRange(drawseg_t *ds, const int x1, const int x2)
             if (!fixedcolormap)
                 dc_colormap[0] = walllights[BETWEEN(0, spryscale >> LIGHTSCALESHIFT, MAXLIGHTSCALE - 1)];
 
-            dc_iscale = 0xFFFFFFFFu / (unsigned int)spryscale;
+            dc_iscale = UINT_MAX / (unsigned int)spryscale;
 
             // draw the texture
             R_BlastMaskedSegColumn(column);
@@ -371,7 +371,7 @@ static void R_RenderSegLoop(void)
                 dc_colormap[0] = walllights[BETWEEN(0, rw_scale >> LIGHTSCALESHIFT, MAXLIGHTSCALE - 1)];
 
             dc_x = rw_x;
-            dc_iscale = 0xFFFFFFFFu / (unsigned int)rw_scale;
+            dc_iscale = UINT_MAX / rw_scale;
         }
 
         // draw the wall tiers
@@ -381,7 +381,9 @@ static void R_RenderSegLoop(void)
             dc_yl = yl;
             dc_yh = yh;
 
-            if (midbrightmap)
+            if (missingmidtexture)
+                R_DrawColorColumn();
+            else if (midbrightmap)
             {
                 dc_source = R_GetTextureColumn(R_CacheTextureCompositePatchNum(midtexture), texturecolumn);
                 dc_texturemid = rw_midtexturemid;
@@ -390,8 +392,6 @@ static void R_RenderSegLoop(void)
                 bmapwallcolfunc();
                 R_UnlockTextureCompositePatchNum(midtexture);
             }
-            else if (missingmidtexture)
-                R_DrawColorColumn();
             else
             {
                 dc_source = R_GetTextureColumn(R_CacheTextureCompositePatchNum(midtexture), texturecolumn);
@@ -419,7 +419,9 @@ static void R_RenderSegLoop(void)
                     dc_yl = yl;
                     dc_yh = mid;
 
-                    if (topbrightmap)
+                    if (missingtoptexture)
+                        R_DrawColorColumn();
+                    else if (topbrightmap)
                     {
                         dc_source = R_GetTextureColumn(R_CacheTextureCompositePatchNum(toptexture), texturecolumn);
                         dc_texturemid = rw_toptexturemid + (dc_yl - centery + 1) * SPARKLEFIX;
@@ -429,8 +431,6 @@ static void R_RenderSegLoop(void)
                         bmapwallcolfunc();
                         R_UnlockTextureCompositePatchNum(toptexture);
                     }
-                    else if (missingtoptexture)
-                        R_DrawColorColumn();
                     else
                     {
                         dc_source = R_GetTextureColumn(R_CacheTextureCompositePatchNum(toptexture), texturecolumn);
@@ -463,7 +463,9 @@ static void R_RenderSegLoop(void)
                     dc_yl = mid;
                     dc_yh = yh;
 
-                    if (bottombrightmap)
+                    if (missingbottomtexture)
+                        R_DrawColorColumn();
+                    else if (bottombrightmap)
                     {
                         dc_source = R_GetTextureColumn(R_CacheTextureCompositePatchNum(bottomtexture), texturecolumn);
                         dc_brightmap = bottombrightmap;
@@ -473,8 +475,6 @@ static void R_RenderSegLoop(void)
                         bmapwallcolfunc();
                         R_UnlockTextureCompositePatchNum(bottomtexture);
                     }
-                    else if (missingbottomtexture)
-                        R_DrawColorColumn();
                     else
                     {
                         dc_source = R_GetTextureColumn(R_CacheTextureCompositePatchNum(bottomtexture), texturecolumn);
@@ -555,6 +555,8 @@ void R_StoreWallRange(const int start, const int stop)
     if (automapactive)
         return;
 
+    dx = curline->dx;
+    dy = curline->dy;
     sidedef = curline->sidedef;
 
     // killough 1/98 -- fix 2s line HOM
@@ -572,8 +574,6 @@ void R_StoreWallRange(const int start, const int stop)
     rw_normalangle = curline->angle + ANG90;
 
     // shift right to avoid possibility of int64 overflow in rw_distance calculation
-    dx = ((int64_t)curline->v2->x - curline->v1->x) >> 1;
-    dy = ((int64_t)curline->v2->y - curline->v1->y) >> 1;
     dx1 = ((int64_t)viewx - curline->v1->x) >> 1;
     dy1 = ((int64_t)viewy - curline->v1->y) >> 1;
     len = curline->length;
@@ -625,7 +625,7 @@ void R_StoreWallRange(const int start, const int stop)
 
     // [BH] animate liquid sectors
     if (r_liquid_bob
-        && frontsector->isliquid
+        && frontsector->terraintype != SOLID
         && (!frontsector->heightsec || viewz > frontsector->heightsec->interpfloorheight))
         worldbottom += animatedliquiddiff;
 
@@ -639,22 +639,22 @@ void R_StoreWallRange(const int start, const int stop)
         ds_p->scale2 = R_ScaleFromGlobalAngle(xtoviewangle[stop]);
         ds_p->scalestep = rw_scalestep = (ds_p->scale2 - rw_scale) / (stop - start);
 
-        if (ds_p->scale1 < ds_p->scale2)
+        if (rw_scale < ds_p->scale2)
         {
-            ds_p->minscale = ds_p->scale1;
+            ds_p->minscale = rw_scale;
             ds_p->maxscale = ds_p->scale2;
         }
         else
         {
             ds_p->minscale = ds_p->scale2;
-            ds_p->maxscale = ds_p->scale1;
+            ds_p->maxscale = rw_scale;
         }
     }
     else
     {
-        ds_p->scale2 = ds_p->scale1;
-        ds_p->minscale = ds_p->scale1;
-        ds_p->maxscale = ds_p->scale1;
+        ds_p->scale2 = rw_scale;
+        ds_p->minscale = rw_scale;
+        ds_p->maxscale = rw_scale;
     }
 
     // calculate texture boundaries and decide if floor/ceiling marks are needed
@@ -668,7 +668,7 @@ void R_StoreWallRange(const int start, const int stop)
     {
         // single sided line
         if ((missingmidtexture = sidedef->missingmidtexture))
-            midtexture = 1;
+            midtexture = -1;
         else
         {
             fixed_t height;
@@ -691,9 +691,9 @@ void R_StoreWallRange(const int start, const int stop)
     }
     else
     {
-        // two sided line
         int liquidoffset = 0;
 
+        // two sided line
         if (linedef->r_flags & RF_CLOSED)
         {
             ds_p->sprtopclip = viewheightarray;
@@ -724,7 +724,7 @@ void R_StoreWallRange(const int start, const int stop)
 
         // [BH] animate liquid sectors
         if (r_liquid_bob
-            && backsector->isliquid
+            && backsector->terraintype != SOLID
             && backsector->interpfloorheight >= frontsector->interpfloorheight
             && (!backsector->heightsec || viewz > backsector->heightsec->interpfloorheight))
         {
@@ -774,7 +774,7 @@ void R_StoreWallRange(const int start, const int stop)
         {
             // top texture
             if ((missingtoptexture = sidedef->missingtoptexture))
-                toptexture = 1;
+                toptexture = -1;
             else
             {
                 fixed_t height;
@@ -792,7 +792,7 @@ void R_StoreWallRange(const int start, const int stop)
         {
             // bottom texture
             if ((missingbottomtexture = sidedef->missingbottomtexture))
-                bottomtexture = 1;
+                bottomtexture = -1;
             else
             {
                 fixed_t height;

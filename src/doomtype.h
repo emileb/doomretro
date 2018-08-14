@@ -68,6 +68,6 @@ typedef enum
 #define PATH_SEPARATOR  ':'
 #endif
 
-#define arrlen(array) (sizeof(array) / sizeof(*array))
+#define arrlen(array)   (sizeof(array) / sizeof(*array))
 
 #endif

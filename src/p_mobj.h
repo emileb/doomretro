@@ -41,6 +41,7 @@
 
 #include "doomdata.h"
 #include "info.h"
+#include "states.h"
 #include "tables.h"
 
 #define REDBLOOD            184
@@ -200,15 +201,11 @@ enum
     // Neither a cacodemon nor a missile.
     MF_SKULLFLY         = 0x01000000,
 
-    // Don't spawn this object
-    //  in death match mode (e.g. key cards).
-    MF_NOTDMATCH        = 0x02000000,
-
     // Player sprites in multiplayer modes are modified
     //  using an internal color lookup table for re-indexing.
     // If 0x4 0x8 or 0xc,
     //  use a translation table for player colormaps
-    MF_TRANSLATION      = 0x0c000000,
+    MF_TRANSLATION      = 0x0C000000,
     // Hmm ???.
     MF_TRANSSHIFT       = 26,
 
@@ -267,8 +264,8 @@ enum
     // Object is a corpse and being resurrected
     MF2_RESURRECTING              = 0x00040000,
 
-    // Object's feet won't be clipped in liquid
-    MF2_NOFOOTCLIP                = 0x00080000,
+    // Object's feet will be clipped in liquid
+    MF2_FOOTCLIP                  = 0x00080000,
 
     // Object won't bob in liquid
     MF2_NOLIQUIDBOB               = 0x00100000,
@@ -303,6 +300,20 @@ enum
     // Object is a missile from a monster
     MF2_MONSTERMISSILE            = 0x40000000
 };
+
+typedef enum
+{
+    DI_EAST,
+    DI_NORTHEAST,
+    DI_NORTH,
+    DI_NORTHWEST,
+    DI_WEST,
+    DI_SOUTHWEST,
+    DI_SOUTH,
+    DI_SOUTHEAST,
+    DI_NODIR,
+    NUMDIRS
+} dirtype_t;
 
 // Map Object definition.
 typedef struct mobj_s
@@ -350,10 +361,11 @@ typedef struct mobj_s
     state_t             *state;
     int                 flags;
     int                 flags2;
+
     int                 health;
 
     // Movement direction, movement generation (zig-zagging).
-    int                 movedir;                // 0-7
+    dirtype_t           movedir;                // 0-7
     int                 movecount;              // when 0, select a new dir
 
     // Thing being chased/attacked (or NULL),

@@ -354,11 +354,11 @@ linefix_t linefix[] =
     { doom,             3,   4,     778,    0, "",         "",            "",                 23,         8, DEFAULT,                   DEFAULT,                                    DEFAULT },
     { doom,             3,   4,     781,    0, "",         "",            "",                -23,         8, DEFAULT,                   DEFAULT,                                    DEFAULT },
     { doom,             3,   4,     783,    0, "",         "",            "",                 11,         8, DEFAULT,                   DEFAULT,                                    DEFAULT },
-    { doom,             3,   4,    1069,    0, "",         "",            "",            DEFAULT,   DEFAULT, DEFAULT,                   NoSpecial,                                  DEFAULT },
+    { doom,             3,   4,    1069,    0, "",         "",            "",            DEFAULT,   DEFAULT, DEFAULT,                   0,                                          DEFAULT },
 
     { doom,             3,   5,     557,    0, "",         "",            "",                160,       112, DEFAULT,                   DEFAULT,                                    DEFAULT },
-    { doom,             3,   5,    1285,    0, "",         "",            "",            DEFAULT,   DEFAULT, DEFAULT,                   NoSpecial,                                  DEFAULT },
-    { doom,             3,   5,    1299,    0, "",         "",            "",            DEFAULT,   DEFAULT, DEFAULT,                   NoSpecial,                                  DEFAULT },
+    { doom,             3,   5,    1285,    0, "",         "",            "",            DEFAULT,   DEFAULT, DEFAULT,                   0,                                          DEFAULT },
+    { doom,             3,   5,    1299,    0, "",         "",            "",            DEFAULT,   DEFAULT, DEFAULT,                   0,                                          DEFAULT },
 
     { doom,             3,   6,     298,    0, "",         "",            "",            DEFAULT,   DEFAULT, DEFAULT,                   W1_Teleport_MonstersOnly,                   DEFAULT },
     { doom,             3,   6,     299,    0, "",         "",            "",            DEFAULT,   DEFAULT, DEFAULT,                   W1_Teleport_MonstersOnly,                   DEFAULT },
@@ -752,7 +752,7 @@ linefix_t linefix[] =
     { doom2,            1,  12,     218,    0, "",         "",            "",            DEFAULT,        32, DEFAULT,                   DEFAULT,                                    DEFAULT },
     { doom2,            1,  12,     223,    0, "",         "",            "",            DEFAULT,        32, DEFAULT,                   DEFAULT,                                    DEFAULT },
     { doom2,            1,  12,     269,    0, "",         "PANEL6",      "",            DEFAULT,   DEFAULT, DEFAULT,                   DEFAULT,                                    DEFAULT },
-    { doom2,            1,  12,     632,    1, "",         "",            "",            DEFAULT,   DEFAULT, DEFAULT,                   NoSpecial,                                  DEFAULT },
+    { doom2,            1,  12,     632,    1, "",         "",            "",            DEFAULT,   DEFAULT, DEFAULT,                   0,                                          DEFAULT },
     { doom2,            1,  12,     648,    1, "",         "",            "PIPES",       DEFAULT,   DEFAULT, DEFAULT,                   DEFAULT,                                    DEFAULT },
     { doom2,            1,  12,     773,    1, "",         "",            "PANCASE2",    DEFAULT,   DEFAULT, DEFAULT,                   DEFAULT,                                    DEFAULT },
 
@@ -849,7 +849,7 @@ linefix_t linefix[] =
     { doom2,            1,  19,     288,    1, "",         "",            "STEP4",       DEFAULT,   DEFAULT, DEFAULT,                   DEFAULT,                                    DEFAULT },
     { doom2,            1,  19,     355,    1, "STONE2",   "",            "",            DEFAULT,   DEFAULT, DEFAULT,                   DEFAULT,                                    DEFAULT },
     { doom2,            1,  19,     455,    1, "",         "",            "METAL",       DEFAULT,   DEFAULT, DEFAULT,                   DEFAULT,                                    DEFAULT },
-    { doom2,            1,  19,     464,    0, "",         "",            "",            DEFAULT,   DEFAULT, DEFAULT,                   NoSpecial,                                  DEFAULT },
+    { doom2,            1,  19,     464,    0, "",         "",            "",            DEFAULT,   DEFAULT, DEFAULT,                   0,                                          DEFAULT },
     { doom2,            1,  19,     521,    0, "",         "",            "",            DEFAULT,        -8, DEFAULT,                   DEFAULT,                                    DEFAULT },
     { doom2,            1,  19,     529,    1, "",         "MIDGRATE",    "",            DEFAULT,   DEFAULT, DEFAULT,                   DEFAULT,                                    DEFAULT },
     { doom2,            1,  19,     558,    0, "",         "",            "",            DEFAULT,        -8, DEFAULT,                   DEFAULT,                                    DEFAULT },
@@ -1299,6 +1299,8 @@ linefix_t linefix[] =
     { pack_tnt,         1,   7,    1006,    1, "",         "",            "",            DEFAULT,   DEFAULT, DEFAULT,                   W1_Floor_RaiseToNextHighestFloor_Fast,           16 },
     { pack_tnt,         1,   7,    1007,    1, "",         "",            "",            DEFAULT,   DEFAULT, DEFAULT,                   W1_Floor_RaiseToNextHighestFloor_Fast,           16 },
 
+    { pack_tnt,         1,   8,     480,    1, "",         "",            "METAL2",      DEFAULT,   DEFAULT, DEFAULT,                   DEFAULT,                                    DEFAULT },
+
     { pack_tnt,         1,  11,    1087,    0, "",         "",            "GRAY4",       DEFAULT,         2, DEFAULT,                   DEFAULT,                                    DEFAULT },
 
     { pack_tnt,         1,  18,      52,    1, "",         "MIDBARS3",    "",            DEFAULT,   DEFAULT, DEFAULT,                   DEFAULT,                                    DEFAULT },
@@ -1477,7 +1479,7 @@ sectorfix_t sectorfix[] =
 
     { pack_tnt,         1,  15,    330, "",        "",             DEFAULT,       DEFAULT, DEFAULT,                           DEFAULT,      11 },
 
-    { -1,               0,   0,      0, "",        "",             DEFAULT,       DEFAULT, DEFAULT,                           DEFAULT, DEFAULT },
+    { -1,               0,   0,      0, "",        "",             DEFAULT,       DEFAULT, DEFAULT,                           DEFAULT, DEFAULT }
 };
 
 thingfix_t thingfix[] =

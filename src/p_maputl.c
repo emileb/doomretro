@@ -62,7 +62,7 @@ fixed_t P_ApproxDistance(fixed_t dx, fixed_t dy)
 //
 int P_PointOnLineSide(fixed_t x, fixed_t y, line_t *line)
 {
-    return (int)((int64_t)(y - line->v1->y) * line->dx + (int64_t)(line->v1->x - x) * line->dy >= 0);
+    return (int)((int64_t)(y - line->v1->y) * line->dx + (int64_t)(line->v1->x - x) * line->dy > 0);
 }
 
 //
@@ -102,7 +102,7 @@ int P_BoxOnLineSide(fixed_t *tmbox, line_t *ld)
 //
 static int P_PointOnDivlineSide(fixed_t x, fixed_t y, divline_t *line)
 {
-    return (int)((int64_t)(y - line->y) * line->dx + (int64_t)(line->x - x) * line->dy >= 0);
+    return (int)((int64_t)(y - line->y) * line->dx + (int64_t)(line->x - x) * line->dy > 0);
 }
 
 //
@@ -434,8 +434,7 @@ static dboolean PIT_AddLineIntercepts(line_t *ld)
     divline_t   dl;
 
     // avoid precision problems with two routines
-    if (dlTrace.dx > FRACUNIT * 16 || dlTrace.dy > FRACUNIT * 16
-        || dlTrace.dx < -FRACUNIT * 16 || dlTrace.dy < -FRACUNIT * 16)
+    if (dlTrace.dx > FRACUNIT * 16 || dlTrace.dy > FRACUNIT * 16 || dlTrace.dx < -FRACUNIT * 16 || dlTrace.dy < -FRACUNIT * 16)
     {
         s1 = P_PointOnDivlineSide(ld->v1->x, ld->v1->y, &dlTrace);
         s2 = P_PointOnDivlineSide(ld->v2->x, ld->v2->y, &dlTrace);

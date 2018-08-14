@@ -52,11 +52,11 @@
 
 dboolean I_InitSound(void);
 void I_ShutdownSound(void);
-int I_GetSfxLumpNum(sfxinfo_t *sfx);
-void I_UpdateSoundParams(int handle, int vol, int sep);
+dboolean CacheSFX(sfxinfo_t *sfxinfo);
+void I_UpdateSoundParams(int channel, int vol, int sep);
 int I_StartSound(sfxinfo_t *sfxinfo, int channel, int vol, int sep, int pitch);
-void I_StopSound(int handle);
-dboolean I_SoundIsPlaying(int handle);
+void I_StopSound(int channel);
+dboolean I_SoundIsPlaying(int channel);
 void I_UpdateSound(void);
 
 dboolean I_InitMusic(void);
@@ -91,6 +91,7 @@ void S_Start(void);
 //  using <sfx_id> from sounds.h
 //
 void S_StartSound(mobj_t *mobj, int sfx_id);
+void S_StartSoundAtVolume(mobj_t *origin, int sfx_id, int pitch, int volume);
 void S_StartSectorSound(degenmobj_t *degenmobj, int sfx_id);
 
 void S_StopSounds(void);

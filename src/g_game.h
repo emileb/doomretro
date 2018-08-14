@@ -89,6 +89,7 @@ void I_ToggleWidescreen(dboolean toggle);
 
 void G_SetMovementSpeed(int scale);
 void G_ToggleAlwaysRun(evtype_t type);
+
 void G_NextWeapon(void);
 void G_PrevWeapon(void);
 

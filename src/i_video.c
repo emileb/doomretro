@@ -76,6 +76,8 @@
 #endif
 
 // CVARs
+int                 r_color = r_color_default;
+float               r_gamma = r_gamma_default;
 int                 vid_capfps = vid_capfps_default;
 int                 vid_display = vid_display_default;
 #if !defined(_WIN32)
@@ -171,9 +173,7 @@ const float gammalevels[GAMMALEVELS] =
     1.55f, 1.60f, 1.65f, 1.70f, 1.75f, 1.80f, 1.85f, 1.90f, 1.95f, 2.0f
 };
 
-// Gamma correction level to use
 int                 gammaindex;
-float               r_gamma = r_gamma_default;
 
 static SDL_Rect     src_rect;
 static SDL_Rect     map_rect;
@@ -191,6 +191,7 @@ static HANDLE       CapFPSEvent;
 static dboolean     capslock;
 dboolean            alwaysrun = alwaysrun_default;
 
+extern dboolean     setsizeneeded;
 extern int          st_palette;
 extern int          windowborderwidth;
 extern int          windowborderheight;
@@ -217,9 +218,7 @@ dboolean MouseShouldBeGrabbed(void)
 
 static void SetShowCursor(dboolean show)
 {
-    if (SDL_SetRelativeMouseMode(!show) < 0)
-        I_SDLError("SDL_SetRelativeMouseMode");
-
+    SDL_SetRelativeMouseMode(!show);
     SDL_GetRelativeMouseState(NULL, NULL);
 }
 
@@ -326,8 +325,7 @@ void I_CapFPS(int fps)
 
         if (CapFPSEvent)
         {
-            CapFPSTimer = timeSetEvent(1000 / fps, 0, (LPTIMECALLBACK)CapFPSEvent, 0,
-                (TIME_PERIODIC | TIME_CALLBACK_EVENT_SET));
+            CapFPSTimer = timeSetEvent(1000 / fps, 0, (LPTIMECALLBACK)CapFPSEvent, 0, (TIME_PERIODIC | TIME_CALLBACK_EVENT_SET));
 
             if (!CapFPSTimer)
             {
@@ -421,7 +419,7 @@ static void I_GetEvent(void)
 
     while (SDL_PollEvent(Event))
     {
-        event_t     event;
+        event_t         event;
 
 #if !defined(_WIN32)
         static dboolean enterdown;
@@ -602,7 +600,7 @@ static void I_GetEvent(void)
 
                                 windowwidth = Event->window.data1;
                                 windowheight = Event->window.data2;
-                                M_snprintf(size, sizeof(size), "%ix%i", windowwidth, windowheight);
+                                M_snprintf(size, sizeof(size), "%sx%s", commify(windowwidth), commify(windowheight));
                                 vid_windowsize = strdup(size);
                                 M_SaveCVARs();
 
@@ -949,6 +947,8 @@ void I_Blit_Automap_NearestLinear(void)
     SDL_RenderPresent(maprenderer);
 }
 
+void (*blitfunc)(void);
+void (*mapblitfunc)(void);
 static void nullfunc(void) {}
 
 void I_UpdateBlitFunc(dboolean shake)
@@ -962,8 +962,7 @@ void I_UpdateBlitFunc(dboolean shake)
         blitfunc = (vid_showfps ? (nearestlinear && !override ? I_Blit_NearestLinear_ShowFPS : I_Blit_ShowFPS) :
             (nearestlinear && !override ? I_Blit_NearestLinear : I_Blit));
 
-    mapblitfunc = (mapwindow ? (nearestlinear && !override ? I_Blit_Automap_NearestLinear : I_Blit_Automap) :
-        nullfunc);
+    mapblitfunc = (mapwindow ? (nearestlinear && !override ? I_Blit_Automap_NearestLinear : I_Blit_Automap) : nullfunc);
 }
 
 //
@@ -971,18 +970,24 @@ void I_UpdateBlitFunc(dboolean shake)
 //
 void I_SetPalette(byte *playpal)
 {
+    double  color = r_color / 100.0;
+
     for (int i = 0; i < 256; i++)
     {
-        colors[i].r = gammatable[gammaindex][*playpal++];
-        colors[i].g = gammatable[gammaindex][*playpal++];
-        colors[i].b = gammatable[gammaindex][*playpal++];
+        byte    r = gammatable[gammaindex][*playpal++];
+        byte    g = gammatable[gammaindex][*playpal++];
+        byte    b = gammatable[gammaindex][*playpal++];
+        double  p = sqrt(r * r * 0.299 + g * g * 0.587 + b * b * 0.114);
+
+        colors[i].r = (byte)(p + (r - p) * color);
+        colors[i].g = (byte)(p + (g - p) * color);
+        colors[i].b = (byte)(p + (b - p) * color);
     }
 
     SDL_SetPaletteColors(palette, colors, 0, 256);
 
     if (vid_pillarboxes)
-        SDL_SetRenderDrawColor(renderer, palette[0].colors->r, palette[0].colors->g, palette[0].colors->b,
-            SDL_ALPHA_OPAQUE);
+        SDL_SetRenderDrawColor(renderer, colors[0].r, colors[0].g, colors[0].b, SDL_ALPHA_OPAQUE);
 }
 
 static void I_RestoreFocus(void)
@@ -1152,31 +1157,40 @@ void GetWindowPosition(void)
 
 void GetWindowSize(void)
 {
-    int width = -1;
-    int height = -1;
+    char    *width = malloc(11);
+    char    *height = malloc(11);
 
-    if (sscanf(vid_windowsize, "%10ix%10i", &width, &height) != 2)
+    if (sscanf(vid_windowsize, "%10[^x]x%10[^x]", width, height) != 2)
     {
         windowheight = SCREENHEIGHT + windowborderheight;
         windowwidth = SCREENHEIGHT * 16 / 10 + windowborderwidth;
         vid_windowsize = vid_windowsize_default;
         M_SaveCVARs();
     }
-    else if (width < ORIGINALWIDTH + windowborderwidth || height < ORIGINALWIDTH * 3 / 4 + windowborderheight)
-    {
-        char    size[16];
-
-        windowwidth = ORIGINALWIDTH + windowborderwidth;
-        windowheight = ORIGINALWIDTH * 3 / 4 + windowborderheight;
-        M_snprintf(size, sizeof(size), "%ix%i", windowwidth, windowheight);
-        vid_windowsize = strdup(size);
-        M_SaveCVARs();
-    }
     else
     {
-        windowwidth = width;
-        windowheight = height;
+        int w = atoi(uncommify(width));
+        int h = atoi(uncommify(height));
+
+        if (w < ORIGINALWIDTH + windowborderwidth || h < ORIGINALWIDTH * 3 / 4 + windowborderheight)
+        {
+            char    size[16];
+
+            windowwidth = ORIGINALWIDTH + windowborderwidth;
+            windowheight = ORIGINALWIDTH * 3 / 4 + windowborderheight;
+            M_snprintf(size, sizeof(size), "%sx%s", commify(windowwidth), commify(windowheight));
+            vid_windowsize = strdup(size);
+            M_SaveCVARs();
+        }
+        else
+        {
+            windowwidth = w;
+            windowheight = h;
+        }
     }
+
+    free(width);
+    free(height);
 }
 
 static dboolean ValidScreenMode(int width, int height)
@@ -1512,6 +1526,12 @@ static void SetVideoMode(dboolean output)
                 C_Output("The screen is rendered using hardware acceleration with the <i><b>OpenGL ES "
                     "2</b></i> API.");
         }
+#elif defined(__MACOSX__)
+        else if (M_StringCompare(rendererinfo.name, vid_scaleapi_metal))
+        {
+            if (output)
+                C_Output("The screen is rendered using hardware acceleration with the <i><b>Metal</b></i> API.");
+        }
 #endif
         else if (M_StringCompare(rendererinfo.name, vid_scaleapi_direct3d))
         {
@@ -1573,10 +1593,6 @@ static void SetVideoMode(dboolean output)
 
             if (!SDL_GetWindowDisplayMode(window, &displaymode))
             {
-                if (M_StringCompare(rendererinfo.name, vid_scaleapi_opengl))
-                    if (SDL_GL_SetSwapInterval(-1) < 0)
-                        SDL_GL_SetSwapInterval(1);
-
                 refreshrate = displaymode.refresh_rate;
 
                 if (refreshrate < vid_capfps || !vid_capfps)
@@ -1723,6 +1739,9 @@ void I_ToggleWidescreen(dboolean toggle)
     }
 
     returntowidescreen = false;
+    setsizeneeded = true;
+
+    HU_InitMessages();
 
     if (SDL_SetPaletteColors(palette, colors, 0, 256) < 0)
         I_SDLError("SDL_SetPaletteColors");
@@ -1786,6 +1805,14 @@ void I_ToggleFullscreen(void)
         if (menuactive || consoleactive || paused || gamestate != GS_LEVEL)
             SDL_WarpMouseInWindow(window, windowwidth - 10 * windowwidth / SCREENWIDTH, windowheight - 16);
     }
+}
+
+void I_SetPillarboxes(void)
+{
+    I_SetPalette(playpal + st_palette * 768);
+
+    if (!vid_pillarboxes)
+        SDL_SetRenderDrawColor(renderer, 0, 0, 0, SDL_ALPHA_OPAQUE);
 }
 
 static void I_InitGammaTables(void)

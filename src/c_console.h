@@ -54,8 +54,7 @@
 
 #define CONSOLETOP          0
 
-#define DIVIDERSTRING       "==================================================" \
-                            "================================================="
+#define DIVIDERSTRING       "==================================================================================================="
 
 #define EMPTYVALUE          "\"\""
 
@@ -141,6 +140,6 @@ void C_PrintCompileDate(void);
 void C_PrintSDLVersions(void);
 void C_StripQuotes(char *string);
 void C_UpdateFPS(void);
-char *C_GetTimeStamp(unsigned int value);
+char *C_GetTimeStamp(unsigned int tics);
 
 #endif

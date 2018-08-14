@@ -129,7 +129,7 @@ dboolean            r_translucency = r_translucency_default;
 
 extern dboolean     canmodify;
 extern dboolean     canmouselook;
-extern int          barreltics;
+extern int          barrelms;
 extern dboolean     transferredsky;
 extern dboolean     vanilla;
 extern lighttable_t **walllights;
@@ -296,8 +296,7 @@ static void R_InitTextureMapping(void)
         else if (tangent < -limit)
             viewangletox[i] = viewwidth + 1;
         else
-            viewangletox[i] = BETWEEN(-1, (centerxfrac - FixedMul(tangent, focallength) + FRACUNIT - 1) >> FRACBITS,
-                viewwidth + 1);
+            viewangletox[i] = BETWEEN(-1, (centerxfrac - FixedMul(tangent, focallength) + FRACUNIT - 1) >> FRACBITS, viewwidth + 1);
     }
 
     // Scan viewangletox[] to generate xtoviewangle[]:
@@ -454,6 +453,37 @@ void R_ExecuteSetViewSize(void)
     }
 }
 
+void (*colfunc)(void);
+void (*wallcolfunc)(void);
+void (*bmapwallcolfunc)(void);
+void (*segcolfunc)(void);
+void (*transcolfunc)(void);
+void (*basecolfunc)(void);
+void (*fuzzcolfunc)(void);
+void (*tlcolfunc)(void);
+void (*tl50colfunc)(void);
+void (*tl50segcolfunc)(void);
+void (*tl33colfunc)(void);
+void (*tlgreencolfunc)(void);
+void (*tlredcolfunc)(void);
+void (*tlredwhitecolfunc1)(void);
+void (*tlredwhitecolfunc2)(void);
+void (*tlredwhite50colfunc)(void);
+void (*tlbluecolfunc)(void);
+void (*tlgreen33colfunc)(void);
+void (*tlred33colfunc)(void);
+void (*tlblue25colfunc)(void);
+void (*redtobluecolfunc)(void);
+void (*tlredtoblue33colfunc)(void);
+void (*skycolfunc)(void);
+void (*redtogreencolfunc)(void);
+void (*tlredtogreen33colfunc)(void);
+void (*psprcolfunc)(void);
+void (*spanfunc)(void);
+void (*bloodsplatcolfunc)(void);
+void (*megaspherecolfunc)(void);
+void (*supershotguncolfunc)(void);
+
 void R_InitColumnFunctions(void)
 {
     if (r_textures)
@@ -468,8 +498,8 @@ void R_InitColumnFunctions(void)
         if (r_skycolor != r_skycolor_default)
             skycolfunc = R_DrawSkyColorColumn;
         else
-            skycolfunc = (canmodify && !transferredsky && (gamemode != commercial || gamemap < 21)
-                && !canmouselook ? R_DrawFlippedSkyColumn : R_DrawSkyColumn);
+            skycolfunc = (canmodify && !transferredsky && (gamemode != commercial || gamemap < 21) && !canmouselook ?
+                R_DrawFlippedSkyColumn : R_DrawSkyColumn);
 
         spanfunc = R_DrawSpan;
 
@@ -531,8 +561,7 @@ void R_InitColumnFunctions(void)
         spanfunc = R_DrawColorSpan;
         tlcolfunc = R_DrawColorColumn;
         tl50colfunc = R_DrawColorColumn;
-        tl50segcolfunc = (r_translucency ? (r_dither ? R_DrawDitheredColorColumn : R_DrawTranslucentColor50Column)
-            : R_DrawColorColumn);
+        tl50segcolfunc = (r_translucency ? (r_dither ? R_DrawDitheredColorColumn : R_DrawTranslucentColor50Column) : R_DrawColorColumn);
         tl33colfunc = R_DrawColorColumn;
         tlgreencolfunc = R_DrawColorColumn;
         tlredcolfunc = R_DrawColorColumn;
@@ -685,17 +714,13 @@ static void R_SetupFrame(void)
 {
     int     cm = 0;
     mobj_t  *mo = viewplayer->mo;
-    int     tempCentery = viewheight / 2;
+    int     tempcentery = viewheight / 2;
     int     pitch = 0;
+    int     time = I_GetTimeMS();
 
     mo->flags2 |= MF2_DONTDRAW;
 
     // [AM] Interpolate the player camera if the feature is enabled.
-
-    // Figure out how far into the current tic we're in as a fixed_t
-    if (vid_capfps != TICRATE)
-        fractionaltic = I_GetTimeMS() * TICRATE % 1000 * FRACUNIT / 1000;
-
     if (vid_capfps != TICRATE
         // Don't interpolate on the first tic of a level, otherwise
         // oldviewz might be garbage.
@@ -718,10 +743,10 @@ static void R_SetupFrame(void)
                 * FIXED2DOUBLE(fractionaltic))) / MLOOKUNIT;
 
             if (weaponrecoil)
-                pitch = BETWEEN(-LOOKDIRMAX, pitch + viewplayer->oldrecoil + FixedMul(viewplayer->recoil
-                    - viewplayer->oldrecoil, fractionaltic), LOOKDIRMAX);
+                pitch = BETWEEN(-LOOKDIRMAX, pitch + viewplayer->oldrecoil + FixedMul(viewplayer->recoil - viewplayer->oldrecoil,
+                    fractionaltic), LOOKDIRMAX);
 
-            tempCentery += (pitch << 1) * (r_screensize + 3) / 10;
+            tempcentery += (pitch << 1) * (r_screensize + 3) / 10;
         }
     }
     else
@@ -738,22 +763,22 @@ static void R_SetupFrame(void)
             if (weaponrecoil)
                 pitch = BETWEEN(-LOOKDIRMAX, pitch + viewplayer->recoil, LOOKDIRMAX);
 
-            tempCentery += (pitch << 1) * (r_screensize + 3) / 10;
+            tempcentery += (pitch << 1) * (r_screensize + 3) / 10;
         }
     }
 
-    if (barreltics && !consoleactive && !menuactive && !paused)
+    if (barrelms > time && !consoleactive && !menuactive && !paused)
     {
-        viewx += M_RandomInt(-2, 2) * FRACUNIT;
-        viewy += M_RandomInt(-2, 2) * FRACUNIT;
-        barreltics--;
+        viewx += M_RandomInt(-3, 3) * FRACUNIT * (barrelms - time) / BARRELMS;
+        viewy += M_RandomInt(-3, 3) * FRACUNIT * (barrelms - time) / BARRELMS;
+        viewz += M_RandomInt(-2, 2) * FRACUNIT * (barrelms - time) / BARRELMS;
     }
 
     extralight = viewplayer->extralight << 2;
 
-    if (centery != tempCentery)
+    if (centery != tempcentery)
     {
-        centery = tempCentery;
+        centery = tempcentery;
         centeryfrac = centery << FRACBITS;
         yslope = yslopes[LOOKDIRMAX + pitch];
     }
@@ -820,10 +845,10 @@ void R_RenderPlayerView(void)
     {
         if (r_homindicator)
             V_FillRect(0, viewwindowx, viewwindowy, viewwidth, viewheight,
-                nearestcolors[(leveltime % 20) < 9 ? RED : (viewplayer->fixedcolormap == INVERSECOLORMAP ? WHITE : BLACK)], false);
+                nearestcolors[((leveltime % 20) < 9 ? RED : (viewplayer->fixedcolormap == INVERSECOLORMAP ? WHITE : BLACK))], false);
         else if ((viewplayer->cheats & CF_NOCLIP) || freeze)
             V_FillRect(0, viewwindowx, viewwindowy, viewwidth, viewheight,
-                nearestcolors[viewplayer->fixedcolormap == INVERSECOLORMAP ? WHITE : BLACK], false);
+                nearestcolors[(viewplayer->fixedcolormap == INVERSECOLORMAP ? WHITE : BLACK)], false);
 
         R_RenderBSPNode(numnodes - 1);  // head node is the last node output
         R_DrawPlanes();

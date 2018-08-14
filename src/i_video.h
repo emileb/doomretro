@@ -79,6 +79,7 @@ void I_CreateExternalAutomap(dboolean output);
 void I_DestroyExternalAutomap(void);
 
 void I_ToggleFullscreen(void);
+void I_SetPillarboxes(void);
 void I_SetMotionBlur(int percent);
 
 // Wait for vertical retrace or pause a bit.
@@ -92,6 +93,9 @@ void I_SetGamma(float value);
 #if defined(_WIN32)
 void I_WindowResizeBlit(void);
 #endif
+
+extern void (*blitfunc)(void);
+extern void (*mapblitfunc)(void);
 
 extern dboolean     sendpause;
 extern dboolean     quitting;
@@ -109,9 +113,6 @@ extern const float  gammalevels[GAMMALEVELS];
 extern dboolean     blurred;
 extern dboolean     splashscreen;
 extern dboolean     noinput;
-
-void (*blitfunc)(void);
-void (*mapblitfunc)(void);
 
 extern int          windowx;
 extern int          windowy;

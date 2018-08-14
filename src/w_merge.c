@@ -94,8 +94,7 @@ static int FindInList(searchlist_t *list, char *name)
     return -1;
 }
 
-static dboolean SetupList(searchlist_t *list, searchlist_t *src_list, char *startname, char *endname,
-    char *startname2, char *endname2)
+static dboolean SetupList(searchlist_t *list, searchlist_t *src_list, char *startname, char *endname, char *startname2, char *endname2)
 {
     int startlump;
 
@@ -273,7 +272,7 @@ static void AddSpriteLump(lumpinfo_t *lump)
 {
     sprite_frame_t  *sprite;
     int             angle_num;
-    int             i;
+    int             i = 0;
     static int      MISFA0;
     static int      MISFB0;
     dboolean        ispackagewad = M_StringCompare(leafname(lump->wadfile->path), PACKAGE_WAD);
@@ -291,8 +290,6 @@ static void AddSpriteLump(lumpinfo_t *lump)
 
         if (M_StringCompare(lump->name, "SHT2A0") && !BTSX)
             SHT2A0 = true;
-
-        i = 0;
 
         while (*weaponsprites[i].spr1)
         {

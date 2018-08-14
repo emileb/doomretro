@@ -48,7 +48,7 @@
 #define SIL_TOP     2
 #define SIL_BOTH    3
 
-#define MAXDRAWSEGS 256
+#define MAXDRAWSEGS 1280
 #define MAXOPENINGS 16384
 
 //
@@ -77,6 +77,16 @@ typedef struct
     thinker_t           thinker;        // not used for anything
     fixed_t             x, y, z;
 } degenmobj_t;
+
+typedef enum
+{
+    SOLID,
+    NUKAGE,
+    WATER,
+    LAVA,
+    BLOOD,
+    SLIME
+} terraintype_t;
 
 //
 // The SECTORS record, at runtime.
@@ -137,7 +147,7 @@ typedef struct sector_s
     //      from storing old positions twice in a tic, and
     //      prevents the renderer from attempting to interpolate
     //      if old values were not updated recently.
-    int                 oldgametic;
+    int                 oldgametime;
 
     // [AM] Interpolated floor and ceiling height.
     //      Calculated once per tic and used inside
@@ -184,7 +194,8 @@ typedef struct sector_s
     // and which isn't, etc.
     int                 sky;
 
-    dboolean            isliquid;
+    terraintype_t       terraintype;
+
     dboolean            islift;
 } sector_t;
 
@@ -270,14 +281,14 @@ typedef struct line_s
     int                 nexttag;
     int                 firsttag;
 
-    int                 r_validcount;   // cph: if == gametic, r_flags already done
+    int                 r_validcount;   // cph: if == gametime, r_flags already done
 
     enum
     {                                   // cph:
-        RF_TOP_TILE = 1,                // Upper texture needs tiling
-        RF_MID_TILE = 2,                // Mid texture needs tiling
-        RF_BOT_TILE = 4,                // Lower texture needs tiling
-        RF_IGNORE   = 8,                // Renderer can skip this line
+        RF_TOP_TILE =  1,               // Upper texture needs tiling
+        RF_MID_TILE =  2,               // Mid texture needs tiling
+        RF_BOT_TILE =  4,               // Lower texture needs tiling
+        RF_IGNORE   =  8,               // Renderer can skip this line
         RF_CLOSED   = 16                // Line blocks view
     } r_flags;
 
@@ -285,11 +296,8 @@ typedef struct line_s
     degenmobj_t         soundorg;
 } line_t;
 
-#define BOOMLINESPECIALS    142
-
 enum
 {
-    NoSpecial                                                      =   0,
     DR_Door_OpenWaitClose_AlsoMonsters                             =   1,
     W1_Door_OpenStay                                               =   2,
     W1_Door_CloseStay                                              =   3,
@@ -432,7 +440,8 @@ enum
     S1_Floor_RaiseBy512                                            = 140,
     W1_Crusher_StartWithSlowDamage_Silent                          = 141,
 
-    // Extended line specials from BOOM
+    BOOMLINESPECIALS                                               = 142,
+
     W1_Floor_RaiseBy512                                            = 142,
     W1_Lift_RaiseBy24_ChangesTexture                               = 143,
     W1_Lift_RaiseBy32_ChangesTexture                               = 144,
@@ -715,7 +724,10 @@ enum
     Zombieman                                          =  3004,
     Cacodemon                                          =  3005,
     LostSoul                                           =  3006,
-    MusicSource                                        = 14164
+    Pusher                                             =  5001,
+    Puller                                             =  5002,
+    MusicSource                                        = 14164,
+    VisualModeCamera                                   = 32000
 };
 
 //
@@ -770,6 +782,8 @@ typedef struct
     fixed_t             offset;
 
     angle_t             angle;
+
+    int64_t             dx, dy;
 
     int64_t             length;
 
@@ -976,13 +990,12 @@ typedef struct
 //
 // Now what is a visplane, anyway?
 //
-typedef struct visplane_s
+typedef struct
 {
-    struct visplane_s   *next;          // Next visplane in hash chain -- killough
     int                 picnum;
     int                 lightlevel;
-    int                 minx;
-    int                 maxx;
+    int                 left;
+    int                 right;
     fixed_t             height;
     fixed_t             xoffs, yoffs;   // killough 2/28/98: Support scrolling flats
 

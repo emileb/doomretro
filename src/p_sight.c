@@ -47,11 +47,14 @@
 // Convert LOS info to struct for reentrancy and efficiency of data locality
 typedef struct
 {
-    fixed_t     sightzstart, t2x, t2y;  // eye z of looker
-    divline_t   strace;                 // from t1 to t2
-    fixed_t     topslope, bottomslope;  // slopes to top and bottom of target
+    fixed_t     sightzstart;    // eye z of looker
+    fixed_t     t2x, t2y;
+    divline_t   strace;         // from t1 to t2
+    fixed_t     topslope;       // slopes to top and bottom of target
+    fixed_t     bottomslope;
     fixed_t     bbox[4];
-    fixed_t     maxz, minz;             // cph - z optimizations for 2sided lines
+    fixed_t     maxz;           // cph - z optimizations for 2sided lines
+    fixed_t     minz;
 } los_t;
 
 static los_t    los; // cph - made static
@@ -75,22 +78,6 @@ static int P_DivlineSide(fixed_t x, fixed_t y, const divline_t *node)
     right = ((y - node->y) >> FRACBITS) * (node->dx >> FRACBITS);
 
     return (right < left ? 0 : (left == right ? 2 : 1));
-}
-
-//
-// P_InterceptVector2
-// Returns the fractional intercept point
-// along the first divline.
-// This is only called by the addthings and addlines traversers.
-//
-static fixed_t P_InterceptVector2(const divline_t *v2, const divline_t *v1)
-{
-    fixed_t den = FixedMul(v1->dy >> 8, v2->dx) - FixedMul(v1->dx >> 8, v2->dy);
-
-    if (!den)
-        return 0;
-
-    return FixedDiv(FixedMul((v1->x - v2->x) >> 8, v1->dy) + FixedMul((v2->y - v1->y) >> 8, v1->dx), den);
 }
 
 //
@@ -179,7 +166,7 @@ static dboolean P_CrossSubsector(int num)
             return false;
 
         // crosses a two sided line
-        frac = P_InterceptVector2(&los.strace, &divl);
+        frac = P_InterceptVector(&los.strace, &divl);
 
         if (front->floorheight != back->floorheight)
             los.bottomslope = MAX(los.bottomslope, FixedDiv(openbottom - los.sightzstart, frac));
@@ -205,8 +192,8 @@ static dboolean P_CrossBSPNode(int bspnum)
     while (!(bspnum & NF_SUBSECTOR))
     {
         const node_t    *bsp = nodes + bspnum;
-        int             side1 = P_DivlineSide(los.strace.x, los.strace.y, (divline_t *)bsp) & 1;
-        int             side2 = P_DivlineSide(los.t2x, los.t2y, (divline_t *)bsp);
+        int             side1 = R_PointOnSide(los.strace.x, los.strace.y, bsp);
+        int             side2 = R_PointOnSide(los.t2x, los.t2y, bsp);
 
         if (side1 == side2)
             bspnum = bsp->children[side1];              // doesn't touch the other side
@@ -238,14 +225,12 @@ dboolean P_CheckSight(mobj_t *t1, mobj_t *t2)
         return false;
 
     // killough 4/19/98: make fake floors and ceilings block monster view
-    if ((s1->heightsec && ((t1->z + t1->height <= s1->heightsec->interpfloorheight &&
-        t2->z >= s1->heightsec->interpfloorheight)
-        || (t1->z >= s1->heightsec->interpceilingheight &&
-        t2->z + t1->height <= s1->heightsec->interpceilingheight))) || (s2->heightsec &&
-        ((t2->z + t2->height <= s2->heightsec->interpfloorheight &&
-        t1->z >= s2->heightsec->interpfloorheight)
-        || (t2->z >= s2->heightsec->interpceilingheight &&
-        t1->z + t2->height <= s2->heightsec->interpceilingheight))))
+    if ((s1->heightsec
+        && ((t1->z + t1->height <= s1->heightsec->interpfloorheight && t2->z >= s1->heightsec->interpfloorheight)
+            || (t1->z >= s1->heightsec->interpceilingheight && t2->z + t2->height <= s1->heightsec->interpceilingheight)))
+        || (s2->heightsec
+            && ((t2->z + t2->height <= s2->heightsec->interpfloorheight && t1->z >= s2->heightsec->interpfloorheight)
+                || (t2->z >= s2->heightsec->interpceilingheight && t1->z + t1->height <= s2->heightsec->interpceilingheight))))
         return false;
 
     // killough 11/98: shortcut for melee situations

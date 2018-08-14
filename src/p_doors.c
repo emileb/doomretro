@@ -48,14 +48,14 @@
 
 static void T_GradualLightingToDoor(vldoor_t *door)
 {
-    if (door->topheight - door->sector->floorheight)
+    sector_t    *sec = door->sector;
+
+    if (door->topheight - sec->floorheight)
     {
         if (door->lighttag)
-            EV_LightTurnOnPartway(door->line, FixedDiv(door->sector->ceilingheight - door->sector->floorheight,
-                door->topheight - door->sector->floorheight));
-        else if (!P_SectorHasLightSpecial(door->sector))
-            EV_LightByAdjacentSectors(door->sector, FixedDiv(door->sector->ceilingheight - door->sector->floorheight,
-                door->topheight - door->sector->floorheight));
+            EV_LightTurnOnPartway(door->line, FixedDiv(sec->ceilingheight - sec->floorheight, door->topheight - sec->floorheight));
+        else if (!P_SectorHasLightSpecial(sec))
+            EV_LightByAdjacentSectors(sec, FixedDiv(sec->ceilingheight - sec->floorheight, door->topheight - sec->floorheight));
     }
 }
 
@@ -135,6 +135,7 @@ void T_VerticalDoor(vldoor_t *door)
             T_GradualLightingToDoor(door);
 
             if (res == pastdest)
+            {
                 switch (door->type)
                 {
                     case doorBlazeRaise:
@@ -167,7 +168,9 @@ void T_VerticalDoor(vldoor_t *door)
                     default:
                         break;
                 }
+            }
             else if (res == crushed)
+            {
                 switch (door->type)
                 {
                     case doorBlazeClose:
@@ -187,6 +190,7 @@ void T_VerticalDoor(vldoor_t *door)
                         S_StartSectorSound(&door->sector->soundorg, sfx_doropn);
                         break;
                 }
+            }
 
             break;
 
@@ -234,7 +238,7 @@ void T_VerticalDoor(vldoor_t *door)
 // EV_DoLockedDoor
 // Move a locked door up/down
 //
-dboolean EV_DoLockedDoor(line_t *line, vldoor_e type, mobj_t *thing)
+dboolean EV_DoLockedDoor(line_t *line, vldoor_e type, mobj_t *thing, fixed_t speed)
 {
     player_t    *player = thing->player;
     static char buffer[1024];
@@ -356,10 +360,10 @@ dboolean EV_DoLockedDoor(line_t *line, vldoor_e type, mobj_t *thing)
             break;
     }
 
-    return EV_DoDoor(line, type);
+    return EV_DoDoor(line, type, speed);
 }
 
-dboolean EV_DoDoor(line_t *line, vldoor_e type)
+dboolean EV_DoDoor(line_t *line, vldoor_e type, fixed_t speed)
 {
     int         secnum = -1;
     dboolean    rtn = false;
@@ -381,7 +385,7 @@ dboolean EV_DoDoor(line_t *line, vldoor_e type)
         door->sector = sec;
         door->type = type;
         door->topwait = VDOORWAIT;
-        door->speed = VDOORSPEED;
+        door->speed = speed;
         door->line = line;      // jff 1/31/98 remember line that triggered us
 
         for (int i = 0; i < door->sector->linecount; i++)
@@ -393,7 +397,6 @@ dboolean EV_DoDoor(line_t *line, vldoor_e type)
                 door->topheight = P_FindLowestCeilingSurrounding(sec);
                 door->topheight -= 4 * FRACUNIT;
                 door->direction = -1;
-                door->speed = VDOORSPEED * 4;
 
                 if (sec->ceilingheight != sec->floorheight)
                     S_StartSectorSound(&door->sector->soundorg, sfx_bdcls);
@@ -424,7 +427,6 @@ dboolean EV_DoDoor(line_t *line, vldoor_e type)
                 door->direction = 1;
                 door->topheight = P_FindLowestCeilingSurrounding(sec);
                 door->topheight -= 4 * FRACUNIT;
-                door->speed = VDOORSPEED * 4;
 
                 if (door->topheight != sec->ceilingheight)
                     S_StartSectorSound(&door->sector->soundorg, sfx_bdopn);
@@ -609,7 +611,7 @@ void EV_VerticalDoor(line_t *line, mobj_t *thing)
                     door->direction = 1;        // go back up
 
                     // [BH] play correct door sound
-                    S_StartSectorSound(&door->sector->soundorg, (door->type == doorBlazeRaise ? sfx_bdopn : sfx_doropn));
+                    S_StartSectorSound(&sec->soundorg, (door->type == doorBlazeRaise ? sfx_bdopn : sfx_doropn));
                 }
                 else
                 {
@@ -621,7 +623,7 @@ void EV_VerticalDoor(line_t *line, mobj_t *thing)
                         door->direction = -1;   // start going down immediately
 
                         // [BH] play correct door sound
-                        S_StartSectorSound(&door->sector->soundorg, (door->type == doorBlazeRaise ? sfx_bdcls : sfx_dorcls));
+                        S_StartSectorSound(&sec->soundorg, (door->type == doorBlazeRaise ? sfx_bdcls : sfx_dorcls));
                     }
                     else if (door->thinker.function == T_PlatRaise)
                     {

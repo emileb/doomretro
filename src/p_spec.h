@@ -47,23 +47,8 @@ typedef enum
     lighting_special
 } special_e;
 
-extern dboolean *isliquid;
-extern dboolean *isteleport;
-
-extern short    nukagestart;
-extern short    nukageend;
-extern short    fwaterstart;
-extern short    fwaterend;
-extern short    swaterstart;
-extern short    swaterend;
-extern short    lavastart;
-extern short    lavaend;
-extern short    bloodstart;
-extern short    bloodend;
-extern short    rrockstart;
-extern short    rrockend;
-extern short    slimestart;
-extern short    slimeend;
+extern terraintype_t    *terraintypes;
+extern dboolean         *isteleport;
 
 // at game start
 void P_InitPicAnims(void);
@@ -246,7 +231,7 @@ typedef struct
 extern button_t *buttonlist;
 extern int      maxbuttons;
 
-void P_ChangeSwitchTexture(line_t *line, dboolean useAgain);
+void P_ChangeSwitchTexture(line_t *line, dboolean useagain);
 
 void P_InitSwitchList(void);
 
@@ -376,9 +361,9 @@ typedef struct
 
 void EV_VerticalDoor(line_t *line, mobj_t *thing);
 
-dboolean EV_DoDoor(line_t *line, vldoor_e type);
+dboolean EV_DoDoor(line_t *line, vldoor_e type, fixed_t speed);
 
-dboolean EV_DoLockedDoor(line_t *line, vldoor_e type, mobj_t *thing);
+dboolean EV_DoLockedDoor(line_t *line, vldoor_e type, mobj_t *thing, fixed_t speed);
 
 void T_VerticalDoor(vldoor_t *door);
 void P_SpawnDoorCloseIn30(sector_t *sec);
@@ -520,11 +505,11 @@ typedef enum
     elevateCurrent
 } elevator_e;
 
-typedef enum
+enum
 {
     build8,     // slowly build by 8
     turbo16     // quickly build by 16
-} stair_e;
+};
 
 typedef struct
 {
@@ -563,7 +548,7 @@ typedef enum
 
 result_e T_MovePlane(sector_t *sector, fixed_t speed, fixed_t dest, dboolean crush, int floorOrCeiling,
     int direction, dboolean elevator);
-dboolean EV_BuildStairs(line_t *line, stair_e type);
+dboolean EV_BuildStairs(line_t *line, fixed_t speed, fixed_t stairsize, dboolean crushing);
 dboolean EV_DoFloor(line_t *line, floor_e floortype);
 dboolean EV_DoChange(line_t *line, change_e changetype);
 dboolean EV_DoElevator(line_t *line, elevator_e elevtype);
