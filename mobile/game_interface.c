@@ -260,11 +260,9 @@ void PortableMove(float fwd, float strafe)
 //======================================================================
 
 //Look up and down
-int look_pitch_mode;
 float look_pitch_mouse,look_pitch_abs,look_pitch_joy;
 void PortableLookPitch(int mode, float pitch)
 {
-	look_pitch_mode = mode;
 	switch(mode)
 	{
 	case LOOK_MODE_MOUSE:
@@ -280,11 +278,9 @@ void PortableLookPitch(int mode, float pitch)
 }
 
 //left right
-int look_yaw_mode;
 float look_yaw_mouse,look_yaw_joy;
 void PortableLookYaw(int mode, float yaw)
 {
-	look_yaw_mode = mode;
 	switch(mode)
 	{
 	case LOOK_MODE_MOUSE:
@@ -397,19 +393,11 @@ void G_AndroidBuildTiccmd(ticcmd_t *cmd)
 	cmd->forwardmove  += forwardmove_android * FORWARDMOVE1;
 	cmd->sidemove  += sidemove_android   *  SIDEMOVE1;
 
-	switch(look_pitch_mode)
-	{
-	case LOOK_MODE_MOUSE:
-		mlooky += look_pitch_mouse * 10000;
-		look_pitch_mouse = 0;
-		break;
-	case LOOK_MODE_ABSOLUTE:
-		mlooky = look_pitch_abs * 80;
-		break;
-	case LOOK_MODE_JOYSTICK:
-		mlooky += look_pitch_joy * 300;
-		break;
-	}
+
+    mlooky += look_pitch_mouse * 10000;
+    look_pitch_mouse = 0;
+
+    mlooky += look_pitch_joy * 300;
 
 	//LOGI("mlooky = %d",mlooky);
 
@@ -428,16 +416,11 @@ void G_AndroidBuildTiccmd(ticcmd_t *cmd)
 	}
 
 
-	switch(look_yaw_mode)
-	{
-	case LOOK_MODE_MOUSE:
-		cmd->angleturn += look_yaw_mouse * 80000;
-		look_yaw_mouse = 0;
-		break;
-	case LOOK_MODE_JOYSTICK:
-		cmd->angleturn += look_yaw_joy * 1000;
-		break;
-	}
+    cmd->angleturn += look_yaw_mouse * 80000;
+    look_yaw_mouse = 0;
+
+    cmd->angleturn += look_yaw_joy * 1000;
+
 	if (newweapon != -1)
 	{
 		cmd->buttons |= BT_CHANGE;
