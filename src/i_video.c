@@ -1032,8 +1032,6 @@ static void GetDisplays(void)
 {
     numdisplays = MIN(SDL_GetNumVideoDisplays(), MAXDISPLAYS);
 
-numdisplays = 1;
-
     for (int i = 0; i < numdisplays; i++)
         if (SDL_GetDisplayBounds(i, &displays[i]) < 0)
             I_SDLError("SDL_GetDisplayBounds");
