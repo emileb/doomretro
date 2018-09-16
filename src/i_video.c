@@ -53,6 +53,7 @@
 #include "i_colors.h"
 #include "i_gamepad.h"
 #include "i_system.h"
+#include "i_timer.h"
 #include "m_config.h"
 #include "m_menu.h"
 #include "m_misc.h"
@@ -68,6 +69,8 @@
 #define MAXUPSCALEWIDTH     (1600 / ORIGINALWIDTH)
 #define MAXUPSCALEHEIGHT    (1200 / ORIGINALHEIGHT)
 
+#define SHAKEANGLE          (M_RandomInt(-1000, 1000) * r_shake_damage / 100000.0)
+
 #define I_SDLError(func)    I_Error("The call to "func"() failed in %s() on line %i of %s with the error:\n" \
                                 "\"%s\".", __FUNCTION__, __LINE__ - 1, leafname(__FILE__), SDL_GetError())
 
@@ -76,6 +79,7 @@
 #endif
 
 // CVARs
+dboolean            m_acceleration = m_acceleration_default;
 int                 r_color = r_color_default;
 float               r_gamma = r_gamma_default;
 int                 vid_capfps = vid_capfps_default;
@@ -179,8 +183,6 @@ static SDL_Rect     src_rect;
 static SDL_Rect     map_rect;
 
 int                 fps;
-int                 minfps = INT_MAX;
-int                 maxfps;
 int                 refreshrate;
 
 #if defined(_WIN32)
@@ -360,8 +362,14 @@ void I_ShutdownGraphics(void)
     SDL_QuitSubSystem(SDL_INIT_VIDEO);
 }
 
-#if defined(X11)
-static void I_SetXKBCapslockState(dboolean enabled)
+#if defined(_WIN32)
+static void ToggleCapsLockState(void)
+{
+    keybd_event(VK_CAPITAL, 0x45, 0, (uintptr_t)0);
+    keybd_event(VK_CAPITAL, 0x45, KEYEVENTF_KEYUP, (uintptr_t)0);
+}
+#elif defined(X11)
+static void SetCapsLockState(dboolean enabled)
 {
     Display *dpy = XOpenDisplay(0);
 
@@ -371,17 +379,23 @@ static void I_SetXKBCapslockState(dboolean enabled)
 }
 #endif
 
+dboolean GetCapsLockState(void)
+{
+#if defined(_WIN32)
+    return !!(GetKeyState(VK_CAPITAL) & 0xFFFF);
+#else
+    return !!(SDL_GetModState() & KMOD_CAPS);
+#endif
+}
+
 void I_ShutdownKeyboard(void)
 {
 #if defined(_WIN32)
-    if (keyboardalwaysrun == KEY_CAPSLOCK && (GetKeyState(VK_CAPITAL) & 0x0001) && !capslock)
-    {
-        keybd_event(VK_CAPITAL, 0x45, KEYEVENTF_EXTENDEDKEY, (uintptr_t)0);
-        keybd_event(VK_CAPITAL, 0x45, (KEYEVENTF_EXTENDEDKEY | KEYEVENTF_KEYUP), (uintptr_t)0);
-    }
+    if (keyboardalwaysrun == KEY_CAPSLOCK && !capslock && GetCapsLockState())
+        ToggleCapsLockState();
 #elif defined(X11)
     if (keyboardalwaysrun == KEY_CAPSLOCK)
-        I_SetXKBCapslockState(false);
+        SetCapsLockState(false);
 #endif
 }
 
@@ -457,10 +471,18 @@ static void I_GetEvent(void)
 
                 if (event.data1)
                 {
-                    if (altdown && event.data1 == KEY_TAB)
+                    if (altdown)
                     {
-                        event.data1 = 0;
-                        event.data2 = 0;
+                        if (event.data1 == KEY_F4)
+                        {
+                            I_Sleep(300);
+                            I_Quit(true);
+                        }
+                        else if (event.data1 == KEY_TAB)
+                        {
+                            event.data1 = 0;
+                            event.data2 = 0;
+                        }
                     }
 
                     if (!isdigit(event.data2))
@@ -488,6 +510,7 @@ static void I_GetEvent(void)
 
                     D_PostEvent(&event);
                 }
+
                 break;
 
             case SDL_KEYUP:
@@ -653,8 +676,18 @@ static void I_ReadMouse(void)
 
         ev.type = ev_mouse;
         ev.data1 = mousebuttonstate;
-        ev.data2 = AccelerateMouse(x);
-        ev.data3 = -AccelerateMouse(y);
+
+        if (m_acceleration)
+        {
+            ev.data2 = AccelerateMouse(x);
+            ev.data3 = -AccelerateMouse(y);
+        }
+        else
+        {
+            ev.data2 = x;
+            ev.data3 = -y;
+        }
+
         D_PostEvent(&ev);
         button = false;
     }
@@ -720,12 +753,7 @@ static void CalculateFPS(void)
 
     if (starttime < (currenttime = SDL_GetPerformanceCounter()) - performancefrequency)
     {
-        if ((fps = frames))
-        {
-            minfps = MIN(minfps, fps);
-            maxfps = MAX(maxfps, fps);
-        }
-
+        fps = frames;
         frames = 0;
         starttime = currenttime;
     }
@@ -838,8 +866,7 @@ static void I_Blit_Shake(void)
     SDL_UpdateTexture(texture, &src_rect, buffer->pixels, SCREENWIDTH * 4);
     SDL_RenderClear(renderer);
     SDL_RenderCopy(renderer, texture, &src_rect, NULL);
-    SDL_RenderCopyEx(renderer, texture, &src_rect, NULL,
-        M_RandomInt(-1000, 1000) / 1000.0 * r_shake_damage / 100.0, NULL, SDL_FLIP_NONE);
+    SDL_RenderCopyEx(renderer, texture, &src_rect, NULL, SHAKEANGLE, NULL, SDL_FLIP_NONE);
 
 #if defined(_WIN32)
     if (CapFPSEvent)
@@ -858,8 +885,7 @@ static void I_Blit_NearestLinear_Shake(void)
     SDL_RenderClear(renderer);
     SDL_SetRenderTarget(renderer, texture_upscaled);
     SDL_RenderCopy(renderer, texture, &src_rect, NULL);
-    SDL_RenderCopyEx(renderer, texture, &src_rect, NULL,
-        M_RandomInt(-1000, 1000) / 1000.0 * r_shake_damage / 100.0, NULL, SDL_FLIP_NONE);
+    SDL_RenderCopyEx(renderer, texture, &src_rect, NULL, SHAKEANGLE, NULL, SDL_FLIP_NONE);
     SDL_SetRenderTarget(renderer, NULL);
     SDL_RenderCopy(renderer, texture_upscaled, NULL, NULL);
 
@@ -880,8 +906,7 @@ static void I_Blit_ShowFPS_Shake(void)
     SDL_UpdateTexture(texture, &src_rect, buffer->pixels, SCREENWIDTH * 4);
     SDL_RenderClear(renderer);
     SDL_RenderCopy(renderer, texture, &src_rect, NULL);
-    SDL_RenderCopyEx(renderer, texture, &src_rect, NULL,
-        M_RandomInt(-1000, 1000) / 1000.0 * r_shake_damage / 100.0, NULL, SDL_FLIP_NONE);
+    SDL_RenderCopyEx(renderer, texture, &src_rect, NULL, SHAKEANGLE, NULL, SDL_FLIP_NONE);
 
 #if defined(_WIN32)
     if (CapFPSEvent)
@@ -901,8 +926,7 @@ static void I_Blit_NearestLinear_ShowFPS_Shake(void)
     SDL_RenderClear(renderer);
     SDL_SetRenderTarget(renderer, texture_upscaled);
     SDL_RenderCopy(renderer, texture, &src_rect, NULL);
-    SDL_RenderCopyEx(renderer, texture, &src_rect, NULL,
-        M_RandomInt(-1000, 1000) / 1000.0 * r_shake_damage / 100.0, NULL, SDL_FLIP_NONE);
+    SDL_RenderCopyEx(renderer, texture, &src_rect, NULL, SHAKEANGLE, NULL, SDL_FLIP_NONE);
     SDL_SetRenderTarget(renderer, NULL);
     SDL_RenderCopy(renderer, texture_upscaled, NULL, NULL);
 
@@ -1007,6 +1031,8 @@ static void I_RestoreFocus(void)
 static void GetDisplays(void)
 {
     numdisplays = MIN(SDL_GetNumVideoDisplays(), MAXDISPLAYS);
+
+numdisplays = 1;
 
     for (int i = 0; i < numdisplays; i++)
         if (SDL_GetDisplayBounds(i, &displays[i]) < 0)
@@ -1135,8 +1161,7 @@ void GetWindowPosition(void)
     int x = 0;
     int y = 0;
 
-    if (M_StringCompare(vid_windowpos, vid_windowpos_centered)
-        || M_StringCompare(vid_windowpos, vid_windowpos_centred))
+    if (M_StringCompare(vid_windowpos, vid_windowpos_centered) || M_StringCompare(vid_windowpos, vid_windowpos_centred))
     {
         windowx = 0;
         windowy = 0;
@@ -1303,8 +1328,7 @@ static void PositionOnCurrentDisplay(void)
     manuallypositioning = true;
 
     if (!windowx && !windowy)
-        SDL_SetWindowPosition(window,
-            displays[displayindex].x + (displays[displayindex].w - windowwidth) / 2,
+        SDL_SetWindowPosition(window, displays[displayindex].x + (displays[displayindex].w - windowwidth) / 2,
             displays[displayindex].y + (displays[displayindex].h - windowheight) / 2);
     else
         SDL_SetWindowPosition(window, windowx, windowy);
@@ -1503,8 +1527,7 @@ static void SetVideoMode(dboolean output)
             else
             {
                 if (output)
-                    C_Output("The screen is rendered using hardware acceleration with the <i><b>OpenGL "
-                        "%i.%i</b></i> API.", major, minor);
+                    C_Output("The screen is rendered using hardware acceleration with the <i><b>OpenGL %i.%i</b></i> API.", major, minor);
 
                 if (!M_StringCompare(vid_scaleapi, vid_scaleapi_opengl))
                 {
@@ -1517,14 +1540,12 @@ static void SetVideoMode(dboolean output)
         else if (M_StringCompare(rendererinfo.name, vid_scaleapi_opengles))
         {
             if (output)
-                C_Output("The screen is rendered using hardware acceleration with the <i><b>OpenGL "
-                    "ES</b></i> API.");
+                C_Output("The screen is rendered using hardware acceleration with the <i><b>OpenGL ES</b></i> API.");
         }
         else if (M_StringCompare(rendererinfo.name, vid_scaleapi_opengles2))
         {
             if (output)
-                C_Output("The screen is rendered using hardware acceleration with the <i><b>OpenGL ES "
-                    "2</b></i> API.");
+                C_Output("The screen is rendered using hardware acceleration with the <i><b>OpenGL ES 2</b></i> API.");
         }
 #elif defined(__MACOSX__)
         else if (M_StringCompare(rendererinfo.name, vid_scaleapi_metal))
@@ -1536,8 +1557,8 @@ static void SetVideoMode(dboolean output)
         else if (M_StringCompare(rendererinfo.name, vid_scaleapi_direct3d))
         {
             if (output)
-                C_Output("The screen is rendered using hardware acceleration with the <i><b>Direct3D "
-                    "%s</b></i> API.", (SDL_VIDEO_RENDER_D3D11 ? "11.0" : "9.0"));
+                C_Output("The screen is rendered using hardware acceleration with the <i><b>Direct3D %s</b></i> API.",
+                    (SDL_VIDEO_RENDER_D3D11 ? "11.0" : "9.0"));
 
             if (!M_StringCompare(vid_scaleapi, vid_scaleapi_direct3d))
             {
@@ -1570,10 +1591,8 @@ static void SetVideoMode(dboolean output)
             if (nearestlinear)
             {
                 C_Output("The %i\xD7%i screen is scaled up to %s\xD7%s using nearest-neighbor interpolation.",
-                    SCREENWIDTH, SCREENHEIGHT, commify(upscaledwidth * SCREENWIDTH),
-                    commify(upscaledheight * SCREENHEIGHT));
-                C_Output("It is then scaled down to %s\xD7%s using linear filtering.",
-                    commify(height * 4 / 3), commify(height));
+                    SCREENWIDTH, SCREENHEIGHT, commify(upscaledwidth * SCREENWIDTH), commify(upscaledheight * SCREENHEIGHT));
+                C_Output("It is then scaled down to %s\xD7%s using linear filtering.", commify(height * 4 / 3), commify(height));
             }
             else if (M_StringCompare(vid_scalefilter, vid_scalefilter_linear) && !software)
                 C_Output("The %i\xD7%i screen is scaled up to %s\xD7%s using linear filtering.",
@@ -1676,24 +1695,24 @@ static void SetVideoMode(dboolean output)
 
     if (nearestlinear)
         SDL_SetHintWithPriority(SDL_HINT_RENDER_SCALE_QUALITY, vid_scalefilter_nearest, SDL_HINT_OVERRIDE);
-#ifdef __ANDROID__
-    if (!(texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_STREAMING,
-#else
-    if (!(texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING,
-#endif
-        SCREENWIDTH, SCREENHEIGHT)))
 
+#ifdef __ANDROID__
+    if (!(texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_STREAMING,SCREENWIDTH, SCREENHEIGHT)))
+#else
+    if (!(texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING,SCREENWIDTH, SCREENHEIGHT)))
+#endif
         I_SDLError("SDL_CreateTexture");
 
     if (nearestlinear)
     {
         SDL_SetHintWithPriority(SDL_HINT_RENDER_SCALE_QUALITY, vid_scalefilter_linear, SDL_HINT_OVERRIDE);
+
 #ifdef __ANDROID__
-        if (!(texture_upscaled = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA8888,
+        if (!(texture_upscaled = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_TARGET,
 #else
-        if (!(texture_upscaled = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB8888,
+        if (!(texture_upscaled = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_TARGET,
 #endif
-            SDL_TEXTUREACCESS_TARGET, upscaledwidth * SCREENWIDTH, upscaledheight * SCREENHEIGHT)))
+            upscaledwidth * SCREENWIDTH, upscaledheight * SCREENHEIGHT)))
             I_SDLError("SDL_CreateTexture");
     }
 
@@ -1772,8 +1791,8 @@ void I_RestartGraphics(void)
 
 void I_ToggleFullscreen(void)
 {
-    if (SDL_SetWindowFullscreen(window, (!vid_fullscreen ? (M_StringCompare(vid_screenresolution,
-        vid_screenresolution_desktop) ? SDL_WINDOW_FULLSCREEN_DESKTOP : SDL_WINDOW_FULLSCREEN) : 0)) < 0)
+    if (SDL_SetWindowFullscreen(window, (!vid_fullscreen ? (M_StringCompare(vid_screenresolution, vid_screenresolution_desktop) ?
+        SDL_WINDOW_FULLSCREEN_DESKTOP : SDL_WINDOW_FULLSCREEN) : 0)) < 0)
     {
         menuactive = false;
         C_ShowConsole();
@@ -1842,21 +1861,16 @@ void I_InitKeyboard(void)
 {
     if (keyboardalwaysrun == KEY_CAPSLOCK)
     {
+        capslock = GetCapsLockState();
+
 #if defined(_WIN32)
-        capslock = !!(GetKeyState(VK_CAPITAL) & 0x0001);
-
         if (alwaysrun != capslock)
-        {
-            keybd_event(VK_CAPITAL, 0x45, KEYEVENTF_EXTENDEDKEY, (uintptr_t)0);
-            keybd_event(VK_CAPITAL, 0x45, (KEYEVENTF_EXTENDEDKEY | KEYEVENTF_KEYUP), (uintptr_t)0);
-        }
+            ToggleCapsLockState();
 #elif defined(X11)
-        capslock = !!(SDL_GetModState() & KMOD_CAPS);
-
         if (alwaysrun && !capslock)
-            I_SetXKBCapslockState(true);
+            SetCapsLockState(true);
         else if (!alwaysrun && capslock)
-            I_SetXKBCapslockState(false);
+            SetCapsLockState(false);
 #endif
     }
 }

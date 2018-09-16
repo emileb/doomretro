@@ -84,20 +84,20 @@ int             gamemap;
 char            speciallumpname[6] = "";
 
 dboolean        paused;
-dboolean        sendpause;              // send a pause event next tic
-static dboolean sendsave;               // send a save event next tic
+dboolean        sendpause;                      // send a pause event next tic
+static dboolean sendsave;                       // send a save event next tic
 
 dboolean        viewactive;
 
 int             gametime;
-int             totalkills;             // for intermission
+int             totalkills;                     // for intermission
 int             totalitems;
 int             totalsecret;
 int             totalpickups;
 int             monstercount[NUMMOBJTYPES];
 int             barrelcount;
 
-wbstartstruct_t wminfo;                 // parms for world map/intermission
+wbstartstruct_t wminfo;                         // parms for world map/intermission
 
 dboolean        autoload = autoload_default;
 
@@ -105,7 +105,7 @@ dboolean        autoload = autoload_default;
 
 fixed_t  forwardmove[2] = { FORWARDMOVE0, FORWARDMOVE1 };
 fixed_t  sidemove[2] = { SIDEMOVE0, SIDEMOVE1 };
-fixed_t  angleturn[3] = { 640, 1280, 320 };      // + slow turn
+fixed_t  angleturn[3] = { 640, 1280, 320 };     // + slow turn
 fixed_t  gamepadangleturn[2] = { 640, 960 };
 
 #define NUMWEAPONKEYS   7
@@ -171,8 +171,6 @@ unsigned int    stat_mapscompleted = 0;
 extern dboolean barrelms;
 extern int      st_palette;
 extern int      pagetic;
-extern dboolean transferredsky;
-
 extern int      timer;
 extern int      countdown;
 
@@ -281,18 +279,26 @@ void G_BuildTiccmd(ticcmd_t *cmd)
             cmd->angleturn += (int)(gamepadangleturn[run] * gamepadthumbRXleft * gamepadsensitivity);
     }
 
-    if (usemouselook && gamepadthumbRY)
+    if (gamepadthumbRY)
     {
-        if (gp_invertyaxis)
-            gamepadthumbRY = -gamepadthumbRY;
+        if (usemouselook && gp_thumbsticks == 2)
+        {
+            if (gp_invertyaxis)
+                gamepadthumbRY = -gamepadthumbRY;
 
-        cmd->lookdir = (int)(48 * (gamepadthumbRY < 0 ? gamepadthumbRYup : gamepadthumbRYdown) * gamepadsensitivity);
+            cmd->lookdir = (int)(48 * (gamepadthumbRY < 0 ? gamepadthumbRYup : gamepadthumbRYdown) * gamepadsensitivity);
+        }
+        else if (gp_thumbsticks == 1)
+        {
+            cmd->lookdir = 0;
+            forward = (int)(forwardmove[run] * (gamepadthumbRY < 0 ? gamepadthumbRYup : gamepadthumbRYdown));
+        }
     }
 
     if (gamekeydown[keyboardforward] || gamekeydown[keyboardforward2] || (gamepadbuttons & gamepadforward))
-        forward = forwardmove[run];
+        forward += forwardmove[run];
     else if (gamepadthumbLY < 0)
-        forward = (int)(forwardmove[run] * gamepadthumbLYup);
+        forward += (int)(forwardmove[run] * gamepadthumbLYup);
 
     if (gamekeydown[keyboardback] || gamekeydown[keyboardback2] || (gamepadbuttons & gamepadback))
         forward -= forwardmove[run];
@@ -302,12 +308,22 @@ void G_BuildTiccmd(ticcmd_t *cmd)
     if (gamekeydown[keyboardstraferight] || gamekeydown[keyboardstraferight2] || (gamepadbuttons & gamepadstraferight))
         side = sidemove[run];
     else if (gamepadthumbLX > 0)
-        side = (int)(sidemove[run] * gamepadthumbLXright);
+    {
+        if (gp_thumbsticks == 2)
+            side = (int)(sidemove[run] * gamepadthumbLXright);
+        else
+            cmd->angleturn -= (int)(gamepadangleturn[run] * gamepadthumbLXright * gamepadsensitivity);
+    }
 
     if (gamekeydown[keyboardstrafeleft] || gamekeydown[keyboardstrafeleft2] || (gamepadbuttons & gamepadstrafeleft))
         side -= sidemove[run];
     else if (gamepadthumbLX < 0)
-        side -= (int)(sidemove[run] * gamepadthumbLXleft);
+    {
+        if (gp_thumbsticks == 2)
+            side -= (int)(sidemove[run] * gamepadthumbLXleft);
+        else
+            cmd->angleturn += (int)(gamepadangleturn[run] * gamepadthumbLXleft * gamepadsensitivity);
+    }
 
     if ((gamekeydown[keyboardjump] || mousebuttons[mousejump] || (gamepadbuttons & gamepadjump)) && !nojump)
         cmd->buttons |= BT_JUMP;
@@ -522,6 +538,7 @@ void G_DoLoadLevel(void)
     viewplayer->itemspickedup_armor = 0;
     viewplayer->itemspickedup_health = 0;
     memset(viewplayer->mobjcount, 0, sizeof(viewplayer->mobjcount));
+    viewplayer->prevmessage[0] = '\0';
 
     freeze = false;
 
@@ -588,7 +605,7 @@ void G_ToggleAlwaysRun(evtype_t type)
 
     if (!consoleactive)
     {
-        HU_SetPlayerMessage((alwaysrun ? s_ALWAYSRUNON : s_ALWAYSRUNOFF), false);
+        HU_SetPlayerMessage((alwaysrun ? s_ALWAYSRUNON : s_ALWAYSRUNOFF), false, false);
         message_dontfuckwithme = true;
     }
 
@@ -728,7 +745,7 @@ dboolean G_Responder(event_t *ev)
             int mousebutton = ev->data1;
 
             for (int i = 0, j = 1; i < MAX_MOUSE_BUTTONS; i++, j <<= 1)
-                mousebuttons[i] = mousebutton & j;
+                mousebuttons[i] = !!(mousebutton & j);
 
             if (mouseactionlist[mousebutton][0])
                 C_ExecuteInputString(mouseactionlist[mousebutton]);
@@ -1083,7 +1100,7 @@ void G_DoScreenShot(void)
         S_StartSound(NULL, sfx_swtchx);
 
         M_snprintf(buffer, sizeof(buffer), s_GSCREENSHOT, lbmname1);
-        HU_SetPlayerMessage(buffer, false);
+        HU_SetPlayerMessage(buffer, false, false);
         message_dontfuckwithme = true;
 
         if (menuactive)
@@ -1401,15 +1418,15 @@ static void G_DoWorldDone(void)
     markpointnum = 0;
 }
 
-extern dboolean setsizeneeded;
-
-void R_ExecuteSetViewSize(void);
-
 void G_LoadGame(char *name)
 {
     M_StringCopy(savename, name, sizeof(savename));
     gameaction = ga_loadgame;
 }
+
+extern dboolean setsizeneeded;
+
+void R_ExecuteSetViewSize(void);
 
 void G_DoLoadGame(void)
 {
@@ -1471,7 +1488,8 @@ void G_DoLoadGame(void)
 
     st_facecount = 0;
 
-    C_Input("load %s", savename);
+    if (consolestrings < 2 || !M_StringStartsWith(console[consolestrings - 3].string, "load "))
+        C_Input("load %s", savename);
 
     if (consoleactive)
     {
@@ -1487,7 +1505,8 @@ void G_LoadedGameMessage(void)
         static char buffer[1024];
 
         M_snprintf(buffer, sizeof(buffer), (loadaction == ga_autoloadgame ? s_GGAUTOLOADED : s_GGLOADED), titlecase(savedescription));
-        HU_PlayerMessage(buffer, false);
+        C_Output(buffer);
+        HU_SetPlayerMessage(buffer, false, false);
         message_dontfuckwithme = true;
     }
 
@@ -1544,7 +1563,8 @@ static void G_DoSaveGame(void)
         remove(savegame_file);
         rename(temp_savegame_file, savegame_file);
 
-        C_Input("save %s", savegame_file);
+        if (!consolestrings || !M_StringStartsWith(console[consolestrings - 1].string, "save "))
+            C_Input("save %s", savegame_file);
 
         if (consoleactive)
             C_Output("<b>%s</b> saved.", savename);
@@ -1553,7 +1573,8 @@ static void G_DoSaveGame(void)
             static char buffer[1024];
 
             M_snprintf(buffer, sizeof(buffer), s_GGSAVED, titlecase(savedescription));
-            HU_PlayerMessage(buffer, false);
+            C_Output(buffer);
+            HU_SetPlayerMessage(buffer, false, false);
             blurred = false;
             message_dontfuckwithme = true;
             S_StartSound(NULL, sfx_swtchx);
@@ -1564,7 +1585,6 @@ static void G_DoSaveGame(void)
     }
 
     gameaction = ga_nothing;
-
     drawdisk = false;
 }
 
@@ -1702,7 +1722,9 @@ void G_InitNew(skill_t skill, int ep, int map)
     gamemap = map;
     gameskill = skill;
 
-    if (consolestrings && M_StringStartsWith(console[consolestrings - 1].string, "idclev"))
+    if (consolestrings == 1
+        || (!M_StringStartsWith(console[consolestrings - 2].string, "map ")
+            && !M_StringStartsWith(console[consolestrings - 1].string, "load ")))
         C_CCMDOutput("newgame");
 
     G_DoLoadLevel();

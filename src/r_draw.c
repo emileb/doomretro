@@ -448,13 +448,13 @@ void R_DrawTranslucentSuperShotgunColumn(void)
         byte    dot = dc_source[frac >> FRACBITS];
 
         if (dot != 71)
-            *dest = colormap[tinttabredwhite1[(*dest << 8) + dot]];
+            *dest = tinttabredwhite1[(*dest << 8) + colormap[dot]];
 
         dest += SCREENWIDTH;
         frac += dc_iscale;
     }
 
-    *dest = colormap[tinttabredwhite1[(*dest << 8) + dc_source[frac >> FRACBITS]]];
+    *dest = tinttabredwhite1[(*dest << 8) + colormap[dc_source[frac >> FRACBITS]]];
 }
 
 void R_DrawSkyColumn(void)
@@ -626,12 +626,12 @@ void R_DrawTranslucentColumn(void)
 
     while (--count)
     {
-        *dest = tinttab[(*dest << 8) + colormap[dc_source[frac >> FRACBITS]]];
+        *dest = tinttabadditive[(*dest << 8) + colormap[dc_source[frac >> FRACBITS]]];
         dest += SCREENWIDTH;
         frac += dc_iscale;
     }
 
-    *dest = tinttab[(*dest << 8) + colormap[dc_source[frac >> FRACBITS]]];
+    *dest = tinttabadditive[(*dest << 8) + colormap[dc_source[frac >> FRACBITS]]];
 }
 
 void R_DrawTranslucent50Column(void)
@@ -790,12 +790,12 @@ void R_DrawTranslucentRedWhiteColumn1(void)
 
     while (--count)
     {
-        *dest = colormap[tinttabredwhite1[(*dest << 8) + dc_source[frac >> FRACBITS]]];
+        *dest = tinttabredwhite1[(*dest << 8) + colormap[dc_source[frac >> FRACBITS]]];
         dest += SCREENWIDTH;
         frac += dc_iscale;
     }
 
-    *dest = colormap[tinttabredwhite1[(*dest << 8) + dc_source[frac >> FRACBITS]]];
+    *dest = tinttabredwhite1[(*dest << 8) + colormap[dc_source[frac >> FRACBITS]]];
 }
 
 void R_DrawTranslucentRedWhiteColumn2(void)
@@ -807,12 +807,12 @@ void R_DrawTranslucentRedWhiteColumn2(void)
 
     while (--count)
     {
-        *dest = colormap[tinttabredwhite2[(*dest << 8) + dc_source[frac >> FRACBITS]]];
+        *dest = tinttabredwhite2[(*dest << 8) + colormap[dc_source[frac >> FRACBITS]]];
         dest += SCREENWIDTH;
         frac += dc_iscale;
     }
 
-    *dest = colormap[tinttabredwhite2[(*dest << 8) + dc_source[frac >> FRACBITS]]];
+    *dest = tinttabredwhite2[(*dest << 8) + colormap[dc_source[frac >> FRACBITS]]];
 }
 
 void R_DrawTranslucentRedWhite50Column(void)
@@ -824,12 +824,12 @@ void R_DrawTranslucentRedWhite50Column(void)
 
     while (--count)
     {
-        *dest = colormap[tinttabredwhite50[(*dest << 8) + dc_source[frac >> FRACBITS]]];
+        *dest = tinttabredwhite50[(*dest << 8) + colormap[dc_source[frac >> FRACBITS]]];
         dest += SCREENWIDTH;
         frac += dc_iscale;
     }
 
-    *dest = colormap[tinttabredwhite50[(*dest << 8) + dc_source[frac >> FRACBITS]]];
+    *dest = tinttabredwhite50[(*dest << 8) + colormap[dc_source[frac >> FRACBITS]]];
 }
 
 void R_DrawTranslucentGreenColumn(void)
@@ -875,12 +875,12 @@ void R_DrawTranslucentRed33Column(void)
 
     while (--count)
     {
-        *dest = colormap[tinttabred33[(*dest << 8) + dc_source[frac >> FRACBITS]]];
+        *dest = tinttabred33[(*dest << 8) + colormap[dc_source[frac >> FRACBITS]]];
         dest += SCREENWIDTH;
         frac += dc_iscale;
     }
 
-    *dest = colormap[tinttabred33[(*dest << 8) + dc_source[frac >> FRACBITS]]];
+    *dest = tinttabred33[(*dest << 8) + colormap[dc_source[frac >> FRACBITS]]];
 }
 
 void R_DrawTranslucentGreen33Column(void)
@@ -892,12 +892,12 @@ void R_DrawTranslucentGreen33Column(void)
 
     while (--count)
     {
-        *dest = colormap[tinttabgreen33[(*dest << 8) + dc_source[frac >> FRACBITS]]];
+        *dest = tinttabgreen33[(*dest << 8) + colormap[dc_source[frac >> FRACBITS]]];
         dest += SCREENWIDTH;
         frac += dc_iscale;
     }
 
-    *dest = colormap[tinttabgreen33[(*dest << 8) + dc_source[frac >> FRACBITS]]];
+    *dest = tinttabgreen33[(*dest << 8) + colormap[dc_source[frac >> FRACBITS]]];
 }
 
 void R_DrawTranslucentBlue25Column(void)
@@ -909,21 +909,20 @@ void R_DrawTranslucentBlue25Column(void)
 
     while (--count)
     {
-        *dest = colormap[tinttabblue25[(*dest << 8) + dc_source[frac >> FRACBITS]]];
+        *dest = tinttabblue25[(*dest << 8) + colormap[dc_source[frac >> FRACBITS]]];
         dest += SCREENWIDTH;
         frac += dc_iscale;
     }
 
-    *dest = colormap[tinttabblue25[(*dest << 8) + dc_source[frac >> FRACBITS]]];
+    *dest = tinttabblue25[(*dest << 8) + colormap[dc_source[frac >> FRACBITS]]];
 }
 
 //
 // Spectre/Invisibility.
 //
-#define FUZZ(a, b)  fuzzrange[M_Random() % ((b) - (a) + 1) + a]
 #define NOFUZZ      251
 
-static const int    fuzzrange[3] = { -SCREENWIDTH, 0, SCREENWIDTH };
+const int           fuzzrange[3] = { -SCREENWIDTH, 0, SCREENWIDTH };
 
 void R_DrawFuzzColumn(void)
 {
@@ -935,26 +934,26 @@ void R_DrawFuzzColumn(void)
 
     // top
     if (!dc_yl)
-        *dest = fullcolormap[6 * 256 + dest[(fuzztable[fuzzpos++] = FUZZ(1, 2))]];
+        *dest = fullcolormap[6 * 256 + dest[(fuzztable[fuzzpos++] = FUZZ(0, 1))]];
     else if (!(M_Random() & 3))
-        *dest = fullcolormap[12 * 256 + dest[(fuzztable[fuzzpos++] = FUZZ(0, 2))]];
+        *dest = fullcolormap[12 * 256 + dest[(fuzztable[fuzzpos++] = FUZZ(-1, 1))]];
 
     dest += SCREENWIDTH;
 
     while (--count)
     {
         // middle
-        *dest = fullcolormap[6 * 256 + dest[(fuzztable[fuzzpos++] = FUZZ(0, 2))]];
+        *dest = fullcolormap[6 * 256 + dest[(fuzztable[fuzzpos++] = FUZZ(-1, 1))]];
         dest += SCREENWIDTH;
     }
 
     // bottom
-    *dest = fullcolormap[5 * 256 + dest[(fuzztable[fuzzpos++] = FUZZ(0, 1))]];
+    *dest = fullcolormap[5 * 256 + dest[(fuzztable[fuzzpos++] = FUZZ(-1, 0))]];
 
     if (dc_yh < dc_floorclip && !(M_Random() & 3))
     {
         dest += SCREENWIDTH;
-        *dest = fullcolormap[14 * 256 + dest[(fuzztable[fuzzpos] = FUZZ(0, 1))]];
+        *dest = fullcolormap[14 * 256 + dest[(fuzztable[fuzzpos] = FUZZ(-1, 0))]];
     }
 }
 
@@ -1018,18 +1017,18 @@ void R_DrawFuzzColumns(void)
                 {
                     // top
                     if (!(M_Random() & 3))
-                        *dest = fullcolormap[12 * 256 + dest[(fuzztable[i] = FUZZ(0, 2))]];
+                        *dest = fullcolormap[12 * 256 + dest[(fuzztable[i] = FUZZ(-1, 1))]];
                 }
                 else if (y == h - SCREENWIDTH)
                 {
                     // bottom of view
-                    *dest = fullcolormap[5 * 256 + dest[(fuzztable[i] = FUZZ(0, 1))]];
+                    *dest = fullcolormap[5 * 256 + dest[(fuzztable[i] = FUZZ(-1, 0))]];
                 }
                 else if (*(src + SCREENWIDTH) == NOFUZZ)
                 {
                     // bottom of post
                     if (!(M_Random() & 3))
-                        *dest = fullcolormap[12 * 256 + dest[(fuzztable[i] = FUZZ(0, 2))]];
+                        *dest = fullcolormap[12 * 256 + dest[(fuzztable[i] = FUZZ(-1, 1))]];
                 }
                 else
                 {
@@ -1037,10 +1036,10 @@ void R_DrawFuzzColumns(void)
                     if (*(src - 1) == NOFUZZ || *(src + 1) == NOFUZZ)
                     {
                         if (!(M_Random() & 3))
-                            *dest = fullcolormap[12 * 256 + dest[(fuzztable[i] = FUZZ(0, 2))]];
+                            *dest = fullcolormap[12 * 256 + dest[(fuzztable[i] = FUZZ(-1, 1))]];
                     }
                     else
-                        *dest = fullcolormap[6 * 256 + dest[(fuzztable[i] = FUZZ(0, 2))]];
+                        *dest = fullcolormap[6 * 256 + dest[(fuzztable[i] = FUZZ(-1, 1))]];
                 }
             }
         }
@@ -1222,14 +1221,14 @@ void R_InitBuffer(int width, int height)
     topleft1 = screens[1] + viewwindowy * SCREENWIDTH + viewwindowx;
 
     for (int x = 0; x < SCREENWIDTH; x++)
-        fuzztable[x] = FUZZ(1, 2);
+        fuzztable[x] = FUZZ(0, 1);
 
     for (int y = 1; y < SCREENHEIGHT - SBARHEIGHT - 1; y++)
         for (int x = 0; x < SCREENWIDTH; x++)
-            fuzztable[y * SCREENWIDTH + x] = FUZZ(0, 2);
+            fuzztable[y * SCREENWIDTH + x] = FUZZ(-1, 1);
 
     for (int x = 0; x < SCREENWIDTH; x++)
-        fuzztable[SCREENHEIGHT - SBARHEIGHT - 1 + x] = FUZZ(0, 1);
+        fuzztable[SCREENHEIGHT - SBARHEIGHT - 1 + x] = FUZZ(-1, 0);
 }
 
 //

@@ -98,7 +98,7 @@ struct mapinfo_s
     int         titlepatch;
 };
 
-mobj_t *P_SpawnMapThing(mapthing_t *mthing, int index, dboolean nomonsters);
+mobj_t *P_SpawnMapThing(mapthing_t *mthing, dboolean nomonsters);
 
 //
 // MAP related Lookup tables.
@@ -131,6 +131,7 @@ int             numsides;
 side_t          *sides;
 
 int             numthings;
+int             thingid;
 int             numdecorations;
 
 // BLOCKMAP
@@ -406,9 +407,6 @@ static void P_LoadSegs(int lump)
 
         li->offset = GetOffset(li->v1, (ml->side ? ldef->v2 : ldef->v1));
 
-        if (li->linedef->special >= BOOMLINESPECIALS)
-            boomlinespecials = true;
-
         // [BH] Apply any map-specific fixes.
         if (canmodify && r_fixmaperrors)
             for (int j = 0; linefix[j].mission != -1; j++)
@@ -495,6 +493,11 @@ static void P_LoadSegs(int lump)
                     break;
                 }
             }
+
+        if (li->linedef->special >= INVALIDLINESPECIALS)
+            C_Warning("The special of linedef %s is invalid.", commify(linedef));
+        else if (li->linedef->special >= BOOMLINESPECIALS)
+            boomlinespecials = true;
     }
 
     W_ReleaseLumpNum(lump);
@@ -599,7 +602,9 @@ static void P_LoadSegs_V4(int lump)
 
         li->offset = GetOffset(li->v1, (ml->side ? ldef->v2 : ldef->v1));
 
-        if (li->linedef->special >= BOOMLINESPECIALS)
+        if (li->linedef->special >= INVALIDLINESPECIALS)
+            C_Warning("The special of linedef %s is invalid.", commify(linedef));
+        else if (li->linedef->special >= BOOMLINESPECIALS)
             boomlinespecials = true;
     }
 
@@ -668,7 +673,7 @@ static void P_LoadSectors(int lump)
         ss->ceilingheight = SHORT(ms->ceilingheight) << FRACBITS;
         ss->floorpic = R_FlatNumForName(ms->floorpic);
         ss->ceilingpic = R_FlatNumForName(ms->ceilingpic);
-        ss->lightlevel = SHORT(ms->lightlevel);
+        ss->lightlevel = ss->oldlightlevel = SHORT(ms->lightlevel);
         ss->special = SHORT(ms->special);
         ss->tag = SHORT(ms->tag);
         ss->nextsec = -1;
@@ -929,7 +934,9 @@ static void P_LoadZSegs(const byte *data)
 
         li->offset = GetOffset(li->v1, (side ? ldef->v2 : ldef->v1));
 
-        if (li->linedef->special >= BOOMLINESPECIALS)
+        if (li->linedef->special >= INVALIDLINESPECIALS)
+            C_Warning("The special of linedef %s is invalid.", commify(linedef));
+        else if (li->linedef->special >= BOOMLINESPECIALS)
             boomlinespecials = true;
     }
 }
@@ -1069,40 +1076,34 @@ static void P_LoadThings(int lump)
         I_Error("There are no things in this map.");
 
     M_Seed(numthings);
+    thingid = 0;
     numdecorations = 0;
 
     for (int i = 0; i < numthings; i++)
     {
         mapthing_t  mt = data[i];
         dboolean    spawn = true;
+        short       type = SHORT(mt.type);
 
-        if (gamemode != commercial)
+        if (gamemode != commercial && type >= ArchVile && type <= MonstersSpawner)
         {
-            switch (SHORT(mt.type))
-            {
-                case Arachnotron:
-                case ArchVile:
-                case BossBrain:
-                case MonstersSpawner:
-                case HellKnight:
-                case Mancubus:
-                case PainElemental:
-                case HeavyWeaponDude:
-                case Revenant:
-                case WolfensteinSS:
-                    spawn = false;
-                    break;
-            }
-        }
+            static char buffer[128];
 
-        if (!spawn)
-            continue;   // [BH] Fix <https://doomwiki.org/wiki/Doom_II_monster_exclusion_bug>.
+            M_StringCopy(buffer, mobjinfo[P_FindDoomedNum(type)].plural1, sizeof(buffer));
+
+            if (!*buffer)
+                M_snprintf(buffer, sizeof(buffer), "%ss", mobjinfo[P_FindDoomedNum(type)].name1);
+
+            buffer[0] = toupper(buffer[0]);
+            C_Warning("%s can't be spawned in <i><b>%s</b></i>.", buffer, gamedescription);
+            continue;
+        }
 
         // Do spawn all other stuff.
         mt.x = SHORT(mt.x);
         mt.y = SHORT(mt.y);
         mt.angle = SHORT(mt.angle);
-        mt.type = SHORT(mt.type);
+        mt.type = type;
         mt.options = SHORT(mt.options);
 
         // [BH] Apply any level-specific fixes.
@@ -1113,15 +1114,17 @@ static void P_LoadThings(int lump)
                     && mt.x == SHORT(thingfix[j].oldx) && mt.y == SHORT(thingfix[j].oldy))
                 {
                     if (thingfix[j].newx == REMOVE && thingfix[j].newy == REMOVE)
+                    {
                         spawn = false;
+                        break;
+                    }
                     else
                     {
                         mt.x = SHORT(thingfix[j].newx);
                         mt.y = SHORT(thingfix[j].newy);
 
                         if (devparm)
-                            C_Warning("The position of thing %s has been changed to (%i,%i).",
-                                commify(thingfix[j].thing), mt.x, mt.y);
+                            C_Warning("The position of thing %s has been changed to (%i,%i).", commify(i), mt.x, mt.y);
                     }
 
                     if (thingfix[j].angle != DEFAULT)
@@ -1129,8 +1132,7 @@ static void P_LoadThings(int lump)
                         mt.angle = SHORT(thingfix[j].angle);
 
                         if (devparm)
-                            C_Warning("The angle of thing %s has been changed to %i.",
-                                commify(thingfix[j].thing), thingfix[j].angle);
+                            C_Warning("The angle of thing %s has been changed to %i.", commify(i), thingfix[j].angle);
                     }
 
                     if (thingfix[j].options != DEFAULT)
@@ -1138,8 +1140,7 @@ static void P_LoadThings(int lump)
                         mt.options = thingfix[j].options;
 
                         if (devparm)
-                            C_Warning("The flags of thing %s have been changed to %i.",
-                                commify(thingfix[j].thing), thingfix[j].options);
+                            C_Warning("The flags of thing %s have been changed to %i.", commify(i), thingfix[j].options);
                     }
 
                     break;
@@ -1150,7 +1151,7 @@ static void P_LoadThings(int lump)
             mt.type = Zombieman;
 
         if (spawn)
-            P_SpawnMapThing(&mt, i, nomonsters);
+            P_SpawnMapThing(&mt, nomonsters);
     }
 
     M_Seed((unsigned int)time(NULL));
@@ -2188,14 +2189,8 @@ void P_SetupLevel(int ep, int map)
 
     leveltime = 0;
     animatedliquiddiff = FRACUNIT * 2;
-    animatedliquidxdir = M_RandomInt(-1, 1) * FRACUNIT / 12;
-    animatedliquidydir = M_RandomInt(-1, 1) * FRACUNIT / 12;
-
-    if (!animatedliquidxdir && !animatedliquidydir)
-    {
-        animatedliquidxdir = FRACUNIT / 12;
-        animatedliquidydir = FRACUNIT / 12;
-    }
+    animatedliquidxdir = M_RandomInt(-FRACUNIT / 12, FRACUNIT / 12);
+    animatedliquidydir = M_RandomInt(-FRACUNIT / 12, FRACUNIT / 12);
 
     animatedliquidxoffs = 0;
     animatedliquidyoffs = 0;
@@ -2282,6 +2277,8 @@ void P_SetupLevel(int ep, int map)
 
     if ((!consolestrings
         || (!M_StringStartsWith(console[consolestrings - 1].string, "map ")
+            && !M_StringStartsWith(console[consolestrings - 1].string, "load ")
+            && !M_StringStartsWith(console[consolestrings - 1].string, "newgame")
             && !M_StringStartsWith(console[consolestrings - 1].string, "idclev")
             && !M_StringCompare(console[consolestrings - 1].string, "restartmap")))
         && ((consolestrings == 1

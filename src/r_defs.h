@@ -171,6 +171,7 @@ typedef struct sector_s
     short               floorpic;
     short               ceilingpic;
     short               lightlevel;
+    short               oldlightlevel;
 
     // killough 3/7/98: support flat heights drawn at another sector's heights
     struct sector_s     *heightsec;     // other sector, or NULL if no other sector
@@ -571,9 +572,10 @@ enum
     W1_Teleport_MonstersOnly_Silent                                = 268,
     WR_Teleport_MonstersOnly_Silent                                = 269,
 
-    // Extended line specials from MBF
     TransferSkyTextureToTaggedSectors                              = 271,
-    TransferSkyTextureToTaggedSectors_Flipped                      = 272
+    TransferSkyTextureToTaggedSectors_Flipped                      = 272,
+
+    INVALIDLINESPECIALS                                            = 273
 };
 
 enum

@@ -125,8 +125,7 @@ dboolean            nomusic;
 extern dboolean     serverMidiPlaying;
 #endif
 
-// Find and initialize a sound_module_t appropriate for the setting
-// in snd_sfxdevice.
+// Initialize sound effects.
 static void InitSfxModule(void)
 {
     if (I_InitSound())
@@ -140,7 +139,7 @@ static void InitSfxModule(void)
     nosfx = true;
 }
 
-// Initialize music according to snd_musicdevice.
+// Initialize music.
 static void InitMusicModule(void)
 {
     if (I_InitMusic())
@@ -152,8 +151,7 @@ static void InitMusicModule(void)
 
 //
 // Initializes sound stuff, including volume
-// Sets channels, SFX and music volume,
-//  allocates channel buffer, sets S_sfx lookup.
+// Sets channels, SFX and music volume, allocates channel buffer, sets S_sfx lookup.
 //
 void S_Init(void)
 {
@@ -176,18 +174,21 @@ void S_Init(void)
         nosfx = true;
     }
 
-#if defined(WIN32)
-    putenv("SDL_AUDIODRIVER=DirectSound");
-#endif
-
     if (!nosfx)
     {
+#if defined(WIN32)
+        char    *audiobuffer = SDL_getenv("SDL_AUDIODRIVER");
+
+        if (audiobuffer)
+            C_Warning("The <b>SDL_AUDIODRIVER</b> environment variable has been set to <b>\"%s\"</b>.", audiobuffer);
+
+        SDL_setenv("SDL_AUDIODRIVER", "DirectSound", false);
+#endif
+
         InitSfxModule();
         S_SetSfxVolume(sfxVolume * MAX_SFX_VOLUME / 31);
 
-        // Allocating the internal channels for mixing
-        // (the maximum number of sounds rendered
-        // simultaneously) within zone memory.
+        // Allocating the internal channels for mixing (the maximum number of sounds rendered simultaneously) within zone memory.
         channels = Z_Calloc(s_channels_max, sizeof(channel_t), PU_STATIC, NULL);
         sobjs = Z_Malloc(s_channels_max * sizeof(sobj_t), PU_STATIC, NULL);
 
@@ -205,7 +206,7 @@ void S_Init(void)
             if ((sfx->lumpnum = W_CheckNumForName(namebuf)) >= 0)
                 if (!CacheSFX(sfx))
                 {
-                    C_Warning("The <b>%s</b> lump isn't a valid sound effect and won't be played.", uppercase(namebuf));
+                    C_Warning("The <b>%s</b> sound lump is in an unrecognized format and won't be played.", uppercase(namebuf));
                     sfx->lumpnum = -1;
                 }
         }
@@ -394,10 +395,11 @@ static int S_GetChannel(mobj_t *origin, sfxinfo_t *sfxinfo)
 // Changes volume and stereo-separation variables from the norm of a sound
 // effect to be played. If the sound is not audible, returns false. Otherwise,
 // modifies parameters and returns true.
-static dboolean S_AdjustSoundParams(mobj_t *listener, fixed_t x, fixed_t y, int *vol, int *sep)
+static dboolean S_AdjustSoundParams(fixed_t x, fixed_t y, int *vol, int *sep)
 {
     fixed_t dist = 0;
     fixed_t adx, ady;
+    mobj_t  *listener = viewplayer->mo;
     angle_t angle;
 
     // calculate the distance to sound origin and clip it if necessary
@@ -446,12 +448,11 @@ static dboolean S_AdjustSoundParams(mobj_t *listener, fixed_t x, fixed_t y, int 
  void S_StartSoundAtVolume(mobj_t *origin, int sfx_id, int pitch, int volume)
 {
     sfxinfo_t   *sfx = &S_sfx[sfx_id];
-    mobj_t      *mo = viewplayer->mo;
     int         sep = NORM_SEP;
     int         cnum;
     int         handle;
 
-    if (nosfx)
+    if (nosfx || sfx->lumpnum == -1)
         return;
 
     // Initialize sound parameters
@@ -466,12 +467,9 @@ static dboolean S_AdjustSoundParams(mobj_t *listener, fixed_t x, fixed_t y, int 
             volume = snd_SfxVolume;
     }
 
-    if (sfx->lumpnum == -1)
-        return;
-
     // Check to see if it is audible, and if not, modify the parms
-    if (origin && origin != mo)
-        if (!S_AdjustSoundParams(mo, origin->x, origin->y, &volume, &sep))
+    if (origin && origin != viewplayer->mo)
+        if (!S_AdjustSoundParams(origin->x, origin->y, &volume, &sep))
             return;
 
     // kill old sound
@@ -524,9 +522,9 @@ void S_ResumeSound(void)
 }
 
 //
-// Updates music & sounds
+// Updates sounds
 //
-void S_UpdateSounds(mobj_t *listener)
+void S_UpdateSounds(void)
 {
     if (nosfx)
         return;
@@ -544,28 +542,26 @@ void S_UpdateSounds(mobj_t *listener)
         if (I_SoundIsPlaying(c->handle))
         {
             // initialize parameters
-            int     volume = snd_SfxVolume;
-            mobj_t  *origin;
-
-            if (sfx->link)
-            {
-                volume += sfx->volume;
-
-                if (volume < 1)
-                {
-                    S_StopChannel(cnum);
-                    continue;
-                }
-                else if (volume > snd_SfxVolume)
-                    volume = snd_SfxVolume;
-            }
+            mobj_t  *origin = c->origin;
 
             // check non-local sounds for distance clipping or modify their parms
-            if ((origin = c->origin) && listener != origin)
+            if (origin && origin != viewplayer->mo)
             {
                 int sep = NORM_SEP;
+                int volume = snd_SfxVolume;
 
-                if (!S_AdjustSoundParams(listener, origin->x, origin->y, &volume, &sep))
+                if (sfx->link)
+                {
+                    if ((volume += sfx->volume) < 1)
+                    {
+                        S_StopChannel(cnum);
+                        continue;
+                    }
+                    else if (volume > snd_SfxVolume)
+                        volume = snd_SfxVolume;
+                }
+
+                if (!S_AdjustSoundParams(origin->x, origin->y, &volume, &sep))
                     S_StopChannel(cnum);
                 else
                     I_UpdateSoundParams(c->handle, volume, sep);

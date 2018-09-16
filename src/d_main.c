@@ -88,17 +88,6 @@
 #endif
 #endif
 
-//
-// D_DoomLoop()
-// Not a globally visible function,
-//  just included for source reference,
-//  called by D_DoomMain, never exits.
-// Manages timing and IO,
-//  calls all ?_Responder, ?_Ticker, and ?_Drawer,
-//  calls I_GetTime, I_StartFrame, and I_StartTic
-//
-static void D_DoomLoop(void);
-
 // Location where savegames are stored
 char                *savegamefolder;
 
@@ -382,9 +371,9 @@ static void D_DoomLoop(void)
 
     while (true)
     {
-        TryRunTics();                   // will run at least one tic
+        TryRunTics();       // will run at least one tic
 
-        S_UpdateSounds(viewplayer->mo); // move positional sounds
+        S_UpdateSounds();   // move positional sounds
 
         // Update display, next frame, with current state.
         D_Display();
@@ -1787,10 +1776,8 @@ static void D_DoomMainSetup(void)
     M_SKILL = (W_CheckMultipleLumps("M_SKILL") > 1);
     M_SKULL1 = (W_CheckMultipleLumps("M_SKULL1") > 1);
     M_SVOL = (W_CheckMultipleLumps("M_SVOL") > 1);
-    STARMS = W_CheckMultipleLumps("STARMS");
     STBAR = W_CheckMultipleLumps("STBAR");
     STCFN034 = (W_CheckMultipleLumps("STCFN034") > 1);
-    STCFN121 = (W_CheckMultipleLumps("STCFN121") > 1);
     STYSNUM0 = (W_CheckMultipleLumps("STYSNUM0") > 1);
     TITLEPIC = (W_CheckNumForName("TITLEPIC") >= 0);
     WISCRT2 = (W_CheckMultipleLumps("WISCRT2") > 1);

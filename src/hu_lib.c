@@ -39,21 +39,18 @@
 #include <ctype.h>
 #include <string.h>
 
-#include "am_map.h"
 #include "c_console.h"
 #include "doomstat.h"
 #include "hu_lib.h"
+#include "i_colors.h"
 #include "i_swap.h"
 #include "m_config.h"
 #include "r_local.h"
 #include "v_data.h"
 #include "v_video.h"
 
-int M_StringWidth(char *string);
-
 extern patch_t  *consolefont[CONSOLEFONTSIZE];
 extern patch_t  *degree;
-extern int      message_x;
 extern int      white;
 
 static void HUlib_clearTextLine(hu_textline_t *t)
@@ -122,61 +119,14 @@ static void HU_drawChar(int x, int y, int ch)
     }
 }
 
-static struct
-{
-    char    char1;
-    char    char2;
-    int     adjust;
-} c_kern[] = {
-    { ' ',  '(',  -1 }, { ' ',  'T',  -1 }, { '\"', '+',  -1 }, { '\"', '.',  -1 },
-    { '\"', 'a',  -1 }, { '\"', 'c',  -1 }, { '\"', 'd',  -1 }, { '\"', 'e',  -1 },
-    { '\"', 'g',  -1 }, { '\"', 'j',  -2 }, { '\"', 'o',  -1 }, { '\"', 'q',  -1 },
-    { '\"', 's',  -1 }, { '\\', '\\', -2 }, { '\\', 'd',  -1 }, { '\\', 'V',  -1 },
-    { '\'', 'a',  -1 }, { '\'', 'a',  -1 }, { '\'', 'c',  -1 }, { '\'', 'd',  -1 },
-    { '\'', 'e',  -1 }, { '\'', 'g',  -1 }, { '\'', 'j',  -2 }, { '\'', 'o',  -1 },
-    { '\'', 's',  -1 }, { '.',  '\\', -1 }, { '.',  '4',  -1 }, { '.',  '7',  -1 },
-    { ',',  '4',  -1 }, { '/',  '/',  -2 }, { '/',  'd',  -1 }, { '/',  'o',  -1 },
-    { ':', '\\',  -1 }, { '_',  'f',  -1 }, { '0',  ',',  -1 }, { '0',  ';',  -1 },
-    { '0',  'j',  -2 }, { '1',  '\"', -1 }, { '1',  '\'', -1 }, { '1',  'j',  -2 },
-    { '2',  'j',  -2 }, { '3',  ',',  -1 }, { '3',  ';',  -1 }, { '3',  'j',  -2 },
-    { '4',  'j',  -2 }, { '5',  ',',  -1 }, { '5',  ';',  -1 }, { '5',  'j',  -2 },
-    { '6',  ',',  -1 }, { '6',  'j',  -2 }, { '7',  '.',  -2 }, { '7',  ',',  -2 },
-    { '7',  ';',  -1 }, { '7',  'j',  -2 }, { '8',  ',',  -1 }, { '8',  ';',  -1 },
-    { '8',  'j',  -2 }, { '9',  ',',  -1 }, { '9',  ';',  -1 }, { '9',  'j',  -2 },
-    { 'F',  '.',  -1 }, { 'F',  ',',  -1 }, { 'F',  ';',  -1 }, { 'L',  '\\', -1 },
-    { 'L',  '\"', -1 }, { 'L',  '\'', -1 }, { 'P',  '.',  -1 }, { 'P',  ',',  -1 },
-    { 'P',  ';',  -1 }, { 'T',  '.',  -1 }, { 'T',  ',',  -1 }, { 'T',  ';',  -1 },
-    { 'T',  'a',  -1 }, { 'T',  'e',  -1 }, { 'T',  'o',  -1 }, { 'V',  '.',  -1 },
-    { 'V',  ',',  -1 }, { 'V',  ';',  -1 }, { 'Y',  '.',  -1 }, { 'Y',  ',',  -1 },
-    { 'Y',  ';',  -1 }, { 'a',  '\"', -1 }, { 'a',  '\'', -1 }, { 'a',  'j',  -2 },
-    { 'b',  ',',  -1 }, { 'b',  ';',  -1 }, { 'b',  '\"', -1 }, { 'b',  '\\', -1 },
-    { 'b',  '\'', -1 }, { 'b',  'j',  -2 }, { 'c',  '\\', -1 }, { 'c',  ',',  -1 },
-    { 'c',  ';',  -1 }, { 'c',  '\"', -1 }, { 'c',  '\'', -1 }, { 'c',  'j',  -2 },
-    { 'd',  'j',  -2 }, { 'e',  '\\', -1 }, { 'e',  ',',  -1 }, { 'e',  ';',  -1 },
-    { 'e',  '\"', -1 }, { 'e',  '\'', -1 }, { 'e',  '_',  -1 }, { 'e',  'j',  -2 },
-    { 'f',  ' ',  -1 }, { 'f',  ',',  -2 }, { 'f',  ';',  -1 }, { 'f',  '_',  -1 },
-    { 'f',  'a',  -1 }, { 'f',  'j',  -2 }, { 'h',  '\\', -1 }, { 'h',  'j',  -2 },
-    { 'i',  'j',  -2 }, { 'k',  'j',  -2 }, { 'l',  'j',  -2 }, { 'm',  '\"', -1 },
-    { 'm',  '\\', -1 }, { 'm',  '\'', -1 }, { 'm',  'j',  -2 }, { 'n',  '\\', -1 },
-    { 'n',  '\"', -1 }, { 'n',  '\'', -1 }, { 'n',  'j',  -2 }, { 'o',  '\\', -1 },
-    { 'o',  ',',  -1 }, { 'o',  ';',  -1 }, { 'o',  '\"', -1 }, { 'o',  '\'', -1 },
-    { 'o',  'j',  -2 }, { 'p',  '\\', -1 }, { 'p',  ',',  -1 }, { 'p',  ';',  -1 },
-    { 'p',  '\"', -1 }, { 'p',  '\'', -1 }, { 'p',  'j',  -2 }, { 'r',  ' ',  -1 },
-    { 'r',  '\\', -1 }, { 'r',  '.',  -2 }, { 'r',  ',',  -2 }, { 'r',  ';',  -1 },
-    { 'r',  '\"', -1 }, { 'r',  '\'', -1 }, { 'r',  '_',  -1 }, { 'r',  'a',  -1 },
-    { 'r',  'j',  -2 }, { 's',  '\\', -1 }, { 's',  ',',  -1 }, { 's',  ';',  -1 },
-    { 's',  'j',  -2 }, { 't',  'j',  -2 }, { 'u',  'j',  -2 }, { 'v',  ',',  -1 },
-    { 'v',  ';',  -1 }, { 'v',  'j',  -2 }, { 'w',  'j',  -2 }, { 'x',  'j',  -2 },
-    { 'z',  'j',  -2 }, {  0 ,   0 ,   0 }
-};
-
 static void HUlib_drawAltHUDTextLine(hu_textline_t *l)
 {
     unsigned char   prevletter = '\0';
     int             x = HU_ALTHUDMSGX;
     int             color = (((viewplayer->fixedcolormap == INVERSECOLORMAP) ^ (!r_textures)) ? colormaps[0][32 * 256 + white] : white);
+    int             len = l->len;
 
-    for (int i = 0; i < l->len; i++)
+    for (int i = 0; i < len; i++)
     {
         unsigned char   letter = l->l[i];
         unsigned char   nextletter = l->l[i + 1];
@@ -192,11 +142,11 @@ static void HUlib_drawAltHUDTextLine(hu_textline_t *l)
             patch = consolefont[letter - CONSOLEFONTSTART];
 
         // [BH] apply kerning to certain character pairs
-        while (c_kern[j].char1)
+        while (altkern[j].char1)
         {
-            if (prevletter == c_kern[j].char1 && letter == c_kern[j].char2)
+            if (prevletter == altkern[j].char1 && letter == altkern[j].char2)
             {
-                x += c_kern[j].adjust;
+                x += altkern[j].adjust;
                 break;
             }
 
@@ -209,23 +159,21 @@ static void HUlib_drawAltHUDTextLine(hu_textline_t *l)
     }
 }
 
-static struct
+kern_t kern[] =
 {
-    char    char1;
-    char    char2;
-    int     adjust;
-} hu_kern[] = {
+    { ' ', '(',  -2 },
     { '.', '1',  -1 },
     { '.', '7',  -1 },
+    { '.', '\"', -1 },
     { ',', '1',  -1 },
     { ',', '7',  -1 },
     { ',', 'Y',  -1 },
-    { 'F', '.',  -1 },
     { 'T', '.',  -1 },
     { 'T', ',',  -1 },
     { 'Y', '.',  -1 },
     { 'Y', ',',  -1 },
     { 'D', '\'', -1 },
+    { 'F', '.',  -1 },
     { '3', '\"', -1 },
     { 'L', '\"', -1 },
     { 0,   0,     0 }
@@ -238,15 +186,22 @@ void HUlib_drawTextLine(hu_textline_t *l, dboolean external)
     int         x, y;
     int         maxx, maxy;
     static char prev;
-    byte        *fb1 = (external ? mapscreen : screens[0]);
-    byte        *fb2 = (external ? mapscreen : screens[r_screensize < 7 && !automapactive]);
+    byte        *fb1 = screens[0];
+    byte        *fb2 = screens[(r_screensize < 7 && !automapactive)];
+    int         len = l->len;
+
+    if (external)
+    {
+        fb1 = mapscreen;
+        fb2 = mapscreen;
+    }
 
     // draw the new stuff
     x = l->x;
     y = l->y;
     memset(tempscreen, 251, SCREENWIDTH * SCREENHEIGHT);
 
-    for (int i = 0; i < l->len; i++)
+    for (int i = 0; i < len; i++)
     {
         unsigned char   c = toupper(l->l[i]);
 
@@ -280,6 +235,9 @@ void HUlib_drawTextLine(hu_textline_t *l, dboolean external)
                 // [BH] display lump from PWAD with shadow
                 w = SHORT(l->f[c - l->sc]->width);
 
+                if (prev == ' ' && c == '(')
+                    x -= 2;
+
                 if (r_messagescale == r_messagescale_big)
                     V_DrawPatchToTempScreen(x, l->y, l->f[c - l->sc]);
                 else
@@ -290,11 +248,11 @@ void HUlib_drawTextLine(hu_textline_t *l, dboolean external)
                 int k = 0;
 
                 // [BH] apply kerning to certain character pairs
-                while (hu_kern[k].char1)
+                while (kern[k].char1)
                 {
-                    if (prev == hu_kern[k].char1 && c == hu_kern[k].char2)
+                    if (prev == kern[k].char1 && c == kern[k].char2)
                     {
-                        x += hu_kern[k].adjust;
+                        x += kern[k].adjust;
                         break;
                     }
 
@@ -304,8 +262,6 @@ void HUlib_drawTextLine(hu_textline_t *l, dboolean external)
                 // [BH] draw individual character
                 w = (int)strlen(smallcharset[j]) / 10 - 1;
                 HU_drawChar(x, y - 1, j);
-
-                prev = c;
             }
 
             x += w;
@@ -313,10 +269,12 @@ void HUlib_drawTextLine(hu_textline_t *l, dboolean external)
         }
         else if (c == ' ')
         {
-            w = (i > 0 && (l->l[i - 1] == '.' || l->l[i - 1] == '!' || l->l[i - 1] == '?') ? 5 : 3);
+            w = (i > 0 && (prev == '.' || prev == '!' || prev == '?') ? 5 : 3);
             x += w;
             tw += w;
         }
+
+        prev = c;
     }
 
     // [BH] draw underscores for IDBEHOLD cheat message
@@ -343,13 +301,13 @@ void HUlib_drawTextLine(hu_textline_t *l, dboolean external)
     }
 
     // [BH] draw entire message from buffer onto screen with translucency
-    maxy = y + 11;
     maxx = l->x + tw + 1;
+    maxy = y + 11;
 
     if (r_messagescale == r_messagescale_big)
     {
-        maxy *= SCREENSCALE;
         maxx *= SCREENSCALE;
+        maxy *= SCREENSCALE;
     }
 
     for (int yy = MAX(0, l->y - 1); yy < maxy; yy++)
@@ -427,13 +385,9 @@ static void HUlib_addLineToSText(hu_stext_t *s)
         s->l[i].needsupdate = 4;
 }
 
-void HUlib_addMessageToSText(hu_stext_t *s, const char *prefix, const char *msg)
+void HUlib_addMessageToSText(hu_stext_t *s, const char *msg)
 {
     HUlib_addLineToSText(s);
-
-    if (prefix)
-        while (*prefix)
-            HUlib_addCharToTextLine(&s->l[s->cl], *(prefix++));
 
     while (*msg)
         HUlib_addCharToTextLine(&s->l[s->cl], *(msg++));

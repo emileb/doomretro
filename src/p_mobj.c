@@ -394,13 +394,26 @@ static void P_ZMovement(mobj_t *mo)
     // clip movement
     if (mo->z <= mo->floorz)
     {
-        // [BH] remove blood the moment it hits the ground and spawn a blood splat in its place
+        // [BH] remove blood the moment it hits the ground and spawn blood splats in its place
         if ((mo->flags2 & MF2_BLOOD) && mo->blood)
         {
             P_RemoveMobj(mo);
 
             if (r_bloodsplats_max)
-                P_SpawnBloodSplat(mo->x, mo->y, mo->blood, mo->floorz, NULL);
+            {
+                int x = mo->x;
+                int y = mo->y;
+
+                P_SpawnBloodSplat(x, y, mo->blood, mo->floorz, NULL);
+
+                if (mo->blood != FUZZYBLOOD)
+                {
+                    P_SpawnBloodSplat(x + (M_RandomInt(-3, 3) << FRACBITS), y + (M_RandomInt(-3, 3) << FRACBITS),
+                        mo->blood, mo->floorz, NULL);
+                    P_SpawnBloodSplat(x + (M_RandomInt(-3, 3) << FRACBITS), y + (M_RandomInt(-3, 3) << FRACBITS),
+                        mo->blood, mo->floorz, NULL);
+                }
+            }
 
             return;
         }
@@ -667,14 +680,13 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
     sector_t    *sector;
     static int  prevx, prevy;
     static int  prevbob;
-    int         height = (z == ONCEILINGZ && type != MT_KEEN && info->projectilepassheight ? info->projectilepassheight : info->height);
 
     mobj->type = type;
     mobj->info = info;
     mobj->x = x;
     mobj->y = y;
     mobj->radius = info->radius;
-    mobj->height = height;
+    mobj->height = (z == ONCEILINGZ && type != MT_KEEN && info->projectilepassheight ? info->projectilepassheight : info->height);
     mobj->flags = info->flags;
     mobj->flags2 = info->flags2;
     mobj->health = info->spawnhealth;
@@ -703,16 +715,15 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
     mobj->frame = st->frame;
     mobj->colfunc = info->colfunc;
     mobj->altcolfunc = info->altcolfunc;
+    mobj->id = (thingid == MusicSource ? thingid - 14100 : thingid);
+    thingid++;
 
     P_SetShadowColumnFunction(mobj);
 
     mobj->shadowoffset = info->shadowoffset;
 
-    mobj->blood = info->blood;
-
     // [BH] don't give dehacked monsters fuzzy blood when they are no longer fuzzy
-    if (mobj->blood == FUZZYBLOOD && !(mobj->flags & MF_FUZZ))
-        mobj->blood = REDBLOOD;
+    mobj->blood = (info->blood == MT_FUZZYBLOOD && !(mobj->flags & MF_FUZZ) ? MT_BLOOD : info->blood);
 
     // [BH] set random pitch for monster sounds when spawned
     mobj->pitch = NORM_PITCH;
@@ -979,7 +990,7 @@ static void P_SpawnMoreBlood(mobj_t *mobj)
 // The fields of the mapthing should
 //  already be in host byte order.
 //
-mobj_t *P_SpawnMapThing(mapthing_t *mthing, int index, dboolean nomonsters)
+mobj_t *P_SpawnMapThing(mapthing_t *mthing, dboolean nomonsters)
 {
     int     i;
     int     bit;
@@ -987,7 +998,6 @@ mobj_t *P_SpawnMapThing(mapthing_t *mthing, int index, dboolean nomonsters)
     fixed_t x, y, z;
     short   type = mthing->type;
     int     flags;
-    int     id = 0;
 
     // check for players specially
     if (type == Player1Start)
@@ -1016,7 +1026,7 @@ mobj_t *P_SpawnMapThing(mapthing_t *mthing, int index, dboolean nomonsters)
     {
         // [BH] make unknown thing type non-fatal and show console warning instead
         if (type != VisualModeCamera)
-            C_Warning("Thing %s at (%i,%i) didn't spawn because it has an unknown type.", commify(index), mthing->x, mthing->y);
+            C_Warning("Thing %s at (%i,%i) didn't spawn because it has an unknown type.", commify(thingid), mthing->x, mthing->y);
 
         return NULL;
     }
@@ -1026,18 +1036,14 @@ mobj_t *P_SpawnMapThing(mapthing_t *mthing, int index, dboolean nomonsters)
         if (mobjinfo[i].name1[0] != '\0')
             C_Warning("The %s at (%i,%i) didn't spawn because it has no skill flags.", mobjinfo[i].name1, mthing->x, mthing->y);
         else
-            C_Warning("Thing %s at (%i,%i) didn't spawn because it has no skill flags.", commify(index), mthing->x, mthing->y);
+            C_Warning("Thing %s at (%i,%i) didn't spawn because it has no skill flags.", commify(thingid), mthing->x, mthing->y);
     }
 
     if (!(mthing->options & bit))
         return NULL;
 
     if (type >= 14100 && type <= 14164)
-    {
-        // Use the ambient number
-        id = type - 14100;              // Mus change
-        type = MusicSource;             // MT_MUSICSOURCE
-    }
+        type = MusicSource;
 
     // find which type to spawn
 
@@ -1064,7 +1070,6 @@ mobj_t *P_SpawnMapThing(mapthing_t *mthing, int index, dboolean nomonsters)
 
     mobj = P_SpawnMobj(x, y, z, (mobjtype_t)i);
     mobj->spawnpoint = *mthing;
-    mobj->id = id;
 
     if (mthing->options & MTF_AMBUSH)
         mobj->flags |= MF_AMBUSH;
@@ -1155,6 +1160,7 @@ void P_SpawnPuff(fixed_t x, fixed_t y, fixed_t z, angle_t angle)
 
     th->colfunc = info->colfunc;
     th->altcolfunc = info->altcolfunc;
+    th->id = thingid++;
 
     P_SetThingPosition(th);
 
@@ -1165,7 +1171,7 @@ void P_SpawnPuff(fixed_t x, fixed_t y, fixed_t z, angle_t angle)
     th->floorz = sector->interpfloorheight;
     th->ceilingz = sector->interpceilingheight;
 
-    th->z = z + (M_NegRandom() << 10);
+    th->z = z + (M_SubRandom() << 10);
 
     th->thinker.function = P_MobjThinker;
     P_AddThinker(&th->thinker);
@@ -1194,7 +1200,7 @@ void P_SpawnPuff(fixed_t x, fixed_t y, fixed_t z, angle_t angle)
 //
 void P_SpawnSmokeTrail(fixed_t x, fixed_t y, fixed_t z, angle_t angle)
 {
-    mobj_t  *th = P_SpawnMobj(x, y, z + (M_NegRandom() << 10), MT_TRAIL);
+    mobj_t  *th = P_SpawnMobj(x, y, z + (M_SubRandom() << 10), MT_TRAIL);
 
     th->momz = FRACUNIT / 2;
     th->tics -= M_Random() & 3;
@@ -1212,18 +1218,17 @@ void P_SpawnBlood(fixed_t x, fixed_t y, fixed_t z, angle_t angle, int damage, mo
 {
     int         minz = target->z;
     int         maxz = minz + spriteheight[sprites[target->sprite].spriteframes[0].lump[0]];
-    dboolean    fuzz = (target->flags & MF_FUZZ);
-    int         type = (r_blood == r_blood_all ? (fuzz ? MT_FUZZYBLOOD : (target->blood ? target->blood : MT_BLOOD)) : MT_BLOOD);
+    int         type = (r_blood == r_blood_all ? (target->blood ? target->blood : MT_BLOOD) : MT_BLOOD);
     mobjinfo_t  *info = &mobjinfo[type];
-    int         blood = (fuzz ? FUZZYBLOOD : info->blood);
-    sector_t    *sector;
+    int         blood = info->blood;
+    state_t     *st = &states[info->spawnstate];
 
     angle += ANG180;
 
     for (int i = (damage >> 2) + 1; i > 0; i--)
     {
-        mobj_t  *th = Z_Calloc(1, sizeof(*th), PU_LEVEL, NULL);
-        state_t *st = &states[info->spawnstate];
+        mobj_t      *th = Z_Calloc(1, sizeof(*th), PU_LEVEL, NULL);
+        sector_t    *sector;
 
         th->type = type;
         th->info = info;
@@ -1241,6 +1246,7 @@ void P_SpawnBlood(fixed_t x, fixed_t y, fixed_t z, angle_t angle, int damage, mo
         th->colfunc = info->colfunc;
         th->altcolfunc = info->altcolfunc;
         th->blood = blood;
+        th->id = thingid++;
 
         P_SetThingPosition(th);
 
@@ -1248,7 +1254,7 @@ void P_SpawnBlood(fixed_t x, fixed_t y, fixed_t z, angle_t angle, int damage, mo
         th->floorz = sector->interpfloorheight;
         th->ceilingz = sector->interpceilingheight;
 
-        th->z = BETWEEN(minz, z + (M_NegRandom() << 10), maxz);
+        th->z = BETWEEN(minz, z + (M_SubRandom() << 10), maxz);
 
         th->thinker.function = P_MobjThinker;
         P_AddThinker(&th->thinker);
@@ -1258,7 +1264,7 @@ void P_SpawnBlood(fixed_t x, fixed_t y, fixed_t z, angle_t angle, int damage, mo
         th->momz = FRACUNIT * (2 + i / 6);
 
         th->angle = angle;
-        angle += M_NegRandom() * 0xB60B60;
+        angle += M_SubRandom() * 0xB60B60;
 
         if (damage <= 12 && th->state->nextstate)
             P_SetMobjState(th, th->state->nextstate);
@@ -1346,7 +1352,7 @@ mobj_t *P_SpawnMissile(mobj_t *source, mobj_t *dest, mobjtype_t type)
 
     // fuzzy player
     if (dest->flags & MF_FUZZ)
-        an += M_NegRandom() << 20;
+        an += M_SubRandom() << 20;
 
     th->angle = an;
     an >>= ANGLETOFINESHIFT;
@@ -1418,7 +1424,7 @@ void P_SpawnPlayerMissile(mobj_t *source, mobjtype_t type)
 
     P_NoiseAlert(source);
 
-    if (type == MT_ROCKET && r_rockettrails && !hacx)
+    if (type == MT_ROCKET && r_rockettrails && !hacx && viewplayer->readyweapon == wp_missile)
     {
         th->flags2 |= MF2_SMOKETRAIL;
         puffcount = 0;

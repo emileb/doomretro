@@ -1144,7 +1144,7 @@ static dboolean P_ThingHeightClip(mobj_t *thing)
 
         // [BH] immediately update player's view
         if (player)
-            player->viewz = MIN(player->mo->z + player->viewheight, player->mo->ceilingz - 4 * FRACUNIT);
+            P_CalcHeight();
 
         // killough 11/98: Possibly upset balance of objects hanging off ledges
         if ((flags2 & MF2_FALLING) && thing->gear >= MAXGEAR)
@@ -2050,8 +2050,8 @@ static void PIT_ChangeSector(mobj_t *thing)
                 // spray blood in a random direction
                 mobj_t  *mo = P_SpawnMobj(thing->x, thing->y, z, type);
 
-                mo->momx = M_NegRandom() << 11;
-                mo->momy = M_NegRandom() << 11;
+                mo->momx = M_SubRandom() << 11;
+                mo->momy = M_SubRandom() << 11;
             }
         }
 

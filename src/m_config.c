@@ -105,17 +105,20 @@ static default_t cvars[] =
     CONFIG_VARIABLE_INT          (episode,                                           NOVALUEALIAS      ),
     CONFIG_VARIABLE_INT          (expansion,                                         NOVALUEALIAS      ),
     CONFIG_VARIABLE_INT          (facebackcolor,                                     FACEBACKVALUEALIAS),
+    CONFIG_VARIABLE_INT          (gp_analog,                                         BOOLVALUEALIAS    ),
     CONFIG_VARIABLE_FLOAT_PERCENT(gp_deadzone_left,                                  NOVALUEALIAS      ),
     CONFIG_VARIABLE_FLOAT_PERCENT(gp_deadzone_right,                                 NOVALUEALIAS      ),
     CONFIG_VARIABLE_INT          (gp_invertyaxis,                                    BOOLVALUEALIAS    ),
     CONFIG_VARIABLE_INT          (gp_sensitivity,                                    NOVALUEALIAS      ),
     CONFIG_VARIABLE_INT          (gp_swapthumbsticks,                                BOOLVALUEALIAS    ),
+    CONFIG_VARIABLE_INT          (gp_thumbsticks,                                    NOVALUEALIAS      ),
     CONFIG_VARIABLE_INT_PERCENT  (gp_vibrate_barrels,                                NOVALUEALIAS      ),
     CONFIG_VARIABLE_INT_PERCENT  (gp_vibrate_damage,                                 NOVALUEALIAS      ),
     CONFIG_VARIABLE_INT_PERCENT  (gp_vibrate_weapons,                                NOVALUEALIAS      ),
     CONFIG_VARIABLE_INT          (infighting,                                        BOOLVALUEALIAS    ),
     CONFIG_VARIABLE_INT          (infiniteheight,                                    BOOLVALUEALIAS    ),
     CONFIG_VARIABLE_STRING       (iwadfolder,                                        NOVALUEALIAS      ),
+    CONFIG_VARIABLE_INT          (m_acceleration,                                    BOOLVALUEALIAS    ),
     CONFIG_VARIABLE_INT          (m_doubleclick_use,                                 BOOLVALUEALIAS    ),
     CONFIG_VARIABLE_INT          (m_invertyaxis,                                     BOOLVALUEALIAS    ),
     CONFIG_VARIABLE_INT          (m_novertical,                                      BOOLVALUEALIAS    ),
@@ -244,18 +247,20 @@ static default_t cvars[] =
 
 valuealias_t valuealiases[] =
 {
-    { "off",       0, BOOLVALUEALIAS     }, { "on",      1, BOOLVALUEALIAS     },
-    { "0",         0, BOOLVALUEALIAS     }, { "1",       1, BOOLVALUEALIAS     },
-    { "no",        0, BOOLVALUEALIAS     }, { "yes",     1, BOOLVALUEALIAS     },
-    { "false",     0, BOOLVALUEALIAS     }, { "true",    1, BOOLVALUEALIAS     },
-    { "low",       0, DETAILVALUEALIAS   }, { "high",    1, DETAILVALUEALIAS   },
-    { "off",       1, GAMMAVALUEALIAS    }, { "none",    0, BLOODVALUEALIAS    },
-    { "red",       1, BLOODVALUEALIAS    }, { "all",     2, BLOODVALUEALIAS    },
-    { "imperial",  0, UNITSVALUEALIAS    }, { "metric",  1, UNITSVALUEALIAS    },
-    { "off",       0, CAPVALUEALIAS      }, { "none",   -1, SKYVALUEALIAS      },
-    { "off",      -1, SKYVALUEALIAS      }, { "small",   0, SCALEVALUEALIAS    },
-    { "big",       1, SCALEVALUEALIAS    }, { "none",    5, FACEBACKVALUEALIAS },
-    { "off",       5, FACEBACKVALUEALIAS }, { "",        0, NOVALUEALIAS       }
+    { "off",       0, BOOLVALUEALIAS      }, { "on",      1, BOOLVALUEALIAS      },
+    { "0",         0, BOOLVALUEALIAS      }, { "1",       1, BOOLVALUEALIAS      },
+    { "no",        0, BOOLVALUEALIAS      }, { "yes",     1, BOOLVALUEALIAS      },
+    { "false",     0, BOOLVALUEALIAS      }, { "true",    1, BOOLVALUEALIAS      },
+    { "low",       0, DETAILVALUEALIAS    }, { "high",    1, DETAILVALUEALIAS    },
+    { "off",       1, GAMMAVALUEALIAS     }, { "none",    0, BLOODVALUEALIAS     },
+    { "red",       1, BLOODVALUEALIAS     }, { "all",     2, BLOODVALUEALIAS     },
+    { "imperial",  0, UNITSVALUEALIAS     }, { "metric",  1, UNITSVALUEALIAS     },
+    { "off",       0, CAPVALUEALIAS       }, { "none",   -1, SKYVALUEALIAS       },
+    { "off",      -1, SKYVALUEALIAS       }, { "small",   0, SCALEVALUEALIAS     },
+    { "big",       1, SCALEVALUEALIAS     }, { "none",    5, FACEBACKVALUEALIAS  },
+    { "off",       5, FACEBACKVALUEALIAS  }, { "none",    0, ARMORTYPEVALUEALIAS },
+    { "green",     1, ARMORTYPEVALUEALIAS }, { "blue",    2, ARMORTYPEVALUEALIAS },
+    { "",          0, NOVALUEALIAS        }
 };
 
 static void SaveBind(FILE *file, char *control, char *string)
@@ -576,13 +581,18 @@ static void M_CheckCVARs(void)
         con_timestamps = con_timestamps_default;
 
     episode = BETWEEN(episode_min, episode, episode_max);
+
     expansion = BETWEEN(expansion_min, expansion, expansion_max);
 
     if (facebackcolor < facebackcolor_min || facebackcolor > facebackcolor_max)
         facebackcolor = facebackcolor_default;
 
+    if (gp_analog != false && gp_analog != true)
+        gp_analog = gp_analog_default;
+
     gp_deadzone_left = BETWEENF(gp_deadzone_left_min, gp_deadzone_left, gp_deadzone_left_max);
     I_SetGamepadLeftDeadZone();
+
     gp_deadzone_right = BETWEENF(gp_deadzone_right_min, gp_deadzone_right, gp_deadzone_right_max);
     I_SetGamepadRightDeadZone();
 
@@ -595,8 +605,13 @@ static void M_CheckCVARs(void)
     if (gp_swapthumbsticks != false && gp_swapthumbsticks != true)
         gp_swapthumbsticks = gp_swapthumbsticks_default;
 
+    if (gp_thumbsticks < gp_thumbsticks_min || gp_thumbsticks > gp_thumbsticks_max)
+        gp_thumbsticks = gp_thumbsticks_default;
+
     gp_vibrate_barrels = BETWEEN(gp_vibrate_barrels_min, gp_vibrate_barrels, gp_vibrate_barrels_max);
+
     gp_vibrate_damage = BETWEEN(gp_vibrate_damage_min, gp_vibrate_damage, gp_vibrate_damage_max);
+
     gp_vibrate_weapons = BETWEEN(gp_vibrate_weapons_min, gp_vibrate_damage, gp_vibrate_weapons_max);
 
     if (infighting != false && infighting != true)
@@ -604,6 +619,9 @@ static void M_CheckCVARs(void)
 
     if (infiniteheight != false && infiniteheight != true)
         infiniteheight = infiniteheight_default;
+
+    if (m_acceleration != false && m_acceleration != true)
+        m_acceleration = m_acceleration_default;
 
     if (m_doubleclick_use != false && m_doubleclick_use != true)
         m_doubleclick_use = m_doubleclick_use_default;
@@ -681,8 +699,7 @@ static void M_CheckCVARs(void)
     if (r_floatbob != false && r_floatbob != true)
         r_floatbob = r_floatbob_default;
 
-    if (r_fov < r_fov_min || r_fov > r_fov_max)
-        r_fov = r_fov_default;
+    r_fov = BETWEEN(r_fov_min, r_fov, r_fov_max);
 
     r_gamma = BETWEENF(r_gamma_min, r_gamma, r_gamma_max);
     I_SetGamma(r_gamma);
@@ -746,6 +763,7 @@ static void M_CheckCVARs(void)
         r_translucency = r_translucency_default;
 
     s_channels = BETWEEN(s_channels_min, s_channels, s_channels_max);
+
     s_musicvolume = BETWEEN(s_musicvolume_min, s_musicvolume, s_musicvolume_max);
     musicVolume = (s_musicvolume * 31 + 50) / 100;
 
@@ -762,7 +780,9 @@ static void M_CheckCVARs(void)
         s_stereo = s_stereo_default;
 
     savegame = BETWEEN(savegame_min, savegame, savegame_max);
+
     skilllevel = BETWEEN(skilllevel_min, skilllevel, skilllevel_max);
+
     stillbob = BETWEEN(stillbob_min, stillbob, stillbob_max);
 
     if (tossdrop != false && tossdrop != true)
@@ -776,12 +796,16 @@ static void M_CheckCVARs(void)
     version = version_default;
 
     vid_capfps = (vid_capfps < vid_capfps_min ? 0 : BETWEEN(vid_capfps_min, vid_capfps, vid_capfps_max));
+
     vid_display = MAX(vid_display_min, vid_display);
 
     if (vid_fullscreen != false && vid_fullscreen != true)
         vid_fullscreen = vid_fullscreen_default;
 
     vid_motionblur = BETWEEN(vid_motionblur_min, vid_motionblur, vid_motionblur_max);
+
+    if (vid_pillarboxes != false && vid_pillarboxes != true)
+        vid_pillarboxes = vid_pillarboxes_default;
 
     if (!M_StringCompare(vid_scaleapi, vid_scaleapi_direct3d)
 #if defined(__MACOSX__)
@@ -829,6 +853,7 @@ static void M_CheckCVARs(void)
 //
 void M_LoadCVARs(char *filename)
 {
+    int     bindcount = 0;
     int     cvarcount = 0;
     int     statcount = 0;
 
@@ -889,7 +914,10 @@ void M_LoadCVARs(char *filename)
         if (M_StringCompare(cvar, "bind"))
         {
             if (!togglingvanilla)
+            {
                 bind_cmd_func2("bind", value);
+                bindcount++;
+            }
 
             continue;
         }
@@ -982,7 +1010,8 @@ void M_LoadCVARs(char *filename)
 
     if (!togglingvanilla)
     {
-        C_Output("Loaded %i CVARs and %i player stats from <b>%s</b>.", cvarcount, statcount, filename);
+        C_Output("Loaded %s CVARs and %s player stats from <b>%s</b>.", commify(cvarcount), commify(statcount), filename);
+        C_Output("Bound %s controls.", commify(bindcount));
         M_CheckCVARs();
         cvarsloaded = true;
     }

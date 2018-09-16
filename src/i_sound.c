@@ -36,13 +36,14 @@
 ========================================================================
 */
 
+#include "SDL_mixer.h"
+
 #include "c_console.h"
 #include "doomstat.h"
 #include "i_system.h"
 #include "m_config.h"
 #include "m_misc.h"
 #include "s_sound.h"
-#include "SDL_mixer.h"
 #include "version.h"
 #include "w_wad.h"
 #include "z_zone.h"
@@ -64,8 +65,6 @@ static dboolean             sound_initialized;
 static allocated_sound_t    *channels_playing[s_channels_max];
 
 static int                  mixer_freq;
-Uint16                      mixer_format;
-int                         mixer_channels;
 
 // Doubly-linked list of allocated sounds.
 // When a sound is played, it is moved to the head, so that the oldest sounds not used recently are at the tail.
@@ -144,7 +143,7 @@ static allocated_sound_t *AllocateSound(sfxinfo_t *sfxinfo, int len)
     } while (!snd);
 
     // Skip past the chunk structure for the audio buffer
-    snd->chunk.abuf = (byte *)(snd + 1);
+    snd->chunk.abuf = (Uint8 *)(snd + 1);
     snd->chunk.alen = len;
     snd->chunk.allocated = 1;
     snd->chunk.volume = MIX_MAX_VOLUME;
@@ -300,7 +299,7 @@ dboolean CacheSFX(sfxinfo_t *sfxinfo)
 
 void I_UpdateSoundParams(int channel, int vol, int sep)
 {
-    Mix_SetPanning(channel, BETWEEN(0, (254 - sep) * vol / 127, 255), BETWEEN(0, sep * vol / 127, 255));
+    Mix_SetPanning(channel, (254 - sep) * vol / 128, sep * vol / 128);
 }
 
 //
@@ -369,12 +368,7 @@ void I_UpdateSound(void)
 
 dboolean I_AnySoundStillPlaying(void)
 {
-    dboolean    result = false;
-
-    for (int i = 0; i < s_channels; i++)
-        result |= Mix_Playing(i);
-
-    return result;
+    return Mix_Playing(-1);
 }
 
 void I_ShutdownSound(void)
@@ -390,6 +384,8 @@ void I_ShutdownSound(void)
 dboolean I_InitSound(void)
 {
     const SDL_version   *linked = Mix_Linked_Version();
+    Uint16              mixer_format;
+    int                 mixer_channels;
 
     // No sounds yet
     for (int i = 0; i < s_channels_max; i++)

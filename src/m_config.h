@@ -71,17 +71,20 @@ extern dboolean     con_timestamps;
 extern int          episode;
 extern int          expansion;
 extern int          facebackcolor;
+extern dboolean     gp_analog;
 extern float        gp_deadzone_left;
 extern float        gp_deadzone_right;
 extern dboolean     gp_invertyaxis;
 extern int          gp_sensitivity;
 extern dboolean     gp_swapthumbsticks;
+extern int          gp_thumbsticks;
 extern int          gp_vibrate_barrels;
 extern int          gp_vibrate_damage;
 extern int          gp_vibrate_weapons;
 extern dboolean     infighting;
 extern dboolean     infiniteheight;
 extern char         *iwadfolder;
+extern dboolean     m_acceleration;
 extern dboolean     m_doubleclick_use;
 extern dboolean     m_invertyaxis;
 extern dboolean     m_novertical;
@@ -314,6 +317,10 @@ enum
 #define armor_default                           0
 #define armor_max                               INT_MAX
 
+#define armortype_min                           NOARMOR
+#define armortype_default                       NOARMOR
+#define armortype_max                           BLUEARMOR
+
 #define autoaim_default                         true
 
 #define autoload_default                        true
@@ -342,6 +349,8 @@ enum
 #define facebackcolor_default                   5
 #define facebackcolor_max                       255
 
+#define gp_analog_default                       true
+
 #define gp_deadzone_left_min                    0.0f
 #define gp_deadzone_left_default                24.0f
 #define gp_deadzone_left_max                    100.0f
@@ -358,6 +367,10 @@ enum
 
 #define gp_swapthumbsticks_default              false
 
+#define gp_thumbsticks_min                      1
+#define gp_thumbsticks_default                  2
+#define gp_thumbsticks_max                      2
+
 #define gp_vibrate_barrels_min                  0
 #define gp_vibrate_barrels_default              100
 #define gp_vibrate_barrels_max                  200
@@ -370,7 +383,7 @@ enum
 #define gp_vibrate_weapons_default              100
 #define gp_vibrate_weapons_max                  200
 
-#define health_min                              -200
+#define health_min                              -100
 #define health_default                          100
 #define health_max                              INT_MAX
 
@@ -379,6 +392,8 @@ enum
 #define infiniteheight_default                  false
 
 #define iwadfolder_default                      "C:\\"
+
+#define m_acceleration_default                  true
 
 #define m_doubleclick_use_default               false
 
@@ -721,7 +736,8 @@ typedef enum
     CAPVALUEALIAS,
     SKYVALUEALIAS,
     SCALEVALUEALIAS,
-    FACEBACKVALUEALIAS
+    FACEBACKVALUEALIAS,
+    ARMORTYPEVALUEALIAS
 } valuealias_type_t;
 
 typedef struct

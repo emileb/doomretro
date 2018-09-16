@@ -21,8 +21,11 @@ autoload off
 autouse off
 centerweapon off
 facebackcolor none
+gp_analog off
+gp_thumbsticks 1
 infighting off
 infiniteheight on
+m_acceleration off
 m_doubleclick_use on
 m_novertical off
 m_sensitivity 8

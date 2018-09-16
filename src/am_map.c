@@ -178,10 +178,10 @@ fixed_t             m_w, m_h;
 static fixed_t      min_x, min_y;
 static fixed_t      max_x, max_y;
 
-static fixed_t      min_scale_mtof;         // used to tell when to stop zooming out
-static fixed_t      max_scale_mtof;         // used to tell when to stop zooming in
+static fixed_t      min_scale_mtof; // used to tell when to stop zooming out
+static fixed_t      max_scale_mtof; // used to tell when to stop zooming in
 
-                                            // old stuff for recovery later
+// old stuff for recovery later
 static fixed_t      old_m_w, old_m_h;
 static fixed_t      old_m_x, old_m_y;
 
@@ -191,8 +191,8 @@ static fixed_t      scale_mtof;
 // used by FTOM to scale from frame-buffer-to-map coords (=1/scale_mtof)
 static fixed_t      scale_ftom;
 
-mpoint_t            *markpoints;            // where the points are
-int                 markpointnum;           // next point to be assigned
+mpoint_t            *markpoints;    // where the points are
+int                 markpointnum;   // next point to be assigned
 int                 markpointnum_max;
 
 mpoint_t            *pathpoints;
@@ -536,12 +536,14 @@ void AM_toggleFollowMode(void)
         m_paninc.x = 0;
         m_paninc.y = 0;
         C_StrCVAROutput(stringize(am_followmode), "on");
-        HU_PlayerMessage(s_AMSTR_FOLLOWON, true);
+        C_Output(s_AMSTR_FOLLOWON);
+        HU_SetPlayerMessage(s_AMSTR_FOLLOWON, false, true);
     }
     else
     {
         C_StrCVAROutput(stringize(am_followmode), "off");
-        HU_PlayerMessage(s_AMSTR_FOLLOWOFF, true);
+        C_Output(s_AMSTR_FOLLOWOFF);
+        HU_SetPlayerMessage(s_AMSTR_FOLLOWOFF, false, true);
     }
 
     message_dontfuckwithme = true;
@@ -553,12 +555,14 @@ void AM_toggleGrid(void)
     if ((am_grid = !am_grid))
     {
         C_StrCVAROutput(stringize(am_grid), "on");
-        HU_PlayerMessage(s_AMSTR_GRIDON, true);
+        C_Output(s_AMSTR_GRIDON);
+        HU_SetPlayerMessage(s_AMSTR_GRIDON, false, true);
     }
     else
     {
         C_StrCVAROutput(stringize(am_grid), "off");
-        HU_PlayerMessage(s_AMSTR_GRIDOFF, true);
+        C_Output(s_AMSTR_GRIDOFF);
+        HU_SetPlayerMessage(s_AMSTR_GRIDOFF, false, true);
     }
 
     message_dontfuckwithme = true;
@@ -588,7 +592,8 @@ void AM_addMark(void)
     markpoints[markpointnum].x = x;
     markpoints[markpointnum].y = y;
     M_snprintf(message, sizeof(message), s_AMSTR_MARKEDSPOT, ++markpointnum);
-    HU_PlayerMessage(message, true);
+    C_Output(message);
+    HU_SetPlayerMessage(message, false, true);
     message_dontfuckwithme = true;
     message_clearable = true;
 }
@@ -602,7 +607,8 @@ void AM_clearMarks(void)
         if (++markpress == 5)
         {
             // clear all marks
-            HU_PlayerMessage(s_AMSTR_MARKSCLEARED, true);
+            C_Output(s_AMSTR_MARKSCLEARED);
+            HU_SetPlayerMessage(s_AMSTR_MARKSCLEARED, false, true);
             message_dontfuckwithme = true;
             message_clearable = true;
             markpointnum = 0;
@@ -613,7 +619,8 @@ void AM_clearMarks(void)
 
             // clear one mark
             M_snprintf(message, sizeof(message), s_AMSTR_MARKCLEARED, markpointnum--);
-            HU_PlayerMessage(message, true);
+            C_Output(message);
+            HU_SetPlayerMessage(message, false, true);
             message_dontfuckwithme = true;
             message_clearable = true;
         }
@@ -646,12 +653,14 @@ void AM_toggleRotateMode(void)
     if ((am_rotatemode = !am_rotatemode))
     {
         C_StrCVAROutput(stringize(am_rotatemode), "on");
-        HU_PlayerMessage(s_AMSTR_ROTATEON, true);
+        C_Output(s_AMSTR_ROTATEON);
+        HU_SetPlayerMessage(s_AMSTR_ROTATEON, false, true);
     }
     else
     {
         C_StrCVAROutput(stringize(am_rotatemode), "off");
-        HU_PlayerMessage(s_AMSTR_ROTATEOFF, true);
+        C_Output(s_AMSTR_ROTATEOFF);
+        HU_SetPlayerMessage(s_AMSTR_ROTATEOFF, false, true);
     }
 
     message_dontfuckwithme = true;
@@ -1231,13 +1240,12 @@ static dboolean AM_clipMline(int *x0, int *y0, int *x1, int *y1)
     unsigned int    outcode2 = 0;
 
     *x0 = CXMTOF(*x0);
+    *x1 = CXMTOF(*x1);
 
     if (*x0 < -1)
         outcode1 = LEFT;
     else if (*x0 >= (int)mapwidth)
         outcode1 = RIGHT;
-
-    *x1 = CXMTOF(*x1);
 
     if (*x1 < -1)
         outcode2 = LEFT;
@@ -1248,13 +1256,15 @@ static dboolean AM_clipMline(int *x0, int *y0, int *x1, int *y1)
         return false;
 
     *y0 = CYMTOF(*y0);
+    *y1 = CYMTOF(*y1);
+
+    if (!((*x0 - *x1) | (*y0 - *y1)))
+        return false;
 
     if (*y0 < -1)
         outcode1 |= TOP;
     else if (*y0 >= (int)mapheight)
         outcode1 |= BOTTOM;
-
-    *y1 = CYMTOF(*y1);
 
     if (*y1 < -1)
         outcode2 |= TOP;
@@ -1339,21 +1349,18 @@ static void AM_drawFline(int x0, int y0, int x1, int y1, byte *color, void (*put
 
     if (!dy)
     {
-        if (dx)
-        {
-            // horizontal line
-            const int   sx = SIGN(dx);
+        // horizontal line
+        const int   sx = SIGN(dx);
 
-            x0 = BETWEEN(-1, x0, mapwidth - 1);
-            x1 = BETWEEN(-1, x1, mapwidth - 1);
+        x0 = BETWEEN(-1, x0, mapwidth - 1);
+        x1 = BETWEEN(-1, x1, mapwidth - 1);
 
-            y0 *= mapwidth;
+        y0 *= mapwidth;
 
-            putdot(x0, y0, color);
+        putdot(x0, y0, color);
 
-            while (x0 != x1)
-                putdot((x0 += sx), y0, color);
-        }
+        while (x0 != x1)
+            putdot((x0 += sx), y0, color);
     }
     else if (!dx)
     {

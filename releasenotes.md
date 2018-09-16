@@ -1,3 +1,44 @@
+### DOOM Retro v2.7.3
+
+* Optimizations have been made to further improve the overall performance and stability of *DOOM Retro*.
+* Minor changes have been made to text that is output to the console.
+* Further improvements have been made to the console’s autocomplete feature.
+* A bug has been fixed whereby gamepads may not initialize correctly when connected more than once during gameplay.
+* A counter is now displayed at the end of player messages when they are the same as those preceding them, resembling how those same messages are displayed in the console.
+* Further improvements have been made to the support of `MAPINFO` lumps.
+* The armor bar in the alternate widescreen HUD is now green or blue to indicate the type of armor the player has.
+* The type of armor the player has can now be changed using the new `armortype` CVAR. It can be `none`, `green` or `blue`.
+* A bug has been fixed whereby the player wouldn’t move correctly while running if the `+run` action was bound to a mouse button.
+* The player will now bob again when moving on a sector that has a rising or lowering floor or ceiling, and the `movebob` CVAR is not `0%`.
+* The player’s height will now be lowered as intended when on a liquid sector that has a rising or lowering floor or ceiling, and the `r_liquid_lowerview` CVAR is `on`.
+* A gamepad’s right thumbstick can no longer be used to move forward when the `mouselook` CVAR is `off` and the `gp_thumbsticks` CVAR is `2`.
+* Looking up and down using a gamepad’s right thumbstick is now smooth when the `mouselook` CVAR is `on`.
+
+---
+
+###### Friday, August 24, 2018
+
+### DOOM Retro v2.7.2
+
+* Optimizations have been made to further improve the overall performance and stability of *DOOM Retro*.
+* Slightly more blood splats are now spawned when blood hits the floor.
+* Minor changes have been made to text that is output to the console.
+* Further improvements have been made to the console’s autocomplete feature.
+* A bug has been fixed whereby a crash could occur when loading a savegame in some instances.
+* The number in the leftmost column of the output to the `thinglist` CCMD is now the actual ID of each thing that is spawned in the current map.
+* Further improvements have been made to the support of `DEHACKED` lumps.
+* Pressing <kbd>ALT</kbd> + <kbd>F4</kbd> will now instantly quit *DOOM Retro* as originally intended.
+* A bug has been fixed whereby the `+zoomin` and `+zoomout` actions couldn’t be rebound from their default <kbd>+</kbd> and <kbd>&ndash;</kbd> keys using the `bind` CCMD.
+* Mouse acceleration can now be disabled using the new `m_acceleration` CVAR. It is `on` by default and `off` when vanilla mode is enabled.
+* Movement of a gamepad's thumbsticks can now be either analog or digital using the new `gp_analog` CVAR. It is `on` by default and `off` when vanilla mode is enabled.
+* The number of thumbsticks used on a gamepad can now be set using the new `gp_thumbsticks` CVAR. If set to `2` (the default), the left thumbstick is used to strafe left/right and move forward/back, and the right thumbstick is used to turn left/right (and look up/down if the `mouselook` CVAR is `on`). If set to `1` (which it is when vanilla mode is enabled), one thumbstick is used to turn left/right and move forward/back.
+* A bug has been fixed whereby monsters could be spawned at an incorrect height in some rare instances.
+* Some translucency effects have been improved.
+
+---
+
+###### Saturday, August 4, 2018
+
 ### DOOM Retro v2.7.1
 
 * The player will now move correctly when using a gamepad.
@@ -5,6 +46,8 @@
 * Minor changes have been made to text that is output to the console.
 * The `restartmap` CCMD will now restart the correct map when playing *E1M4B: Phobos Mission Control* or *E1M8B: Tech Gone Bad*.
 * The help screen’s background when pressing the <kbd>F1</kbd> key is now displayed better when using a custom colormap from a PWAD.
+* If the super shotgun was selected by the player more recently than the shotgun, it will now be selected when pressing the <kbd>3</kbd> key, and vice versa.
+* Improvements have been made to the gradual lighting effect under doors and crushing ceilings.
 
 ---
 

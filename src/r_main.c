@@ -142,7 +142,25 @@ extern lighttable_t **walllights;
 //
 int R_PointOnSide(fixed_t x, fixed_t y, const node_t *node)
 {
-    return ((int)(((int64_t)(y - node->y) * node->dx + (int64_t)(node->x - x) * node->dy) >> 32) > 0);
+    fixed_t nx = node->x;
+    fixed_t ny = node->y;
+    fixed_t ndx = node->dx;
+    fixed_t ndy = node->dy;
+
+    if (!ndx)
+        return (x <= nx ? (ndy > 0) : (ndy < 0));
+
+    if (!ndy)
+        return (y <= ny ? (ndx < 0) : (ndx > 0));
+
+    x -= nx;
+    y -= ny;
+
+    // Try to quickly decide by looking at sign bits.
+    if ((ndy ^ ndx ^ x ^ y) < 0)
+        return ((ndy ^ x) < 0); // (left is negative)
+
+    return (FixedMul(y, ndx >> FRACBITS) >= FixedMul(ndy >> FRACBITS, x));
 }
 
 int R_PointOnSegSide(fixed_t x, fixed_t y, seg_t *line)
@@ -270,7 +288,7 @@ static void R_InitPointToAngle(void)
 {
     // slope (tangent) to angle lookup
     for (int i = 0; i <= SLOPERANGE; i++)
-        tantoangle[i] = (angle_t)(0xFFFFFFFF * atan2((double)i, (double)SLOPERANGE) / (M_PI * 2));
+        tantoangle[i] = (angle_t)(0xFFFFFFFF * atan2(i, SLOPERANGE) / (M_PI * 2));
 }
 
 //
@@ -716,9 +734,6 @@ static void R_SetupFrame(void)
     mobj_t  *mo = viewplayer->mo;
     int     tempcentery = viewheight / 2;
     int     pitch = 0;
-    int     time = I_GetTimeMS();
-
-    mo->flags2 |= MF2_DONTDRAW;
 
     // [AM] Interpolate the player camera if the feature is enabled.
     if (vid_capfps != TICRATE
@@ -767,11 +782,16 @@ static void R_SetupFrame(void)
         }
     }
 
-    if (barrelms > time && !consoleactive && !menuactive && !paused)
+    if (barrelms)
     {
-        viewx += M_RandomInt(-3, 3) * FRACUNIT * (barrelms - time) / BARRELMS;
-        viewy += M_RandomInt(-3, 3) * FRACUNIT * (barrelms - time) / BARRELMS;
-        viewz += M_RandomInt(-2, 2) * FRACUNIT * (barrelms - time) / BARRELMS;
+        int time = I_GetTimeMS();
+
+        if (barrelms > time && !consoleactive && !menuactive && !paused)
+        {
+            viewx += M_RandomInt(-3, 3) * FRACUNIT * (barrelms - time) / BARRELMS;
+            viewy += M_RandomInt(-3, 3) * FRACUNIT * (barrelms - time) / BARRELMS;
+            viewz += M_RandomInt(-2, 2) * FRACUNIT * (barrelms - time) / BARRELMS;
+        }
     }
 
     extralight = viewplayer->extralight << 2;

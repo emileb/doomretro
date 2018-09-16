@@ -72,7 +72,6 @@
 
 int             episode = episode_default;
 int             expansion = expansion_default;
-int             gp_sensitivity = gp_sensitivity_default;
 int             m_sensitivity = m_sensitivity_default;
 dboolean        messages = messages_default;
 int             r_detail = r_detail_default;
@@ -632,7 +631,7 @@ static struct
     char    char1;
     char    char2;
     int     adjust;
-} kern[] = {
+} bigkern[] = {
     { '-', 'V', -2 }, { 'O', 'A', -1 }, { 'P', 'a', -3 }, { 'V', 'o', -2 },
     { 'f', 'e', -1 }, { 'f', 'f', -1 }, { 'f', 'o', -1 }, { 'l', 'e', -1 },
     { 'l', 't', -1 }, { 'l', 'u', -1 }, { 'o', 'a', -1 }, { 'o', 't', -1 },
@@ -676,11 +675,11 @@ void M_DrawString(int x, int y, char *str)
         if (str[i] < 123)
             j = chartoi[(int)str[i]];
 
-        while (kern[k].char1)
+        while (bigkern[k].char1)
         {
-            if (prev == kern[k].char1 && str[i] == kern[k].char2)
+            if (prev == bigkern[k].char1 && str[i] == bigkern[k].char2)
             {
-                x += kern[k].adjust;
+                x += bigkern[k].adjust;
                 break;
             }
 
@@ -727,10 +726,10 @@ static int M_BigStringWidth(char *str)
         int j = chartoi[(int)str[i]];
         int k = 0;
 
-        while (kern[k].char1)
+        while (bigkern[k].char1)
         {
-            if (prev == kern[k].char1 && str[i] == kern[k].char2)
-                w += kern[k].adjust;
+            if (prev == bigkern[k].char1 && str[i] == bigkern[k].char2)
+                w += bigkern[k].adjust;
 
             k++;
         }
@@ -1360,7 +1359,8 @@ static void M_DeleteSavegameResponse(int key)
         }
 
         M_snprintf(buffer, sizeof(buffer), s_GGDELETED, titlecase(savegamestrings[itemOn]));
-        HU_PlayerMessage(buffer, false);
+        C_Output(buffer);
+        HU_SetPlayerMessage(buffer, false, false);
         blurred = false;
         message_dontfuckwithme = true;
         M_ReadSaveStrings();
@@ -1628,7 +1628,7 @@ void M_SetWindowCaption(void)
         else
             M_StringCopy(caption, gamedescription, sizeof(caption));
 
-        if (bfgedition && !modifiedgame)
+        if (bfgedition && (nerve || !modifiedgame))
             M_snprintf(caption, sizeof(caption), "%s (%s)", caption, s_CAPTION_BFGEDITION);
     }
 
@@ -1786,8 +1786,19 @@ static void M_ChangeMessages(int choice)
     if (menuactive)
         message_dontpause = true;
 
-    C_StrCVAROutput(stringize(messages), (messages ? "on" : "off"));
-    HU_PlayerMessage((messages ? s_MSGON : s_MSGOFF), false);
+    if (messages)
+    {
+        C_StrCVAROutput(stringize(messages), "on");
+        C_Output(s_MSGON);
+        HU_SetPlayerMessage(s_MSGON, false, false);
+    }
+    else
+    {
+        C_StrCVAROutput(stringize(messages), "off");
+        C_Output(s_MSGOFF);
+        HU_SetPlayerMessage(s_MSGOFF, false, false);
+    }
+
     message_dontfuckwithme = true;
     M_SaveCVARs();
 }
@@ -2044,7 +2055,17 @@ static void M_ChangeDetail(int choice)
 
     if (!menuactive)
     {
-        HU_PlayerMessage((r_detail == r_detail_low ? s_DETAILLO : s_DETAILHI), false);
+        if (r_detail == r_detail_low)
+        {
+            C_Output(s_DETAILLO);
+            HU_SetPlayerMessage(s_DETAILLO, false, false);
+        }
+        else
+        {
+            C_Output(s_DETAILHI);
+            HU_SetPlayerMessage(s_DETAILHI, false, false);
+        }
+
         message_dontfuckwithme = true;
     }
     else
@@ -2361,7 +2382,10 @@ void M_ChangeGamma(dboolean shift)
     gammawait = I_GetTime() + HU_MSGTIMEOUT;
 
     if (r_gamma == 1.0f)
-        HU_PlayerMessage(s_GAMMAOFF, false);
+    {
+        C_Output(s_GAMMAOFF);
+        HU_SetPlayerMessage(s_GAMMAOFF, false, false);
+    }
     else
     {
         static char buf[128];
@@ -2373,7 +2397,8 @@ void M_ChangeGamma(dboolean shift)
         if (len >= 2 && buf[len - 1] == '0' && buf[len - 2] == '0')
             buf[len - 1] = '\0';
 
-        HU_PlayerMessage(buf, false);
+        C_Output(buf);
+        HU_SetPlayerMessage(buf, false, false);
     }
 
     message_dontpause = true;
@@ -2838,38 +2863,28 @@ dboolean M_Responder(event_t *ev)
             return false;
         }
 
-        else if (key == KEY_F4 && (!functionkey || functionkey == KEY_F4 || (SDL_GetModState() & KMOD_ALT)) && !keydown)
+        else if (key == KEY_F4 && (!functionkey || functionkey == KEY_F4) && !keydown)
         {
             keydown = key;
 
-            // Quit DOOM Retro
-            if (SDL_GetModState() & KMOD_ALT)
+            // Sound Volume
+            if (functionkey == KEY_F4)
             {
-                S_StartSound(NULL, sfx_swtchn);
-                M_QuitResponse('y');
-                return false;
+                functionkey = 0;
+                currentMenu->lastOn = itemOn;
+                M_ClearMenus();
+                S_StartSound(NULL, sfx_swtchx);
             }
             else
             {
-                // Sound Volume
-                if (functionkey == KEY_F4)
-                {
-                    functionkey = 0;
-                    currentMenu->lastOn = itemOn;
-                    M_ClearMenus();
-                    S_StartSound(NULL, sfx_swtchx);
-                }
-                else
-                {
-                    functionkey = KEY_F4;
-                    M_StartControlPanel();
-                    currentMenu = &SoundDef;
-                    itemOn = currentMenu->lastOn;
-                    S_StartSound(NULL, sfx_swtchn);
-                }
-
-                return false;
+                functionkey = KEY_F4;
+                M_StartControlPanel();
+                currentMenu = &SoundDef;
+                itemOn = currentMenu->lastOn;
+                S_StartSound(NULL, sfx_swtchn);
             }
+
+            return false;
         }
 
         // Toggle graphic detail

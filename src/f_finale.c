@@ -277,25 +277,6 @@ void M_DrawSmallChar(int x, int y, int i, dboolean shadow);
 
 static void F_TextWrite(void)
 {
-    static struct
-    {
-        char    char1;
-        char    char2;
-        int     adjust;
-    } kern[] = {
-        { '.', '1',  -1 },
-        { '.', '7',  -1 },
-        { '.', '\"', -1 },
-        { ',', '1',  -1 },
-        { ',', '7',  -1 },
-        { ',', 'Y',  -1 },
-        { 'T', '.',  -1 },
-        { 'T', ',',  -1 },
-        { 'Y', '.',  -1 },
-        { 'Y', ',',  -1 },
-        { 'D', '\'', -1 },
-        { 0,   0,     0 }
-    };
 
     // draw some of the text onto the screen
     byte        *src;
@@ -694,7 +675,7 @@ static dboolean F_CastResponder(event_t *ev)
         }
     }
 
-    S_StartSound(viewplayer->mo, sfx_dshtgn);
+    S_StartSound(NULL, sfx_dshtgn);
 
     type = castordertype[castnum];
 
@@ -709,7 +690,7 @@ static dboolean F_CastResponder(event_t *ev)
 
     if (casttics == -1 && caststate->action == A_RandomJump)
     {
-        caststate = &states[M_Random() < caststate->misc2 ? caststate->misc1 : caststate->nextstate];
+        caststate = &states[(M_Random() < caststate->misc2 ? caststate->misc1 : caststate->nextstate)];
         casttics = caststate->tics;
     }
 
@@ -921,8 +902,7 @@ static void F_BunnyScroll(void)
         return;
     else if (finalecount < 1180)
     {
-        V_DrawPatchWithShadow((ORIGINALWIDTH - 13 * 8) / 2 + 1, (ORIGINALHEIGHT - 8 * 8) / 2 + 1,
-            W_CacheLumpName("END0"), false);
+        V_DrawPatchWithShadow((ORIGINALWIDTH - 13 * 8) / 2 + 1, (ORIGINALHEIGHT - 8 * 8) / 2 + 1, W_CacheLumpName("END0"), false);
         laststage = 0;
         return;
     }
@@ -934,8 +914,7 @@ static void F_BunnyScroll(void)
     }
 
     M_snprintf(name, sizeof(name), "END%i", stage);
-    V_DrawPatchWithShadow((ORIGINALWIDTH - 13 * 8) / 2 + 1, (ORIGINALHEIGHT - 8 * 8) / 2 + 1,
-        W_CacheLumpName(name), false);
+    V_DrawPatchWithShadow((ORIGINALWIDTH - 13 * 8) / 2 + 1, (ORIGINALHEIGHT - 8 * 8) / 2 + 1, W_CacheLumpName(name), false);
 }
 
 static void F_ArtScreenDrawer(void)

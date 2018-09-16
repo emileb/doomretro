@@ -39,12 +39,13 @@
 #if !defined(__S_SOUND_H__)
 #define __S_SOUND_H__
 
-#include "r_defs.h"
 #include "SDL_mixer.h"
+
+#include "r_defs.h"
 #include "sounds.h"
 
 #define CHANNELS            2
-#define CHUNKSIZE           1024
+#define CHUNKSIZE           512
 #define SAMPLERATE          44100
 
 #define MAX_MUSIC_VOLUME    MIX_MAX_VOLUME
@@ -115,7 +116,7 @@ void S_ResumeSound(void);
 //
 // Updates music & sounds
 //
-void S_UpdateSounds(mobj_t *listener);
+void S_UpdateSounds(void);
 
 void S_SetMusicVolume(int volume);
 void S_SetSfxVolume(int volume);

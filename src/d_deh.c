@@ -184,8 +184,6 @@ char    *s_GOTMAP = GOTMAP;
 char    *s_GOTVISOR = GOTVISOR;
 
 char    *s_GOTCLIP = GOTCLIP;
-char    *s_GOTCLIPX2 = "";
-char    *s_GOTHALFCLIP = "";
 char    *s_GOTCLIPBOX = GOTCLIPBOX;
 char    *s_GOTROCKET = GOTROCKET;
 char    *s_GOTROCKETX2 = "";
@@ -436,7 +434,8 @@ char    *s_STSTR_BEHOLD = STSTR_BEHOLD;
 char    *s_STSTR_BEHOLDX = STSTR_BEHOLDX;
 char    *s_STSTR_BEHOLDON = "";
 char    *s_STSTR_BEHOLDOFF = "";
-char    *s_STSTR_BUDDHA = "";
+char    *s_STSTR_BUDDHAON = "";
+char    *s_STSTR_BUDDHAOFF = "";
 char    *s_STSTR_CHOPPERS = STSTR_CHOPPERS;
 char    *s_STSTR_CLEV = STSTR_CLEV;
 char    *s_STSTR_CLEVSAME = "";
@@ -751,8 +750,6 @@ deh_strs deh_strlookup[] =
     { &s_GOTVISOR,                   "GOTVISOR"                   },
 
     { &s_GOTCLIP,                    "GOTCLIP"                    },
-    { &s_GOTCLIPX2,                  "GOTCLIPX2"                  },
-    { &s_GOTHALFCLIP,                "GOTHALFCLIP"                },
     { &s_GOTCLIPBOX,                 "GOTCLIPBOX"                 },
     { &s_GOTROCKET,                  "GOTROCKET"                  },
     { &s_GOTROCKETX2,                "GOTROCKETX2"                },
@@ -1000,7 +997,8 @@ deh_strs deh_strlookup[] =
     { &s_STSTR_BEHOLDX,              "STSTR_BEHOLDX"              },
     { &s_STSTR_BEHOLDON,             "STSTR_BEHOLDON"             },
     { &s_STSTR_BEHOLDOFF,            "STSTR_BEHOLDOFF"            },
-    { &s_STSTR_BUDDHA,               "STSTR_BUDDHA"               },
+    { &s_STSTR_BUDDHAON,             "STSTR_BUDDHAON"             },
+    { &s_STSTR_BUDDHAOFF,            "STSTR_BUDDHAOFF"            },
     { &s_STSTR_CHOPPERS,             "STSTR_CHOPPERS"             },
     { &s_STSTR_CLEV,                 "STSTR_CLEV"                 },
     { &s_STSTR_CLEVSAME,             "STSTR_CLEVSAME"             },
@@ -1978,30 +1976,23 @@ dboolean CheckPackageWADVersion(void)
     DEHFILE infile;
     DEHFILE *filein = &infile;
     char    inbuffer[32];
+    int     i = W_GetNumForName("VERSION");
 
-    for (int i = 0; i < numlumps; i++)
-        if (!strncasecmp(lumpinfo[i]->name, "VERSION", 7))
+    infile.size = W_LumpLength(i);
+    infile.inp = infile.lump = W_CacheLumpNum(i);
+
+    while (dehfgets(inbuffer, sizeof(inbuffer), filein))
+    {
+        lfstrip(inbuffer);
+
+        if (M_StringCompare(inbuffer, PACKAGE_NAMEANDVERSIONSTRING))
         {
-            infile.size = W_LumpLength(i);
-            infile.inp = infile.lump = W_CacheLumpNum(i);
-
-            while (dehfgets(inbuffer, sizeof(inbuffer), filein))
-            {
-                lfstrip(inbuffer);
-
-                if (!*inbuffer || *inbuffer == '#' || *inbuffer == ' ')
-                    continue;   // Blank line or comment line
-
-                if (M_StringCompare(inbuffer, PACKAGE_NAMEANDVERSIONSTRING))
-                {
-                    Z_ChangeTag(infile.lump, PU_CACHE);
-                    return true;
-                }
-            }
-
             Z_ChangeTag(infile.lump, PU_CACHE);
+            return true;
         }
+    }
 
+    Z_ChangeTag(infile.lump, PU_CACHE);
     return false;
 }
 
@@ -2223,8 +2214,7 @@ static void deh_procBexCodePointers(DEHFILE *fpin, char *line)
                 states[indexnum].action = deh_bexptrs[i].cptr;  // assign
 
                 if (devparm)
-                    C_Output(" - applied %s from codeptr[%i] to states[%i]", deh_bexptrs[i].lookup, i,
-                        indexnum);
+                    C_Output(" - applied %s from codeptr[%i] to states[%i]", deh_bexptrs[i].lookup, i, indexnum);
 
                 found = true;
             }

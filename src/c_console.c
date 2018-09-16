@@ -42,6 +42,9 @@
 
 #include <ctype.h>
 
+#include "SDL_image.h"
+#include "SDL_mixer.h"
+
 #include "c_cmds.h"
 #include "c_console.h"
 #include "doomstat.h"
@@ -58,8 +61,6 @@
 #include "r_main.h"
 #include "s_sound.h"
 #include "sc_man.h"
-#include "SDL_image.h"
-#include "SDL_mixer.h"
 #include "v_video.h"
 #include "version.h"
 #include "w_wad.h"
@@ -408,46 +409,37 @@ void C_AddConsoleDivider(void)
     }
 }
 
-const static struct
+kern_t altkern[] =
 {
-    char    char1;
-    char    char2;
-    int     adjust;
-} kern[] = {
-    { ' ',  '(',  -1 }, { ' ',  'T',  -1 }, { '\"', '+',  -1 }, { '\"', '.',  -1 }, { '\"', ',',  -1 },
-    { '\"', 'a',  -1 }, { '\"', 'c',  -1 }, { '\"', 'd',  -1 }, { '\"', 'e',  -1 }, { '\"', 'g',  -1 },
-    { '\"', 'j',  -2 }, { '\"', 'o',  -1 }, { '\"', 'q',  -1 }, { '\"', 's',  -1 }, { '\"', 'J',  -2 },
-    { '\\', '\\', -2 }, { '\\', 'd',  -1 }, { '\\', 't',  -1 }, { '\\', 'T',  -1 }, { '\\', 'V',  -1 },
-    { '\'', 'a',  -1 }, { '\'', 'a',  -1 }, { '\'', 'c',  -1 }, { '\'', 'd',  -1 }, { '\'', 'e',  -1 },
-    { '\'', 'g',  -1 }, { '\'', 'j',  -2 }, { '\'', 'o',  -1 }, { '\'', 's',  -1 }, { '\'', 'J',  -2 },
-    { '+',  'j',  -1 }, { '.',  '\\', -1 }, { '.',  '4',  -1 }, { '.',  '7',  -1 }, { ',',  '4',  -1 },
-    { '/',  '/',  -2 }, { '/',  'd',  -1 }, { '/',  'o',  -1 }, { ':', '\\',  -1 }, { '_',  'f',  -1 },
-    { '0',  ',',  -1 }, { '0',  ';',  -1 }, { '0',  'j',  -2 }, { '1',  '\"', -1 }, { '1',  '\\', -1 },
-    { '1',  '\'', -1 }, { '1',  'j',  -2 }, { '2',  'j',  -2 }, { '3',  ',',  -1 }, { '3',  ';',  -1 },
-    { '3',  'j',  -2 }, { '4',  'j',  -2 }, { '5',  ',',  -1 }, { '5',  ';',  -1 }, { '5',  'j',  -2 },
-    { '6',  ',',  -1 }, { '6',  'j',  -2 }, { '7',  '.',  -2 }, { '7',  ',',  -2 }, { '7',  ';',  -1 },
-    { '7',  'j',  -2 }, { '8',  ',',  -1 }, { '8',  ';',  -1 }, { '8',  'j',  -2 }, { '9',  ',',  -1 },
-    { '9',  ';',  -1 }, { '9',  'j',  -2 }, { 'F',  '.',  -1 }, { 'F',  ',',  -1 }, { 'F',  ';',  -1 },
-    { 'L',  '\\', -1 }, { 'L',  '\"', -1 }, { 'L',  '\'', -1 }, { 'P',  '.',  -1 }, { 'P',  ',',  -1 },
-    { 'P',  ';',  -1 }, { 'T',  '.',  -1 }, { 'T',  ',',  -1 }, { 'T',  ';',  -1 }, { 'T',  'a',  -1 },
-    { 'T',  'e',  -1 }, { 'T',  'o',  -1 }, { 'V',  '.',  -1 }, { 'V',  ',',  -1 }, { 'V',  ';',  -1 },
-    { 'Y',  '.',  -1 }, { 'Y',  ',',  -1 }, { 'Y',  ';',  -1 }, { 'a',  '\"', -1 }, { 'a',  '\\', -1 },
-    { 'a',  '\'', -1 }, { 'a',  'j',  -2 }, { 'b',  ',',  -1 }, { 'b',  ';',  -1 }, { 'b',  '\"', -1 },
-    { 'b',  '\\', -1 }, { 'b',  '\'', -1 }, { 'b',  'j',  -2 }, { 'c',  '\\', -1 }, { 'c',  ',',  -1 },
-    { 'c',  ';',  -1 }, { 'c',  '\"', -1 }, { 'c',  '\'', -1 }, { 'c',  'j',  -2 }, { 'd',  'j',  -2 },
-    { 'e',  '\\', -1 }, { 'e',  ',',  -1 }, { 'e',  ';',  -1 }, { 'e',  '\"', -1 }, { 'e',  '\'', -1 },
-    { 'e',  '_',  -1 }, { 'e',  'j',  -2 }, { 'f',  ' ',  -1 }, { 'f',  ',',  -2 }, { 'f',  ';',  -1 },
-    { 'f',  '_',  -1 }, { 'f',  'a',  -1 }, { 'f',  'j',  -2 }, { 'h',  '\\', -1 }, { 'h',  'j',  -2 },
-    { 'i',  'j',  -2 }, { 'k',  'j',  -2 }, { 'l',  'j',  -2 }, { 'm',  '\"', -1 }, { 'm',  '\\', -1 },
-    { 'm',  '\'', -1 }, { 'm',  'j',  -2 }, { 'n',  '\\', -1 }, { 'n',  '\"', -1 }, { 'n',  '\'', -1 },
-    { 'n',  'j',  -2 }, { 'o',  '\\', -1 }, { 'o',  ',',  -1 }, { 'o',  ';',  -1 }, { 'o',  '\"', -1 },
-    { 'o',  '\'', -1 }, { 'o',  'j',  -2 }, { 'p',  '\\', -1 }, { 'p',  ',',  -1 }, { 'p',  ';',  -1 },
-    { 'p',  '\"', -1 }, { 'p',  '\'', -1 }, { 'p',  'j',  -2 }, { 'r',  ' ',  -1 }, { 'r',  '\\', -1 },
-    { 'r',  '.',  -2 }, { 'r',  ',',  -2 }, { 'r',  ';',  -1 }, { 'r',  '\"', -1 }, { 'r',  '\'', -1 },
-    { 'r',  '_',  -1 }, { 'r',  'a',  -1 }, { 'r',  'j',  -2 }, { 's',  '\\', -1 }, { 's',  ',',  -1 },
-    { 's',  ';',  -1 }, { 's',  'j',  -2 }, { 't',  'j',  -2 }, { 'u',  'j',  -2 }, { 'v',  ',',  -1 },
-    { 'v',  ';',  -1 }, { 'v',  'j',  -2 }, { 'w',  'j',  -2 }, { 'x',  'j',  -2 }, { 'z',  'j',  -2 },
-    { '\0', '\0',  0 }
+    { ' ',  '(',  -1 }, { ' ',  'T',  -1 }, { '\"', '+',  -1 }, { '\"', '.',  -1 }, { '\"', ',',  -1 }, { '\"', 'a',  -1 },
+    { '\"', 'c',  -1 }, { '\"', 'd',  -1 }, { '\"', 'e',  -1 }, { '\"', 'g',  -1 }, { '\"', 'j',  -2 }, { '\"', 'o',  -1 },
+    { '\"', 'q',  -1 }, { '\"', 's',  -1 }, { '\"', 'J',  -2 }, { '\\', '\\', -2 }, { '\\', 'd',  -1 }, { '\\', 't',  -1 },
+    { '\\', 'T',  -1 }, { '\\', 'V',  -1 }, { '\'', 'a',  -1 }, { '\'', 'a',  -1 }, { '\'', 'c',  -1 }, { '\'', 'd',  -1 },
+    { '\'', 'e',  -1 }, { '\'', 'g',  -1 }, { '\'', 'j',  -2 }, { '\'', 'o',  -1 }, { '\'', 's',  -1 }, { '\'', 'J',  -2 },
+    { '+',  'j',  -1 }, { '.',  '\\', -1 }, { '.',  '4',  -1 }, { '.',  '7',  -1 }, { ',',  '4',  -1 }, { '/',  '/',  -2 },
+    { '/',  'a',  -1 }, { '/',  'd',  -1 }, { '/',  'o',  -1 }, { ':', '\\',  -1 }, { '_',  'f',  -1 }, { '0',  ',',  -1 },
+    { '0',  ';',  -1 }, { '0',  'j',  -2 }, { '1',  '\"', -1 }, { '1',  '\\', -1 }, { '1',  '\'', -1 }, { '1',  'j',  -2 },
+    { '2',  'j',  -2 }, { '3',  ',',  -1 }, { '3',  ';',  -1 }, { '3',  'j',  -2 }, { '4',  'j',  -2 }, { '5',  ',',  -1 },
+    { '5',  ';',  -1 }, { '5',  'j',  -2 }, { '6',  ',',  -1 }, { '6',  'j',  -2 }, { '7',  '.',  -2 }, { '7',  ',',  -2 },
+    { '7',  ';',  -1 }, { '7',  'j',  -2 }, { '8',  ',',  -1 }, { '8',  ';',  -1 }, { '8',  'j',  -2 }, { '9',  ',',  -1 },
+    { '9',  ';',  -1 }, { '9',  'j',  -2 }, { 'F',  '.',  -1 }, { 'F',  ',',  -1 }, { 'F',  ';',  -1 }, { 'L',  '\\', -1 },
+    { 'L',  '\"', -1 }, { 'L',  '\'', -1 }, { 'L',  'Y',  -1 }, { 'P',  '.',  -1 }, { 'P',  ',',  -1 }, { 'P',  ';',  -1 },
+    { 'T',  '.',  -1 }, { 'T',  ',',  -1 }, { 'T',  ';',  -1 }, { 'T',  'a',  -1 }, { 'T',  'e',  -1 }, { 'T',  'o',  -1 },
+    { 'V',  '.',  -1 }, { 'V',  ',',  -1 }, { 'V',  ';',  -1 }, { 'Y',  '.',  -1 }, { 'Y',  ',',  -1 }, { 'Y',  ';',  -1 },
+    { 'a',  '\"', -1 }, { 'a',  '\\', -1 }, { 'a',  '\'', -1 }, { 'a',  'j',  -2 }, { 'b',  ',',  -1 }, { 'b',  ';',  -1 },
+    { 'b',  '\"', -1 }, { 'b',  '\\', -1 }, { 'b',  '\'', -1 }, { 'b',  'j',  -2 }, { 'c',  '\\', -1 }, { 'c',  ',',  -1 },
+    { 'c',  ';',  -1 }, { 'c',  '\"', -1 }, { 'c',  '\'', -1 }, { 'c',  'j',  -2 }, { 'd',  'j',  -2 }, { 'e',  '\\', -1 },
+    { 'e',  ',',  -1 }, { 'e',  ';',  -1 }, { 'e',  '\"', -1 }, { 'e',  '\'', -1 }, { 'e',  '_',  -1 }, { 'e',  'j',  -2 },
+    { 'f',  ' ',  -1 }, { 'f',  ',',  -2 }, { 'f',  ';',  -1 }, { 'f',  '_',  -1 }, { 'f',  'a',  -1 }, { 'f',  'j',  -2 },
+    { 'h',  '\\', -1 }, { 'h',  'j',  -2 }, { 'i',  'j',  -2 }, { 'k',  'j',  -2 }, { 'l',  'j',  -2 }, { 'm',  '\"', -1 },
+    { 'm',  '\\', -1 }, { 'm',  '\'', -1 }, { 'm',  'j',  -2 }, { 'n',  '\\', -1 }, { 'n',  '\"', -1 }, { 'n',  '\'', -1 },
+    { 'n',  'j',  -2 }, { 'o',  '\\', -1 }, { 'o',  ',',  -1 }, { 'o',  ';',  -1 }, { 'o',  '\"', -1 }, { 'o',  '\'', -1 },
+    { 'o',  'j',  -2 }, { 'p',  '\\', -1 }, { 'p',  ',',  -1 }, { 'p',  ';',  -1 }, { 'p',  '\"', -1 }, { 'p',  '\'', -1 },
+    { 'p',  'j',  -2 }, { 'r',  ' ',  -1 }, { 'r',  '\\', -1 }, { 'r',  '.',  -2 }, { 'r',  ',',  -2 }, { 'r',  ';',  -1 },
+    { 'r',  '\"', -1 }, { 'r',  '\'', -1 }, { 'r',  '_',  -1 }, { 'r',  'a',  -1 }, { 'r',  'j',  -2 }, { 's',  '\\', -1 },
+    { 's',  ',',  -1 }, { 's',  ';',  -1 }, { 's',  'j',  -2 }, { 't',  '\\', -1 }, { 't',  'j',  -2 }, { 'u',  'j',  -2 },
+    { 'v',  '\\', -1 }, { 'v',  ',',  -1 }, { 'v',  ';',  -1 }, { 'v',  'j',  -2 }, { 'w',  '\\', -1 }, { 'w',  'j',  -2 },
+    { 'x',  '\\', -1 }, { 'x',  'j',  -2 }, { 'z',  'j',  -2 }, { '\0', '\0',  0 }
 };
 
 static int C_TextWidth(const char *text, const dboolean formatting, const dboolean kerning)
@@ -461,17 +453,15 @@ static int C_TextWidth(const char *text, const dboolean formatting, const dboole
         const unsigned char letter = text[i];
         const int           c = letter - CONSOLEFONTSTART;
 
-        if (letter == '<'
-            && i < len - 2
-            && (text[i + 1] == 'b' || text[i + 1] == 'i')
-            && text[i + 2] == '>' && formatting)
+        if (letter == '<' && i < len - 2 && (text[i + 1] == 'b' || text[i + 1] == 'i') && text[i + 2] == '>' && formatting)
             i += 2;
-        else if (letter == '<'
-            && i < len - 3
-            && text[i + 1] == '/'
-            && (text[i + 2] == 'b' || text[i + 2] == 'i')
-            && text[i + 3] == '>' && formatting)
+        else if (letter == '<' && i < len - 3 && text[i + 1] == '/' && text[i + 2] == 'b' && text[i + 3] == '>' && formatting)
             i += 3;
+        else if (letter == '<' && i < len - 3 && text[i + 1] == '/' && text[i + 2] == 'i' && text[i + 3] == '>' && formatting)
+        {
+            w++;
+            i += 3;
+        }
         else if (letter == 153)
         {
             w += SHORT(trademark->width);
@@ -501,10 +491,10 @@ static int C_TextWidth(const char *text, const dboolean formatting, const dboole
             w += SHORT(c < 0 || c >= CONSOLEFONTSIZE ? 0 : consolefont[c]->width);
 
         if (kerning)
-            for (int j = 0; kern[j].char1; j++)
-                if (prevletter == kern[j].char1 && letter == kern[j].char2)
+            for (int j = 0; altkern[j].char1; j++)
+                if (prevletter == altkern[j].char1 && letter == altkern[j].char2)
                 {
-                    w += kern[j].adjust;
+                    w += altkern[j].adjust;
                     break;
                 }
 
@@ -743,7 +733,7 @@ static void C_DrawBackground(int height)
 }
 
 static void C_DrawConsoleText(int x, int y, char *text, const int color1, const int color2,
-    const int boldcolor, byte *tinttab, const int tabs[8], const dboolean formatting, const dboolean kerning)
+    const int boldcolor, byte *translucency, const int tabs[8], const dboolean formatting, const dboolean kerning)
 {
     int             bold = 0;
     dboolean        italics = false;
@@ -758,7 +748,7 @@ static void C_DrawConsoleText(int x, int y, char *text, const int color1, const 
 
     if (color1 == consolewarningcolor)
     {
-        V_DrawConsoleTextPatch(x, y, warning, color1, color2, false, tinttab);
+        V_DrawConsoleTextPatch(x, y, warning, color1, color2, false, translucency);
         width += SHORT(warning->width) + 1;
         x += width;
     }
@@ -816,17 +806,17 @@ static void C_DrawConsoleText(int x, int y, char *text, const int color1, const 
                 continue;
 
             if (kerning)
-                for (int j = 0; kern[j].char1; j++)
-                    if (prevletter == kern[j].char1 && letter == kern[j].char2)
+                for (int j = 0; altkern[j].char1; j++)
+                    if (prevletter == altkern[j].char1 && letter == altkern[j].char2)
                     {
-                        x += kern[j].adjust;
+                        x += altkern[j].adjust;
                         break;
                     }
 
             if (patch)
             {
                 V_DrawConsoleTextPatch(x, y, patch, (lastcolor1 = (bold == 1 ? boldcolor : (bold == 2 ? color1 :
-                    (italics ? (color1 == consolewarningcolor ? color1 : consoleitalicscolor) : color1)))), color2, italics, tinttab);
+                    (italics ? (color1 == consolewarningcolor ? color1 : consoleitalicscolor) : color1)))), color2, italics, translucency);
                 x += SHORT(patch->width);
             }
 
@@ -836,14 +826,14 @@ static void C_DrawConsoleText(int x, int y, char *text, const int color1, const 
 
     if (truncate < len)
     {
-        V_DrawConsoleTextPatch(x, y, dot, lastcolor1, color2, false, tinttab);
+        V_DrawConsoleTextPatch(x, y, dot, lastcolor1, color2, false, translucency);
         x += SHORT(dot->width);
-        V_DrawConsoleTextPatch(x, y, dot, lastcolor1, color2, false, tinttab);
+        V_DrawConsoleTextPatch(x, y, dot, lastcolor1, color2, false, translucency);
 
         if (text[truncate - 1] != '.')
         {
             x += SHORT(dot->width);
-            V_DrawConsoleTextPatch(x, y, dot, lastcolor1, color2, false, tinttab);
+            V_DrawConsoleTextPatch(x, y, dot, lastcolor1, color2, false, translucency);
         }
     }
 }
@@ -906,8 +896,8 @@ static void C_DrawTimeStamp(int x, int y, unsigned int tics)
         patch_t     *patch = consolefont[buffer[i] - CONSOLEFONTSTART];
         const int   width = SHORT(patch->width);
 
-        V_DrawConsoleTextPatch(x + (buffer[i] == '1' ? (zerowidth - width) / 2 : 0), y, patch,
-            consoletimestampcolor, NOBACKGROUNDCOLOR, false, tinttab25);
+        V_DrawConsoleTextPatch(x + (buffer[i] == '1' ? (zerowidth - width) / 2 : 0), y, patch, consoletimestampcolor, NOBACKGROUNDCOLOR,
+            false, tinttab25);
         x += (isdigit(buffer[i]) ? zerowidth : width);
     }
 }
@@ -1038,8 +1028,8 @@ void C_Drawer(void)
                     static char buffer[CONSOLETEXTMAXLENGTH];
 
                     M_snprintf(buffer, sizeof(buffer), "%s (%s)", console[i].string, commify(console[i].count));
-                    C_DrawConsoleText(CONSOLETEXTX, y, buffer, consoleplayermessagecolor, NOBACKGROUNDCOLOR, consoleboldcolor, tinttab66,
-                        notabs, true, true);
+                    C_DrawConsoleText(CONSOLETEXTX, y, buffer, consoleplayermessagecolor, NOBACKGROUNDCOLOR, consoleboldcolor,
+                        tinttab66, notabs, true, true);
                 }
                 else
                     C_DrawConsoleText(CONSOLETEXTX, y, console[i].string, consoleplayermessagecolor, NOBACKGROUNDCOLOR, consoleboldcolor,
@@ -1528,7 +1518,7 @@ dboolean C_Responder(event_t *ev)
                     else
                     {
                         i += 1 + (consoleinput[i + 1] == ' ');
-                        M_StringCopy(prefix, M_SubString(consoleinput, 0, i), sizeof(input));
+                        M_StringCopy(prefix, M_SubString(consoleinput, 0, i), sizeof(prefix));
 
                         if (autocomplete == -1)
                         {
@@ -1542,8 +1532,7 @@ dboolean C_Responder(event_t *ev)
                     spaces1 = numspaces(input);
                     endspace1 = (input[strlen(input) - 1] == ' ');
 
-                    while ((direction == -1 && autocomplete > 0)
-                        || (direction == 1 && autocomplete < numautocomplete - 1))
+                    while ((direction == -1 && autocomplete > 0) || (direction == 1 && autocomplete < numautocomplete - 1))
                     {
                         static char output[255];
                         int         spaces2;
@@ -1551,7 +1540,8 @@ dboolean C_Responder(event_t *ev)
                         int         len2;
 
                         autocomplete += direction;
-                        M_StringCopy(output, autocompletelist[autocomplete], sizeof(output));
+                        M_StringCopy(output, (GetCapsLockState() ? uppercase(autocompletelist[autocomplete]) :
+                            autocompletelist[autocomplete]), sizeof(output));
 
                         if (M_StringCompare(output, input))
                             continue;
@@ -1567,7 +1557,8 @@ dboolean C_Responder(event_t *ev)
                                 || (spaces1 == 2 && !endspace1 && (spaces2 == 2 || (spaces2 == 3 && endspace2)))
                                 || (spaces1 == 3 && !endspace1)))
                         {
-                            M_StringCopy(consoleinput, M_StringJoin(prefix, output, NULL), sizeof(consoleinput));
+                            M_StringCopy(consoleinput, M_StringJoin(prefix, M_StringReplace(output, input, input), NULL),
+                                sizeof(consoleinput));
                             caretpos = selectstart = selectend = len2 + (int)strlen(prefix);
                             caretwait = I_GetTimeMS() + CARETBLINKTIME;
                             showcaret = true;

@@ -79,8 +79,6 @@ static byte general[PALETTESIZE] =
 #define BLUES       B
 #define EXTRAS      X
 
-byte    *tinttab;
-
 byte    *tinttab20;
 byte    *tinttab25;
 byte    *tinttab33;
@@ -92,6 +90,7 @@ byte    *tinttab75;
 
 byte    *tranmap;
 
+byte    *tinttabadditive;
 byte    *tinttabred;
 byte    *tinttabredwhite1;
 byte    *tinttabredwhite2;
@@ -311,8 +310,6 @@ void I_InitTintTables(byte *palette)
 {
     int lump = W_CheckNumForName("TRANMAP");
 
-    tinttab = GenerateTintTable(palette, ADDITIVE, general, ALL);
-
     tinttab20 = GenerateTintTable(palette, 20, general, ALL);
     tinttab25 = GenerateTintTable(palette, 25, general, ALL);
     tinttab33 = GenerateTintTable(palette, 33, general, ALL);
@@ -322,8 +319,9 @@ void I_InitTintTables(byte *palette)
     tinttab66 = GenerateTintTable(palette, 66, general, ALL);
     tinttab75 = GenerateTintTable(palette, 75, general, ALL);
 
-    tranmap = (lump != -1 ? W_CacheLumpNum(lump) : (r_dither ? tinttab25 : tinttab50));
+    tranmap = (lump != -1 ? W_CacheLumpNum(lump) : tinttab50);
 
+    tinttabadditive = GenerateTintTable(palette, ADDITIVE, general, ALL);
     tinttabred = GenerateTintTable(palette, ADDITIVE, general, REDS);
     tinttabredwhite1 = GenerateTintTable(palette, ADDITIVE, general, (REDS | WHITES));
     tinttabredwhite2 = GenerateTintTable(palette, ADDITIVE, general, (REDS | WHITES | EXTRAS));

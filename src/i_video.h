@@ -39,8 +39,9 @@
 #if !defined(__I_VIDEO_H__)
 #define __I_VIDEO_H__
 
-#include "doomtype.h"
 #include "SDL.h"
+
+#include "doomtype.h"
 
 #define MAX_MOUSE_BUTTONS   8
 
@@ -55,6 +56,8 @@ typedef struct
 } resolution_t;
 
 void I_InitKeyboard(void);
+void I_ShutdownKeyboard(void);
+dboolean GetCapsLockState(void);
 
 // Called by D_DoomMain,
 // determines the hardware configuration
@@ -68,7 +71,6 @@ void GetWindowPosition(void);
 void GetWindowSize(void);
 void GetScreenResolution(void);
 
-void I_ShutdownKeyboard(void);
 
 // Takes full 8 bit values.
 void I_SetPalette(byte *playpal);

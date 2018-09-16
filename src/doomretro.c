@@ -36,6 +36,13 @@
 ========================================================================
 */
 
+#if defined(_WIN32)
+#include <Windows.h>
+#include <ShellAPI.h>
+
+#include "SDL_syswm.h"
+#endif
+
 #include "c_console.h"
 #include "d_main.h"
 #include "doomstat.h"
@@ -48,15 +55,10 @@
 #include "m_misc.h"
 #include "version.h"
 
-int windowborderwidth;
-int windowborderheight;
+int windowborderwidth = 0;
+int windowborderheight = 0;
 
 #if defined(_WIN32)
-
-#include "SDL_syswm.h"
-
-#include <Windows.h>
-#include <ShellAPI.h>
 
 #if !defined(SM_CXPADDEDBORDER)
 #define SM_CXPADDEDBORDER   92
@@ -146,7 +148,10 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
         return true;
     }
     else if (msg == WM_DEVICECHANGE)
+    {
+        I_ShutdownGamepad();
         I_InitGamepad();
+    }
     else if (msg == WM_SIZE && !vid_fullscreen)
         I_WindowResizeBlit();
     else if (msg == WM_GETMINMAXINFO)

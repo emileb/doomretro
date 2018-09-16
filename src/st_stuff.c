@@ -292,7 +292,6 @@ cheatseq_t cheat_clev = CHEAT("idclev", 0);
 cheatseq_t cheat_clev_xy = CHEAT("idclev", 2);
 cheatseq_t cheat_mypos = CHEAT("idmypos", 0);
 cheatseq_t cheat_amap = CHEAT("iddt", 0);
-
 cheatseq_t cheat_buddha = CHEAT("mumu", 0);
 
 static dboolean movekey(char key)
@@ -386,8 +385,6 @@ static const int mus[IDMUS_MAX][6] =
 //
 // STATUS BAR CODE
 //
-static int ST_calcPainOffset(void);
-
 static void ST_refreshBackground(void)
 {
     if (st_statusbaron)
@@ -423,6 +420,8 @@ extern char     cheatkey;
 extern int      episode;
 extern menu_t   EpiDef;
 
+static int ST_calcPainOffset(void);
+
 // Respond to keyboard input events,
 //  intercept cheats.
 dboolean ST_Responder(event_t *ev)
@@ -438,6 +437,9 @@ dboolean ST_Responder(event_t *ev)
             // 'dqd' cheat for toggleable god mode
             if (cht_CheckCheat(&cheat_god, ev->data2) && gameskill != sk_nightmare)
             {
+                S_StartSound(NULL, sfx_getpow);
+                C_Input(cheat_god.sequence);
+
                 // [BH] if player is dead, resurrect them first
                 if (viewplayer->health <= 0)
                     P_ResurrectPlayer(initial_health);
@@ -451,25 +453,23 @@ dboolean ST_Responder(event_t *ev)
                     oldhealth = viewplayer->health;
                     P_GiveBody(god_health, false);
 
-                    C_Input(cheat_god.sequence);
+                    if (oldhealth < 100)
+                        P_AddBonus();
 
-                    HU_PlayerMessage(s_STSTR_DQDON, false);
+                    C_Output(s_STSTR_DQDON);
+                    HU_SetPlayerMessage(s_STSTR_DQDON, false, false);
 
                     // [BH] always display message
                     if (!consoleactive)
                         message_dontfuckwithme = true;
-
-                    // [BH] play sound
-                    S_StartSound(NULL, sfx_getpow);
 
                     stat_cheated = SafeAdd(stat_cheated, 1);
                     viewplayer->cheated++;
                 }
                 else
                 {
-                    C_Input(cheat_god.sequence);
-
-                    HU_PlayerMessage(s_STSTR_DQDOFF, false);
+                    C_Output(s_STSTR_DQDOFF);
+                    HU_SetPlayerMessage(s_STSTR_DQDOFF, false, false);
 
                     // [BH] always display message
                     if (!consoleactive)
@@ -478,9 +478,6 @@ dboolean ST_Responder(event_t *ev)
                     // [BH] restore player's health
                     viewplayer->health = oldhealth;
                     viewplayer->mo->health = oldhealth;
-
-                    // [BH] play sound
-                    S_StartSound(NULL, sfx_getpow);
                 }
             }
 
@@ -491,6 +488,9 @@ dboolean ST_Responder(event_t *ev)
                 dboolean    armorgiven = false;
                 dboolean    berserkgiven = false;
                 dboolean    weaponsgiven = false;
+
+                S_StartSound(NULL, sfx_getpow);
+                C_Input(cheat_ammonokey.sequence);
 
                 // [BH] note if doesn't have full armor before giving it
                 if (viewplayer->armorpoints < idfa_armor || viewplayer->armortype < idfa_armor_class)
@@ -525,16 +525,12 @@ dboolean ST_Responder(event_t *ev)
                     // [BH] flash screen
                     P_AddBonus();
 
-                    C_Input(cheat_ammonokey.sequence);
-
-                    HU_PlayerMessage(s_STSTR_FAADDED, false);
+                    C_Output(s_STSTR_FAADDED);
+                    HU_SetPlayerMessage(s_STSTR_FAADDED, false, false);
 
                     // [BH] always display message
                     if (!consoleactive)
                         message_dontfuckwithme = true;
-
-                    // [BH] play sound
-                    S_StartSound(NULL, sfx_getpow);
 
                     stat_cheated = SafeAdd(stat_cheated, 1);
                     viewplayer->cheated++;
@@ -551,6 +547,9 @@ dboolean ST_Responder(event_t *ev)
                 dboolean    berserkgiven = false;
                 dboolean    keysgiven = false;
                 dboolean    weaponsgiven = false;
+
+                    S_StartSound(NULL, sfx_getpow);
+                    C_Input(cheat_ammo.sequence);
 
                 // [BH] note if doesn't have full armor before giving it
                 if (viewplayer->armorpoints < idkfa_armor || viewplayer->armortype < idkfa_armor_class)
@@ -589,16 +588,12 @@ dboolean ST_Responder(event_t *ev)
                     // [BH] flash screen
                     P_AddBonus();
 
-                    C_Input(cheat_ammo.sequence);
-
-                    HU_PlayerMessage(s_STSTR_KFAADDED, false);
+                    C_Output(s_STSTR_KFAADDED);
+                    HU_SetPlayerMessage(s_STSTR_KFAADDED, false, false);
 
                     // [BH] always display message
                     if (!consoleactive)
                         message_dontfuckwithme = true;
-
-                    // [BH] play sound
-                    S_StartSound(NULL, sfx_getpow);
 
                     stat_cheated = SafeAdd(stat_cheated, 1);
                     viewplayer->cheated++;
@@ -621,6 +616,9 @@ dboolean ST_Responder(event_t *ev)
                 {
                     int musnum = (buf[0] - '0') * 10 + (buf[1] - '0');
 
+                    S_StartSound(NULL, sfx_getpow);
+                    C_Input("%s%c%c", cheat_mus_xy.sequence, buf[0], buf[1]);
+
                     if (musnum < IDMUS_MAX)
                     {
                         if (gamemission == pack_nerve)
@@ -636,20 +634,13 @@ dboolean ST_Responder(event_t *ev)
 
                             S_ChangeMusic(musnum, 1, true, false);
 
-                            C_Input("%s%c%c", cheat_mus_xy.sequence, buf[0], buf[1]);
-
                             M_snprintf(msg, sizeof(msg), s_STSTR_MUS, uppercase(S_music[musnum].name));
-                            HU_PlayerMessage(msg, false);
+                            C_Output(msg);
+                            HU_SetPlayerMessage(msg, false, false);
 
                             // [BH] always display message
                             if (!consoleactive)
                                 message_dontfuckwithme = true;
-
-                            // [BH] play sound
-                            S_StartSound(NULL, sfx_getpow);
-
-                            stat_cheated = SafeAdd(stat_cheated, 1);
-                            viewplayer->cheated++;
                         }
                         else
                             idmus = false;
@@ -666,18 +657,26 @@ dboolean ST_Responder(event_t *ev)
                 // [BH] can only enter cheat while player is alive
                 && viewplayer->health > 0)
             {
-                viewplayer->cheats ^= CF_NOCLIP;
 
+                S_StartSound(NULL, sfx_getpow);
                 C_Input(gamemode == commercial ? cheat_commercial_noclip.sequence : cheat_noclip.sequence);
 
-                HU_PlayerMessage(((viewplayer->cheats & CF_NOCLIP) ? s_STSTR_NCON : s_STSTR_NCOFF), false);
+                viewplayer->cheats ^= CF_NOCLIP;
+
+                if (viewplayer->cheats & CF_NOCLIP)
+                {
+                    C_Output(s_STSTR_NCON);
+                    HU_SetPlayerMessage(s_STSTR_NCON, false, false);
+                }
+                else
+                {
+                    C_Output(s_STSTR_NCOFF);
+                    HU_SetPlayerMessage(s_STSTR_NCOFF, false, false);
+                }
 
                 // [BH] always display message
                 if (!consoleactive)
                     message_dontfuckwithme = true;
-
-                // [BH] play sound
-                S_StartSound(NULL, sfx_getpow);
 
                 if (viewplayer->cheats & CF_NOCLIP)
                 {
@@ -693,13 +692,16 @@ dboolean ST_Responder(event_t *ev)
                     // [BH] can only enter cheat while player is alive
                     && viewplayer->health > 0)
                 {
+                    S_StartSound(NULL, sfx_getpow);
+                    C_Input(cheat_powerup[i - 1].sequence);
+                    C_Output(s_STSTR_BEHOLD);
+
                     if ((i != pw_strength && viewplayer->powers[i] >= 0 && viewplayer->powers[i] <= STARTFLASHING)
                         || (i == pw_strength && !viewplayer->powers[i]))
                     {
                         P_GivePower(i);
 
-                        // [BH] set to -1 so power-up won't run out, but can
-                        //  still be toggled off using cheat
+                        // [BH] set to -1 so power-up won't run out, but can still be toggled off using cheat
                         if (i != pw_strength)
                         {
                             viewplayer->powers[i] = -1;
@@ -726,10 +728,16 @@ dboolean ST_Responder(event_t *ev)
                             }
                         }
 
-                        C_Input(cheat_powerup[i - 1].sequence);
-
-                        HU_PlayerMessage((!M_StringCompare(s_STSTR_BEHOLDX, STSTR_BEHOLDX) ?
-                            s_STSTR_BEHOLDX : s_STSTR_BEHOLDON), false);
+                        if (!M_StringCompare(s_STSTR_BEHOLDX, STSTR_BEHOLDX))
+                        {
+                            C_Output(s_STSTR_BEHOLDX);
+                            HU_SetPlayerMessage(s_STSTR_BEHOLDX, false, false);
+                        }
+                        else
+                        {
+                            C_Output(s_STSTR_BEHOLDON);
+                            HU_SetPlayerMessage(s_STSTR_BEHOLDON, false, false);
+                        }
 
                         stat_cheated = SafeAdd(stat_cheated, 1);
                         viewplayer->cheated++;
@@ -765,10 +773,16 @@ dboolean ST_Responder(event_t *ev)
                             viewplayer->powers[i] = STARTFLASHING * (i != pw_allmap);
                         }
 
-                        C_Input(cheat_powerup[i - 1].sequence);
-
-                        HU_PlayerMessage((!M_StringCompare(s_STSTR_BEHOLDX, STSTR_BEHOLDX) ?
-                            s_STSTR_BEHOLDX : s_STSTR_BEHOLDOFF), false);
+                        if (!M_StringCompare(s_STSTR_BEHOLDX, STSTR_BEHOLDX))
+                        {
+                            C_Output(s_STSTR_BEHOLDX);
+                            HU_SetPlayerMessage(s_STSTR_BEHOLDX, false, false);
+                        }
+                        else
+                        {
+                            C_Output(s_STSTR_BEHOLDOFF);
+                            HU_SetPlayerMessage(s_STSTR_BEHOLDOFF, false, false);
+                        }
                     }
 
                     // [BH] reset all cheat sequences
@@ -797,9 +811,6 @@ dboolean ST_Responder(event_t *ev)
                     if (!consoleactive)
                         message_dontfuckwithme = true;
 
-                    // [BH] play sound
-                    S_StartSound(NULL, sfx_getpow);
-
                     idbehold = false;
                     return true;
                 }
@@ -820,6 +831,9 @@ dboolean ST_Responder(event_t *ev)
                      // [BH] can only enter cheat while player is alive
                      && viewplayer->health > 0)
             {
+                S_StartSound(NULL, sfx_getpow);
+                C_Input(cheat_choppers.sequence);
+
                 if (!(viewplayer->cheats & CF_CHOPPERS))
                 {
                     // [BH] flash screen
@@ -846,16 +860,12 @@ dboolean ST_Responder(event_t *ev)
                     P_GivePower(pw_invulnerability);
                     viewplayer->powers[pw_invulnerability] = -1;
 
-                    C_Input(cheat_choppers.sequence);
-
-                    HU_PlayerMessage(s_STSTR_CHOPPERS, false);
+                    C_Output(s_STSTR_CHOPPERS);
+                    HU_SetPlayerMessage(s_STSTR_CHOPPERS, false, false);
 
                     // [BH] always display message
                     if (!consoleactive)
                         message_dontfuckwithme = true;
-
-                    // [BH] play sound
-                    S_StartSound(NULL, sfx_getpow);
 
                     viewplayer->cheats |= CF_CHOPPERS;
 
@@ -874,57 +884,62 @@ dboolean ST_Responder(event_t *ev)
 
                     viewplayer->weaponowned[wp_chainsaw] = viewplayer->chainsawbeforechoppers;
                     oldweaponsowned[wp_chainsaw] = viewplayer->chainsawbeforechoppers;
-
-                    C_Input(cheat_choppers.sequence);
                 }
             }
 
             // 'mypos' for player position
             else if (cht_CheckCheat(&cheat_mypos, ev->data2))
             {
+                S_StartSound(NULL, sfx_getpow);
                 C_Input(cheat_mypos.sequence);
 
                 // [BH] message stays on screen until toggled off again using
                 //  cheat. Code is in hu_stuff.c.
                 viewplayer->cheats ^= CF_MYPOS;
 
-                if (!(viewplayer->cheats & CF_MYPOS))
+                if (viewplayer->cheats & CF_MYPOS)
+                {
+                    stat_cheated = SafeAdd(stat_cheated, 1);
+                    viewplayer->cheated++;
+                }
+                else
                 {
                     message_clearable = true;
                     HU_ClearMessages();
                 }
-
-                // [BH] play sound
-                S_StartSound(NULL, sfx_getpow);
-
-                stat_cheated = SafeAdd(stat_cheated, 1);
-                viewplayer->cheated++;
             }
 
             else if (cht_CheckCheat(&cheat_buddha, ev->data2) && gameskill != sk_nightmare && viewplayer->health > 0)
             {
-                viewplayer->cheats ^= CF_BUDDHA;
-
+                S_StartSound(NULL, sfx_getpow);
                 C_Input(cheat_buddha.sequence);
+
+                viewplayer->cheats ^= CF_BUDDHA;
 
                 if (viewplayer->cheats & CF_BUDDHA)
                 {
-                    HU_PlayerMessage(s_STSTR_BUDDHA, false);
+                    C_Output(s_STSTR_BUDDHAON);
+                    HU_SetPlayerMessage(s_STSTR_BUDDHAON, false, false);
 
-                    // [BH] always display message
-                    if (!consoleactive)
-                        message_dontfuckwithme = true;
+                    stat_cheated = SafeAdd(stat_cheated, 1);
+                    viewplayer->cheated++;
+                }
+                else
+                {
+                    C_Output(s_STSTR_BUDDHAOFF);
+                    HU_SetPlayerMessage(s_STSTR_BUDDHAOFF, false, false);
                 }
 
-                // [BH] play sound
-                S_StartSound(NULL, sfx_getpow);
-
-                stat_cheated = SafeAdd(stat_cheated, 1);
-                viewplayer->cheated++;
+                // [BH] always display message
+                if (!consoleactive)
+                    message_dontfuckwithme = true;
             }
 
             else if ((automapactive || mapwindow) && cht_CheckCheat(&cheat_amap, ev->data2))
             {
+                S_StartSound(NULL, sfx_getpow);
+                C_Input(cheat_amap.sequence);
+
                 if (viewplayer->cheats & CF_ALLMAP)
                 {
                     viewplayer->cheats ^= CF_ALLMAP;
@@ -942,8 +957,6 @@ dboolean ST_Responder(event_t *ev)
                     stat_cheated = SafeAdd(stat_cheated, 1);
                     viewplayer->cheated++;
                 }
-
-                S_StartSound(NULL, sfx_getpow);
             }
         }
 
@@ -989,6 +1002,7 @@ dboolean ST_Responder(event_t *ev)
                     static char message[128];
                     static char prevlump[6];
 
+                    S_StartSound(NULL, sfx_getpow);
                     C_Input("%s%c%c", cheat_clev_xy.sequence, buf[0], buf[1]);
 
                     if (BTSX)
@@ -999,14 +1013,12 @@ dboolean ST_Responder(event_t *ev)
                     M_snprintf(message, sizeof(message), (M_StringCompare(lump, prevlump) ? s_STSTR_CLEVSAME : s_STSTR_CLEV), lump);
                     M_StringCopy(prevlump, lump, 6);
 
-                    HU_PlayerMessage(message, false);
+                    C_Output(message);
+                    HU_SetPlayerMessage(message, false, false);
 
                     // [BH] always display message
                     viewplayer->message = message;
                     message_dontfuckwithme = true;
-
-                    // [BH] play sound
-                    S_StartSound(NULL, sfx_getpow);
 
                     // [BH] delay map change by 1 second to allow message to be displayed
                     samelevel = (gameepisode == epsd && gamemap == map);
