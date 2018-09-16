@@ -325,6 +325,9 @@ void D_Display(void)
             HU_DrawDisk();
 
         // normal update
+#ifdef __ANDROID__ // The touch controls change the viewport, call this to fix. This function does not exist in SDL2
+        SDL_ForceupdateViewport(renderer);
+#endif
         blitfunc();             // blit buffer
         mapblitfunc();
 
@@ -353,6 +356,9 @@ void D_Display(void)
         blurred = false;
 
         M_Drawer();
+#ifdef __ANDROID__ // The touch controls change the viewport, call this to fix. This function does not exist in SDL2
+        SDL_ForceupdateViewport(renderer);
+#endif
         blitfunc();             // blit buffer
         mapblitfunc();
     } while (!done);
@@ -443,6 +449,9 @@ void D_FadeScreen(void)
     for (int i = 0; i < 11; i++)
     {
         I_SetPalette(splashpal + i * 768);
+#ifdef __ANDROID__ // The touch controls change the viewport, call this to fix. This function does not exist in SDL2
+        SDL_ForceupdateViewport(renderer);
+#endif
         blitfunc();
     }
 }
