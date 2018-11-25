@@ -114,7 +114,6 @@ fixed_t animatedliquiddiffs[64] =
 
 static anim_t       *lastanim;
 static anim_t       *anims;                 // new structure w/o limits -- killough
-static size_t       maxanims;
 
 terraintype_t       *terraintypes;
 dboolean            *isteleport;
@@ -152,11 +151,18 @@ void P_InitPicAnims(void)
     terraintypes = Z_Calloc(1, size, PU_STATIC, NULL);
     isteleport = Z_Calloc(1, size, PU_STATIC, NULL);
 
+    RROCK05 = R_CheckFlatNumForName("RROCK05");
+    RROCK08 = R_CheckFlatNumForName("RROCK08");
+    SLIME09 = R_CheckFlatNumForName("SLIME09");
+    SLIME12 = R_CheckFlatNumForName("SLIME12");
+
     // Init animation
     lastanim = anims;
 
     for (int i = 0; animdefs[i].istexture != -1; i++)
     {
+        static size_t   maxanims;
+
         // 1/11/98 killough -- removed limit by array-doubling
         if (lastanim >= anims + maxanims)
         {
@@ -2201,9 +2207,6 @@ int countdown;
 
 void P_UpdateSpecials(void)
 {
-    if (freeze)
-        return;
-
     if (timer)
         if (!--countdown)
             G_ExitLevel();
@@ -2329,9 +2332,11 @@ dboolean EV_DoDonut(line_t *line)
 
             // Spawn rising slime
             floor = Z_Calloc(1, sizeof(*floor), PU_LEVSPEC, NULL);
-            P_AddThinker(&floor->thinker);
-            s2->floordata = floor;
+
             floor->thinker.function = T_MoveFloor;
+            P_AddThinker(&floor->thinker);
+
+            s2->floordata = floor;
             floor->type = donutRaise;
             floor->direction = 1;
             floor->sector = s2;
@@ -2342,9 +2347,11 @@ dboolean EV_DoDonut(line_t *line)
 
             // Spawn lowering donut-hole
             floor = Z_Calloc(1, sizeof(*floor), PU_LEVSPEC, NULL);
-            P_AddThinker(&floor->thinker);
-            s1->floordata = floor;
+
             floor->thinker.function = T_MoveFloor;
+            P_AddThinker(&floor->thinker);
+
+            s1->floordata = floor;
             floor->type = lowerFloor;
             floor->direction = -1;
             floor->sector = s1;
@@ -2545,9 +2552,6 @@ void T_Scroll(scroll_t *s)
     fixed_t dx = s->dx;
     fixed_t dy = s->dy;
 
-    if (freeze)
-        return;
-
     if (s->control != -1)
     {
         // compute scroll amounts based on a sector's height changes
@@ -2601,8 +2605,7 @@ void T_Scroll(scroll_t *s)
             // killough 4/4/98: Underwater, carry things even w/o gravity
             sec = sectors + s->affectee;
             height = sec->floorheight;
-            waterheight = (sec->heightsec && sec->heightsec->floorheight > height ?
-                sec->heightsec->floorheight : INT_MIN);
+            waterheight = (sec->heightsec && sec->heightsec->floorheight > height ? sec->heightsec->floorheight : INT_MIN);
 
             // Move objects only if on floor or underwater,
             // non-floating, and clipped.
@@ -2610,8 +2613,7 @@ void T_Scroll(scroll_t *s)
             {
                 mobj_t  *thing = node->m_thing;
 
-                if (!(thing->flags & MF_NOCLIP) && (!((thing->flags & MF_NOGRAVITY) || thing->z > height)
-                    || thing->z < waterheight))
+                if (!(thing->flags & MF_NOCLIP) && (!((thing->flags & MF_NOGRAVITY) || thing->z > height) || thing->z < waterheight))
                 {
                     thing->momx += dx;
                     thing->momy += dy;
@@ -2643,7 +2645,6 @@ static void Add_Scroller(int type, fixed_t dx, fixed_t dy, int control, int affe
 {
     scroll_t    *s = Z_Calloc(1, sizeof(*s), PU_LEVSPEC, NULL);
 
-    s->thinker.function = T_Scroll;
     s->type = type;
     s->dx = dx;
     s->dy = dy;
@@ -2653,6 +2654,8 @@ static void Add_Scroller(int type, fixed_t dx, fixed_t dy, int control, int affe
         s->last_height = sectors[control].floorheight + sectors[control].ceilingheight;
 
     s->affectee = affectee;
+
+    s->thinker.function = T_Scroll;
     P_AddThinker(&s->thinker);
 }
 
@@ -2916,7 +2919,6 @@ static void Add_Pusher(int type, int x_mag, int y_mag, mobj_t *source, int affec
 {
     pusher_t    *p = Z_Calloc(1, sizeof(*p), PU_LEVSPEC, NULL);
 
-    p->thinker.function = T_Pusher;
     p->source = source;
     p->type = type;
     p->x_mag = x_mag >> FRACBITS;
@@ -2931,6 +2933,8 @@ static void Add_Pusher(int type, int x_mag, int y_mag, mobj_t *source, int affec
     }
 
     p->affectee = affectee;
+
+    p->thinker.function = T_Pusher;
     P_AddThinker(&p->thinker);
 }
 
@@ -2996,9 +3000,6 @@ void T_Pusher(pusher_t *p)
     sector_t    *sec;
     int         xspeed, yspeed;
     int         ht = 0;
-
-    if (freeze)
-        return;
 
     sec = sectors + p->affectee;
 

@@ -45,6 +45,7 @@
 #include "doomstat.h"
 #include "i_system.h"
 #include "m_argv.h"
+#include "m_config.h"
 #include "m_menu.h"
 #include "m_misc.h"
 #include "version.h"
@@ -132,7 +133,7 @@ static registryvalue_t root_path_keys[] =
         "PATH"
     },
 
-    // Doom 3: BFG Edition
+    // DOOM 3: BFG Edition
     {
         HKEY_LOCAL_MACHINE,
         "Software\\GOG.com\\Games\\1135892318",
@@ -169,9 +170,9 @@ static const char *root_path_subdirs[] =
 // Location where Steam is installed
 static registryvalue_t steam_install_location =
 {
-    HKEY_LOCAL_MACHINE,
+    HKEY_CURRENT_USER,
     "Software\\Valve\\Steam",
-    "InstallPath"
+    "SteamPath"
 };
 
 // Subdirs of the steam install directory where IWADs are found
@@ -339,7 +340,7 @@ void D_IdentifyIWADByName(char *name)
 //
 static void AddDoomWADPath(void)
 {
-    char    *doomwadpath = getenv("DOOMWADPATH");
+    char    *doomwadpath = SDL_getenv("DOOMWADPATH");
     char    *p;
 
     if (!doomwadpath)
@@ -379,7 +380,7 @@ static void BuildIWADDirList(void)
         return;
 
     // Add DOOMWADDIR if it is in the environment
-    if ((doomwaddir = getenv("DOOMWADDIR")))
+    if ((doomwaddir = SDL_getenv("DOOMWADDIR")))
         AddIWADDir(doomwaddir);
 
     // Add dirs from DOOMWADPATH
@@ -436,6 +437,19 @@ char *D_FindWADByName(char *filename)
     return NULL;
 }
 
+void D_InitIWADFolder(void)
+{
+    BuildIWADDirList();
+
+    for (int i = 0; i < num_iwad_dirs; i++)
+        if (M_FolderExists(iwad_dirs[i]))
+        {
+            iwadfolder = strdup(iwad_dirs[i]);
+            strreplace(iwadfolder, "/", "\\");
+            break;
+        }
+}
+
 //
 // D_TryWADByName
 //
@@ -487,7 +501,9 @@ static char *SaveGameIWADName(void)
     // Note that we match on gamemission rather than on IWAD name.
     // This ensures that doom1.wad and doom.wad saves are stored
     // in the same place.
-    if (hacx)
+    if (FREEDOOM)
+        return (gamemode == commercial ? "freedoom2" : "freedoom");
+    else if (hacx)
         return "hacx";
 
     for (size_t i = 0; i < arrlen(iwads); i++)
@@ -506,23 +522,27 @@ extern char *pwadfile;
 //
 void D_SetSaveGameFolder(dboolean output)
 {
-    char    *iwad_name = SaveGameIWADName();
-    char    *appdatafolder = M_GetAppDataFolder();
-    int     p = M_CheckParmWithArgs("-savedir", 1, 1);
-
-    if (!iwad_name)
-        iwad_name = "unknown";
+    int p = M_CheckParmsWithArgs("-save", "-savedir", 1, 1);
 
     if (p)
-        savegamefolder = M_StringJoin(myargv[p + 1], DIR_SEPARATOR_S, NULL);
+    {
+        if (myargv[p + 1][strlen(myargv[p + 1]) - 1] != DIR_SEPARATOR)
+            savegamefolder = M_StringJoin(myargv[p + 1], DIR_SEPARATOR_S, NULL);
+    }
     else
     {
+        char    *iwad_name = SaveGameIWADName();
+        char    *appdatafolder = M_GetAppDataFolder();
+
+        if (!iwad_name)
+            iwad_name = "unknown";
+
         M_MakeDirectory(appdatafolder);
         savegamefolder = M_StringJoin(appdatafolder, DIR_SEPARATOR_S, "savegames", DIR_SEPARATOR_S, NULL);
+        M_MakeDirectory(savegamefolder);
+        savegamefolder = M_StringJoin(savegamefolder, (*pwadfile ? pwadfile : iwad_name), DIR_SEPARATOR_S, NULL);
     }
 
-    M_MakeDirectory(savegamefolder);
-    savegamefolder = M_StringJoin(savegamefolder, (*pwadfile ? pwadfile : iwad_name), DIR_SEPARATOR_S, NULL);
     M_MakeDirectory(savegamefolder);
 
     if (output)

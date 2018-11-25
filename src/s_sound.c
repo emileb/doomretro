@@ -130,7 +130,7 @@ static void InitSfxModule(void)
 {
     if (I_InitSound())
     {
-        C_Output("Sound effects will play at a sample rate of %.1fkHz on %i channels%s.", SAMPLERATE / 1000.0f, s_channels,
+        C_Output("Sound effects will play at a sample rate of %.1fkHz over %i channels%s.", SAMPLERATE / 1000.0f, s_channels,
             (M_StringCompare(SDL_GetCurrentAudioDriver(), "directsound") ? " using the <i><b>DirectSound</b></i> API" : ""));
         return;
     }
@@ -204,11 +204,21 @@ void S_Init(void)
             M_snprintf(namebuf, sizeof(namebuf), "ds%s", sfx->name);
 
             if ((sfx->lumpnum = W_CheckNumForName(namebuf)) >= 0)
+            {
                 if (!CacheSFX(sfx))
-                {
+                    if (W_CheckMultipleLumps(namebuf) > 1)
+                    {
+                        sfx->lumpnum = W_GetNumForName2(namebuf);
+
+                        if (!CacheSFX(sfx))
+                            sfx->lumpnum = -1;
+                        else
+                            C_Warning("The <b>%s</b> sound lump is in an unrecognized format.", uppercase(namebuf));
+                    }
+
+                if (sfx->lumpnum == -1)
                     C_Warning("The <b>%s</b> sound lump is in an unrecognized format and won't be played.", uppercase(namebuf));
-                    sfx->lumpnum = -1;
-                }
+            }
         }
     }
 
@@ -445,12 +455,13 @@ static dboolean S_AdjustSoundParams(fixed_t x, fixed_t y, int *vol, int *sep)
     return (*vol > 0);
 }
 
- void S_StartSoundAtVolume(mobj_t *origin, int sfx_id, int pitch, int volume)
+static void S_StartSoundAtVolume(mobj_t *origin, int sfx_id, int pitch)
 {
     sfxinfo_t   *sfx = &S_sfx[sfx_id];
     int         sep = NORM_SEP;
     int         cnum;
     int         handle;
+    int         volume = snd_SfxVolume;
 
     if (nosfx || sfx->lumpnum == -1)
         return;
@@ -492,12 +503,12 @@ static dboolean S_AdjustSoundParams(fixed_t x, fixed_t y, int *vol, int *sep)
 
 void S_StartSound(mobj_t *mobj, int sfx_id)
 {
-    S_StartSoundAtVolume(mobj, sfx_id, (mobj ? mobj->pitch : NORM_PITCH), snd_SfxVolume);
+    S_StartSoundAtVolume(mobj, sfx_id, (mobj ? mobj->pitch : NORM_PITCH));
 }
 
 void S_StartSectorSound(degenmobj_t *degenmobj, int sfx_id)
 {
-    S_StartSoundAtVolume((mobj_t *)degenmobj, sfx_id, NORM_PITCH, snd_SfxVolume);
+    S_StartSoundAtVolume((mobj_t *)degenmobj, sfx_id, NORM_PITCH);
 }
 
 //
@@ -689,7 +700,7 @@ void S_ChangeMusInfoMusic(int lumpnum, int looping)
     musinfo.current_item = lumpnum;
 }
 
-musinfo_t musinfo;
+musinfo_t   musinfo;
 
 //
 // S_ParseMusInfo
@@ -749,7 +760,7 @@ void MusInfoThinker(mobj_t *thing)
 
 void T_MAPMusic(void)
 {
-    if (musinfo.tics < 0 || !musinfo.mapthing)
+    if (!musinfo.mapthing || musinfo.tics < 0)
         return;
 
     if (musinfo.tics > 0)

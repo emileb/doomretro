@@ -69,6 +69,7 @@ static int  missingflatnum;
 
 int         firstspritelump;
 int         lastspritelump;
+int         numspritelumps;
 
 dboolean    notranslucency;
 dboolean    telefragonmap30;
@@ -180,9 +181,17 @@ static byte blueandgreen[256] =
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
 };
 
-#define DOOM1AND2   0
-#define DOOM1ONLY   1
-#define DOOM2ONLY   2
+static byte brighttan[256] =
+{
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 1, 1, 1, 0,
+    1, 1, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+};
 
 static struct
 {
@@ -213,20 +222,21 @@ static struct
     { "SW2BRN1",  DOOM1AND2, greenonly2     }, { "SW2BRN2",  DOOM1AND2, greenonly1     },
     { "SW2BRNGN", DOOM1AND2, greenonly3     }, { "SW2COMM",  DOOM1AND2, greenonly1     },
     { "SW2COMP",  DOOM1AND2, redonly        }, { "SW2DIRT",  DOOM1AND2, greenonly2     },
-    { "SW2EXIT",  DOOM1AND2, notgray        }, { "SW2GRAY",  DOOM1AND2, notgray        },
-    { "SW2GRAY1", DOOM1AND2, notgray        }, { "SW2GSTON", DOOM1AND2, redonly        },
+    { "SW2EXIT",  DOOM1AND2, notgray        }, { "SW2GARG",  DOOM1AND2, brighttan      },
+    { "SW2GRAY",  DOOM1AND2, notgray        }, { "SW2GRAY1", DOOM1AND2, notgray        },
+    { "SW2GSTON", DOOM1AND2, redonly        }, { "SW2LION",  DOOM1AND2, brighttan      },
     { "SW2MARB",  DOOM2ONLY, redonly        }, { "SW2MET2",  DOOM1AND2, greenonly1     },
     { "SW2METAL", DOOM1AND2, greenonly3     }, { "SW2MOD1",  DOOM1AND2, greenonly1     },
     { "SW2PANEL", DOOM1AND2, redonly        }, { "SW2ROCK",  DOOM1AND2, redonly        },
-    { "SW2SLAD",  DOOM1AND2, redonly        }, { "SW2STARG", DOOM2ONLY, greenonly2     },
-    { "SW2STON1", DOOM1AND2, greenonly3     }, { "SW2STON2", DOOM1ONLY, redonly        },
-    { "SW2STON2", DOOM2ONLY, greenonly2     }, { "SW2STON6", DOOM1AND2, redonly        },
-    { "SW2STONE", DOOM1AND2, greenonly2     }, { "SW2STRTN", DOOM1AND2, greenonly1     },
-    { "SW2TEK",   DOOM1AND2, greenonly1     }, { "SW2VINE",  DOOM1AND2, greenonly1     },
-    { "SW2WOOD",  DOOM1AND2, redonly        }, { "SW2ZIM",   DOOM1AND2, redonly        },
-    { "WOOD4",    DOOM1AND2, redonly        }, { "WOODGARG", DOOM1AND2, redonly        },
-    { "WOODSKUL", DOOM1AND2, redonly        }, { "ZELDOOR",  DOOM1AND2, redonly        },
-    { "",         0,         0              }
+    { "SW2SATYR", DOOM1AND2, brighttan      }, { "SW2SLAD",  DOOM1AND2, redonly        },
+    { "SW2STARG", DOOM2ONLY, greenonly2     }, { "SW2STON1", DOOM1AND2, greenonly3     },
+    { "SW2STON2", DOOM1ONLY, redonly        }, { "SW2STON2", DOOM2ONLY, greenonly2     },
+    { "SW2STON6", DOOM1AND2, redonly        }, { "SW2STONE", DOOM1AND2, greenonly2     },
+    { "SW2STRTN", DOOM1AND2, greenonly1     }, { "SW2TEK",   DOOM1AND2, greenonly1     },
+    { "SW2VINE",  DOOM1AND2, greenonly1     }, { "SW2WOOD",  DOOM1AND2, redonly        },
+    { "SW2ZIM",   DOOM1AND2, redonly        }, { "WOOD4",    DOOM1AND2, redonly        },
+    { "WOODGARG", DOOM1AND2, redonly        }, { "WOODSKUL", DOOM1AND2, redonly        },
+    { "ZELDOOR",  DOOM1AND2, redonly        }, { "",         0,         0              }
 };
 
 extern char *pwadfile;
@@ -281,7 +291,7 @@ static void R_InitTextures(void)
         patchlookup[i] = W_CheckNumForName(name);
     }
 
-    W_ReleaseLumpNum(names_lump);                                // cph - release the lump
+    W_ReleaseLumpNum(names_lump);                               // cph - release the lump
 
     // Load the map texture definitions from textures.lmp.
     // The data is contained in one or two lumps,
@@ -392,8 +402,8 @@ static void R_InitTextures(void)
     {
         int game = brightmaps[i].game;
 
-        if (brightmaps[i].texture[0] != '\0' && (game == DOOM1AND2
-            || (gamemission == doom && game == DOOM1ONLY) || (gamemission != doom && game == DOOM2ONLY)))
+        if (brightmaps[i].texture[0] != '\0'
+            && (game == DOOM1AND2 || (gamemission == doom && game == DOOM1ONLY) || (gamemission != doom && game == DOOM2ONLY)))
         {
             int num = R_CheckTextureNumForName(brightmaps[i].texture);
 
@@ -432,7 +442,6 @@ static void R_InitFlats(void)
 static void R_InitSpriteLumps(void)
 {
     dboolean    fixspriteoffsets = false;
-    int         numspritelumps;
 
     SC_Open("DRCOMPAT");
 

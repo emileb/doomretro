@@ -75,7 +75,6 @@ static int      tmunstuck;      // killough 8/1/98: whether to allow unsticking
 
 // 1/11/98 killough: removed limit on special lines crossed
 line_t          **spechit;
-static int      spechit_max;
 int             numspechit;
 
 static angle_t  shootangle;     // [BH] angle of blood and puffs for automap
@@ -102,7 +101,7 @@ extern dboolean telefragonmap30;
 //
 // PIT_StompThing
 //
-static dboolean telefrag;       // killough 8/9/98: whether to telefrag at exit
+static dboolean telefrag;   // killough 8/9/98: whether to telefrag at exit
 
 static dboolean PIT_StompThing(mobj_t *thing)
 {
@@ -119,10 +118,10 @@ static dboolean PIT_StompThing(mobj_t *thing)
     blockdist = thing->radius + tmthing->radius;
 
     if (ABS(thing->x - tmx) >= blockdist || ABS(thing->y - tmy) >= blockdist)
-        return true;    // didn't hit it
+        return true;        // didn't hit it
 
     // monsters don't stomp things except on boss level
-    if (!telefrag)      // killough 8/9/98: make consistent across all levels
+    if (!telefrag)          // killough 8/9/98: make consistent across all levels
         return false;
 
     if (tmthing->flags2 & MF2_PASSMOBJ)
@@ -398,6 +397,8 @@ static dboolean PIT_CheckLine(line_t *ld)
     // if contacted a special line, add it to the list
     if (ld->special)
     {
+        static int  spechit_max;
+
         // 1/11/98 killough: remove limit on lines hit, by array doubling
         if (numspechit >= spechit_max)
         {
@@ -418,9 +419,17 @@ static dboolean PIT_CheckThing(mobj_t *thing)
 {
     fixed_t     blockdist;
     dboolean    unblocking = false;
-    int         flags = thing->flags;
-    int         tmflags = tmthing->flags;
-    dboolean    corpse = (flags & MF_CORPSE);
+    int         flags;
+    int         tmflags;
+    dboolean    corpse;
+
+    // don't clip against self
+    if (thing == tmthing)
+        return true;
+
+    flags = thing->flags;
+    tmflags = tmthing->flags;
+    corpse = (flags & MF_CORPSE);
 
     // [BH] apply small amount of momentum to a corpse when a monster walks over it
     if (r_corpses_nudge && corpse && (tmflags & MF_SHOOTABLE) && !thing->nudge && thing->z == tmthing->z)
@@ -446,10 +455,6 @@ static dboolean PIT_CheckThing(mobj_t *thing)
 
     if (ABS(thing->x - tmx) >= blockdist || ABS(thing->y - tmy) >= blockdist)
         return true;            // didn't hit it
-
-    // don't clip against self
-    if (thing == tmthing)
-        return true;
 
     // [BH] check if things are stuck and allow move if it makes them further apart
     if (!thing->player && !corpse)
@@ -1115,8 +1120,8 @@ void P_ApplyTorque(mobj_t *mo)
 //
 static dboolean P_ThingHeightClip(mobj_t *thing)
 {
-    dboolean    onfloor = (thing->z == thing->floorz);
     fixed_t     oldfloorz = thing->floorz;      // haleyjd
+    dboolean    onfloor = (thing->z == oldfloorz);
     int         flags2 = thing->flags2;
     player_t    *player = thing->player;
 
@@ -1127,12 +1132,12 @@ static dboolean P_ThingHeightClip(mobj_t *thing)
     thing->ceilingz = tmceilingz;
     thing->dropoffz = tmdropoffz;               // killough 11/98: remember dropoffs
 
-    if ((flags2 & MF2_FEETARECLIPPED) && r_liquid_bob && !player)
-        thing->z = thing->floorz;
+    if ((flags2 & MF2_FEETARECLIPPED) && !player && r_liquid_bob)
+        thing->z = tmfloorz;
     else if (flags2 & MF2_FLOATBOB)
     {
-        if (thing->floorz > oldfloorz || !(thing->flags & MF_NOGRAVITY))
-            thing->z = thing->z - oldfloorz + thing->floorz;
+        if (tmfloorz > oldfloorz || !(thing->flags & MF_NOGRAVITY))
+            thing->z = thing->z - oldfloorz + tmfloorz;
 
         if (thing->z + thing->height > thing->ceilingz)
             thing->z = thing->ceilingz - thing->height;
@@ -1140,7 +1145,7 @@ static dboolean P_ThingHeightClip(mobj_t *thing)
     else if (onfloor)
     {
         // walking monsters rise and fall with the floor
-        thing->z = thing->floorz;
+        thing->z = tmfloorz;
 
         // [BH] immediately update player's view
         if (player)
@@ -1157,7 +1162,7 @@ static dboolean P_ThingHeightClip(mobj_t *thing)
             thing->z = thing->ceilingz - thing->height;
     }
 
-    return (thing->ceilingz - thing->floorz >= thing->height);
+    return (thing->ceilingz - tmfloorz >= thing->height);
 }
 
 //
@@ -1617,6 +1622,8 @@ static dboolean PTR_ShootTraverse(intercept_t *in)
                     frac = -FixedDiv(FixedMul(frac, shootz - floorz), distz);
                     z = floorz;
                 }
+                else
+                    hitwall = true;
             }
         }
 
@@ -1634,8 +1641,6 @@ static dboolean PTR_ShootTraverse(intercept_t *in)
 
         // Spawn bullet puffs.
         P_SpawnPuff(dlTrace.x + FixedMul(dlTrace.dx, frac), dlTrace.y + FixedMul(dlTrace.dy, frac), z, shootangle);
-
-        hitwall = true;
 
         // don't go any farther
         return false;

@@ -74,9 +74,9 @@ void G_RemoveChoppers(void);
 // P_Thrust
 // Moves the given origin along a given angle.
 //
-void P_Thrust(angle_t angle, fixed_t move)
+static void P_Thrust(angle_t angle, fixed_t move)
 {
-    viewplayer->mo->momx += FixedMul(move, finecosine[angle >>= ANGLETOFINESHIFT]);
+    viewplayer->mo->momx += FixedMul(move, finecosine[(angle >>= ANGLETOFINESHIFT)]);
     viewplayer->mo->momy += FixedMul(move, finesine[angle]);
 }
 
@@ -92,7 +92,7 @@ void P_Thrust(angle_t angle, fixed_t move)
 //
 static void P_Bob(angle_t angle, fixed_t move)
 {
-    viewplayer->momx += FixedMul(move, finecosine[angle >>= ANGLETOFINESHIFT]);
+    viewplayer->momx += FixedMul(move, finecosine[(angle >>= ANGLETOFINESHIFT)]);
     viewplayer->momy += FixedMul(move, finesine[angle]);
 }
 
@@ -117,6 +117,17 @@ void P_CalcHeight(void)
             bob = MAX(MIN((FixedMul(momx, momx) + FixedMul(momy, momy)) >> 2, MAXBOB) * movebob / 100, MAXBOB * stillbob / 400) / 2;
         else
             bob = (MAXBOB * stillbob / 400) / 2;
+
+        if (viewplayer->bouncemax)
+        {
+            viewplayer->bounce -= FRACUNIT;
+
+            if (viewplayer->bounce < viewplayer->bouncemax)
+                viewplayer->bounce = -viewplayer->bounce;
+
+            if (!viewplayer->bounce)
+                viewplayer->bouncemax = 0;
+        }
 
         // move viewheight
         viewplayer->viewheight += viewplayer->deltaviewheight;
@@ -223,17 +234,24 @@ void P_MovePlayer(void)
         }
     }
 
-    viewplayer->lookdir = BETWEEN(-LOOKDIRMAX * MLOOKUNIT, viewplayer->lookdir + cmd->lookdir, LOOKDIRMAX * MLOOKUNIT);
-
-    if (viewplayer->lookdir && !usemouselook)
+    if (canmouselook)
     {
-        if (viewplayer->lookdir > 0)
-            viewplayer->lookdir -= 16 * MLOOKUNIT;
-        else
-            viewplayer->lookdir += 16 * MLOOKUNIT;
+        if (cmd->lookdir)
+            viewplayer->lookdir = BETWEEN(-LOOKDIRMAX * MLOOKUNIT, viewplayer->lookdir + cmd->lookdir, LOOKDIRMAX * MLOOKUNIT);
 
-        if (ABS(viewplayer->lookdir) < 16 * MLOOKUNIT)
-            viewplayer->lookdir = 0;
+        if (viewplayer->lookdir && !usemouselook)
+        {
+            if (viewplayer->lookdir > 0)
+            {
+                if ((viewplayer->lookdir -= 16 * MLOOKUNIT) < 16 * MLOOKUNIT)
+                    viewplayer->lookdir = 0;
+            }
+            else
+            {
+                if ((viewplayer->lookdir += 16 * MLOOKUNIT) > -16 * MLOOKUNIT)
+                    viewplayer->lookdir = 0;
+            }
+        }
     }
 }
 
@@ -261,9 +279,9 @@ static void P_DeathThink(void)
     mobj_t          *attacker = viewplayer->attacker;
 
     weaponvibrationtics = 1;
-    idlemotorspeed = 0;
+    idlevibrationstrength = 0;
     freeze = false;
-    infight = infighting;
+    infight = (infighting && !(viewplayer->cheats & CF_NOTARGET));
 
     P_MovePsprites();
 
@@ -563,15 +581,17 @@ void P_PlayerThink(void)
     if ((cmd->buttons & BT_CHANGE) && (!automapactive || am_followmode))
         P_ChangeWeapon((cmd->buttons & BT_WEAPONMASK) >> BT_WEAPONSHIFT);
 
-    if (autouse && !(leveltime % TICRATE))
-    {
-        autousing = true;
-        P_UseLines();
-        autousing = false;
-    }
-
     // check for use
-    if (cmd->buttons & BT_USE)
+    if (autouse)
+    {
+        if (!(leveltime % TICRATE))
+        {
+            autousing = true;
+            P_UseLines();
+            autousing = false;
+        }
+    }
+    else if (cmd->buttons & BT_USE)
     {
         if (!viewplayer->usedown)
         {

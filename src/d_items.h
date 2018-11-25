@@ -57,7 +57,7 @@ typedef struct
     int             atkstate;
     int             flashstate;
     int             recoil;
-    int             motorspeed;
+    int             strength;
     int             tics;
     int             prev;
     int             next;

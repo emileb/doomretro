@@ -43,6 +43,7 @@
 #include "m_config.h"
 #include "m_random.h"
 #include "p_local.h"
+#include "p_tick.h"
 #include "r_sky.h"
 #include "v_video.h"
 
@@ -288,7 +289,7 @@ static void R_InitPointToAngle(void)
 {
     // slope (tangent) to angle lookup
     for (int i = 0; i <= SLOPERANGE; i++)
-        tantoangle[i] = (angle_t)(0xFFFFFFFF * atan2(i, SLOPERANGE) / (M_PI * 2));
+        tantoangle[i] = (angle_t)(0xFFFFFFFF * atan((i + 0.5) / SLOPERANGE) / (M_PI * 2));
 }
 
 //
@@ -408,9 +409,7 @@ void R_ExecuteSetViewSize(void)
     viewwidth = scaledviewwidth;
 
     centerx = viewwidth / 2;
-    centery = viewheight / 2;
     centerxfrac = centerx << FRACBITS;
-    centeryfrac = centery << FRACBITS;
     fovscale = finetangent[FINEANGLES / 4 + (r_fov * FINEANGLES / 360) / 2];
     projection = FixedDiv(centerxfrac, fovscale);
 
@@ -618,7 +617,7 @@ void R_InitColumnFunctions(void)
         else if (info->flags & MF_FUZZ)
         {
             info->colfunc = fuzzcolfunc;
-            info->altcolfunc = basecolfunc;
+            info->altcolfunc = fuzzcolfunc;
         }
         else if (flags2 & MF2_TRANSLUCENT_REDONLY)
         {
@@ -682,6 +681,15 @@ void R_InitColumnFunctions(void)
         }
     }
 
+    if (gamestate == GS_LEVEL)
+        for (thinker_t *th = thinkers[th_mobj].cnext; th != &thinkers[th_mobj]; th = th->cnext)
+        {
+            mobj_t  *mo = (mobj_t *)th;
+
+            mo->colfunc = mo->info->colfunc;
+            mo->altcolfunc = mo->info->altcolfunc;
+        }
+
     if (chex)
         mobjinfo[MT_BLOOD].blood = GREENBLOOD;
 }
@@ -732,8 +740,9 @@ static void R_SetupFrame(void)
 {
     int     cm = 0;
     mobj_t  *mo = viewplayer->mo;
-    int     tempcentery = viewheight / 2;
     int     pitch = 0;
+
+    centery = viewheight / 2;
 
     // [AM] Interpolate the player camera if the feature is enabled.
     if (vid_capfps != TICRATE
@@ -761,7 +770,7 @@ static void R_SetupFrame(void)
                 pitch = BETWEEN(-LOOKDIRMAX, pitch + viewplayer->oldrecoil + FixedMul(viewplayer->recoil - viewplayer->oldrecoil,
                     fractionaltic), LOOKDIRMAX);
 
-            tempcentery += (pitch << 1) * (r_screensize + 3) / 10;
+            centery += (pitch << 1) * (r_screensize + 3) / 10;
         }
     }
     else
@@ -778,7 +787,7 @@ static void R_SetupFrame(void)
             if (weaponrecoil)
                 pitch = BETWEEN(-LOOKDIRMAX, pitch + viewplayer->recoil, LOOKDIRMAX);
 
-            tempcentery += (pitch << 1) * (r_screensize + 3) / 10;
+            centery += (pitch << 1) * (r_screensize + 3) / 10;
         }
     }
 
@@ -796,12 +805,8 @@ static void R_SetupFrame(void)
 
     extralight = viewplayer->extralight << 2;
 
-    if (centery != tempcentery)
-    {
-        centery = tempcentery;
-        centeryfrac = centery << FRACBITS;
-        yslope = yslopes[LOOKDIRMAX + pitch];
-    }
+    centeryfrac = centery << FRACBITS;
+    yslope = yslopes[LOOKDIRMAX + pitch];
 
     viewsin = finesine[viewangle >> ANGLETOFINESHIFT];
     viewcos = finecosine[viewangle >> ANGLETOFINESHIFT];
@@ -829,7 +834,10 @@ static void R_SetupFrame(void)
         static lighttable_t *scalelightfixed[MAXLIGHTSCALE];
 
         // killough 3/20/98: use fullcolormap
-        fixedcolormap = fullcolormap + viewplayer->fixedcolormap * 256 * sizeof(lighttable_t);
+        fixedcolormap = fullcolormap;
+
+        if (viewplayer->fixedcolormap == INVERSECOLORMAP)
+            fixedcolormap += 32 * 256 * sizeof(lighttable_t);
 
         usebrightmaps = false;
         walllights = scalelightfixed;
@@ -860,21 +868,22 @@ void R_RenderPlayerView(void)
     R_ClearSprites();
 
     if (automapactive)
-        R_RenderBSPNode(numnodes - 1);
-    else
     {
-        if (r_homindicator)
-            V_FillRect(0, viewwindowx, viewwindowy, viewwidth, viewheight,
-                nearestcolors[((leveltime % 20) < 9 ? RED : (viewplayer->fixedcolormap == INVERSECOLORMAP ? WHITE : BLACK))], false);
-        else if ((viewplayer->cheats & CF_NOCLIP) || freeze)
-            V_FillRect(0, viewwindowx, viewwindowy, viewwidth, viewheight,
-                nearestcolors[(viewplayer->fixedcolormap == INVERSECOLORMAP ? WHITE : BLACK)], false);
-
-        R_RenderBSPNode(numnodes - 1);  // head node is the last node output
-        R_DrawPlanes();
-        R_DrawMasked();
-
-        if (!r_textures && viewplayer->fixedcolormap == INVERSECOLORMAP)
-            V_InvertScreen();
+        R_RenderBSPNode(numnodes - 1);
+        return;
     }
+
+    if (r_homindicator)
+        V_FillRect(0, viewwindowx, viewwindowy, viewwidth, viewheight,
+            nearestcolors[((leveltime % 20) < 9 ? RED : (viewplayer->fixedcolormap == INVERSECOLORMAP ? WHITE : BLACK))], false);
+    else if ((viewplayer->cheats & CF_NOCLIP) || freeze)
+        V_FillRect(0, viewwindowx, viewwindowy, viewwidth, viewheight,
+            nearestcolors[(viewplayer->fixedcolormap == INVERSECOLORMAP ? WHITE : BLACK)], false);
+
+    R_RenderBSPNode(numnodes - 1);  // head node is the last node output
+    R_DrawPlanes();
+    R_DrawMasked();
+
+    if (!r_textures && viewplayer->fixedcolormap == INVERSECOLORMAP)
+        V_InvertScreen();
 }

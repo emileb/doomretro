@@ -55,6 +55,7 @@
 #include "i_colors.h"
 #include "i_gamepad.h"
 #include "i_system.h"
+#include "i_timer.h"
 #include "info.h"
 #include "m_cheat.h"
 #include "m_config.h"
@@ -128,55 +129,56 @@ extern menu_t       SaveDef;
 
 control_t controls[] =
 {
-    { "1",             keyboardcontrol, '1'                   }, { "2",             keyboardcontrol, '2'                    },
-    { "3",             keyboardcontrol, '3'                   }, { "4",             keyboardcontrol, '4'                    },
-    { "5",             keyboardcontrol, '5'                   }, { "6",             keyboardcontrol, '6'                    },
-    { "7",             keyboardcontrol, '7'                   }, { "8",             keyboardcontrol, '8'                    },
-    { "9",             keyboardcontrol, '9'                   }, { "0",             keyboardcontrol, '0'                    },
-    { "-",             keyboardcontrol, KEY_MINUS             }, { "=",             keyboardcontrol, KEY_EQUALS             },
-    { "+",             keyboardcontrol, KEY_EQUALS            }, { "backspace",     keyboardcontrol, KEY_BACKSPACE          },
-    { "tab",           keyboardcontrol, KEY_TAB               }, { "q",             keyboardcontrol, 'q'                    },
-    { "w",             keyboardcontrol, 'w'                   }, { "e",             keyboardcontrol, 'e'                    },
-    { "r",             keyboardcontrol, 'r'                   }, { "t",             keyboardcontrol, 't'                    },
-    { "y",             keyboardcontrol, 'y'                   }, { "u",             keyboardcontrol, 'u'                    },
-    { "i",             keyboardcontrol, 'i'                   }, { "o",             keyboardcontrol, 'o'                    },
-    { "p",             keyboardcontrol, 'p'                   }, { "[",             keyboardcontrol, '['                    },
-    { "]",             keyboardcontrol, ']'                   }, { "enter",         keyboardcontrol, KEY_ENTER              },
-    { "ctrl",          keyboardcontrol, KEY_CTRL              }, { "a",             keyboardcontrol, 'a'                    },
-    { "s",             keyboardcontrol, 's'                   }, { "d",             keyboardcontrol, 'd'                    },
-    { "f",             keyboardcontrol, 'f'                   }, { "g",             keyboardcontrol, 'g'                    },
-    { "h",             keyboardcontrol, 'h'                   }, { "j",             keyboardcontrol, 'j'                    },
-    { "k",             keyboardcontrol, 'k'                   }, { "l",             keyboardcontrol, 'l'                    },
-    { ";",             keyboardcontrol, ';'                   }, { "'",             keyboardcontrol, '\''                   },
-    { "shift",         keyboardcontrol, KEY_SHIFT             }, { "\\",            keyboardcontrol, '\\'                   },
-    { "z",             keyboardcontrol, 'z'                   }, { "x",             keyboardcontrol, 'x'                    },
-    { "c",             keyboardcontrol, 'c'                   }, { "v",             keyboardcontrol, 'v'                    },
-    { "b",             keyboardcontrol, 'b'                   }, { "n",             keyboardcontrol, 'n'                    },
-    { "m",             keyboardcontrol, 'm'                   }, { ",",             keyboardcontrol, ','                    },
-    { ".",             keyboardcontrol, '.'                   }, { "/",             keyboardcontrol, '/'                    },
-    { "tilde",         keyboardcontrol, '`'                   }, { "alt",           keyboardcontrol, KEY_ALT                },
-    { "space",         keyboardcontrol, ' '                   }, { "numlock",       keyboardcontrol, KEY_NUMLOCK            },
-    { "capslock",      keyboardcontrol, KEY_CAPSLOCK          }, { "scrolllock",    keyboardcontrol, KEY_SCROLLLOCK         },
-    { "home",          keyboardcontrol, KEY_HOME              }, { "up",            keyboardcontrol, KEY_UPARROW            },
-    { "pageup",        keyboardcontrol, KEY_PAGEUP            }, { "left",          keyboardcontrol, KEY_LEFTARROW          },
-    { "right",         keyboardcontrol, KEY_RIGHTARROW        }, { "end",           keyboardcontrol, KEY_END                },
-    { "down",          keyboardcontrol, KEY_DOWNARROW         }, { "pagedown",      keyboardcontrol, KEY_PAGEDOWN           },
-    { "insert",        keyboardcontrol, KEY_INSERT            }, { "printscreen",   keyboardcontrol, KEY_PRINTSCREEN        },
-    { "delete",        keyboardcontrol, KEY_DELETE            }, { "escape",        keyboardcontrol, KEY_ESCAPE             },
-    { "mouse1",        mousecontrol,    0                     }, { "mouse2",        mousecontrol,    1                      },
-    { "mouse3",        mousecontrol,    2                     }, { "mouse4",        mousecontrol,    3                      },
-    { "mouse5",        mousecontrol,    4                     }, { "mouse6",        mousecontrol,    5                      },
-    { "mouse7",        mousecontrol,    6                     }, { "mouse8",        mousecontrol,    7                      },
-    { "wheelup",       mousecontrol,    MOUSE_WHEELUP         }, { "wheeldown",     mousecontrol,    MOUSE_WHEELDOWN        },
-    { "dpadup",        gamepadcontrol,  GAMEPAD_DPAD_UP       }, { "dpaddown",      gamepadcontrol,  GAMEPAD_DPAD_DOWN      },
-    { "dpadleft",      gamepadcontrol,  GAMEPAD_DPAD_LEFT     }, { "dpadright",     gamepadcontrol,  GAMEPAD_DPAD_RIGHT     },
-    { "start",         gamepadcontrol,  GAMEPAD_START         }, { "back",          gamepadcontrol,  GAMEPAD_BACK           },
-    { "leftthumb",     gamepadcontrol,  GAMEPAD_LEFT_THUMB    }, { "rightthumb",    gamepadcontrol,  GAMEPAD_RIGHT_THUMB    },
-    { "leftshoulder",  gamepadcontrol,  GAMEPAD_LEFT_SHOULDER }, { "rightshoulder", gamepadcontrol,  GAMEPAD_RIGHT_SHOULDER },
-    { "lefttrigger",   gamepadcontrol,  GAMEPAD_LEFT_TRIGGER  }, { "righttrigger",  gamepadcontrol,  GAMEPAD_RIGHT_TRIGGER  },
-    { "gamepad1",      gamepadcontrol,  GAMEPAD_A             }, { "gamepad2",      gamepadcontrol,  GAMEPAD_B              },
-    { "gamepad3",      gamepadcontrol,  GAMEPAD_X             }, { "gamepad4",      gamepadcontrol,  GAMEPAD_Y              },
-    { "",              0,               0                     }
+    { "1",             keyboardcontrol, '1'                    }, { "2",             keyboardcontrol, '2'                    },
+    { "3",             keyboardcontrol, '3'                    }, { "4",             keyboardcontrol, '4'                    },
+    { "5",             keyboardcontrol, '5'                    }, { "6",             keyboardcontrol, '6'                    },
+    { "7",             keyboardcontrol, '7'                    }, { "8",             keyboardcontrol, '8'                    },
+    { "9",             keyboardcontrol, '9'                    }, { "0",             keyboardcontrol, '0'                    },
+    { "-",             keyboardcontrol, KEY_MINUS              }, { "=",             keyboardcontrol, KEY_EQUALS             },
+    { "+",             keyboardcontrol, KEY_EQUALS             }, { "backspace",     keyboardcontrol, KEY_BACKSPACE          },
+    { "tab",           keyboardcontrol, KEY_TAB                }, { "q",             keyboardcontrol, 'q'                    },
+    { "w",             keyboardcontrol, 'w'                    }, { "e",             keyboardcontrol, 'e'                    },
+    { "r",             keyboardcontrol, 'r'                    }, { "t",             keyboardcontrol, 't'                    },
+    { "y",             keyboardcontrol, 'y'                    }, { "u",             keyboardcontrol, 'u'                    },
+    { "i",             keyboardcontrol, 'i'                    }, { "o",             keyboardcontrol, 'o'                    },
+    { "p",             keyboardcontrol, 'p'                    }, { "[",             keyboardcontrol, '['                    },
+    { "]",             keyboardcontrol, ']'                    }, { "enter",         keyboardcontrol, KEY_ENTER              },
+    { "ctrl",          keyboardcontrol, KEY_CTRL               }, { "a",             keyboardcontrol, 'a'                    },
+    { "s",             keyboardcontrol, 's'                    }, { "d",             keyboardcontrol, 'd'                    },
+    { "f",             keyboardcontrol, 'f'                    }, { "g",             keyboardcontrol, 'g'                    },
+    { "h",             keyboardcontrol, 'h'                    }, { "j",             keyboardcontrol, 'j'                    },
+    { "k",             keyboardcontrol, 'k'                    }, { "l",             keyboardcontrol, 'l'                    },
+    { ";",             keyboardcontrol, ';'                    }, { "'",             keyboardcontrol, '\''                   },
+    { "shift",         keyboardcontrol, KEY_SHIFT              }, { "\\",            keyboardcontrol, '\\'                   },
+    { "z",             keyboardcontrol, 'z'                    }, { "x",             keyboardcontrol, 'x'                    },
+    { "c",             keyboardcontrol, 'c'                    }, { "v",             keyboardcontrol, 'v'                    },
+    { "b",             keyboardcontrol, 'b'                    }, { "n",             keyboardcontrol, 'n'                    },
+    { "m",             keyboardcontrol, 'm'                    }, { ",",             keyboardcontrol, ','                    },
+    { ".",             keyboardcontrol, '.'                    }, { "/",             keyboardcontrol, '/'                    },
+    { "tilde",         keyboardcontrol, '`'                    }, { "alt",           keyboardcontrol, KEY_ALT                },
+    { "space",         keyboardcontrol, ' '                    }, { "numlock",       keyboardcontrol, KEY_NUMLOCK            },
+    { "capslock",      keyboardcontrol, KEY_CAPSLOCK           }, { "scrolllock",    keyboardcontrol, KEY_SCROLLLOCK         },
+    { "home",          keyboardcontrol, KEY_HOME               }, { "up",            keyboardcontrol, KEY_UPARROW            },
+    { "pageup",        keyboardcontrol, KEY_PAGEUP             }, { "left",          keyboardcontrol, KEY_LEFTARROW          },
+    { "right",         keyboardcontrol, KEY_RIGHTARROW         }, { "end",           keyboardcontrol, KEY_END                },
+    { "down",          keyboardcontrol, KEY_DOWNARROW          }, { "pagedown",      keyboardcontrol, KEY_PAGEDOWN           },
+    { "insert",        keyboardcontrol, KEY_INSERT             }, { "printscreen",   keyboardcontrol, KEY_PRINTSCREEN        },
+    { "delete",        keyboardcontrol, KEY_DELETE             }, { "escape",        keyboardcontrol, KEY_ESCAPE             },
+    { "F12",           keyboardcontrol, KEY_F12                }, { "mouse1",        mousecontrol,    0                      },
+    { "mouse2",        mousecontrol,    1                      }, { "mouse3",        mousecontrol,    2                      },
+    { "mouse4",        mousecontrol,    3                      }, { "mouse5",        mousecontrol,    4                      },
+    { "mouse6",        mousecontrol,    5                      }, { "mouse7",        mousecontrol,    6                      },
+    { "mouse8",        mousecontrol,    7                      }, { "wheelup",       mousecontrol,    MOUSE_WHEELUP          },
+    { "wheeldown",     mousecontrol,    MOUSE_WHEELDOWN        }, { "dpadup",        gamepadcontrol,  GAMEPAD_DPAD_UP        },
+    { "dpaddown",      gamepadcontrol,  GAMEPAD_DPAD_DOWN      }, { "dpadleft",      gamepadcontrol,  GAMEPAD_DPAD_LEFT      },
+    { "dpadright",     gamepadcontrol,  GAMEPAD_DPAD_RIGHT     }, { "start",         gamepadcontrol,  GAMEPAD_START          },
+    { "back",          gamepadcontrol,  GAMEPAD_BACK           }, { "leftthumb",     gamepadcontrol,  GAMEPAD_LEFT_THUMB     },
+    { "rightthumb",    gamepadcontrol,  GAMEPAD_RIGHT_THUMB    }, { "leftshoulder",  gamepadcontrol,  GAMEPAD_LEFT_SHOULDER  },
+    { "rightshoulder", gamepadcontrol,  GAMEPAD_RIGHT_SHOULDER }, { "lefttrigger",   gamepadcontrol,  GAMEPAD_LEFT_TRIGGER   },
+    { "righttrigger",  gamepadcontrol,  GAMEPAD_RIGHT_TRIGGER  }, { "gamepad1",      gamepadcontrol,  GAMEPAD_A              },
+    { "gamepad2",      gamepadcontrol,  GAMEPAD_B              }, { "gamepad3",      gamepadcontrol,  GAMEPAD_X              },
+    { "gamepad4",      gamepadcontrol,  GAMEPAD_Y              }, { "guide",         gamepadcontrol,  GAMEPAD_GUIDE          },
+    { "",              0,               0                      }
 };
 
 static void alwaysrun_action_func(void);
@@ -211,41 +213,41 @@ static void weapon7_action_func(void);
 
 action_t actions[] =
 {
-    { "+alwaysrun",   alwaysrun_action_func,   &keyboardalwaysrun,         NULL,                  NULL,              &gamepadalwaysrun,         NULL         },
-    { "+automap",     automap_action_func,     &keyboardautomap,           NULL,                  NULL,              &gamepadautomap,           NULL         },
-    { "+back",        back_action_func,        &keyboardback,              &keyboardback2,        NULL,              &gamepadback,              NULL         },
-    { "+clearmark",   clearmark_action_func,   &keyboardautomapclearmark,  NULL,                  NULL,              &gamepadautomapclearmark,  NULL         },
-    { "+console",     console_action_func,     &keyboardconsole,           NULL,                  NULL,              NULL,                      NULL         },
-    { "+fire",        fire_action_func,        &keyboardfire,              NULL,                  &mousefire,        &gamepadfire,              NULL         },
-    { "+followmode",  followmode_action_func,  &keyboardautomapfollowmode, NULL,                  NULL,              &gamepadautomapfollowmode, NULL         },
-    { "+forward",     forward_action_func,     &keyboardforward,           &keyboardforward2,     &mouseforward,     &gamepadforward,           NULL         },
-    { "+grid",        grid_action_func,        &keyboardautomapgrid,       NULL,                  NULL,              &gamepadautomapgrid,       NULL         },
-    { "+jump",        jump_action_func,        &keyboardjump,              NULL,                  &mousejump,        &gamepadjump,              NULL         },
-    { "+left",        left_action_func,        &keyboardleft,              NULL,                  NULL,              &gamepadleft,              NULL         },
-    { "+mark",        mark_action_func,        &keyboardautomapmark,       NULL,                  NULL,              &gamepadautomapmark,       NULL         },
-    { "+maxzoom",     maxzoom_action_func,     &keyboardautomapmaxzoom,    NULL,                  NULL,              &gamepadautomapmaxzoom,    NULL         },
-    { "+menu",        menu_action_func,        &keyboardmenu,              NULL,                  NULL,              &gamepadmenu,              NULL         },
-    { "+mouselook",   NULL,                    &keyboardmouselook,         NULL,                  &mousemouselook,   &gamepadmouselook,         NULL         },
-    { "+nextweapon",  nextweapon_action_func,  &keyboardnextweapon,        NULL,                  &mousenextweapon,  &gamepadnextweapon,        NULL         },
-    { "+prevweapon",  prevweapon_action_func,  &keyboardprevweapon,        NULL,                  &mouseprevweapon,  &gamepadprevweapon,        NULL         },
-    { "+right",       right_action_func,       &keyboardright,             NULL,                  NULL,              &gamepadright,             NULL         },
-    { "+rotatemode",  rotatemode_action_func,  &keyboardautomaprotatemode, NULL,                  NULL,              &gamepadautomaprotatemode, NULL         },
-    { "+run",         NULL,                    &keyboardrun,               NULL,                  &mouserun,         &gamepadrun,               NULL         },
-    { "+screenshot",  screenshot_action_func,  &keyboardscreenshot,        NULL,                  NULL,              NULL,                      NULL         },
-    { "+strafe",      NULL,                    &keyboardstrafe,            NULL,                  &mousestrafe,      &gamepadstrafe,            NULL         },
-    { "+strafeleft",  strafeleft_action_func,  &keyboardstrafeleft,        &keyboardstrafeleft2,  NULL,              &gamepadstrafeleft,        NULL         },
-    { "+straferight", straferight_action_func, &keyboardstraferight,       &keyboardstraferight2, NULL,              &gamepadstraferight,       NULL         },
-    { "+use",         use_action_func,         &keyboarduse,               &keyboarduse2,         &mouseuse,         &gamepaduse,               &gamepaduse2 },
-    { "+weapon1",     weapon1_action_func,     &keyboardweapon1,           NULL,                  NULL,              &gamepadweapon1,           NULL         },
-    { "+weapon2",     weapon2_action_func,     &keyboardweapon2,           NULL,                  NULL,              &gamepadweapon2,           NULL         },
-    { "+weapon3",     weapon3_action_func,     &keyboardweapon3,           NULL,                  NULL,              &gamepadweapon3,           NULL         },
-    { "+weapon4",     weapon4_action_func,     &keyboardweapon4,           NULL,                  NULL,              &gamepadweapon4,           NULL         },
-    { "+weapon5",     weapon5_action_func,     &keyboardweapon5,           NULL,                  NULL,              &gamepadweapon5,           NULL         },
-    { "+weapon6",     weapon6_action_func,     &keyboardweapon6,           NULL,                  NULL,              &gamepadweapon6,           NULL         },
-    { "+weapon7",     weapon7_action_func,     &keyboardweapon7,           NULL,                  NULL,              &gamepadweapon7,           NULL         },
-    { "+zoomin",      NULL,                    &keyboardautomapzoomin,     NULL,                  NULL,              &gamepadautomapzoomin,     NULL         },
-    { "+zoomout",     NULL,                    &keyboardautomapzoomout,    NULL,                  NULL,              &gamepadautomapzoomout,    NULL         },
-    { "",             NULL,                    NULL,                       NULL,                  NULL,              NULL,                      NULL         }
+    { "+alwaysrun",   alwaysrun_action_func,   &keyboardalwaysrun,         NULL,                  NULL,             &gamepadalwaysrun,         NULL         },
+    { "+automap",     automap_action_func,     &keyboardautomap,           NULL,                  NULL,             &gamepadautomap,           NULL         },
+    { "+back",        back_action_func,        &keyboardback,              &keyboardback2,        NULL,             &gamepadback,              NULL         },
+    { "+clearmark",   clearmark_action_func,   &keyboardautomapclearmark,  NULL,                  NULL,             &gamepadautomapclearmark,  NULL         },
+    { "+console",     console_action_func,     &keyboardconsole,           NULL,                  NULL,             NULL,                      NULL         },
+    { "+fire",        fire_action_func,        &keyboardfire,              NULL,                  &mousefire,       &gamepadfire,              NULL         },
+    { "+followmode",  followmode_action_func,  &keyboardautomapfollowmode, NULL,                  NULL,             &gamepadautomapfollowmode, NULL         },
+    { "+forward",     forward_action_func,     &keyboardforward,           &keyboardforward2,     &mouseforward,    &gamepadforward,           NULL         },
+    { "+grid",        grid_action_func,        &keyboardautomapgrid,       NULL,                  NULL,             &gamepadautomapgrid,       NULL         },
+    { "+jump",        jump_action_func,        &keyboardjump,              NULL,                  &mousejump,       &gamepadjump,              NULL         },
+    { "+left",        left_action_func,        &keyboardleft,              NULL,                  NULL,             &gamepadleft,              NULL         },
+    { "+mark",        mark_action_func,        &keyboardautomapmark,       NULL,                  NULL,             &gamepadautomapmark,       NULL         },
+    { "+maxzoom",     maxzoom_action_func,     &keyboardautomapmaxzoom,    NULL,                  NULL,             &gamepadautomapmaxzoom,    NULL         },
+    { "+menu",        menu_action_func,        &keyboardmenu,              NULL,                  NULL,             &gamepadmenu,              NULL         },
+    { "+mouselook",   NULL,                    &keyboardmouselook,         NULL,                  &mousemouselook,  &gamepadmouselook,         NULL         },
+    { "+nextweapon",  nextweapon_action_func,  &keyboardnextweapon,        NULL,                  &mousenextweapon, &gamepadnextweapon,        NULL         },
+    { "+prevweapon",  prevweapon_action_func,  &keyboardprevweapon,        NULL,                  &mouseprevweapon, &gamepadprevweapon,        NULL         },
+    { "+right",       right_action_func,       &keyboardright,             NULL,                  NULL,             &gamepadright,             NULL         },
+    { "+rotatemode",  rotatemode_action_func,  &keyboardautomaprotatemode, NULL,                  NULL,             &gamepadautomaprotatemode, NULL         },
+    { "+run",         NULL,                    &keyboardrun,               NULL,                  &mouserun,        &gamepadrun,               NULL         },
+    { "+screenshot",  screenshot_action_func,  &keyboardscreenshot,        NULL,                  NULL,             NULL,                      NULL         },
+    { "+strafe",      NULL,                    &keyboardstrafe,            NULL,                  &mousestrafe,     &gamepadstrafe,            NULL         },
+    { "+strafeleft",  strafeleft_action_func,  &keyboardstrafeleft,        &keyboardstrafeleft2,  NULL,             &gamepadstrafeleft,        NULL         },
+    { "+straferight", straferight_action_func, &keyboardstraferight,       &keyboardstraferight2, NULL,             &gamepadstraferight,       NULL         },
+    { "+use",         use_action_func,         &keyboarduse,               &keyboarduse2,         &mouseuse,        &gamepaduse,               &gamepaduse2 },
+    { "+weapon1",     weapon1_action_func,     &keyboardweapon1,           NULL,                  NULL,             &gamepadweapon1,           NULL         },
+    { "+weapon2",     weapon2_action_func,     &keyboardweapon2,           NULL,                  NULL,             &gamepadweapon2,           NULL         },
+    { "+weapon3",     weapon3_action_func,     &keyboardweapon3,           NULL,                  NULL,             &gamepadweapon3,           NULL         },
+    { "+weapon4",     weapon4_action_func,     &keyboardweapon4,           NULL,                  NULL,             &gamepadweapon4,           NULL         },
+    { "+weapon5",     weapon5_action_func,     &keyboardweapon5,           NULL,                  NULL,             &gamepadweapon5,           NULL         },
+    { "+weapon6",     weapon6_action_func,     &keyboardweapon6,           NULL,                  NULL,             &gamepadweapon6,           NULL         },
+    { "+weapon7",     weapon7_action_func,     &keyboardweapon7,           NULL,                  NULL,             &gamepadweapon7,           NULL         },
+    { "+zoomin",      NULL,                    &keyboardautomapzoomin,     NULL,                  NULL,             &gamepadautomapzoomin,     NULL         },
+    { "+zoomout",     NULL,                    &keyboardautomapzoomout,    NULL,                  NULL,             &gamepadautomapzoomout,    NULL         },
+    { "",             NULL,                    NULL,                       NULL,                  NULL,             NULL,                      NULL         }
 };
 
 static dboolean alive_func1(char *cmd, char *parms);
@@ -329,7 +331,6 @@ static void expansion_cvar_func2(char *cmd, char *parms);
 static dboolean gp_deadzone_cvars_func1(char *cmd, char *parms);
 static void gp_deadzone_cvars_func2(char *cmd, char *parms);
 static void gp_sensitivity_cvar_func2(char *cmd, char *parms);
-static void gp_swapthumbsticks_cvar_func2(char *cmd, char *parms);
 static void mouselook_cvar_func2(char *cmd, char *parms);
 static dboolean player_cvars_func1(char *cmd, char *parms);
 static void player_cvars_func2(char *cmd, char *parms);
@@ -425,21 +426,24 @@ consolecmd_t consolecmds[] =
     CVAR_BOOL(alwaysrun, "", bool_cvars_func1, alwaysrun_cvar_func2, BOOLVALUEALIAS,
         "Toggles the player to always run when they move."),
     CVAR_INT(am_allmapcdwallcolor, am_allmapcdwallcolour, color_cvars_func1, color_cvars_func2, CF_NONE, NOVALUEALIAS,
-        "The color of lines with a change in ceiling height in\nthe automap when the player has the computer\narea map power-up (<b>0</b> to <b>255</b>, or <b>#</b><i>rrggbb</i>)."),
+        "The color of lines in the automap with a change in\nceiling height when the player has a computer\narea map power-up "
+        "(<b>0</b> to <b>255</b>, or <b>#</b><i>rrggbb</i>)."),
     CVAR_INT(am_allmapfdwallcolor, am_allmapfdwallcolour, color_cvars_func1, color_cvars_func2, CF_NONE, NOVALUEALIAS,
-        "The color of lines with a change in floor height in\nthe automap when the player has the computer\narea map power-up (<b>0</b> to <b>255</b>, or <b>#</b><i>rrggbb</i>)."),
+        "The color of lines in the automap with a change in\nfloor height when the player has a computer\narea map power-up (<b>0</b> "
+        "to <b>255</b>, or <b>#</b><i>rrggbb</i>)."),
     CVAR_INT(am_allmapwallcolor, am_allmapwallcolour, color_cvars_func1, color_cvars_func2, CF_NONE, NOVALUEALIAS,
-        "The color of solid walls in the automap when the\nplayer has the computer area map power-up (<b>0</b> to\n<b>255</b>, or <b>#</b><i>rrggbb</i>)."),
+        "The color of solid walls in the automap when the\nplayer has a computer area map power-up (<b>0</b> to\n<b>255</b>, or "
+        "<b>#</b><i>rrggbb</i>)."),
     CVAR_INT(am_backcolor, am_backcolour, color_cvars_func1, color_cvars_func2, CF_NONE, NOVALUEALIAS,
         "The color of the automap's background (<b>0</b> to <b>255</b>,\nor <b>#</b><i>rrggbb</i>)."),
     CVAR_INT(am_cdwallcolor, am_cdwallcolour, color_cvars_func1, color_cvars_func2, CF_NONE, NOVALUEALIAS,
-        "The color of lines with a change in ceiling height in\nthe automap (<b>0</b> to <b>255</b>, or <b>#</b><i>rrggbb</i>)."),
+        "The color of lines in the automap with a change in\nceiling height (<b>0</b> to <b>255</b>, or <b>#</b><i>rrggbb</i>)."),
     CVAR_INT(am_crosshaircolor, am_crosshaircolour, color_cvars_func1, color_cvars_func2, CF_NONE, NOVALUEALIAS,
         "The color of the crosshair in the automap (<b>0</b> to <b>255</b>,\nor <b>#</b><i>rrggbb</i>)."),
     CVAR_BOOL(am_external, "", bool_cvars_func1, am_external_cvar_func2, BOOLVALUEALIAS,
         "Toggles showing the automap on an external\ndisplay."),
     CVAR_INT(am_fdwallcolor, am_fdwallcolour, color_cvars_func1, color_cvars_func2, CF_NONE, NOVALUEALIAS,
-        "The color of lines with a change in floor height in\nthe automap (<b>0</b> to <b>255</b>, or <b>#</b><i>rrggbb</i>)."),
+        "The color of lines in the automap with a change in\nfloor height (<b>0</b> to <b>255</b>, or <b>#</b><i>rrggbb</i>)."),
     CVAR_BOOL(am_followmode, "", am_followmode_cvar_func1, bool_cvars_func2, BOOLVALUEALIAS,
         "Toggles follow mode in the automap."),
     CVAR_BOOL(am_grid, "", bool_cvars_func1, bool_cvars_func2, BOOLVALUEALIAS,
@@ -463,7 +467,7 @@ consolecmd_t consolecmds[] =
     CVAR_INT(am_thingcolor, am_thingcolour, color_cvars_func1, color_cvars_func2, CF_NONE, NOVALUEALIAS,
         "The color of things in the automap (<b>0</b> to <b>255</b>, or\n<b>#</b><i>rrggbb</i>)."),
     CVAR_INT(am_tswallcolor, am_tswallcolour, color_cvars_func1, color_cvars_func2, CF_NONE, NOVALUEALIAS,
-        "The color of lines with no change in height in the\nautomap (<b>0</b> to <b>255</b>, or <b>#</b><i>rrggbb</i>)."),
+        "The color of lines in the automap with no change in\nheight (<b>0</b> to <b>255</b>, or <b>#</b><i>rrggbb</i>)."),
     CVAR_INT(am_wallcolor, am_wallcolour, color_cvars_func1, color_cvars_func2, CF_NONE, NOVALUEALIAS,
         "The color of solid walls in the automap (<b>0</b> to <b>255</b>, or\n<b>#</b><i>rrggbb</i>)."),
     CVAR_INT(ammo, "", player_cvars_func1, player_cvars_func2, CF_NONE, NOVALUEALIAS,
@@ -517,7 +521,8 @@ consolecmd_t consolecmds[] =
     CVAR_TIME(gametime, "", null_func1, time_cvars_func2,
         "The amount of time <i><b>"PACKAGE_NAME"</b></i> has been running."),
     CMD(give, "", give_cmd_func1, give_cmd_func2, true, GIVECMDFORMAT,
-        "Gives <b>ammo</b>, <b>armor</b>, <b>health</b>, <b>keys</b>, <b>weapons</b>, or <b>all</b>\nor certain <i>items</i> to the player."),
+        "Gives <b>ammo</b>, <b>armor</b>, <b>health</b>, <b>keys</b>, <b>weapons</b>, or <b>all</b>\nor certain <i>items</i> to the "
+        "player."),
     CMD(god, "", alive_func1, god_cmd_func2, true, "[<b>on</b>|<b>off</b>]",
         "Toggles god mode."),
     CVAR_BOOL(gp_analog, gp_analogue, bool_cvars_func1, bool_cvars_func2, BOOLVALUEALIAS,
@@ -530,7 +535,7 @@ consolecmd_t consolecmds[] =
         "Toggles inverting the vertical axis of the\ngamepad's right thumbstick when looking up and\ndown."),
     CVAR_INT(gp_sensitivity, "", int_cvars_func1, gp_sensitivity_cvar_func2, CF_NONE, NOVALUEALIAS,
         "The gamepad's sensitivity (<b>0</b> to <b>128</b>)."),
-    CVAR_BOOL(gp_swapthumbsticks, "", bool_cvars_func1, gp_swapthumbsticks_cvar_func2, BOOLVALUEALIAS,
+    CVAR_BOOL(gp_swapthumbsticks, "", bool_cvars_func1, bool_cvars_func2, BOOLVALUEALIAS,
         "Toggles swapping the gamepad's left and right\nthumbsticks."),
     CVAR_INT(gp_thumbsticks, "", int_cvars_func1, int_cvars_func2, CF_NONE, NOVALUEALIAS,
         "The number of thumbsticks used on the gamepad\n(<b>1</b> or <b>2</b>)."),
@@ -585,7 +590,7 @@ consolecmd_t consolecmds[] =
     CMD(map, warp, map_cmd_func1, map_cmd_func2, true, MAPCMDFORMAT,
         "Warps to a map."),
     CMD(maplist, "", null_func1, maplist_cmd_func2, false, "",
-        "Shows a list of the available maps."),
+        "Shows a list of the maps in the currently loaded\nWADs."),
     CMD(mapstats, "", game_func1, mapstats_cmd_func2, false, "",
         "Shows statistics about the current map."),
     CVAR_BOOL(messages, "", bool_cvars_func1, bool_cvars_func2, BOOLVALUEALIAS,
@@ -618,7 +623,7 @@ consolecmd_t consolecmds[] =
     CVAR_BOOL(r_althud, "", bool_cvars_func1, bool_cvars_func2, BOOLVALUEALIAS,
         "Toggles an alternate heads-up display when in\nwidescreen mode."),
     CVAR_INT(r_berserkintensity, "", int_cvars_func1, int_cvars_func2, CF_NONE, NOVALUEALIAS,
-        "The intensity of the effect when the player has the\nberserk power-up and their fists equipped (<b>0</b> to <b>8</b>)."),
+        "The intensity of the effect when the player has a\nberserk power-up and their fists equipped (<b>0</b> to <b>8</b>)."),
     CVAR_INT(r_blood, "", r_blood_cvar_func1, r_blood_cvar_func2, CF_NONE, BLOODVALUEALIAS,
         "The colors of the blood of the player and monsters\n(<b>all</b>, <b>none</b> or <b>red</b>)."),
     CVAR_INT(r_bloodsplats_max, "", int_cvars_func1, int_cvars_func2, CF_NONE, NOVALUEALIAS,
@@ -656,7 +661,7 @@ consolecmd_t consolecmds[] =
     CVAR_BOOL(r_floatbob, "", bool_cvars_func1, bool_cvars_func2, BOOLVALUEALIAS,
         "Toggles some power-ups bobbing up and down."),
     CVAR_INT(r_fov, "", int_cvars_func1, r_fov_cvar_func2, CF_NONE, NOVALUEALIAS,
-        "The player's field of view (<b>45</b> to <b>135</b>)."),
+        "The player's field of view (<b>45</b> to <b>135</b> degrees)."),
     CVAR_FLOAT(r_gamma, "", r_gamma_cvar_func1, r_gamma_cvar_func2, CF_NONE,
         "The screen's gamma correction level (<b>off</b>, or <b>0.50</b>\nto <b>2.0</b>)."),
     CVAR_BOOL(r_homindicator, "", bool_cvars_func1, bool_cvars_func2, BOOLVALUEALIAS,
@@ -758,7 +763,8 @@ consolecmd_t consolecmds[] =
     CVAR_STR(version, "", null_func1, str_cvars_func2, CF_READONLY,
         "<i><b>"PACKAGE_NAME"'s</b></i> version."),
     CVAR_INT(vid_capfps, "", vid_capfps_cvar_func1, vid_capfps_cvar_func2, CF_NONE, CAPVALUEALIAS,
-        "The number of frames per second at which to cap\nthe framerate (<b>off</b>, or <b>1</b> to <b>1,000</b>). Interpolation is\ndisabled when this CVAR is <b>35</b>."),
+        "The number of frames per second at which to cap\nthe framerate (<b>off</b>, or <b>1</b> to <b>1,000</b>). Interpolation is\n"
+        "disabled when this CVAR is <b>35</b>."),
     CVAR_INT(vid_display, "", int_cvars_func1, vid_display_cvar_func2, CF_NONE, NOVALUEALIAS,
         "The display used to render the game."),
 #if !defined(_WIN32)
@@ -776,7 +782,8 @@ consolecmd_t consolecmds[] =
         "The API used to scale the display (<b>\"direct3d\"</b>,\n<b>\"opengl\"</b> or <b>\"software\"</b>)."),
 #elif defined(__MACOSX__)
     CVAR_STR(vid_scaleapi, "", vid_scaleapi_cvar_func1, vid_scaleapi_cvar_func2, CF_NONE,
-        "The API used to scale the display (<b>\"metal\"</b>,\n<b>\"opengl\"</b>, <b>\"opengles\"</b>, <b>\"opengles2\"</b> or <b>\"software\"</b>)."),
+        "The API used to scale the display (<b>\"metal\"</b>,\n<b>\"opengl\"</b>, <b>\"opengles\"</b>, <b>\"opengles2\"</b> or "
+        "<b>\"software\"</b>)."),
 #else
     CVAR_STR(vid_scaleapi, "", vid_scaleapi_cvar_func1, vid_scaleapi_cvar_func2, CF_NONE,
         "The API used to scale the display (<b>\"opengl\"</b>,\n<b>\"opengles\"</b>, <b>\"opengles2\"</b> or <b>\"software\"</b>)."),
@@ -800,7 +807,9 @@ consolecmd_t consolecmds[] =
         "The last WAD to be opened by the WAD launcher."),
 #endif
     CVAR_INT(weaponbob, "", int_cvars_func1, int_cvars_func2, CF_PERCENT, NOVALUEALIAS,
-        "The amount the player's weapon bobs up and down\nwhen they move (<b>0%</b> to <b>100%</b>)."),
+        "The amount the player's weapon bobs when they\nmove (<b>0%</b> to <b>100%</b>)."),
+    CVAR_BOOL(weaponbounce, "", bool_cvars_func1, bool_cvars_func2, BOOLVALUEALIAS,
+        "Toggles the player's weapon bouncing when they\ndrop from a greater height."),
     CVAR_BOOL(weaponrecoil, "", bool_cvars_func1, bool_cvars_func2, BOOLVALUEALIAS,
         "Toggles the player's weapon recoiling when fired\nwhile using mouselook."),
     CVAR_BOOL(wipe, "", bool_cvars_func1, bool_cvars_func2, BOOLVALUEALIAS,
@@ -1001,7 +1010,7 @@ static int C_GetIndex(const char *cmd)
     return i;
 }
 
-static void C_ShowCVARDescription(int index)
+static void C_ShowDescription(int index)
 {
     char    description1[255];
     char    description2[255] = "";
@@ -1158,6 +1167,7 @@ void alias_cmd_func2(char *cmd, char *parms)
 
     if (!*parm1)
     {
+        C_ShowDescription(C_GetIndex(stringize(alias)));
         C_Output("<b>%s</b> %s", cmd, ALIASCMDFORMAT);
         return;
     }
@@ -1246,6 +1256,7 @@ void bind_cmd_func2(char *cmd, char *parms)
 
     if (!*parm1)
     {
+        C_ShowDescription(C_GetIndex(stringize(bind)));
         C_Output("<b>%s</b> %s", cmd, BINDCMDFORMAT);
         return;
     }
@@ -1836,7 +1847,10 @@ static void endgame_cmd_func2(char *cmd, char *parms)
 static void exec_cmd_func2(char *cmd, char *parms)
 {
     if (!*parms)
+    {
+        C_ShowDescription(C_GetIndex(stringize(exec)));
         C_Output("<b>%s</b> %s", cmd, EXECCMDFORMAT);
+    }
     else
     {
         FILE    *file = fopen(parms, "r");
@@ -1975,7 +1989,7 @@ static dboolean give_cmd_func1(char *cmd, char *parms)
         || M_StringCompare(parm, "keycards") || M_StringCompare(parm, "skullkeys"))
         return true;
 
-    sscanf(parm, "%10i", &num);
+    sscanf(parm, "%10d", &num);
 
     for (int i = 0; i < NUMMOBJTYPES; i++)
         if ((mobjinfo[i].flags & MF_SPECIAL) && (M_StringCompare(parm, removenonalpha(mobjinfo[i].name1))
@@ -1992,7 +2006,10 @@ static void give_cmd_func2(char *cmd, char *parms)
     char    *parm = removenonalpha(parms);
 
     if (!*parm)
+    {
+        C_ShowDescription(C_GetIndex(stringize(give)));
         C_Output("<b>%s</b> %s", cmd, GIVECMDFORMAT);
+    }
     else
     {
         if (M_StringCompare(parm, "all") || M_StringCompare(parm, "everything"))
@@ -2135,7 +2152,7 @@ static void give_cmd_func2(char *cmd, char *parms)
         {
             int num = -1;
 
-            sscanf(parm, "%10i", &num);
+            sscanf(parm, "%10d", &num);
 
             for (int i = 0; i < NUMMOBJTYPES; i++)
             {
@@ -2151,10 +2168,6 @@ static void give_cmd_func2(char *cmd, char *parms)
                     if (gamemode != commercial && (i == MT_SUPERSHOTGUN || i == MT_MEGA))
                     {
                         M_StringCopy(buffer, mobjinfo[i].plural1, sizeof(buffer));
-
-                        if (!*buffer)
-                            M_snprintf(buffer, sizeof(buffer), "%ss", mobjinfo[i].name1);
-
                         buffer[0] = toupper(buffer[0]);
                         C_Warning("%s can't be given to the player in <i><b>%s</b></i>.", buffer, gamedescription);
                         return;
@@ -2164,10 +2177,6 @@ static void give_cmd_func2(char *cmd, char *parms)
                         || i == MT_MISC20 || i == MT_MISC21 || i == MT_MISC25 || i == MT_MISC28))
                     {
                         M_StringCopy(buffer, mobjinfo[i].plural1, sizeof(buffer));
-
-                        if (!*buffer)
-                            M_snprintf(buffer, sizeof(buffer), "%ss", mobjinfo[i].name1);
-
                         buffer[0] = toupper(buffer[0]);
                         C_Warning("%s can't be given to the player in <i><b>%s</b></i>.", buffer, gamedescription);
                         return;
@@ -2253,6 +2262,7 @@ static void if_cmd_func2(char *cmd, char *parms)
 
     if (!*parm1 || !*parm2 || !*parm3)
     {
+        C_ShowDescription(C_GetIndex(stringize(if)));
         C_Output("<b>%s</b> %s", cmd, IFCMDFORMAT);
         return;
     }
@@ -2273,7 +2283,7 @@ static void if_cmd_func2(char *cmd, char *parms)
                     int value = C_LookupValueFromAlias(parm2, consolecmds[i].aliases);
 
                     if (value == INT_MIN)
-                        sscanf(parms, "%10i", &value);
+                        sscanf(parms, "%10d", &value);
 
                     condition = (value != INT_MIN && value == *(int *)consolecmds[i].variable);
                 }
@@ -2359,7 +2369,7 @@ static dboolean kill_cmd_func1(char *cmd, char *parms)
         {
             int num = -1;
 
-            sscanf(parm, "%10i", &num);
+            sscanf(parm, "%10d", &num);
             killcmdtype = mobjinfo[i].doomednum;
 
             if (killcmdtype >= 0
@@ -2373,12 +2383,7 @@ static dboolean kill_cmd_func1(char *cmd, char *parms)
             {
                 dboolean    kill = true;
 
-                if (gamemode != commercial)
-                {
-                    if (killcmdtype >= ArchVile && killcmdtype <= MonstersSpawner)
-                        kill = false;
-                }
-                else if (killcmdtype == WolfensteinSS && bfgedition && !states[S_SSWV_STND].dehacked)
+                if (killcmdtype == WolfensteinSS && bfgedition && !states[S_SSWV_STND].dehacked)
                     killcmdtype = Zombieman;
 
                 if (!(mobjinfo[i].flags & MF_SHOOTABLE))
@@ -2388,6 +2393,7 @@ static dboolean kill_cmd_func1(char *cmd, char *parms)
             }
         }
     }
+
     return false;
 }
 
@@ -2399,7 +2405,10 @@ void kill_cmd_func2(char *cmd, char *parms)
     static char buffer[1024];
 
     if (!*parm)
+    {
+        C_ShowDescription(C_GetIndex(stringize(kill)));
         C_Output("<b>%s</b> %s", cmd, KILLCMDFORMAT);
+    }
     else if (M_StringCompare(parm, "player") || M_StringCompare(parm, "me") || (*playername && M_StringCompare(parm, playername)))
     {
         viewplayer->health = 0;
@@ -2422,6 +2431,7 @@ void kill_cmd_func2(char *cmd, char *parms)
     else
     {
         int kills = 0;
+        int prevkills = totalkills;
 
         if (M_StringCompare(parm, "all") || M_StringCompare(parm, "monsters"))
         {
@@ -2476,8 +2486,8 @@ void kill_cmd_func2(char *cmd, char *parms)
 
             if (kills)
             {
-                M_snprintf(buffer, sizeof(buffer), "%s%s monster%s in this map %s been killed.", (kills == 1 ? "" : "All "),
-                    commify(kills), (kills == 1 ? "" : "s"), (kills == 1 ? "has" : "have"));
+                M_snprintf(buffer, sizeof(buffer), "%s%s monster%s%s in this map %s been killed.", (kills == 1 ? "" : "All "),
+                    commify(kills), (kills == 1 ? "" : "s"), (kills < prevkills ? " remaining" : ""), (kills == 1 ? "has" : "have"));
                 C_Output(buffer);
                 C_HideConsole();
                 HU_SetPlayerMessage(buffer, false, false);
@@ -2587,8 +2597,25 @@ void kill_cmd_func2(char *cmd, char *parms)
                 M_SaveCVARs();
             }
             else
+            {
+                if (gamemode != commercial)
+                {
+                    if (killcmdtype >= ArchVile && killcmdtype <= MonstersSpawner)
+                    {
+                        C_Warning("There are no %s in <i><b>%s</b></i>.", mobjinfo[type].plural1, gamedescription);
+                        return;
+                    }
+
+                    if (gamemode == shareware && (killcmdtype == Cyberdemon || killcmdtype == SpiderMastermind))
+                    {
+                        C_Warning("There are no %s in <i><b>%s</b></i>.", mobjinfo[type].plural1, gamedescription);
+                        return;
+                    }
+                }
+
                 C_Warning("There are no %s %s %s.", mobjinfo[type].plural1, (dead ? "left to" : "to"),
                     (type == MT_BARREL ? "explode" : "kill"));
+            }
         }
     }
 }
@@ -2600,6 +2627,7 @@ static void load_cmd_func2(char *cmd, char *parms)
 {
     if (!*parms)
     {
+        C_ShowDescription(C_GetIndex(stringize(load)));
         C_Output("<b>%s</b> %s", cmd, LOADCMDFORMAT);
         return;
     }
@@ -2685,7 +2713,7 @@ static dboolean map_cmd_func1(char *cmd, char *parms)
         {
             if (gamemode == commercial)
             {
-                if (gamemap != (gamemission == pack_nerve ? 9 : (bfgedition ? 33 : 32)))
+                if (gamemap != (gamemission == pack_nerve ? 8 : 30))
                 {
                     mapcmdepisode = gameepisode;
                     mapcmdmap = gamemap + 1;
@@ -2695,9 +2723,9 @@ static dboolean map_cmd_func1(char *cmd, char *parms)
             }
             else
             {
-                if (gamemap == 9)
+                if (gamemap == 8)
                 {
-                    if (gameepisode != (gamemode == retail ? 4 : gamemode == shareware ? 1 : 3))
+                    if (gameepisode != (gamemode == retail ? 4 : (gamemode == shareware ? 1 : 3)))
                     {
                         mapcmdepisode = gameepisode + 1;
                         mapcmdmap = 1;
@@ -2720,52 +2748,52 @@ static dboolean map_cmd_func1(char *cmd, char *parms)
             {
                 if (gamemission == pack_nerve)
                 {
-                    if (gamemap != 9)
+                    if (gamemap != 8)
                     {
                         mapcmdepisode = gameepisode;
-                        mapcmdmap = 9;
-                        M_StringCopy(mapcmdlump, "MAP09", sizeof(mapcmdlump));
+                        mapcmdmap = 8;
+                        M_StringCopy(mapcmdlump, "MAP08", sizeof(mapcmdlump));
                         result = true;
                     }
                 }
                 else
                 {
-                    if (gamemap != (bfgedition ? 33 : 32))
+                    if (gamemap != 30)
                     {
                         mapcmdepisode = gameepisode;
-                        mapcmdmap = (bfgedition ? 33 : 32);
-                        M_snprintf(mapcmdlump, sizeof(mapcmdlump), "MAP%02i", (bfgedition ? 33 : 32));
+                        mapcmdmap = 30;
+                        M_StringCopy(mapcmdlump, "MAP30", sizeof(mapcmdlump));
                         result = true;
                     }
                 }
             }
             else if (gamemode == retail)
             {
-                if (!(gameepisode == 4 && gamemap == 9))
+                if (!(gameepisode == 4 && gamemap == 8))
                 {
                     mapcmdepisode = 4;
-                    mapcmdmap = 9;
-                    M_StringCopy(mapcmdlump, "E4M9", sizeof(mapcmdlump));
+                    mapcmdmap = 8;
+                    M_StringCopy(mapcmdlump, "E4M8", sizeof(mapcmdlump));
                     result = true;
                 }
             }
             else if (gamemode == shareware)
             {
-                if (!(gameepisode == 1 && gamemap == 9))
+                if (!(gameepisode == 1 && gamemap == 8))
                 {
                     mapcmdepisode = 1;
-                    mapcmdmap = 9;
-                    M_StringCopy(mapcmdlump, "E1M9", sizeof(mapcmdlump));
+                    mapcmdmap = 8;
+                    M_StringCopy(mapcmdlump, "E1M8", sizeof(mapcmdlump));
                     result = true;
                 }
             }
             else
             {
-                if (!(gameepisode == 4 && gamemap == 9))
+                if (!(gameepisode == 4 && gamemap == 8))
                 {
                     mapcmdepisode = 3;
-                    mapcmdmap = 9;
-                    M_StringCopy(mapcmdlump, "E3M9", sizeof(mapcmdlump));
+                    mapcmdmap = 8;
+                    M_StringCopy(mapcmdlump, "E3M8", sizeof(mapcmdlump));
                     result = true;
                 }
             }
@@ -2775,19 +2803,19 @@ static dboolean map_cmd_func1(char *cmd, char *parms)
             if (gamemode == commercial)
             {
                 mapcmdepisode = gameepisode;
-                mapcmdmap = M_RandomIntNoRepeat(1, (gamemission == pack_nerve ? 9 : (bfgedition ? 33 : 32)), gamemap);
+                mapcmdmap = M_RandomIntNoRepeat(1, (gamemission == pack_nerve ? 8 : 30), gamemap);
                 M_snprintf(mapcmdlump, sizeof(mapcmdlump), "MAP%02i", mapcmdmap);
                 result = true;
             }
             else
             {
-                mapcmdepisode = M_RandomIntNoRepeat(1, (gamemode == retail ? 4 : (gamemode == shareware ? 1 : 3)), gameepisode);
-                mapcmdmap = M_RandomIntNoRepeat(1, 9, gamemap);
+                mapcmdepisode = (gamemode == shareware ? 1 : M_RandomIntNoRepeat(1, (gamemode == retail ? 4 : 3), gameepisode));
+                mapcmdmap = M_RandomIntNoRepeat(1, 8, gamemap);
                 M_snprintf(mapcmdlump, sizeof(mapcmdlump), "E%iM%i", mapcmdepisode, mapcmdmap);
                 result = true;
             }
         }
-        else if (M_StringCompare(map, "E1M4B") && gamemission == doom && (gamemode == registered || gamemode == retail))
+        else if (M_StringCompare(map, "E1M4B") && gamemission == doom && gamemode != shareware)
         {
             mapcmdepisode = 1;
             mapcmdmap = 4;
@@ -2795,7 +2823,7 @@ static dboolean map_cmd_func1(char *cmd, char *parms)
             M_StringCopy(mapcmdlump, "E1M4B", 6);
             result = true;
         }
-        else if (M_StringCompare(map, "E1M8B") && gamemission == doom && (gamemode == registered || gamemode == retail))
+        else if (M_StringCompare(map, "E1M8B") && gamemission == doom && gamemode != shareware)
         {
             mapcmdepisode = 1;
             mapcmdmap = 8;
@@ -2867,6 +2895,7 @@ static void map_cmd_func2(char *cmd, char *parms)
 
     if (!*parms)
     {
+        C_ShowDescription(C_GetIndex(stringize(map)));
         C_Output("<b>%s</b> %s", cmd, MAPCMDFORMAT);
         return;
     }
@@ -3256,8 +3285,7 @@ static void mapstats_cmd_func2(char *cmd, char *parms)
                     striptrailingzero(metricwidth, 1), striptrailingzero(metricheight, 1), striptrailingzero(metricdepth, 1));
             else
                 C_TabbedOutput(tabs, "Dimensions\t<b>%s\xD7%s\xD7%s kilometers</b>",
-                    striptrailingzero(metricwidth / METERSPERKILOMETER, 1),
-                    striptrailingzero(metricheight / METERSPERKILOMETER, 1),
+                    striptrailingzero(metricwidth / METERSPERKILOMETER, 1), striptrailingzero(metricheight / METERSPERKILOMETER, 1),
                     striptrailingzero(metricdepth / METERSPERKILOMETER, 1));
         }
         else
@@ -3266,8 +3294,7 @@ static void mapstats_cmd_func2(char *cmd, char *parms)
                 C_TabbedOutput(tabs, "Dimensions\t<b>%s\xD7%s\xD7%s feet</b>", commify(width), commify(height), commify(depth));
             else
                 C_TabbedOutput(tabs, "Dimensions\t<b>%s\xD7%s\xD7%s miles</b>",
-                    striptrailingzero((float)width / FEETPERMILE, 2),
-                    striptrailingzero((float)height / FEETPERMILE, 2),
+                    striptrailingzero((float)width / FEETPERMILE, 2), striptrailingzero((float)height / FEETPERMILE, 2),
                     striptrailingzero((float)depth / FEETPERMILE, 2));
         }
     }
@@ -3281,9 +3308,11 @@ static void mapstats_cmd_func2(char *cmd, char *parms)
         M_snprintf(lumpname, sizeof(lumpname), "d_%s", mus_playing->name);
         lumps = W_CheckMultipleLumps(lumpname);
 
-        if (((gamemode == commercial || gameepisode > 1) && lumps == 1)
-            || (gamemode != commercial && gameepisode == 1 && lumps == 2))
+        if (((gamemode == commercial || gameepisode > 1) && lumps == 1) || (gamemode != commercial && gameepisode == 1 && lumps == 2))
+        {
             C_TabbedOutput(tabs, "Music title\t<b>%s</b>", mus_playing->title);
+            C_TabbedOutput(tabs, "Music composer\t<b>Bobby Prince</b>");
+        }
 
         if (musmusictype)
             C_TabbedOutput(tabs, "Music format\t<b>MUS converted to MIDI</b>");
@@ -3532,7 +3561,10 @@ static dboolean play_cmd_func1(char *cmd, char *parms)
 static void play_cmd_func2(char *cmd, char *parms)
 {
     if (!*parms)
+    {
+        C_ShowDescription(C_GetIndex(stringize(play)));
         C_Output("<b>%s</b> %s", cmd, PLAYCMDFORMAT);
+    }
     else if (playcmdtype == 1)
         S_StartSound(NULL, playcmdid);
     else
@@ -3581,7 +3613,7 @@ static void C_PlayerStats_Game(void)
 
     C_Header(tabs, PLAYERSTATSTITLE);
 
-    if ((viewplayer->cheats & CF_ALLMAP) || (viewplayer->cheats & CF_ALLMAP_THINGS))
+    if (viewplayer->cheats & (CF_ALLMAP | CF_ALLMAP_THINGS))
         C_TabbedOutput(tabs, "Map explored\t<b>100%%</b>\t-");
     else
     {
@@ -3594,8 +3626,7 @@ static void C_PlayerStats_Game(void)
         for (int i = 0; i < totallines; i++)
             totallinesmapped += !!(lines[i++].flags & ML_MAPPED);
 
-        C_TabbedOutput(tabs, "Map explored\t<b>%s%%</b>\t-",
-            striptrailingzero(totallinesmapped * 100.0f / totallines, 1));
+        C_TabbedOutput(tabs, "Map explored\t<b>%s%%</b>\t-", striptrailingzero(totallinesmapped * 100.0f / totallines, 1));
     }
 
     C_TabbedOutput(tabs, "Maps completed\t-\t<b>%s</b>", commify(stat_mapscompleted));
@@ -3741,17 +3772,13 @@ static void C_PlayerStats_Game(void)
     C_TabbedOutput(tabs, "Damage received\t<b>%s%%</b>\t<b>%s%%</b>",
         commify(viewplayer->damagereceived), commify(stat_damagereceived));
 
-    C_TabbedOutput(tabs, "Deaths\t<b>%s</b>\t<b>%s</b>",
-        commify(viewplayer->deaths), commify(stat_deaths));
+    C_TabbedOutput(tabs, "Deaths\t<b>%s</b>\t<b>%s</b>", commify(viewplayer->deaths), commify(stat_deaths));
 
-    C_TabbedOutput(tabs, "Cheated\t<b>%s</b>\t<b>%s</b>",
-        commify(viewplayer->cheated), commify(stat_cheated));
+    C_TabbedOutput(tabs, "Cheated\t<b>%s</b>\t<b>%s</b>", commify(viewplayer->cheated), commify(stat_cheated));
 
-    C_TabbedOutput(tabs, "Shots fired\t<b>%s</b>\t<b>%s</b>",
-        commify(viewplayer->shotsfired), commify(stat_shotsfired));
+    C_TabbedOutput(tabs, "Shots fired\t<b>%s</b>\t<b>%s</b>", commify(viewplayer->shotsfired), commify(stat_shotsfired));
 
-    C_TabbedOutput(tabs, "Shots hit\t<b>%s</b>\t<b>%s</b>",
-        commify(viewplayer->shotshit), commify(stat_shotshit));
+    C_TabbedOutput(tabs, "Shots hit\t<b>%s</b>\t<b>%s</b>", commify(viewplayer->shotshit), commify(stat_shotshit));
 
     C_TabbedOutput(tabs, "Weapon accuracy\t<b>%s%%</b>\t<b>%s%%</b>",
         (viewplayer->shotsfired ? striptrailingzero(viewplayer->shotshit * 100.0f / viewplayer->shotsfired, 1) : "0"),
@@ -3838,8 +3865,7 @@ static void C_PlayerStats_NoGame(void)
 
     C_TabbedOutput(tabs, "Secrets revealed\t-\t<b>%s</b>", commify(stat_secretsrevealed));
 
-    C_TabbedOutput(tabs, "Time played\t-\t<b>%02i:%02i:%02i</b>",
-        time2 / 3600, (time2 % 3600) / 60, (time2 % 3600) % 60);
+    C_TabbedOutput(tabs, "Time played\t-\t<b>%02i:%02i:%02i</b>", time2 / 3600, (time2 % 3600) / 60, (time2 % 3600) % 60);
 
     C_TabbedOutput(tabs, "Damage inflicted\t-\t<b>%s</b>", commify(stat_damageinflicted));
 
@@ -3927,6 +3953,7 @@ static void reset_cmd_func2(char *cmd, char *parms)
 {
     if (!*parms)
     {
+        C_ShowDescription(C_GetIndex(stringize(reset)));
         C_Output("<b>%s</b> %s", cmd, RESETCMDFORMAT);
         return;
     }
@@ -3937,8 +3964,8 @@ static void reset_cmd_func2(char *cmd, char *parms)
         return;
     }
 
-    if (M_StringCompare(parms, "ammo") || M_StringCompare(parms, "armor")
-        || M_StringCompare(parms, "armortype") || M_StringCompare(parms, "health"))
+    if (M_StringCompare(parms, "ammo") || M_StringCompare(parms, "armor") || M_StringCompare(parms, "armour")
+        || M_StringCompare(parms, "armortype") || M_StringCompare(parms, "armourtype") || M_StringCompare(parms, "health"))
         return;
 
     resettingcvar = true;
@@ -4114,8 +4141,9 @@ static void C_VerifyResetAll(const int key)
 
 #if defined(_WIN32)
         wad = "";
-        M_SaveCVARs();
 #endif
+
+        M_SaveCVARs();
 
         C_Output("All CVARs have been reset to their defaults.");
     }
@@ -4237,6 +4265,7 @@ static void save_cmd_func2(char *cmd, char *parms)
 {
     if (!*parms)
     {
+        C_ShowDescription(C_GetIndex(stringize(save)));
         C_Output("<b>%s</b> %s", cmd, SAVECMDFORMAT);
         return;
     }
@@ -4263,7 +4292,7 @@ static dboolean spawn_cmd_func1(char *cmd, char *parms)
     {
         int num = -1;
 
-        sscanf(parm, "%10i", &num);
+        sscanf(parm, "%10d", &num);
 
         for (int i = 0; i < NUMMOBJTYPES; i++)
         {
@@ -4285,6 +4314,7 @@ static void spawn_cmd_func2(char *cmd, char *parms)
 
     if (!*parm)
     {
+        C_ShowDescription(C_GetIndex(stringize(spawn)));
         C_Output("<b>%s</b> %s", cmd, SPAWNCMDFORMAT);
         return;
     }
@@ -4358,6 +4388,7 @@ static void teleport_cmd_func2(char *cmd, char *parms)
 {
     if (!*parms)
     {
+        C_ShowDescription(C_GetIndex(stringize(teleport)));
         C_Output("<b>%s</b> %s", cmd, TELEPORTCMDFORMAT);
         return;
     }
@@ -4424,7 +4455,7 @@ static void thinglist_cmd_func2(char *cmd, char *parms)
 
     C_Header(tabs, THINGLISTTITLE);
 
-    for (thinker_t *th = thinkerclasscap[th_mobj].cnext; th != &thinkerclasscap[th_mobj]; th = th->cnext)
+    for (thinker_t *th = thinkers[th_mobj].cnext; th != &thinkers[th_mobj]; th = th->cnext)
     {
         mobj_t  *mobj = (mobj_t *)th;
 
@@ -4441,6 +4472,7 @@ static void timer_cmd_func2(char *cmd, char *parms)
 {
     if (!*parms)
     {
+        C_ShowDescription(C_GetIndex(stringize(timer)));
         C_Output("<b>%s</b> %s", cmd, TIMERCMDFORMAT);
         return;
     }
@@ -4448,7 +4480,7 @@ static void timer_cmd_func2(char *cmd, char *parms)
     {
         int value = INT_MAX;
 
-        sscanf(parms, "%10i", &value);
+        sscanf(parms, "%10d", &value);
 
         if (value != INT_MAX)
             P_SetTimer(value);
@@ -4462,6 +4494,7 @@ static void unbind_cmd_func2(char *cmd, char *parms)
 {
     if (!*parms)
     {
+        C_ShowDescription(C_GetIndex(stringize(unbind)));
         C_Output("<b>%s</b> %s", cmd, UNBINDCMDFORMAT);
         return;
     }
@@ -4490,6 +4523,24 @@ static void vanilla_cmd_func2(char *cmd, char *parms)
 
     togglingvanilla = true;
 
+    for (int i = 0; *actions[i].action; i++)
+    {
+        if (actions[i].keyboard1)
+            *(int *)actions[i].keyboard1 = 0;
+
+        if (actions[i].keyboard2)
+            *(int *)actions[i].keyboard2 = 0;
+
+        if (actions[i].mouse1)
+            *(int *)actions[i].mouse1 = -1;
+
+        if (actions[i].gamepad1)
+            *(int *)actions[i].gamepad1 = 0;
+
+        if (actions[i].gamepad2)
+            *(int *)actions[i].gamepad2 = 0;
+    }
+
     if (vanilla)
     {
         SC_Open("VANILLA");
@@ -4498,7 +4549,19 @@ static void vanilla_cmd_func2(char *cmd, char *parms)
         {
             char    *cvar = strdup(sc_String);
 
-            if (SC_GetString())
+            if (M_StringCompare(cvar, "bind"))
+            {
+                if (SC_GetString())
+                {
+                    char    *control = strdup(sc_String);
+
+                    if (SC_GetString())
+                        bind_cmd_func2("bind", M_StringJoin(control, " ", sc_String, NULL));
+
+                    free(control);
+                }
+            }
+            else if (SC_GetString())
                 C_ValidateInput(M_StringJoin(cvar, " ", sc_String, NULL));
 
             free(cvar);
@@ -4507,23 +4570,19 @@ static void vanilla_cmd_func2(char *cmd, char *parms)
         SC_Close();
         C_Output(s_STSTR_VMON);
         HU_SetPlayerMessage(s_STSTR_VMON, false, false);
-
         C_Warning("Any changes to CVARs won't be saved while vanilla mode is on.");
-
-        if (gamestate == GS_LEVEL)
-            C_HideConsole();
     }
     else
     {
         M_LoadCVARs(packageconfig);
         C_Output(s_STSTR_VMOFF);
         HU_SetPlayerMessage(s_STSTR_VMOFF, false, false);
-
-        if (gamestate == GS_LEVEL)
-            C_HideConsole();
     }
 
     togglingvanilla = false;
+
+    if (gamestate == GS_LEVEL)
+        C_HideConsole();
 }
 
 //
@@ -4552,7 +4611,7 @@ static void bool_cvars_func2(char *cmd, char *parms)
             }
             else
             {
-                C_ShowCVARDescription(i);
+                C_ShowDescription(i);
 
                 if (*(dboolean *)consolecmds[i].variable == (dboolean)consolecmds[i].defaultnumber)
                     C_Output("It is currently set to its default of <b>%s</b>.",
@@ -4610,8 +4669,7 @@ static void color_cvars_func2(char *cmd, char *parms)
     if (strlen(parms) == 7 && parms[0] == '#')
     {
         M_snprintf(buffer, sizeof(buffer), "%i", FindNearestColor(W_CacheLumpName("PLAYPAL"),
-            hextodec(M_SubString(parms, 1, 2)), hextodec(M_SubString(parms, 3, 2)),
-            hextodec(M_SubString(parms, 5, 2))));
+            hextodec(M_SubString(parms, 1, 2)), hextodec(M_SubString(parms, 3, 2)), hextodec(M_SubString(parms, 5, 2))));
         int_cvars_func2(cmd, buffer);
     }
     else
@@ -4630,8 +4688,7 @@ static dboolean float_cvars_func1(char *cmd, char *parms)
         return true;
 
     for (int i = 0; *consolecmds[i].name; i++)
-        if (M_StringCompare(cmd, consolecmds[i].name) && consolecmds[i].type == CT_CVAR
-            && (consolecmds[i].flags & CF_FLOAT))
+        if (M_StringCompare(cmd, consolecmds[i].name) && consolecmds[i].type == CT_CVAR && (consolecmds[i].flags & CF_FLOAT))
         {
             float   value = FLT_MIN;
 
@@ -4651,13 +4708,12 @@ static dboolean int_cvars_func1(char *cmd, char *parms)
         return true;
 
     for (int i = 0; *consolecmds[i].name; i++)
-        if (M_StringCompare(cmd, consolecmds[i].name) && consolecmds[i].type == CT_CVAR
-            && (consolecmds[i].flags & CF_INTEGER))
+        if (M_StringCompare(cmd, consolecmds[i].name) && consolecmds[i].type == CT_CVAR && (consolecmds[i].flags & CF_INTEGER))
         {
             int value = C_LookupValueFromAlias(parms, consolecmds[i].aliases);
 
             if (value == INT_MIN)
-                sscanf(parms, "%10i", &value);
+                sscanf(parms, "%10d", &value);
 
             return (value >= consolecmds[i].minimumvalue && value <= consolecmds[i].maximumvalue);
         }
@@ -4668,15 +4724,14 @@ static dboolean int_cvars_func1(char *cmd, char *parms)
 static void int_cvars_func2(char *cmd, char *parms)
 {
     for (int i = 0; *consolecmds[i].name; i++)
-        if (M_StringCompare(cmd, consolecmds[i].name) && consolecmds[i].type == CT_CVAR
-            && (consolecmds[i].flags & CF_INTEGER))
+        if (M_StringCompare(cmd, consolecmds[i].name) && consolecmds[i].type == CT_CVAR && (consolecmds[i].flags & CF_INTEGER))
         {
             if (*parms && !(consolecmds[i].flags & CF_READONLY))
             {
                 int value = C_LookupValueFromAlias(parms, consolecmds[i].aliases);
 
                 if (value == INT_MIN)
-                    sscanf(parms, "%10i", &value);
+                    sscanf(parms, "%10d", &value);
 
                 if (value != INT_MIN && value != *(int *)consolecmds[i].variable)
                 {
@@ -4686,16 +4741,14 @@ static void int_cvars_func2(char *cmd, char *parms)
             }
             else
             {
-                C_ShowCVARDescription(i);
+                C_ShowDescription(i);
 
                 if (consolecmds[i].flags & CF_PERCENT)
                 {
                     if (consolecmds[i].flags & CF_READONLY)
-                        C_Output("It is currently set to <b>%i%%</b> and is read-only.",
-                            *(int *)consolecmds[i].variable);
+                        C_Output("It is currently set to <b>%i%%</b> and is read-only.", *(int *)consolecmds[i].variable);
                     else if (*(int *)consolecmds[i].variable == (int)consolecmds[i].defaultnumber)
-                        C_Output("It is currently set to its default of <b>%i%%</b>.",
-                            *(int *)consolecmds[i].variable);
+                        C_Output("It is currently set to its default of <b>%i%%</b>.", *(int *)consolecmds[i].variable);
                     else
                         C_Output("It is currently set to <b>%i%%</b> and its default is <b>%i%%</b>.",
                             *(int *)consolecmds[i].variable, (int)consolecmds[i].defaultnumber);
@@ -4725,19 +4778,16 @@ static void int_cvars_func2(char *cmd, char *parms)
 static void str_cvars_func2(char *cmd, char *parms)
 {
     for (int i = 0; *consolecmds[i].name; i++)
-        if (M_StringCompare(cmd, consolecmds[i].name) && consolecmds[i].type == CT_CVAR
-            && (consolecmds[i].flags & CF_STRING))
+        if (M_StringCompare(cmd, consolecmds[i].name) && consolecmds[i].type == CT_CVAR && (consolecmds[i].flags & CF_STRING))
         {
-            if (M_StringCompare(parms, EMPTYVALUE) && **(char **)consolecmds[i].variable
-                && !(consolecmds[i].flags & CF_READONLY))
+            if (M_StringCompare(parms, EMPTYVALUE) && **(char **)consolecmds[i].variable && !(consolecmds[i].flags & CF_READONLY))
             {
                 *(char **)consolecmds[i].variable = "";
                 M_SaveCVARs();
             }
             else if (*parms)
             {
-                if (!M_StringCompare(parms, *(char **)consolecmds[i].variable)
-                    && !(consolecmds[i].flags & CF_READONLY))
+                if (!M_StringCompare(parms, *(char **)consolecmds[i].variable) && !(consolecmds[i].flags & CF_READONLY))
                 {
                     C_StripQuotes(parms);
                     *(char **)consolecmds[i].variable = strdup(parms);
@@ -4746,15 +4796,14 @@ static void str_cvars_func2(char *cmd, char *parms)
             }
             else
             {
-                C_ShowCVARDescription(i);
+                C_ShowDescription(i);
 
                 if (consolecmds[i].flags & CF_READONLY)
                     C_Output("It is currently set to <b>%s%s%s</b> and is read-only.",
                         (M_StringCompare(consolecmds[i].name, "version") ? "" : "\""), *(char **)consolecmds[i].variable,
                         (M_StringCompare(consolecmds[i].name, "version") ? "" : "\""));
                 else if (M_StringCompare(*(char **)consolecmds[i].variable, consolecmds[i].defaultstring))
-                    C_Output("It is currently set to its default of <b>\"%s\"</b>.",
-                        *(char **)consolecmds[i].variable);
+                    C_Output("It is currently set to its default of <b>\"%s\"</b>.", *(char **)consolecmds[i].variable);
                 else
                     C_Output("It is currently set to <b>\"%s\"</b> and its default is <b>\"%s\"</b>.",
                         *(char **)consolecmds[i].variable, consolecmds[i].defaultstring);
@@ -4774,7 +4823,7 @@ static void time_cvars_func2(char *cmd, char *parms)
         {
             const int   tics = *(int *)consolecmds[i].variable / TICRATE;
 
-            C_ShowCVARDescription(i);
+            C_ShowDescription(i);
 
             C_Output("It is currently set to <b>%02i:%02i:%02i</b> and is read-only.",
                 tics / 3600, (tics % 3600) / 60, (tics % 3600) % 60);
@@ -4844,7 +4893,7 @@ static void am_gridsize_cvar_func2(char *cmd, char *parms)
     }
     else
     {
-        C_ShowCVARDescription(C_GetIndex(stringize(am_gridsize)));
+        C_ShowDescription(C_GetIndex(stringize(am_gridsize)));
 
         if (M_StringCompare(am_gridsize, am_gridsize_default))
             C_Output("It is currently set to its default of <b>%s</b>.", formatsize(am_gridsize));
@@ -4891,7 +4940,7 @@ static void armortype_cvar_func2(char *cmd, char *parms)
     }
     else
     {
-        C_ShowCVARDescription(C_GetIndex(stringize(armortype)));
+        C_ShowDescription(C_GetIndex(stringize(armortype)));
 
         if (gamestate == GS_LEVEL)
             C_Output("It is currently set to <b>%s</b>.", C_LookupAliasFromValue(viewplayer->armortype, ARMORTYPEVALUEALIAS));
@@ -4968,7 +5017,7 @@ static void gp_deadzone_cvars_func2(char *cmd, char *parms)
     }
     else if (M_StringCompare(cmd, stringize(gp_deadzone_left)))
     {
-        C_ShowCVARDescription(C_GetIndex(stringize(gp_deadzone_left)));
+        C_ShowDescription(C_GetIndex(stringize(gp_deadzone_left)));
 
         if (gp_deadzone_left == gp_deadzone_left_default)
             C_Output("It is currently set to its default of <b>%s%%</b>.", striptrailingzero(gp_deadzone_left, 1));
@@ -4978,7 +5027,7 @@ static void gp_deadzone_cvars_func2(char *cmd, char *parms)
     }
     else
     {
-        C_ShowCVARDescription(C_GetIndex(stringize(gp_deadzone_right)));
+        C_ShowDescription(C_GetIndex(stringize(gp_deadzone_right)));
 
         if (gp_deadzone_right == gp_deadzone_right_default)
             C_Output("It is currently set to its default of <b>%s%%</b>.", striptrailingzero(gp_deadzone_right, 1));
@@ -4999,19 +5048,6 @@ static void gp_sensitivity_cvar_func2(char *cmd, char *parms)
 
     if (gp_sensitivity != gp_sensitivity_old)
         I_SetGamepadSensitivity();
-}
-
-//
-// gp_swapthumbsticks CVAR
-//
-static void gp_swapthumbsticks_cvar_func2(char *cmd, char *parms)
-{
-    const int   gp_swapthumbsticks_old = gp_swapthumbsticks;
-
-    bool_cvars_func2(cmd, parms);
-
-    if (gp_swapthumbsticks != gp_swapthumbsticks_old)
-        I_SetGamepadThumbSticks();
 }
 
 //
@@ -5064,12 +5100,14 @@ static void player_cvars_func2(char *cmd, char *parms)
 
         if (*parms)
         {
-            sscanf(parms, "%10i", &value);
+            sscanf(parms, "%10d", &value);
 
             if (ammotype != am_noammo && value != viewplayer->ammo[ammotype] && viewplayer->health > 0)
             {
                 if (value > viewplayer->ammo[ammotype])
                 {
+                    P_UpdateAmmoStat(ammotype, value - viewplayer->ammo[ammotype]);
+                    ammohighlight = I_GetTimeMS() + HUD_AMMO_HIGHLIGHT_WAIT;
                     P_AddBonus();
                     S_StartSound(NULL, sfx_itemup);
                 }
@@ -5081,7 +5119,7 @@ static void player_cvars_func2(char *cmd, char *parms)
         }
         else
         {
-            C_ShowCVARDescription(C_GetIndex(stringize(ammo)));
+            C_ShowDescription(C_GetIndex(stringize(ammo)));
 
             if (gamestate == GS_LEVEL)
                 C_Output("It is currently set to <b>%i</b>.", (ammotype == am_noammo ? 0 : viewplayer->ammo[ammotype]));
@@ -5091,12 +5129,14 @@ static void player_cvars_func2(char *cmd, char *parms)
     {
         if (*parms)
         {
-            sscanf(parms, "%10i", &value);
+            sscanf(parms, "%10d", &value);
 
             if (value != viewplayer->armorpoints)
             {
                 if (value > viewplayer->armorpoints)
                 {
+                    P_UpdateArmorStat(value - viewplayer->armorpoints);
+                    armorhighlight = I_GetTimeMS() + HUD_ARMOR_HIGHLIGHT_WAIT;
                     P_AddBonus();
                     S_StartSound(NULL, sfx_itemup);
                 }
@@ -5111,7 +5151,7 @@ static void player_cvars_func2(char *cmd, char *parms)
         }
         else
         {
-            C_ShowCVARDescription(C_GetIndex(stringize(armor)));
+            C_ShowDescription(C_GetIndex(stringize(armor)));
 
             if (gamestate == GS_LEVEL)
                 C_Output("It is currently set to <b>%i%%</b>.", viewplayer->armorpoints);
@@ -5121,7 +5161,7 @@ static void player_cvars_func2(char *cmd, char *parms)
     {
         if (*parms)
         {
-            sscanf(parms, "%10i", &value);
+            sscanf(parms, "%10d", &value);
             value = BETWEEN(health_min, value, maxhealth);
 
             if (viewplayer->health <= 0)
@@ -5144,8 +5184,10 @@ static void player_cvars_func2(char *cmd, char *parms)
                     P_DamageMobj(viewplayer->mo, viewplayer->mo, NULL, viewplayer->health - value, false);
                 else
                 {
+                    P_UpdateHealthStat(value - viewplayer->health);
                     viewplayer->health = value;
                     viewplayer->mo->health = value;
+                    healthhighlight = I_GetTimeMS() + HUD_HEALTH_HIGHLIGHT_WAIT;
                     P_AddBonus();
                     S_StartSound(NULL, sfx_itemup);
                 }
@@ -5155,7 +5197,7 @@ static void player_cvars_func2(char *cmd, char *parms)
         }
         else
         {
-            C_ShowCVARDescription(C_GetIndex(stringize(health)));
+            C_ShowDescription(C_GetIndex(stringize(health)));
 
             if (gamestate == GS_LEVEL)
                 C_Output("It is currently set to <b>%i%%</b>.", viewplayer->health);
@@ -5193,15 +5235,13 @@ static void r_blood_cvar_func2(char *cmd, char *parms)
     }
     else
     {
-        C_ShowCVARDescription(C_GetIndex(stringize(r_blood)));
+        C_ShowDescription(C_GetIndex(stringize(r_blood)));
 
         if (r_blood == r_blood_default)
-            C_Output("It is currently set to its default of <b>%s</b>.",
-                C_LookupAliasFromValue(r_blood, BLOODVALUEALIAS));
+            C_Output("It is currently set to its default of <b>%s</b>.", C_LookupAliasFromValue(r_blood, BLOODVALUEALIAS));
         else
             C_Output("It is currently set to <b>%s</b> and its default is <b>%s</b>.",
-                C_LookupAliasFromValue(r_blood, BLOODVALUEALIAS),
-                C_LookupAliasFromValue(r_blood_default, BLOODVALUEALIAS));
+                C_LookupAliasFromValue(r_blood, BLOODVALUEALIAS), C_LookupAliasFromValue(r_blood_default, BLOODVALUEALIAS));
     }
 }
 
@@ -5250,7 +5290,7 @@ static void r_bloodsplats_translucency_cvar_func2(char *cmd, char *parms)
     }
     else
     {
-        C_ShowCVARDescription(C_GetIndex(stringize(r_bloodsplats_translucency)));
+        C_ShowDescription(C_GetIndex(stringize(r_bloodsplats_translucency)));
 
         if (r_bloodsplats_translucency == r_bloodsplats_translucency_default)
             C_Output("It is currently set to its default of <b>%s</b>.",
@@ -5284,15 +5324,13 @@ static void r_detail_cvar_func2(char *cmd, char *parms)
     }
     else
     {
-        C_ShowCVARDescription(C_GetIndex(stringize(r_detail)));
+        C_ShowDescription(C_GetIndex(stringize(r_detail)));
 
         if (r_detail == r_detail_default)
-            C_Output("It is currently set to its default of <b>%s</b>.",
-                C_LookupAliasFromValue(r_detail, DETAILVALUEALIAS));
+            C_Output("It is currently set to its default of <b>%s</b>.", C_LookupAliasFromValue(r_detail, DETAILVALUEALIAS));
         else
             C_Output("It is currently set to <b>%s</b> and its default is <b>%s</b>.",
-                C_LookupAliasFromValue(r_detail, DETAILVALUEALIAS),
-                C_LookupAliasFromValue(r_detail_default, DETAILVALUEALIAS));
+                C_LookupAliasFromValue(r_detail, DETAILVALUEALIAS), C_LookupAliasFromValue(r_detail_default, DETAILVALUEALIAS));
     }
 }
 
@@ -5314,15 +5352,13 @@ static void r_dither_cvar_func2(char *cmd, char *parms)
     }
     else
     {
-        C_ShowCVARDescription(C_GetIndex(stringize(r_dither)));
+        C_ShowDescription(C_GetIndex(stringize(r_dither)));
 
         if (r_dither == r_dither_default)
-            C_Output("It is currently set to its default of <b>%s</b>.",
-                C_LookupAliasFromValue(r_dither, BOOLVALUEALIAS));
+            C_Output("It is currently set to its default of <b>%s</b>.", C_LookupAliasFromValue(r_dither, BOOLVALUEALIAS));
         else
             C_Output("It is currently set to <b>%s</b> and its default is <b>%s</b>.",
-                C_LookupAliasFromValue(r_dither, BOOLVALUEALIAS),
-                C_LookupAliasFromValue(r_dither_default, BOOLVALUEALIAS));
+                C_LookupAliasFromValue(r_dither, BOOLVALUEALIAS), C_LookupAliasFromValue(r_dither_default, BOOLVALUEALIAS));
     }
 }
 
@@ -5346,15 +5382,13 @@ static void r_fixmaperrors_cvar_func2(char *cmd, char *parms)
     }
     else
     {
-        C_ShowCVARDescription(C_GetIndex(stringize(r_fixmaperrors)));
+        C_ShowDescription(C_GetIndex(stringize(r_fixmaperrors)));
 
         if (r_fixmaperrors == r_fixmaperrors_default)
-            C_Output("It is currently set to its default of <b>%s</b>.",
-                C_LookupAliasFromValue(r_fixmaperrors, BOOLVALUEALIAS));
+            C_Output("It is currently set to its default of <b>%s</b>.", C_LookupAliasFromValue(r_fixmaperrors, BOOLVALUEALIAS));
         else
             C_Output("It is currently set to <b>%s</b> and its default is <b>%s</b>.",
-                C_LookupAliasFromValue(r_fixmaperrors, BOOLVALUEALIAS),
-                C_LookupAliasFromValue(r_fixmaperrors_default, BOOLVALUEALIAS));
+                C_LookupAliasFromValue(r_fixmaperrors, BOOLVALUEALIAS), C_LookupAliasFromValue(r_fixmaperrors_default, BOOLVALUEALIAS));
     }
 }
 
@@ -5371,6 +5405,7 @@ static void r_fov_cvar_func2(char *cmd, char *parms)
     {
         setsizeneeded = true;
         R_InitLightTables();
+        S_StartSound(NULL, sfx_stnmov);
     }
 }
 
@@ -5410,7 +5445,7 @@ static void r_gamma_cvar_func2(char *cmd, char *parms)
         if (len >= 2 && buf[len - 1] == '0' && buf[len - 2] == '0')
             buf[len - 1] = '\0';
 
-        C_ShowCVARDescription(C_GetIndex(stringize(r_gamma)));
+        C_ShowDescription(C_GetIndex(stringize(r_gamma)));
 
         if (r_gamma == r_gamma_default)
             C_Output("It is currently set to its default of <b>%s</b>.", (r_gamma == 1.0f ? "off" : buf));
@@ -5447,11 +5482,10 @@ static void r_hud_translucency_cvar_func2(char *cmd, char *parms)
     }
     else
     {
-        C_ShowCVARDescription(C_GetIndex(stringize(r_hud_translucency)));
+        C_ShowDescription(C_GetIndex(stringize(r_hud_translucency)));
 
         if (r_hud_translucency == r_hud_translucency_default)
-            C_Output("It is currently set to its default of <b>%s</b>.",
-                C_LookupAliasFromValue(r_hud_translucency, BOOLVALUEALIAS));
+            C_Output("It is currently set to its default of <b>%s</b>.", C_LookupAliasFromValue(r_hud_translucency, BOOLVALUEALIAS));
         else
             C_Output("It is currently set to <b>%s</b> and its default is <b>%s</b>.",
                 C_LookupAliasFromValue(r_hud_translucency, BOOLVALUEALIAS),
@@ -5474,7 +5508,7 @@ static void r_lowpixelsize_cvar_func2(char *cmd, char *parms)
     }
     else
     {
-        C_ShowCVARDescription(C_GetIndex(stringize(r_lowpixelsize)));
+        C_ShowDescription(C_GetIndex(stringize(r_lowpixelsize)));
 
         if (M_StringCompare(r_lowpixelsize, r_lowpixelsize_default))
             C_Output("It is currently set to its default of <b>%s</b>.", formatsize(r_lowpixelsize));
@@ -5502,13 +5536,12 @@ static void r_messagepos_cvar_func2(char *cmd, char *parms)
     }
     else
     {
-        C_ShowCVARDescription(C_GetIndex(stringize(r_messagepos)));
+        C_ShowDescription(C_GetIndex(stringize(r_messagepos)));
 
         if (M_StringCompare(r_messagepos, r_messagepos_default))
             C_Output("It is currently set to its default of <b>%s</b>.", r_messagepos);
         else
-            C_Output("It is currently set to <b>%s</b> and its default is <b>%s</b>.",
-                r_messagepos, r_messagepos_default);
+            C_Output("It is currently set to <b>%s</b> and its default is <b>%s</b>.", r_messagepos, r_messagepos_default);
     }
 }
 
@@ -5535,11 +5568,10 @@ static void r_messagescale_cvar_func2(char *cmd, char *parms)
     }
     else
     {
-        C_ShowCVARDescription(C_GetIndex(stringize(r_messagescale)));
+        C_ShowDescription(C_GetIndex(stringize(r_messagescale)));
 
         if (r_messagescale == r_messagescale_default)
-            C_Output("It is currently set to its default of <b>%s</b>.",
-                C_LookupAliasFromValue(r_messagescale, SCALEVALUEALIAS));
+            C_Output("It is currently set to its default of <b>%s</b>.", C_LookupAliasFromValue(r_messagescale, SCALEVALUEALIAS));
         else
             C_Output("It is currently set to <b>%s</b> and its default is <b>%s</b>.",
                 C_LookupAliasFromValue(r_messagescale, SCALEVALUEALIAS),
@@ -5574,13 +5606,12 @@ static void r_screensize_cvar_func2(char *cmd, char *parms)
     }
     else
     {
-        C_ShowCVARDescription(C_GetIndex(stringize(r_screensize)));
+        C_ShowDescription(C_GetIndex(stringize(r_screensize)));
 
         if (r_screensize == r_screensize_default)
             C_Output("It is currently set to its default of <b>%i</b>.", r_screensize);
         else
-            C_Output("It is currently set to <b>%i</b> and its default is <b>%i</b>.",
-                r_screensize, r_screensize_default);
+            C_Output("It is currently set to <b>%i</b> and its default is <b>%i</b>.", r_screensize, r_screensize_default);
     }
 }
 
@@ -5612,7 +5643,7 @@ static void r_shadows_translucency_cvar_func2(char *cmd, char *parms)
     }
     else
     {
-        C_ShowCVARDescription(C_GetIndex(stringize(r_shadows_translucency)));
+        C_ShowDescription(C_GetIndex(stringize(r_shadows_translucency)));
 
         if (r_shadows_translucency == r_shadows_translucency_default)
             C_Output("It is currently set to its default of <b>%s</b>.",
@@ -5693,15 +5724,13 @@ static void r_textures_cvar_func2(char *cmd, char *parms)
     }
     else
     {
-        C_ShowCVARDescription(C_GetIndex(stringize(r_textures)));
+        C_ShowDescription(C_GetIndex(stringize(r_textures)));
 
         if (r_textures == r_textures_default)
-            C_Output("It is currently set to its default of <b>%s</b>.",
-                C_LookupAliasFromValue(r_textures, BOOLVALUEALIAS));
+            C_Output("It is currently set to its default of <b>%s</b>.", C_LookupAliasFromValue(r_textures, BOOLVALUEALIAS));
         else
             C_Output("It is currently set to <b>%s</b> and its default is <b>%s</b>.",
-                C_LookupAliasFromValue(r_textures, BOOLVALUEALIAS),
-                C_LookupAliasFromValue(r_textures_default, BOOLVALUEALIAS));
+                C_LookupAliasFromValue(r_textures, BOOLVALUEALIAS), C_LookupAliasFromValue(r_textures_default, BOOLVALUEALIAS));
     }
 }
 
@@ -5734,15 +5763,13 @@ static void r_translucency_cvar_func2(char *cmd, char *parms)
     }
     else
     {
-        C_ShowCVARDescription(C_GetIndex(stringize(r_translucency)));
+        C_ShowDescription(C_GetIndex(stringize(r_translucency)));
 
         if (r_translucency == r_translucency_default)
-            C_Output("It is currently set to its default of <b>%s</b>.",
-                C_LookupAliasFromValue(r_translucency, BOOLVALUEALIAS));
+            C_Output("It is currently set to its default of <b>%s</b>.", C_LookupAliasFromValue(r_translucency, BOOLVALUEALIAS));
         else
             C_Output("It is currently set to <b>%s</b> and its default is <b>%s</b>.",
-                C_LookupAliasFromValue(r_translucency, BOOLVALUEALIAS),
-                C_LookupAliasFromValue(r_translucency_default, BOOLVALUEALIAS));
+                C_LookupAliasFromValue(r_translucency, BOOLVALUEALIAS), C_LookupAliasFromValue(r_translucency_default, BOOLVALUEALIAS));
     }
 }
 
@@ -5757,7 +5784,7 @@ static dboolean s_volume_cvars_func1(char *cmd, char *parms)
         return true;
 
     if (sscanf(parms, "%10i%%", &value) != 1)
-        sscanf(parms, "%10i", &value);
+        sscanf(parms, "%10d", &value);
 
     return ((M_StringCompare(cmd, stringize(s_musicvolume)) && value >= s_musicvolume_min
         && value <= s_musicvolume_max) || (M_StringCompare(cmd, stringize(s_sfxvolume))
@@ -5771,7 +5798,7 @@ static void s_volume_cvars_func2(char *cmd, char *parms)
         int value = INT_MIN;
 
         if (sscanf(parms, "%10i%%", &value) != 1)
-            sscanf(parms, "%10i", &value);
+            sscanf(parms, "%10d", &value);
 
         if (M_StringCompare(cmd, stringize(s_musicvolume)) && s_musicvolume != value)
         {
@@ -5790,23 +5817,21 @@ static void s_volume_cvars_func2(char *cmd, char *parms)
     }
     else if (M_StringCompare(cmd, stringize(s_musicvolume)))
     {
-        C_ShowCVARDescription(C_GetIndex(stringize(s_musicvolume)));
+        C_ShowDescription(C_GetIndex(stringize(s_musicvolume)));
 
         if (s_musicvolume == s_musicvolume_default)
             C_Output("It is currently set to its default of <b>%i%%</b>.", s_musicvolume);
         else
-            C_Output("It is currently set to <b>%i%%</b> and its default is <b>%i%%</b>.",
-                s_musicvolume, s_musicvolume_default);
+            C_Output("It is currently set to <b>%i%%</b> and its default is <b>%i%%</b>.", s_musicvolume, s_musicvolume_default);
     }
     else
     {
-        C_ShowCVARDescription(C_GetIndex(stringize(s_sfxvolume)));
+        C_ShowDescription(C_GetIndex(stringize(s_sfxvolume)));
 
         if (s_sfxvolume == s_sfxvolume_default)
             C_Output("It is currently set to its default of <b>%i%%</b>.", s_sfxvolume);
         else
-            C_Output("It is currently set to <b>%i%%</b> and its default is <b>%i%%</b>.",
-                s_sfxvolume, s_sfxvolume_default);
+            C_Output("It is currently set to <b>%i%%</b> and its default is <b>%i%%</b>.", s_sfxvolume, s_sfxvolume_default);
     }
 }
 
@@ -5855,7 +5880,7 @@ static dboolean turbo_cvar_func1(char *cmd, char *parms)
     if (!*parms)
         return true;
 
-    sscanf(parms, "%10i", &value);
+    sscanf(parms, "%10d", &value);
     return (value >= turbo_min && value <= turbo_max);
 }
 
@@ -5865,7 +5890,7 @@ static void turbo_cvar_func2(char *cmd, char *parms)
     {
         int value = INT_MIN;
 
-        sscanf(parms, "%10i", &value);
+        sscanf(parms, "%10d", &value);
 
         if (value >= turbo_min && value <= turbo_max && value != turbo)
         {
@@ -5883,7 +5908,7 @@ static void turbo_cvar_func2(char *cmd, char *parms)
     }
     else
     {
-        C_ShowCVARDescription(C_GetIndex(stringize(turbo)));
+        C_ShowDescription(C_GetIndex(stringize(turbo)));
 
         if (turbo == turbo_default)
             C_Output("It is currently set to its default of <b>%i%%</b>.", turbo);
@@ -5914,7 +5939,7 @@ static void units_cvar_func2(char *cmd, char *parms)
     }
     else
     {
-        C_ShowCVARDescription(C_GetIndex(stringize(units)));
+        C_ShowDescription(C_GetIndex(stringize(units)));
 
         if (units == units_default)
             C_Output("It is currently set to its default of <b>%s</b>.", C_LookupAliasFromValue(units, UNITSVALUEALIAS));
@@ -6025,7 +6050,7 @@ static void vid_scaleapi_cvar_func2(char *cmd, char *parms)
     }
     else
     {
-        C_ShowCVARDescription(C_GetIndex(stringize(vid_scaleapi)));
+        C_ShowDescription(C_GetIndex(stringize(vid_scaleapi)));
 
         if (M_StringCompare(vid_scaleapi, vid_scaleapi_default))
             C_Output("It is currently set to its default of <b>\"%s\"</b>.", vid_scaleapi);
@@ -6057,12 +6082,13 @@ static void vid_scalefilter_cvar_func2(char *cmd, char *parms)
     }
     else
     {
-        C_ShowCVARDescription(C_GetIndex(stringize(vid_scalefilter)));
+        C_ShowDescription(C_GetIndex(stringize(vid_scalefilter)));
 
         if (M_StringCompare(vid_scalefilter, vid_scalefilter_default))
             C_Output("It is currently set to its default of <b>\"%s\"</b>.", vid_scalefilter);
         else
-            C_Output("It is currently set to <b>\"%s\"</b> and its default is <b>\"%s\"</b>.", vid_scalefilter, vid_scalefilter_default);
+            C_Output("It is currently set to <b>\"%s\"</b> and its default is <b>\"%s\"</b>.",
+                vid_scalefilter, vid_scalefilter_default);
     }
 }
 
@@ -6085,7 +6111,7 @@ static void vid_screenresolution_cvar_func2(char *cmd, char *parms)
     }
     else
     {
-        C_ShowCVARDescription(C_GetIndex(stringize(vid_screenresolution)));
+        C_ShowDescription(C_GetIndex(stringize(vid_screenresolution)));
 
         if (M_StringCompare(vid_screenresolution, vid_screenresolution_default))
             C_Output("It is currently set to its default of <b>%s</b>.", formatsize(vid_screenresolution));
@@ -6192,7 +6218,7 @@ static void vid_windowpos_cvar_func2(char *cmd, char *parms)
     }
     else
     {
-        C_ShowCVARDescription(C_GetIndex(stringize(vid_windowpos)));
+        C_ShowDescription(C_GetIndex(stringize(vid_windowpos)));
 
         if (M_StringCompare(vid_windowpos, vid_windowpos_default))
             C_Output("It is currently set to its default of <b>%s</b>.", vid_windowpos);
@@ -6220,7 +6246,7 @@ static void vid_windowsize_cvar_func2(char *cmd, char *parms)
     }
     else
     {
-        C_ShowCVARDescription(C_GetIndex(stringize(vid_windowsize)));
+        C_ShowDescription(C_GetIndex(stringize(vid_windowsize)));
 
         if (M_StringCompare(vid_windowsize, vid_windowsize_default))
             C_Output("It is currently set to its default of <b>%s</b>.", formatsize(vid_windowsize));

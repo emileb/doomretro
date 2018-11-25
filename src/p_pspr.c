@@ -48,16 +48,14 @@
 #include "p_tick.h"
 #include "s_sound.h"
 
-#define LOWERSPEED              (6 * FRACUNIT)
-#define RAISESPEED              (6 * FRACUNIT)
-
-#define CHAINSAWIDLEMOTORSPEED  15000
-#define MAXMOTORSPEED           65535
+#define LOWERSPEED  (6 * FRACUNIT)
+#define RAISESPEED  (6 * FRACUNIT)
 
 dboolean        autoaim = autoaim_default;
 dboolean        centerweapon = centerweapon_default;
-dboolean        weaponrecoil = weaponrecoil_default;
 int             weaponbob = weaponbob_default;
+dboolean        weaponbounce = weaponbounce_default;
+dboolean        weaponrecoil = weaponrecoil_default;
 
 unsigned int    stat_shotsfired = 0;
 unsigned int    stat_shotshit = 0;
@@ -69,8 +67,9 @@ extern dboolean canmouselook;
 extern dboolean hitwall;
 extern dboolean usemouselook;
 
-void P_CheckMissileSpawn(mobj_t *th);
-
+//
+// A_Recoil
+//
 void A_Recoil(weapontype_t weapon)
 {
     if (weaponrecoil && canmouselook)
@@ -124,18 +123,22 @@ void P_SetPsprite(size_t position, statenum_t stnum)
 // P_BringUpWeapon
 // Starts bringing the pending weapon up
 // from the bottom of the screen.
-// Uses player
 //
 static void P_BringUpWeapon(void)
 {
+    statenum_t  newstate;
+
     if (viewplayer->pendingweapon == wp_nochange)
         viewplayer->pendingweapon = viewplayer->readyweapon;
     else if (viewplayer->pendingweapon == wp_chainsaw)
         S_StartSound(viewplayer->mo, sfx_sawup);
 
-    viewplayer->psprites[ps_weapon].sy = WEAPONBOTTOM;
-    P_SetPsprite(ps_weapon, weaponinfo[viewplayer->pendingweapon].upstate);
+    newstate = weaponinfo[viewplayer->pendingweapon].upstate;
+
     viewplayer->pendingweapon = wp_nochange;
+    viewplayer->psprites[ps_weapon].sy = WEAPONBOTTOM;
+
+    P_SetPsprite(ps_weapon, newstate);
 }
 
 //
@@ -203,15 +206,19 @@ void P_FireWeapon(void)
 
     P_SetPsprite(ps_weapon, weaponinfo[readyweapon].atkstate);
 
-    if (gp_vibrate_weapons && vibrate)
+    if (gp_vibrate_weapons)
     {
-        int motorspeed = weaponinfo[readyweapon].motorspeed * gp_vibrate_weapons / 100;
+        if (readyweapon == wp_chainsaw && linetarget)
+        {
+            I_GamepadVibration(MAXVIBRATIONSTRENGTH);
+            weaponvibrationtics = weaponinfo[readyweapon].tics;
+        }
+        else if (readyweapon != wp_fist)
+        {
+            I_GamepadVibration(weaponinfo[readyweapon].strength * gp_vibrate_weapons / 100);
+            weaponvibrationtics = weaponinfo[readyweapon].tics;
+        }
 
-        if ((readyweapon == wp_fist && viewplayer->powers[pw_strength]) || (readyweapon == wp_chainsaw && linetarget))
-            motorspeed = MAXMOTORSPEED;
-
-        XInputVibration(motorspeed);
-        weaponvibrationtics = weaponinfo[readyweapon].tics;
     }
 
     if (centerweapon)
@@ -255,17 +262,17 @@ void A_WeaponReady(mobj_t *actor, player_t *player, pspdef_t *psp)
     //  if player is dead, put the weapon away
     if (pendingweapon != wp_nochange || player->health <= 0)
     {
-        if (gp_vibrate_weapons && vibrate)
+        if (gp_vibrate_weapons)
         {
             if (pendingweapon == wp_chainsaw)
             {
-                idlemotorspeed = CHAINSAWIDLEMOTORSPEED * gp_vibrate_weapons / 100;
-                XInputVibration(idlemotorspeed);
+                idlevibrationstrength = CHAINSAWIDLEVIBRATIONSTRENGTH * gp_vibrate_weapons / 100;
+                I_GamepadVibration(idlevibrationstrength);
             }
-            else if (idlemotorspeed)
+            else if (idlevibrationstrength)
             {
-                idlemotorspeed = 0;
-                XInputVibration(idlemotorspeed);
+                idlevibrationstrength = 0;
+                I_StopGamepadVibration();
             }
         }
 
@@ -311,10 +318,7 @@ void A_ReFire(mobj_t *actor, player_t *player, pspdef_t *psp)
 
 void A_CheckReload(mobj_t *actor, player_t *player, pspdef_t *psp)
 {
-    weapontype_t    readyweapon = player->readyweapon;
-
-    if (!P_CheckAmmo(readyweapon))
-        P_SetPsprite(ps_weapon, weaponinfo[readyweapon].downstate);
+    P_CheckAmmo(player->readyweapon);
 }
 
 //
@@ -610,7 +614,6 @@ void A_FirePistol(mobj_t *actor, player_t *player, pspdef_t *psp)
 
     if (successfulshot)
     {
-        successfulshot = false;
         player->shotshit++;
         stat_shotshit = SafeAdd(stat_shotshit, 1);
     }
@@ -643,7 +646,6 @@ void A_FireShotgun(mobj_t *actor, player_t *player, pspdef_t *psp)
 
     if (successfulshot)
     {
-        successfulshot = false;
         player->shotshit++;
         stat_shotshit = SafeAdd(stat_shotshit, 1);
     }
@@ -679,7 +681,6 @@ void A_FireShotgun2(mobj_t *actor, player_t *player, pspdef_t *psp)
 
     if (successfulshot)
     {
-        successfulshot = false;
         player->shotshit++;
         stat_shotshit = SafeAdd(stat_shotshit, 1);
     }
@@ -732,7 +733,6 @@ void A_FireCGun(mobj_t *actor, player_t *player, pspdef_t *psp)
 
     if (successfulshot)
     {
-        successfulshot = false;
         player->shotshit++;
         stat_shotshit = SafeAdd(stat_shotshit, 1);
     }
@@ -833,10 +833,10 @@ void P_MovePsprites(void)
     pspdef_t    *weapon = &psp[ps_weapon];
     pspdef_t    *flash = &psp[ps_flash];
 
-    if (weapon->state && weapon->tics != -1 && !--weapon->tics)
+    if (weapon->tics != -1 && !--weapon->tics)
         P_SetPsprite(ps_weapon, weapon->state->nextstate);
 
-    if (flash->state && flash->tics != -1 && !--flash->tics)
+    if (flash->tics != -1 && !--flash->tics)
         P_SetPsprite(ps_flash, flash->state->nextstate);
 
     if (weapon->state->action == A_WeaponReady)

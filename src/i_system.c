@@ -184,8 +184,8 @@ void I_PrintWindowsVersion(void)
             else if (info.dwMajorVersion == 10)
                 infoname = (info.wProductType == VER_NT_WORKSTATION ? "10" : "Server 2016");
 
-            C_Output("Running on %s <i><b>Microsoft Windows %s%s%s%s%ws%s (Build %s)</b></i>.", bits, infoname,
-                (*typename ? " " : ""), typename, (wcslen(info.szCSDVersion) ? " (" : ""),
+            C_Output("Running on %s <i><b>Microsoft Windows %s%s%s%s%ws%s (Build %s)</b></i>.",
+                bits, infoname, (*typename ? " " : ""), typename, (wcslen(info.szCSDVersion) ? " (" : ""),
                 (wcslen(info.szCSDVersion) ? info.szCSDVersion : L""), (wcslen(info.szCSDVersion) ? ")" : ""),
                 commify(info.dwBuildNumber));
         }
@@ -197,8 +197,8 @@ void I_PrintSystemInfo(void)
 {
     int cores = SDL_GetCPUCount();
 
-    C_Output("There %s %i logical core%s and %sGB of system RAM.", (cores > 1 ? "are" : "is"), cores, (cores > 1 ? "s" : ""),
-        commify(SDL_GetSystemRAM() / 1000));
+    C_Output("There %s %i logical core%s and %sGB of system RAM.",
+        (cores > 1 ? "are" : "is"), cores, (cores > 1 ? "s" : ""), commify(SDL_GetSystemRAM() / 1000));
 }
 
 //
@@ -220,21 +220,16 @@ void I_Quit(dboolean shutdown)
         I_ShutdownGraphics();
         I_ShutdownKeyboard();
         I_ShutdownGamepad();
+        I_ShutdownTimer();
     }
 
 #if defined(_WIN32)
     I_ShutdownWindows32();
 #endif
 
-    SDL_Quit();
-
     exit(0);
 }
 
-void I_WaitVBL(int count)
-{
-    I_Sleep(count * 1000 / 70);
-}
 
 #ifdef __ANDROID__
 #include "LogWritter.h"
@@ -243,12 +238,11 @@ void I_WaitVBL(int count)
 //
 // I_Error
 //
-static dboolean already_quitting;
-
 void I_Error(const char *error, ...)
 {
-    va_list argptr;
-    char    msgbuf[512];
+    va_list         argptr;
+    char            msgbuf[512];
+    static dboolean already_quitting;
 
     if (already_quitting)
         exit(-1);
@@ -266,6 +260,7 @@ void I_Error(const char *error, ...)
     I_ShutdownGraphics();
     I_ShutdownKeyboard();
     I_ShutdownGamepad();
+    I_ShutdownTimer();
 
 #if defined(_WIN32)
     I_ShutdownWindows32();
@@ -291,8 +286,6 @@ void I_Error(const char *error, ...)
     va_end(argptr);
 
     SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, PACKAGE_NAME, msgbuf, NULL);
-
-    SDL_Quit();
 
     exit(-1);
 }

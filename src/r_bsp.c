@@ -67,8 +67,8 @@ void R_ClearDrawSegs(void)
 // CPhipps -
 // Instead of clipsegs, let's try using an array with one entry for each column,
 // indicating whether it's blocked by a solid wall yet or not.
-byte        *solidcol;
 static int  memcmpsize;
+byte        *solidcol;
 
 // CPhipps -
 // R_ClipWallSegment
@@ -106,12 +106,12 @@ static void R_ClipWallSegment(int first, int last, dboolean solid)
 //
 void R_InitClipSegs(void)
 {
-    solidcol = calloc(1, SCREENWIDTH * sizeof(*solidcol));
     memcmpsize = sizeof(frontsector->floor_xoffs) + sizeof(frontsector->floor_yoffs)
         + sizeof(frontsector->ceiling_xoffs) + sizeof(frontsector->ceiling_yoffs)
-        + sizeof(frontsector->ceilingpic) + sizeof(frontsector->floorpic)
-        + sizeof(frontsector->lightlevel) + sizeof(*frontsector->floorlightsec)
-        + sizeof(*frontsector->ceilinglightsec);
+        + sizeof(*frontsector->floorlightsec) + sizeof(*frontsector->ceilinglightsec)
+        + sizeof(frontsector->floorpic) + sizeof(frontsector->ceilingpic)
+        + sizeof(frontsector->lightlevel);
+    solidcol = calloc(1, SCREENWIDTH * sizeof(*solidcol));
 }
 
 //
@@ -148,7 +148,7 @@ static void R_RecalcLineFlags(line_t *linedef)
             || curline->sidedef->midtexture
             || memcmp(&backsector->floor_xoffs, &frontsector->floor_xoffs, memcmpsize))
         {
-            linedef->r_flags = 0;
+            linedef->r_flags = RF_NONE;
             return;
         }
         else
@@ -360,22 +360,22 @@ static void R_AddLine(seg_t *line)
         // Either angle1 or angle2 is behind us, so it doesn't matter if we
         // change it to the correct sign
         if (angle1 >= ANG180 && angle1 < ANG270)
-            angle1 = INT_MAX;   // which is ANG180 - 1
+            angle1 = INT_MAX;           // which is ANG180 - 1
         else
             angle2 = INT_MIN;
     }
 
     if ((int)angle2 >= (int)clipangle)
-        return;                 // Both off left edge
+        return;                         // Both off left edge
 
     if ((int)angle1 <= -(int)clipangle)
-        return;                 // Both off right edge
+        return;                         // Both off right edge
 
     if ((int)angle1 >= (int)clipangle)
-        angle1 = clipangle;     // Clip at left edge
+        angle1 = clipangle;             // Clip at left edge
 
     if ((int)angle2 <= -(int)clipangle)
-        angle2 = 0 - clipangle; // Clip at right edge
+        angle2 = 0 - clipangle;         // Clip at right edge
 
     // The seg is in the view range,
     // but not necessarily visible.
@@ -426,11 +426,11 @@ static dboolean R_CheckBBox(const fixed_t *bspcoord)
         { 3, 0, 2, 1 },
         { 3, 0, 2, 0 },
         { 3, 1, 2, 0 },
-        { 0 },
+        { 0, 0, 0, 0 },
         { 2, 0, 2, 1 },
         { 0, 0, 0, 0 },
         { 3, 1, 3, 0 },
-        { 0 },
+        { 0, 0, 0, 0 },
         { 2, 0, 3, 1 },
         { 2, 1, 3, 1 },
         { 2, 1, 3, 0 }

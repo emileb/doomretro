@@ -132,11 +132,11 @@ static byte *crosshaircolor;
 
 // how much zoom-in per tic
 // goes to 2x in 1 second
-#define M_ZOOMIN        ((fixed_t)((double)FRACUNIT * (1.0 + F_PANINC / 200.0)))
+#define M_ZOOMIN        ((fixed_t)(FRACUNIT * (1.0 + F_PANINC / 200.0)))
 
 // how much zoom-out per tic
 // pulls out to 0.5x in 1 second
-#define M_ZOOMOUT       ((fixed_t)((double)FRACUNIT / (1.0 + F_PANINC / 200.0)))
+#define M_ZOOMOUT       ((fixed_t)(FRACUNIT / (1.0 + F_PANINC / 200.0)))
 
 #define PLAYERRADIUS    (16 * (1 << MAPBITS))
 
@@ -157,7 +157,7 @@ typedef struct
 static const unsigned int   mapwidth = SCREENWIDTH;
 static const unsigned int   mapheight = SCREENHEIGHT - SBARHEIGHT;
 static const unsigned int   maparea = SCREENWIDTH * (SCREENHEIGHT - SBARHEIGHT);
-static const unsigned int   mapbottom = SCREENWIDTH * (SCREENHEIGHT - SBARHEIGHT) - SCREENWIDTH;
+static const unsigned int   mapbottom = SCREENWIDTH * (SCREENHEIGHT - SBARHEIGHT - 1);
 
 dboolean            automapactive;
 
@@ -1242,12 +1242,12 @@ static dboolean AM_clipMline(int *x0, int *y0, int *x1, int *y1)
     *x0 = CXMTOF(*x0);
     *x1 = CXMTOF(*x1);
 
-    if (*x0 < -1)
+    if (*x0 < 0)
         outcode1 = LEFT;
     else if (*x0 >= (int)mapwidth)
         outcode1 = RIGHT;
 
-    if (*x1 < -1)
+    if (*x1 < 0)
         outcode2 = LEFT;
     else if (*x1 >= (int)mapwidth)
         outcode2 = RIGHT;
@@ -1261,12 +1261,12 @@ static dboolean AM_clipMline(int *x0, int *y0, int *x1, int *y1)
     if (!((*x0 - *x1) | (*y0 - *y1)))
         return false;
 
-    if (*y0 < -1)
+    if (*y0 < 0)
         outcode1 |= TOP;
     else if (*y0 >= (int)mapheight)
         outcode1 |= BOTTOM;
 
-    if (*y1 < -1)
+    if (*y1 < 0)
         outcode2 |= TOP;
     else if (*y1 >= (int)mapheight)
         outcode2 |= BOTTOM;
@@ -1461,18 +1461,21 @@ static void AM_drawTransMline(int x0, int y0, int x1, int y1, byte *color)
 static void AM_drawGrid(void)
 {
     const fixed_t   minlen = (fixed_t)(sqrt((double)m_w * m_w + (double)m_h * m_h));
-    fixed_t         startx = m_x - (minlen - m_w) / 2;
-    fixed_t         starty = m_y - (minlen - m_h) / 2;
+    const fixed_t   startx = m_x - (minlen - m_w) / 2;
+    const fixed_t   starty = m_y - (minlen - m_h) / 2;
+    fixed_t         start;
     fixed_t         end;
 
     // Figure out start of vertical gridlines
-    if ((startx - (bmaporgx >> FRACTOMAPBITS)) % gridwidth)
-        startx += gridwidth - ((startx - (bmaporgx >> FRACTOMAPBITS)) % gridwidth);
+    start = startx;
+
+    if ((start - (bmaporgx >> FRACTOMAPBITS)) % gridwidth)
+        start -= (start - (bmaporgx >> FRACTOMAPBITS)) % gridwidth;
 
     end = startx + minlen;
 
-    // draw vertical gridlines
-    for (fixed_t x = startx; x < end; x += gridwidth)
+    // Draw vertical gridlines
+    for (fixed_t x = start; x < end; x += gridwidth)
     {
         mline_t ml;
 
@@ -1491,13 +1494,15 @@ static void AM_drawGrid(void)
     }
 
     // Figure out start of horizontal gridlines
-    if ((starty - (bmaporgy >> FRACTOMAPBITS)) % gridheight)
-        starty += gridheight - ((starty - (bmaporgy >> FRACTOMAPBITS)) % gridheight);
+    start = starty;
+
+    if ((start - (bmaporgx >> FRACTOMAPBITS)) % gridwidth)
+        start -= (start - (bmaporgx >> FRACTOMAPBITS)) % gridwidth;
 
     end = starty + minlen;
 
-    // draw horizontal gridlines
-    for (fixed_t y = starty; y < end; y += gridheight)
+    // Draw horizontal gridlines
+    for (fixed_t y = start; y < end; y += gridheight)
     {
         mline_t ml;
 
@@ -1545,8 +1550,8 @@ static void AM_drawWalls(void)
             {
                 const sector_t  *backsector = line.backsector;
                 const sector_t  *frontsector = line.frontsector;
-                const short     mapped = (flags & ML_MAPPED);
-                const short     secret = (flags & ML_SECRET);
+                const short     mapped = flags & ML_MAPPED;
+                const short     secret = flags & ML_SECRET;
                 const short     special = line.special;
                 static mline_t  l;
 
@@ -1590,7 +1595,7 @@ static void AM_drawWalls(void)
                     if (mapped || cheating)
                         AM_drawBigMline(l.a.x, l.a.y, l.b.x, l.b.y, wallcolor);
                     else if (allmap)
-                        AM_drawBigMline(l.a.x, l.a.y, l.b.x, l.b.y, allmapfdwallcolor);
+                        AM_drawBigMline(l.a.x, l.a.y, l.b.x, l.b.y, allmapwallcolor);
                 }
                 else if (backsector->floorheight != frontsector->floorheight)
                 {
@@ -1858,7 +1863,7 @@ static void AM_drawMarks(void)
         x = CXMTOF(point.x) - MARKWIDTH / 2 + 1;
         y = CYMTOF(point.y) - MARKHEIGHT / 2 - 1;
 
-        while (temp /= 10)
+        while ((temp /= 10))
             digits++;
 
         x += (digits - 1) * MARKWIDTH / 2;
@@ -1928,7 +1933,7 @@ static void AM_drawPath(void)
                 AM_drawMline2(start.x, start.y, end.x, end.y, &pathcolor);
             }
 
-            if (pathpointnum > 1 && !freeze && !(viewplayer->cheats & MF_NOCLIP))
+            if (pathpointnum > 1 && !freeze && !(viewplayer->cheats & CF_NOCLIP))
             {
                 AM_rotatePoint(&player);
                 AM_drawMline2(end.x, end.y, player.x, player.y, &pathcolor);
@@ -1941,7 +1946,7 @@ static void AM_drawPath(void)
                     && ABS(pathpoints[i - 1].y - pathpoints[i].y) <= FRACUNIT * 4)
                     AM_drawMline2(pathpoints[i - 1].x, pathpoints[i - 1].y, pathpoints[i].x, pathpoints[i].y, &pathcolor);
 
-            if (pathpointnum > 1 && !freeze && !(viewplayer->cheats & MF_NOCLIP))
+            if (pathpointnum > 1 && !freeze && !(viewplayer->cheats & CF_NOCLIP))
                 AM_drawMline2(pathpoints[pathpointnum - 1].x, pathpoints[pathpointnum - 1].y, player.x, player.y, &pathcolor);
         }
     }
@@ -1987,8 +1992,8 @@ static void AM_setFrameVariables(void)
     if (am_rotatemode)
     {
         const int       angle = (ANG90 - viewplayer->mo->angle) >> ANGLETOFINESHIFT;
-        const double    dx = (double)(m_x2 - x);
-        const double    dy = (double)(m_y2 - y);
+        const double    dx = m_x2 - x;
+        const double    dy = m_y2 - y;
         const fixed_t   r = (fixed_t)sqrt(dx * dx + dy * dy);
 
         am_frame.sin = finesine[angle];

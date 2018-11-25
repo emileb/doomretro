@@ -52,11 +52,11 @@
 #define MINZ                (FRACUNIT * 4)
 #define BASEYCENTER         (ORIGINALHEIGHT / 2)
 
+#define MAXVISSPRITES       128
+
 //
-// Sprite rotation 0 is facing the viewer,
-//  rotation 1 is one angle turn CLOCKWISE around the axis.
-// This is not the same as the angle,
-//  which increases counter clockwise (protractor).
+// Sprite rotation 0 is facing the viewer, rotation 1 is one angle turn CLOCKWISE around the axis.
+// This is not the same as the angle, which increases counter clockwise (protractor).
 // There was a lot of stuff grabbed wrong, so I changed it...
 //
 fixed_t                 pspritescale;
@@ -64,8 +64,7 @@ fixed_t                 pspriteiscale;
 
 static lighttable_t     **spritelights;         // killough 1/25/98 made static
 
-// constant arrays
-//  used for psprite clipping and initializing clipping
+// constant arrays used for psprite clipping and initializing clipping
 int                     negonearray[SCREENWIDTH];
 int                     viewheightarray[SCREENWIDTH];
 
@@ -146,27 +145,21 @@ static void R_InstallSpriteLump(const lumpinfo_t *lump, const int lumpnum, const
 
 //
 // R_InitSpriteDefs
-// Pass a null terminated list of sprite names
-// (4 chars exactly) to be used.
+// Pass a null terminated list of sprite names (4 chars exactly) to be used.
 //
-// Builds the sprite rotation matrices to account
-// for horizontally flipped sprites.
+// Builds the sprite rotation matrices to account for horizontally flipped sprites.
 //
-// Will report an error if the lumps are inconsistent.
-// Only called at startup.
+// Will report an error if the lumps are inconsistent. Only called at startup.
 //
-// Sprite lump names are 4 characters for the actor,
-//  a letter for the frame, and a number for the rotation.
+// Sprite lump names are 4 characters for the actor, a letter for the frame, and a number for the rotation.
 //
-// A sprite that is flippable will have an additional
-//  letter/number appended.
+// A sprite that is flippable will have an additional letter/number appended.
 //
 // The rotation character can be 0 to signify no rotations.
 //
 // 1/25/98, 1/31/98 killough : Rewritten for performance
 //
-// Empirically verified to have excellent hash
-// properties across standard DOOM sprites:
+// Empirically verified to have excellent hash properties across standard DOOM sprites:
 #define R_SpriteNameHash(s) ((unsigned int)((s)[0] - ((s)[1] * 3 - (s)[3] * 2 - (s)[2]) * 2))
 
 static void R_InitSpriteDefs(void)
@@ -199,8 +192,7 @@ static void R_InitSpriteDefs(void)
         hash[j].index = i;
     }
 
-    // scan all the lump names for each of the names,
-    //  noting the highest frame letter.
+    // scan all the lump names for each of the names, noting the highest frame letter.
     for (unsigned int i = 0; i < NUMSPRITES; i++)
     {
         const char  *spritename = sprnames[i];
@@ -308,7 +300,7 @@ static vissprite_t              *vissprites;
 static vissprite_t              **vissprite_ptrs;
 static unsigned int             num_vissprite;
 static unsigned int             num_bloodsplatvissprite;
-static unsigned int             num_vissprite_alloc;
+static unsigned int             num_vissprite_alloc = MAXVISSPRITES;
 
 static bloodsplatvissprite_t    bloodsplatvissprites[r_bloodsplats_max_max];
 
@@ -322,6 +314,8 @@ void R_InitSprites(void)
         negonearray[i] = -1;
 
     R_InitSpriteDefs();
+
+    vissprites = malloc(num_vissprite_alloc * sizeof(*vissprites));
 }
 
 //
@@ -341,7 +335,7 @@ static vissprite_t *R_NewVisSprite(void)
 {
     if (num_vissprite >= num_vissprite_alloc)
     {
-        num_vissprite_alloc = (num_vissprite_alloc ? num_vissprite_alloc * 2 : 128);
+        num_vissprite_alloc = (num_vissprite_alloc ? num_vissprite_alloc * 2 : MAXVISSPRITES);
         vissprites = I_Realloc(vissprites, num_vissprite_alloc * sizeof(*vissprites));
     }
 
@@ -388,8 +382,7 @@ static void R_BlastSpriteColumn(const rcolumn_t *column)
         if ((dc_yh = MIN((int)((topscreen + post->length * spryscale - 256) >> FRACBITS), dc_floorclip)) >= 0)
             if ((dc_yl = MAX(dc_ceilingclip, (int)((topscreen + FRACUNIT + 512) >> FRACBITS))) <= dc_yh)
             {
-                dc_texturefrac = dc_texturemid - (topdelta << FRACBITS)
-                    + FixedMul((dc_yl - centery) << FRACBITS, dc_iscale);
+                dc_texturefrac = dc_texturemid - (topdelta << FRACBITS) + FixedMul((dc_yl - centery) << FRACBITS, dc_iscale);
                 dc_source = pixels + topdelta;
                 colfunc();
             }
@@ -410,8 +403,7 @@ static void R_BlastPlayerSpriteColumn(const rcolumn_t *column)
         if ((dc_yh = MIN((int)((topscreen + post->length * pspritescale) >> FRACBITS), viewheight - 1)) >= 0)
             if ((dc_yl = MAX(0, (int)((topscreen + FRACUNIT) >> FRACBITS))) <= dc_yh)
             {
-                dc_texturefrac = dc_texturemid - (topdelta << FRACBITS)
-                    + FixedMul((dc_yl - centery) << FRACBITS, dc_iscale);
+                dc_texturefrac = dc_texturemid - (topdelta << FRACBITS) + FixedMul((dc_yl - centery) << FRACBITS, dc_iscale);
                 dc_source = pixels + topdelta;
                 colfunc();
             }
@@ -443,10 +435,10 @@ static void R_DrawVisSprite(const vissprite_t *vis)
     fixed_t         frac = vis->startfrac;
     const fixed_t   xiscale = vis->xiscale;
     const fixed_t   x2 = vis->x2;
-    const int       id = vis->patch + firstspritelump;
-    const rpatch_t  *patch = R_CachePatchNum(id);
+    const rpatch_t  *patch = R_CachePatchNum(vis->patch + firstspritelump);
     const mobj_t    *mobj = vis->mobj;
     const int       flags = mobj->flags;
+    int             baseclip;
 
     spryscale = vis->scale;
     dc_colormap[0] = vis->colormap[0];
@@ -462,7 +454,7 @@ static void R_DrawVisSprite(const vissprite_t *vis)
         colfunc = vis->colfunc;
 
     sprtopscreen = centeryfrac - FixedMul(dc_texturemid, spryscale);
-    dc_baseclip = (vis->footclip ? (int)(sprtopscreen + vis->footclip) >> FRACBITS : viewheight);
+    baseclip = (vis->footclip ? (int)(sprtopscreen + vis->footclip) >> FRACBITS : viewheight);
     fuzzpos = 0;
 
     for (dc_x = vis->x1; dc_x <= x2; dc_x++, frac += xiscale)
@@ -472,12 +464,10 @@ static void R_DrawVisSprite(const vissprite_t *vis)
         if ((dc_numposts = column->numposts))
         {
             dc_ceilingclip = mceilingclip[dc_x] + 1;
-            dc_floorclip = MIN(dc_baseclip, mfloorclip[dc_x]) - 1;
+            dc_floorclip = MIN(baseclip, mfloorclip[dc_x]) - 1;
             R_BlastSpriteColumn(column);
         }
     }
-
-    R_UnlockPatchNum(id);
 }
 
 //
@@ -488,14 +478,15 @@ static void R_DrawVisSpriteWithShadow(const vissprite_t *vis)
     fixed_t         frac = vis->startfrac;
     const fixed_t   xiscale = vis->xiscale;
     const fixed_t   x2 = vis->x2;
-    const int       id = vis->patch + firstspritelump;
-    const rpatch_t  *patch = R_CachePatchNum(id);
+    const rpatch_t  *patch = R_CachePatchNum(vis->patch + firstspritelump);
     const mobj_t    *mobj = vis->mobj;
     const int       flags = mobj->flags;
 
     spryscale = vis->scale;
     dc_colormap[0] = vis->colormap[0];
-    dc_black = dc_colormap[0][0] << 8;
+    dc_black = dc_colormap[0][nearestcolors[0]];
+    dc_black25 = tinttab25 + (dc_black << 8);
+    dc_black40 = tinttab40 + (dc_black << 8);
     dc_iscale = FixedDiv(FRACUNIT, spryscale);
     dc_texturemid = vis->texturemid;
 
@@ -525,8 +516,6 @@ static void R_DrawVisSpriteWithShadow(const vissprite_t *vis)
             R_BlastSpriteColumn(column);
         }
     }
-
-    R_UnlockPatchNum(id);
 }
 
 //
@@ -536,8 +525,7 @@ static void R_DrawPlayerVisSprite(const vissprite_t *vis)
 {
     fixed_t         frac = vis->startfrac;
     const fixed_t   x2 = vis->x2;
-    const int       id = vis->patch + firstspritelump;
-    const rpatch_t  *patch = R_CachePatchNum(id);
+    const rpatch_t  *patch = R_CachePatchNum(vis->patch + firstspritelump);
 
     dc_colormap[0] = vis->colormap[0];
     colfunc = vis->colfunc;
@@ -553,8 +541,6 @@ static void R_DrawPlayerVisSprite(const vissprite_t *vis)
         if ((dc_numposts = column->numposts))
             R_BlastPlayerSpriteColumn(column);
     }
-
-    R_UnlockPatchNum(id);
 }
 
 //
@@ -565,12 +551,11 @@ static void R_DrawBloodSplatVisSprite(const bloodsplatvissprite_t *vis)
     fixed_t         frac = vis->startfrac;
     const fixed_t   xiscale = vis->xiscale;
     const fixed_t   x2 = vis->x2;
-    const int       id = vis->patch + firstspritelump;
-    const rcolumn_t *columns = R_CachePatchNum(id)->columns;
+    const rcolumn_t *columns = R_CachePatchNum(vis->patch + firstspritelump)->columns;
 
     colfunc = vis->colfunc;
     dc_colormap[0] = vis->colormap;
-    dc_blood = tinttab75 + (dc_colormap[0][vis->blood] << 8);
+    dc_blood = tinttab75 + ((dc_solidblood = dc_colormap[0][vis->blood]) << 8);
     spryscale = vis->scale;
     sprtopscreen = centeryfrac - FixedMul(vis->texturemid, spryscale);
     fuzzpos = 0;
@@ -586,8 +571,6 @@ static void R_DrawBloodSplatVisSprite(const bloodsplatvissprite_t *vis)
             R_BlastBloodSplatColumn(column);
         }
     }
-
-    R_UnlockPatchNum(id);
 }
 
 //
@@ -743,10 +726,10 @@ static void R_ProjectSprite(mobj_t *thing)
     else
         vis->shadowpos = 1;
 
-    if ((thing->flags & MF_FUZZ) && pausesprites && r_textures)
-        vis->colfunc = R_DrawPausedFuzzColumn;
+    if ((thing->flags & MF_FUZZ) && pausesprites)
+        vis->colfunc = (r_textures ? R_DrawPausedFuzzColumn : thing->colfunc);
     else
-        vis->colfunc = (invulnerable ? thing->altcolfunc : thing->colfunc);
+        vis->colfunc = (invulnerable && r_textures ? thing->altcolfunc : thing->colfunc);
 
     // foot clipping
     if ((flags2 & MF2_FEETARECLIPPED) && fz <= floorheight + FRACUNIT && !heightsec && r_liquid_clipsprites)
@@ -763,8 +746,8 @@ static void R_ProjectSprite(mobj_t *thing)
     }
     else
     {
-        vis->footclip = 0;
         vis->texturemid = gzt - viewz;
+        vis->footclip = 0;
     }
 
     if (flip)
@@ -908,10 +891,7 @@ static void R_ProjectBloodSplat(const bloodsplat_t *splat)
     vis->patch = splat->patch;
 
     // get light level
-    if (fixedcolormap)
-        vis->colormap = fixedcolormap;
-    else
-        vis->colormap = spritelights[MIN(xscale >> LIGHTSCALESHIFT, MAXLIGHTSCALE - 1)];
+    vis->colormap = (fixedcolormap ? fixedcolormap : spritelights[MIN(xscale >> LIGHTSCALESHIFT, MAXLIGHTSCALE - 1)]);
 }
 
 //
@@ -925,18 +905,24 @@ void R_AddSprites(sector_t *sec, int lightlevel)
 
     spritelights = scalelight[MIN((lightlevel >> LIGHTSEGSHIFT) + extralight, LIGHTLEVELS - 1)];
     floorheight = sec->interpfloorheight;
-    drawshadows = (r_shadows && !fixedcolormap && sec->terraintype == SOLID && sec->floorpic != skyflatnum);
 
-    if (drawbloodsplats && floorheight - FRACUNIT <= viewz)
+    if (floorheight - FRACUNIT <= viewz)
     {
-        bloodsplat_t    *splat = sec->splatlist;
+        drawshadows = (r_shadows && !fixedcolormap && sec->terraintype == SOLID && sec->floorpic != skyflatnum);
 
-        while (splat)
+        if (drawbloodsplats)
         {
-            R_ProjectBloodSplat(splat);
-            splat = splat->snext;
+            bloodsplat_t    *splat = sec->splatlist;
+
+            while (splat)
+            {
+                R_ProjectBloodSplat(splat);
+                splat = splat->snext;
+            }
         }
     }
+    else
+        drawshadows = false;
 
     // Handle all things in sector.
     while (thing)
@@ -969,7 +955,7 @@ static void R_DrawPlayerSprite(pspdef_t *psp, dboolean invisibility, dboolean al
     x2 = ((centerxfrac + FRACUNIT / 2 + FixedMul(tx + spritewidth[lump], pspritescale)) >> FRACBITS) - 1;
 
     // store information in a vissprite
-    vis->texturemid = (BASEYCENTER << FRACBITS) + FRACUNIT / 4 - (psp->sy - spritetopoffset[lump]);
+    vis->texturemid = (BASEYCENTER << FRACBITS) + FRACUNIT / 4 - (psp->sy + ABS(viewplayer->bounce) - spritetopoffset[lump]);
 
     vis->x1 = MAX(0, x1);
     vis->x2 = MIN(x2, viewwidth - 1);
@@ -989,9 +975,8 @@ static void R_DrawPlayerSprite(pspdef_t *psp, dboolean invisibility, dboolean al
         } psp_interpolate_t;
 
         static psp_interpolate_t    psp_inter;
-        static dboolean             skippsprinterp2;
 
-        if (realframe)
+        if (realframe && !skippsprinterp)
         {
             psp_inter.x1 = psp_inter.x1_prev;
             psp_inter.texturemid = psp_inter.texturemid_prev;
@@ -1000,7 +985,7 @@ static void R_DrawPlayerSprite(pspdef_t *psp, dboolean invisibility, dboolean al
         psp_inter.x1_prev = vis->x1;
         psp_inter.texturemid_prev = vis->texturemid;
 
-        if (lump == psp_inter.lump && !(skippsprinterp || skippsprinterp2))
+        if (lump == psp_inter.lump && !skippsprinterp)
         {
             int deltax = vis->x2 - vis->x1;
 
@@ -1013,11 +998,6 @@ static void R_DrawPlayerSprite(pspdef_t *psp, dboolean invisibility, dboolean al
             psp_inter.x1 = vis->x1;
             psp_inter.texturemid = vis->texturemid;
             psp_inter.lump = lump;
-
-            skippsprinterp2 = false;
-
-            if (skippsprinterp)
-                skippsprinterp2 = true;
 
             skippsprinterp = false;
         }
@@ -1081,8 +1061,7 @@ static void R_DrawPlayerSprite(pspdef_t *psp, dboolean invisibility, dboolean al
                 short    lightlevel = (sec->floorlightsec ? sec->floorlightsec->lightlevel : sec->lightlevel);
                 int      lightnum = (lightlevel >> OLDLIGHTSEGSHIFT) + extralight;
 
-                vis->colormap[0] = psprscalelight[BETWEEN(0, lightnum, OLDLIGHTLEVELS - 1)]
-                    [BETWEEN(0, lightnum + 16, OLDMAXLIGHTSCALE - 1)];
+                vis->colormap[0] = psprscalelight[MIN(lightnum, OLDLIGHTLEVELS - 1)][MIN(lightnum + 16, OLDMAXLIGHTSCALE - 1)];
             }
         }
     }
@@ -1360,7 +1339,7 @@ void R_DrawMasked(void)
 {
     int i;
 
-    pausesprites = (menuactive || paused || consoleactive);
+    pausesprites = (menuactive || paused || consoleactive || freeze);
     interpolatesprites = (vid_capfps != TICRATE && !pausesprites);
     invulnerable = (viewplayer->fixedcolormap == INVERSECOLORMAP && r_translucency);
 

@@ -71,9 +71,6 @@
 
 #define SHAKEANGLE          (M_RandomInt(-1000, 1000) * r_shake_damage / 100000.0)
 
-#define I_SDLError(func)    I_Error("The call to "func"() failed in %s() on line %i of %s with the error:\n" \
-                                "\"%s\".", __FUNCTION__, __LINE__ - 1, leafname(__FILE__), SDL_GetError())
-
 #if !defined(SDL_VIDEO_RENDER_D3D11)
 #define SDL_VIDEO_RENDER_D3D11  0
 #endif
@@ -112,6 +109,7 @@ static SDL_Palette  *palette;
 static SDL_Color    colors[256];
 static byte         *playpal;
 
+byte                *oscreen;
 byte                *mapscreen;
 SDL_Window          *mapwindow;
 SDL_Renderer        *maprenderer;
@@ -128,7 +126,6 @@ static int          upscaledheight;
 static dboolean     software;
 
 static int          displayindex;
-static int          am_displayindex;
 static int          numdisplays;
 static SDL_Rect     displays[MAXDISPLAYS];
 
@@ -186,8 +183,7 @@ int                 fps;
 int                 refreshrate;
 
 #if defined(_WIN32)
-static UINT         CapFPSTimer;
-static HANDLE       CapFPSEvent;
+HANDLE              CapFPSEvent;
 #endif
 
 static dboolean     capslock;
@@ -197,6 +193,8 @@ extern dboolean     setsizeneeded;
 extern int          st_palette;
 extern int          windowborderwidth;
 extern int          windowborderheight;
+
+evtype_t            lasteventtype;
 
 void ST_doRefresh(void);
 
@@ -306,6 +304,8 @@ dboolean keystate(int key)
 void I_CapFPS(int fps)
 {
 #if defined(_WIN32)
+    static UINT CapFPSTimer;
+
     if (CapFPSTimer)
     {
         timeKillEvent(CapFPSTimer);
@@ -356,10 +356,11 @@ static void FreeSurfaces(void)
 
 void I_ShutdownGraphics(void)
 {
-    SetShowCursor(true);
     I_CapFPS(0);
     FreeSurfaces();
     SDL_QuitSubSystem(SDL_INIT_VIDEO);
+    free(oscreen);
+    oscreen = NULL;
 }
 
 #if defined(_WIN32)
@@ -410,15 +411,9 @@ static int AccelerateMouse(int value)
         return value;
 }
 
-// Warp the mouse back to the middle of the screen
-static void CenterMouse(void)
+static short __inline clamp(short value, short deadzone)
 {
-    // Warp to the screen center
-    SDL_WarpMouseInWindow(window, displaycenterx, displaycentery);
-
-    // Clear any relative movement caused by warping
-    SDL_PumpEvents();
-    SDL_GetRelativeMouseState(NULL, NULL);
+    return (ABS(value) < deadzone ? 0 : (gp_analog ? MAX(-SHRT_MAX, value) : SIGN(value) * SHRT_MAX));
 }
 
 dboolean        altdown;
@@ -430,6 +425,8 @@ static void I_GetEvent(void)
 {
     SDL_Event   SDLEvent;
     SDL_Event   *Event = &SDLEvent;
+
+    SDL_PumpEvents();
 
     while (SDL_PollEvent(Event))
     {
@@ -563,8 +560,72 @@ static void I_GetEvent(void)
                 D_PostEvent(&event);
                 break;
 
-            case SDL_JOYBUTTONUP:
+            case SDL_CONTROLLERAXISMOTION:
+                switch (Event->caxis.axis)
+                {
+                    case SDL_CONTROLLER_AXIS_LEFTX:
+                        if (gp_swapthumbsticks)
+                            gamepadthumbRX = clamp(Event->caxis.value, gamepadrightdeadzone);
+                        else
+                            gamepadthumbLX = clamp(Event->caxis.value, gamepadleftdeadzone);
+
+                        break;
+
+                    case SDL_CONTROLLER_AXIS_LEFTY:
+                        if (gp_swapthumbsticks)
+                            gamepadthumbRY = clamp(Event->caxis.value, gamepadrightdeadzone);
+                        else
+                            gamepadthumbLY = clamp(Event->caxis.value, gamepadleftdeadzone);
+
+                        break;
+
+                    case SDL_CONTROLLER_AXIS_RIGHTX:
+                        if (gp_swapthumbsticks)
+                            gamepadthumbLX = clamp(Event->caxis.value, gamepadleftdeadzone);
+                        else
+                            gamepadthumbRX = clamp(Event->caxis.value, gamepadrightdeadzone);
+
+                        break;
+
+                    case SDL_CONTROLLER_AXIS_RIGHTY:
+                        if (gp_swapthumbsticks)
+                            gamepadthumbLY = clamp(Event->caxis.value, gamepadleftdeadzone);
+                        else
+                            gamepadthumbRY = clamp(Event->caxis.value, gamepadrightdeadzone);
+
+                        break;
+
+                    case SDL_CONTROLLER_AXIS_TRIGGERLEFT:
+                        if (Event->caxis.value >= GAMEPAD_TRIGGER_THRESHOLD)
+                            gamepadbuttons |= GAMEPAD_LEFT_TRIGGER;
+                        else
+                            gamepadbuttons &= ~GAMEPAD_LEFT_TRIGGER;
+
+                        break;
+
+                    case SDL_CONTROLLER_AXIS_TRIGGERRIGHT:
+                        if (Event->caxis.value >= GAMEPAD_TRIGGER_THRESHOLD)
+                            gamepadbuttons |= GAMEPAD_RIGHT_TRIGGER;
+                        else
+                            gamepadbuttons &= ~GAMEPAD_RIGHT_TRIGGER;
+
+                        break;
+                }
+
+                lasteventtype = ev_gamepad;
+                break;
+
+            case SDL_CONTROLLERBUTTONDOWN:
+                gamepadbuttons |= (1 << Event->cbutton.button);
+                event.type = ev_gamepad;
+                D_PostEvent(&event);
+                break;
+
+            case SDL_CONTROLLERBUTTONUP:
+                gamepadbuttons &= ~(1 << Event->cbutton.button);
                 keydown = 0;
+                event.type = ev_gamepad;
+                D_PostEvent(&event);
                 break;
 
             case SDL_QUIT:
@@ -595,6 +656,8 @@ static void I_GetEvent(void)
                             if (menuactive || consoleactive)
                                 S_ResumeSound();
 
+                            I_InitKeyboard();
+
                             break;
 
                         case SDL_WINDOWEVENT_FOCUS_LOST:
@@ -609,6 +672,8 @@ static void I_GetEvent(void)
                                 else
                                     sendpause = true;
                             }
+
+                            I_ShutdownKeyboard();
 
                             break;
 
@@ -644,10 +709,7 @@ static void I_GetEvent(void)
                                 windowy = Event->window.data2;
                                 M_snprintf(pos, sizeof(pos), "(%i,%i)", windowx, windowy);
                                 vid_windowpos = strdup(pos);
-
-                                if ((vid_display = SDL_GetWindowDisplayIndex(window) + 1) < 1)
-                                    I_SDLError("SDL_GetWindowDisplayIndex");
-
+                                vid_display = SDL_GetWindowDisplayIndex(window) + 1;
                                 M_SaveCVARs();
                             }
 
@@ -700,12 +762,13 @@ void I_StartTic(void)
 {
     I_GetEvent();
     I_ReadMouse();
-    gamepadfunc();
 
 #ifdef __ANDROID__
     extern void I_UpdateAndroid(void);
     I_UpdateAndroid();
 #endif
+
+    I_UpdateGamepadVibration();
 }
 
 static void UpdateGrab(void)
@@ -714,15 +777,11 @@ static void UpdateGrab(void)
     static dboolean currently_grabbed;
 
     if (grab && !currently_grabbed)
-    {
         SetShowCursor(false);
-        CenterMouse();
-    }
     else if (!grab && currently_grabbed)
     {
         SetShowCursor(true);
         SDL_WarpMouseInWindow(window, windowwidth - 10 * windowwidth / SCREENWIDTH, windowheight - 16);
-        SDL_PumpEvents();
         SDL_GetRelativeMouseState(NULL, NULL);
     }
 
@@ -745,13 +804,14 @@ static void GetUpscaledTextureSize(int width, int height)
 static uint64_t performancefrequency;
 uint64_t        starttime;
 int             frames = -1;
-static uint64_t currenttime;
 
 static void CalculateFPS(void)
 {
+    uint64_t    currenttime = SDL_GetPerformanceCounter();
+
     frames++;
 
-    if (starttime < (currenttime = SDL_GetPerformanceCounter()) - performancefrequency)
+    if (starttime < currenttime - performancefrequency)
     {
         fps = frames;
         frames = 0;
@@ -790,12 +850,6 @@ static void I_Blit(void)
     SDL_UpdateTexture(texture, &src_rect, buffer->pixels, SCREENWIDTH * 4);
     SDL_RenderClear(renderer);
     SDL_RenderCopy(renderer, texture, &src_rect, NULL);
-
-#if defined(_WIN32)
-    if (CapFPSEvent)
-        WaitForSingleObject(CapFPSEvent, 1000);
-#endif
-
     SDL_RenderPresent(renderer);
 }
 
@@ -810,12 +864,6 @@ static void I_Blit_NearestLinear(void)
     SDL_RenderCopy(renderer, texture, &src_rect, NULL);
     SDL_SetRenderTarget(renderer, NULL);
     SDL_RenderCopy(renderer, texture_upscaled, NULL, NULL);
-
-#if defined(_WIN32)
-    if (CapFPSEvent)
-        WaitForSingleObject(CapFPSEvent, 1000);
-#endif
-
     SDL_RenderPresent(renderer);
 }
 
@@ -828,12 +876,6 @@ static void I_Blit_ShowFPS(void)
     SDL_UpdateTexture(texture, &src_rect, buffer->pixels, SCREENWIDTH * 4);
     SDL_RenderClear(renderer);
     SDL_RenderCopy(renderer, texture, &src_rect, NULL);
-
-#if defined(_WIN32)
-    if (CapFPSEvent)
-        WaitForSingleObject(CapFPSEvent, 1000);
-#endif
-
     SDL_RenderPresent(renderer);
 }
 
@@ -849,12 +891,6 @@ static void I_Blit_NearestLinear_ShowFPS(void)
     SDL_RenderCopy(renderer, texture, &src_rect, NULL);
     SDL_SetRenderTarget(renderer, NULL);
     SDL_RenderCopy(renderer, texture_upscaled, NULL, NULL);
-
-#if defined(_WIN32)
-    if (CapFPSEvent)
-        WaitForSingleObject(CapFPSEvent, 1000);
-#endif
-
     SDL_RenderPresent(renderer);
 }
 
@@ -867,12 +903,6 @@ static void I_Blit_Shake(void)
     SDL_RenderClear(renderer);
     SDL_RenderCopy(renderer, texture, &src_rect, NULL);
     SDL_RenderCopyEx(renderer, texture, &src_rect, NULL, SHAKEANGLE, NULL, SDL_FLIP_NONE);
-
-#if defined(_WIN32)
-    if (CapFPSEvent)
-        WaitForSingleObject(CapFPSEvent, 1000);
-#endif
-
     SDL_RenderPresent(renderer);
 }
 
@@ -888,12 +918,6 @@ static void I_Blit_NearestLinear_Shake(void)
     SDL_RenderCopyEx(renderer, texture, &src_rect, NULL, SHAKEANGLE, NULL, SDL_FLIP_NONE);
     SDL_SetRenderTarget(renderer, NULL);
     SDL_RenderCopy(renderer, texture_upscaled, NULL, NULL);
-
-#if defined(_WIN32)
-    if (CapFPSEvent)
-        WaitForSingleObject(CapFPSEvent, 1000);
-#endif
-
     SDL_RenderPresent(renderer);
 }
 
@@ -907,12 +931,6 @@ static void I_Blit_ShowFPS_Shake(void)
     SDL_RenderClear(renderer);
     SDL_RenderCopy(renderer, texture, &src_rect, NULL);
     SDL_RenderCopyEx(renderer, texture, &src_rect, NULL, SHAKEANGLE, NULL, SDL_FLIP_NONE);
-
-#if defined(_WIN32)
-    if (CapFPSEvent)
-        WaitForSingleObject(CapFPSEvent, 1000);
-#endif
-
     SDL_RenderPresent(renderer);
 }
 
@@ -929,12 +947,6 @@ static void I_Blit_NearestLinear_ShowFPS_Shake(void)
     SDL_RenderCopyEx(renderer, texture, &src_rect, NULL, SHAKEANGLE, NULL, SDL_FLIP_NONE);
     SDL_SetRenderTarget(renderer, NULL);
     SDL_RenderCopy(renderer, texture_upscaled, NULL, NULL);
-
-#if defined(_WIN32)
-    if (CapFPSEvent)
-        WaitForSingleObject(CapFPSEvent, 1000);
-#endif
-
     SDL_RenderPresent(renderer);
 }
 
@@ -944,12 +956,6 @@ void I_Blit_Automap(void)
     SDL_UpdateTexture(maptexture, &map_rect, mapbuffer->pixels, SCREENWIDTH * 4);
     SDL_RenderClear(maprenderer);
     SDL_RenderCopy(maprenderer, maptexture, &map_rect, NULL);
-
-#if defined(_WIN32)
-    if (CapFPSEvent)
-        WaitForSingleObject(CapFPSEvent, 1000);
-#endif
-
     SDL_RenderPresent(maprenderer);
 }
 
@@ -962,12 +968,6 @@ void I_Blit_Automap_NearestLinear(void)
     SDL_RenderCopy(maprenderer, maptexture, &map_rect, NULL);
     SDL_SetRenderTarget(maprenderer, NULL);
     SDL_RenderCopy(maprenderer, maptexture_upscaled, NULL, NULL);
-
-#if defined(_WIN32)
-    if (CapFPSEvent)
-        WaitForSingleObject(CapFPSEvent, 1000);
-#endif
-
     SDL_RenderPresent(maprenderer);
 }
 
@@ -994,18 +994,30 @@ void I_UpdateBlitFunc(dboolean shake)
 //
 void I_SetPalette(byte *playpal)
 {
-    double  color = r_color / 100.0;
-
-    for (int i = 0; i < 256; i++)
+    if (r_color == r_color_max)
     {
-        byte    r = gammatable[gammaindex][*playpal++];
-        byte    g = gammatable[gammaindex][*playpal++];
-        byte    b = gammatable[gammaindex][*playpal++];
-        double  p = sqrt(r * r * 0.299 + g * g * 0.587 + b * b * 0.114);
+        for (int i = 0; i < 256; i++)
+        {
+            colors[i].r = gammatable[gammaindex][*playpal++];
+            colors[i].g = gammatable[gammaindex][*playpal++];
+            colors[i].b = gammatable[gammaindex][*playpal++];
+        }
+    }
+    else
+    {
+        double  color = r_color / 100.0;
 
-        colors[i].r = (byte)(p + (r - p) * color);
-        colors[i].g = (byte)(p + (g - p) * color);
-        colors[i].b = (byte)(p + (b - p) * color);
+        for (int i = 0; i < 256; i++)
+        {
+            byte    r = gammatable[gammaindex][*playpal++];
+            byte    g = gammatable[gammaindex][*playpal++];
+            byte    b = gammatable[gammaindex][*playpal++];
+            double  p = sqrt(r * r * 0.299 + g * g * 0.587 + b * b * 0.114);
+
+            colors[i].r = (byte)(p + (r - p) * color);
+            colors[i].g = (byte)(p + (g - p) * color);
+            colors[i].b = (byte)(p + (b - p) * color);
+        }
     }
 
     SDL_SetPaletteColors(palette, colors, 0, 256);
@@ -1014,16 +1026,25 @@ void I_SetPalette(byte *playpal)
         SDL_SetRenderDrawColor(renderer, colors[0].r, colors[0].g, colors[0].b, SDL_ALPHA_OPAQUE);
 }
 
+void I_SetSimplePalette(byte *playpal)
+{
+    for (int i = 0; i < 256; i++)
+    {
+        colors[i].r = *playpal++;
+        colors[i].g = *playpal++;
+        colors[i].b = *playpal++;
+    }
+
+    SDL_SetPaletteColors(palette, colors, 0, 256);
+}
+
 static void I_RestoreFocus(void)
 {
 #if defined(_WIN32)
     SDL_SysWMinfo   info;
 
     SDL_VERSION(&info.version);
-
-    if (!SDL_GetWindowWMInfo(window, &info))
-        I_SDLError("SDL_GetWindowWMInfo");
-
+    SDL_GetWindowWMInfo(window, &info);
     SetFocus(info.info.win.window);
 #endif
 }
@@ -1033,15 +1054,15 @@ static void GetDisplays(void)
     numdisplays = MIN(SDL_GetNumVideoDisplays(), MAXDISPLAYS);
 
     for (int i = 0; i < numdisplays; i++)
-        if (SDL_GetDisplayBounds(i, &displays[i]) < 0)
-            I_SDLError("SDL_GetDisplayBounds");
+        SDL_GetDisplayBounds(i, &displays[i]);
 }
 
 void I_CreateExternalAutomap(dboolean output)
 {
-    Uint32  rmask, gmask, bmask, amask;
-    int     bpp;
-    int     flags = SDL_RENDERER_TARGETTEXTURE;
+    Uint32      rmask, gmask, bmask, amask;
+    int         bpp;
+    int         flags = SDL_RENDERER_TARGETTEXTURE;
+    static int  am_displayindex;
 
     mapscreen = *screens;
     mapblitfunc = nullfunc;
@@ -1063,65 +1084,51 @@ void I_CreateExternalAutomap(dboolean output)
 
     SDL_SetHintWithPriority(SDL_HINT_VIDEO_MINIMIZE_ON_FOCUS_LOSS, "0", SDL_HINT_OVERRIDE);
 
-    if (!(mapwindow = SDL_CreateWindow("Automap", SDL_WINDOWPOS_UNDEFINED_DISPLAY(am_displayindex),
-        SDL_WINDOWPOS_UNDEFINED_DISPLAY(am_displayindex), 0, 0, SDL_WINDOW_FULLSCREEN_DESKTOP)))
-        I_SDLError("SDL_CreateWindow");
+    mapwindow = SDL_CreateWindow("Automap", SDL_WINDOWPOS_UNDEFINED_DISPLAY(am_displayindex),
+        SDL_WINDOWPOS_UNDEFINED_DISPLAY(am_displayindex), 0, 0, SDL_WINDOW_FULLSCREEN_DESKTOP);
 
     if (vid_vsync)
         flags |= SDL_RENDERER_PRESENTVSYNC;
 
-    if (!(maprenderer = SDL_CreateRenderer(mapwindow, -1, flags)))
-        I_SDLError("SDL_CreateRenderer");
+
+    maprenderer = SDL_CreateRenderer(mapwindow, -1, flags);
 #ifdef __ANDROID__
     if( M_CheckParm("-android_aspect") )
 #endif
-    if (SDL_RenderSetLogicalSize(maprenderer, SCREENWIDTH, SCREENHEIGHT) < 0)
-        I_SDLError("SDL_RenderSetLogicalSize");
+    SDL_RenderSetLogicalSize(maprenderer, SCREENWIDTH, SCREENHEIGHT);
+    mapsurface = SDL_CreateRGBSurface(0, SCREENWIDTH, SCREENHEIGHT, 8, 0, 0, 0, 0);
 
-    if (!(mapsurface = SDL_CreateRGBSurface(0, SCREENWIDTH, SCREENHEIGHT, 8, 0, 0, 0, 0)))
-        I_SDLError("SDL_CreateRGBSurface");
 
     if (SDL_PixelFormatEnumToMasks(SDL_GetWindowPixelFormat(mapwindow), &bpp, &rmask, &gmask, &bmask, &amask))
-    {
-        if (!(mapbuffer = SDL_CreateRGBSurface(0, SCREENWIDTH, SCREENHEIGHT, 32, rmask, gmask, bmask, amask)))
-            I_SDLError("SDL_CreateRGBSurface");
-    }
-    else if (!(mapbuffer = SDL_CreateRGBSurface(0, SCREENWIDTH, SCREENHEIGHT, 32, 0, 0, 0, 0)))
-        I_SDLError("SDL_CreateRGBSurface");
+        mapbuffer = SDL_CreateRGBSurface(0, SCREENWIDTH, SCREENHEIGHT, 32, rmask, gmask, bmask, amask);
+    else
+        mapbuffer = SDL_CreateRGBSurface(0, SCREENWIDTH, SCREENHEIGHT, 32, 0, 0, 0, 0);
 
     SDL_FillRect(mapbuffer, NULL, 0);
 
 
 #ifdef __ANDROID__
-    if (!(maptexture = SDL_CreateTexture(maprenderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_STREAMING,
-        SCREENWIDTH, SCREENHEIGHT)))
+    maptexture = SDL_CreateTexture(maprenderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_STREAMING, SCREENWIDTH, SCREENHEIGHT);
 #else
-    if (!(maptexture = SDL_CreateTexture(maprenderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING,
-        SCREENWIDTH, SCREENHEIGHT)))
+    maptexture = SDL_CreateTexture(maprenderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING, SCREENWIDTH, SCREENHEIGHT);
 #endif
-        I_SDLError("SDL_CreateTexture");
+
 
     if (nearestlinear)
     {
         SDL_SetHintWithPriority(SDL_HINT_RENDER_SCALE_QUALITY, vid_scalefilter_linear, SDL_HINT_OVERRIDE);
 
-        if (!(maptexture_upscaled = SDL_CreateTexture(maprenderer, SDL_PIXELFORMAT_ARGB8888,
-            SDL_TEXTUREACCESS_TARGET, upscaledwidth * SCREENWIDTH, upscaledheight * SCREENHEIGHT)))
-            I_SDLError("SDL_CreateTexture");
+        maptexture_upscaled = SDL_CreateTexture(maprenderer, SDL_PIXELFORMAT_ARGB8888,
+            SDL_TEXTUREACCESS_TARGET, upscaledwidth * SCREENWIDTH, upscaledheight * SCREENHEIGHT);
 
         mapblitfunc = I_Blit_Automap_NearestLinear;
     }
     else
         mapblitfunc = I_Blit_Automap;
 
-    if (!(mappalette = SDL_AllocPalette(256)))
-        I_SDLError("SDL_AllocPalette");
-
-    if (SDL_SetSurfacePalette(mapsurface, mappalette) < 0)
-        I_SDLError("SDL_SetSurfacePalette");
-
-    if (SDL_SetPaletteColors(mappalette, colors, 0, 256) < 0)
-        I_SDLError("SDL_SetPaletteColors");
+    mappalette = SDL_AllocPalette(256);
+    SDL_SetSurfacePalette(mapsurface, mappalette);
+    SDL_SetPaletteColors(mappalette, colors, 0, 256);
 
     mapscreen = mapsurface->pixels;
     map_rect.w = SCREENWIDTH;
@@ -1164,7 +1171,7 @@ void GetWindowPosition(void)
         windowx = 0;
         windowy = 0;
     }
-    else if (sscanf(vid_windowpos, "(%10i,%10i)", &x, &y) != 2)
+    else if (sscanf(vid_windowpos, "(%10d,%10d)", &x, &y) != 2)
     {
         windowx = 0;
         windowy = 0;
@@ -1245,7 +1252,7 @@ void GetScreenResolution(void)
         int width = -1;
         int height = -1;
 
-        if (sscanf(vid_screenresolution, "%10ix%10i", &width, &height) != 2 || !ValidScreenMode(width, height))
+        if (sscanf(vid_screenresolution, "%10dx%10d", &width, &height) != 2 || !ValidScreenMode(width, height))
         {
             screenwidth = 0;
             screenheight = 0;
@@ -1416,12 +1423,13 @@ static void SetVideoMode(dboolean output)
             acronym = getacronym(width, height);
             ratio = getaspectratio(width, height);
 
+
 #ifdef __ANDROID__
             SDL_GL_SetAttribute( SDL_GL_DEPTH_SIZE, 16 ); // Defaults to 24 which is not needed and fails on old Tegras
 #endif
-            if (!(window = SDL_CreateWindow(PACKAGE_NAME, SDL_WINDOWPOS_UNDEFINED_DISPLAY(displayindex),
-                SDL_WINDOWPOS_UNDEFINED_DISPLAY(displayindex), 0, 0, (windowflags | SDL_WINDOW_FULLSCREEN_DESKTOP))))
-                I_SDLError("SDL_CreateWindow");
+            window = SDL_CreateWindow(PACKAGE_NAME, SDL_WINDOWPOS_UNDEFINED_DISPLAY(displayindex),
+                SDL_WINDOWPOS_UNDEFINED_DISPLAY(displayindex), width, height, (windowflags | SDL_WINDOW_FULLSCREEN));
+
 
             if (output)
                 C_Output("Staying at the desktop resolution of %s\xD7%s%s%s%s with a %s aspect ratio.",
@@ -1434,12 +1442,8 @@ static void SetVideoMode(dboolean output)
             acronym = getacronym(width, height);
             ratio = getaspectratio(width, height);
 
-            if (!(window = SDL_CreateWindow(PACKAGE_NAME, SDL_WINDOWPOS_UNDEFINED_DISPLAY(displayindex),
-                SDL_WINDOWPOS_UNDEFINED_DISPLAY(displayindex), width, height, windowflags)))
-                I_SDLError("SDL_CreateWindow");
-
-            if (SDL_SetWindowFullscreen(window, SDL_WINDOW_FULLSCREEN) < 0)
-                I_SDLError("SDL_SetWindowFullscreen");
+            window = SDL_CreateWindow(PACKAGE_NAME, SDL_WINDOWPOS_UNDEFINED_DISPLAY(displayindex),
+                SDL_WINDOWPOS_UNDEFINED_DISPLAY(displayindex), width, height, (windowflags | SDL_WINDOW_FULLSCREEN));
 
             if (output)
                 C_Output("Switched to a resolution of %s\xD7%s%s%s%s with a %s aspect ratio.",
@@ -1460,9 +1464,8 @@ static void SetVideoMode(dboolean output)
 
         if (!windowx && !windowy)
         {
-            if (!(window = SDL_CreateWindow(PACKAGE_NAME, SDL_WINDOWPOS_CENTERED_DISPLAY(displayindex),
-                SDL_WINDOWPOS_CENTERED_DISPLAY(displayindex), width, height, windowflags)))
-                I_SDLError("SDL_CreateWindow");
+            window = SDL_CreateWindow(PACKAGE_NAME, SDL_WINDOWPOS_CENTERED_DISPLAY(displayindex),
+                SDL_WINDOWPOS_CENTERED_DISPLAY(displayindex), width, height, windowflags);
 
             if (output)
                 C_Output("Created a resizable window with dimensions %s\xD7%s centered on the screen.",
@@ -1470,8 +1473,7 @@ static void SetVideoMode(dboolean output)
         }
         else
         {
-            if (!(window = SDL_CreateWindow(PACKAGE_NAME, windowx, windowy, width, height, windowflags)))
-                I_SDLError("SDL_CreateWindow");
+            window = SDL_CreateWindow(PACKAGE_NAME, windowx, windowy, width, height, windowflags);
 
             if (output)
                 C_Output("Created a resizable window with dimensions %s\xD7%s at (%i,%i).",
@@ -1487,17 +1489,15 @@ static void SetVideoMode(dboolean output)
     displaycenterx = displaywidth / 2;
     displaycentery = displayheight / 2;
 
-
 #ifdef __ANDROID__
     rendererflags  = SDL_RENDERER_ACCELERATED;
 #endif
-    if (!(renderer = SDL_CreateRenderer(window, -1, rendererflags)))
-        I_SDLError("SDL_CreateRenderer");
+    renderer = SDL_CreateRenderer(window, -1, rendererflags);
 #ifdef __ANDROID__
     if( M_CheckParm("-android_aspect") )
 #endif
-    if (SDL_RenderSetLogicalSize(renderer, SCREENWIDTH, SCREENWIDTH * 3 / 4) < 0)
-        I_SDLError("SDL_RenderSetLogicalSize");
+    SDL_RenderSetLogicalSize(renderer, SCREENWIDTH, SCREENWIDTH * 3 / 4);
+
 
 
     if (!SDL_GetRendererInfo(renderer, &rendererinfo))
@@ -1525,7 +1525,8 @@ static void SetVideoMode(dboolean output)
             else
             {
                 if (output)
-                    C_Output("The screen is rendered using hardware acceleration with the <i><b>OpenGL %i.%i</b></i> API.", major, minor);
+                    C_Output("The screen is rendered using hardware acceleration with the <i><b>OpenGL %i.%i</b></i> API.",
+                        major, minor);
 
                 if (!M_StringCompare(vid_scaleapi, vid_scaleapi_opengl))
                 {
@@ -1676,50 +1677,42 @@ static void SetVideoMode(dboolean output)
         }
     }
 
-    if (!(surface = SDL_CreateRGBSurface(0, SCREENWIDTH, SCREENHEIGHT, 8, 0, 0, 0, 0)))
-        I_SDLError("SDL_CreateRGBSurface");
+    surface = SDL_CreateRGBSurface(0, SCREENWIDTH, SCREENHEIGHT, 8, 0, 0, 0, 0);
 
     screens[0] = surface->pixels;
 
     if (SDL_PixelFormatEnumToMasks(SDL_GetWindowPixelFormat(window), &bpp, &rmask, &gmask, &bmask, &amask))
-    {
-        if (!(buffer = SDL_CreateRGBSurface(0, SCREENWIDTH, SCREENHEIGHT, 32, rmask, gmask, bmask, amask)))
-            I_SDLError("SDL_CreateRGBSurface");
-    }
-    else if (!(buffer = SDL_CreateRGBSurface(0, SCREENWIDTH, SCREENHEIGHT, 32, 0, 0, 0, 0)))
-        I_SDLError("SDL_CreateRGBSurface");
+        buffer = SDL_CreateRGBSurface(0, SCREENWIDTH, SCREENHEIGHT, 32, rmask, gmask, bmask, amask);
+    else
+        buffer = SDL_CreateRGBSurface(0, SCREENWIDTH, SCREENHEIGHT, 32, 0, 0, 0, 0);
 
     SDL_FillRect(buffer, NULL, 0);
 
     if (nearestlinear)
         SDL_SetHintWithPriority(SDL_HINT_RENDER_SCALE_QUALITY, vid_scalefilter_nearest, SDL_HINT_OVERRIDE);
 
+
 #ifdef __ANDROID__
-    if (!(texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_STREAMING,SCREENWIDTH, SCREENHEIGHT)))
+    texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_STREAMING, SCREENWIDTH, SCREENHEIGHT);
 #else
-    if (!(texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING,SCREENWIDTH, SCREENHEIGHT)))
+    texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING, SCREENWIDTH, SCREENHEIGHT);
 #endif
-        I_SDLError("SDL_CreateTexture");
 
     if (nearestlinear)
     {
         SDL_SetHintWithPriority(SDL_HINT_RENDER_SCALE_QUALITY, vid_scalefilter_linear, SDL_HINT_OVERRIDE);
 
 #ifdef __ANDROID__
-        if (!(texture_upscaled = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_TARGET,
+        texture_upscaled = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_TARGET, upscaledwidth * SCREENWIDTH,
+            upscaledheight * SCREENHEIGHT);
 #else
-        if (!(texture_upscaled = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_TARGET,
+        texture_upscaled = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_TARGET, upscaledwidth * SCREENWIDTH,
+            upscaledheight * SCREENHEIGHT);
 #endif
-            upscaledwidth * SCREENWIDTH, upscaledheight * SCREENHEIGHT)))
-            I_SDLError("SDL_CreateTexture");
     }
 
-    if (!(palette = SDL_AllocPalette(256)))
-        I_SDLError("SDL_AllocPalette");
-
-    if (SDL_SetSurfacePalette(surface, palette) < 0)
-        I_SDLError("SDL_SetSurfacePalette");
-
+    palette = SDL_AllocPalette(256);
+    SDL_SetSurfacePalette(surface, palette);
     I_SetPalette(playpal + st_palette * 768);
 
     src_rect.w = SCREENWIDTH;
@@ -1733,10 +1726,9 @@ void I_ToggleWidescreen(dboolean toggle)
         vid_widescreen = true;
 
 #ifdef __ANDROID__
-    if( M_CheckParm("-android_aspect") )
+        if( M_CheckParm("-android_aspect") )
 #endif
-        if (SDL_RenderSetLogicalSize(renderer, SCREENWIDTH, SCREENWIDTH * 10 / 16) < 0)
-            I_SDLError("SDL_RenderSetLogicalSize");
+        SDL_RenderSetLogicalSize(renderer, SCREENWIDTH, SCREENWIDTH * 10 / 16);
 
         src_rect.h = SCREENHEIGHT - SBARHEIGHT;
     }
@@ -1746,11 +1738,11 @@ void I_ToggleWidescreen(dboolean toggle)
 
         if (gamestate == GS_LEVEL)
             ST_doRefresh();
+
 #ifdef __ANDROID__
-    if( M_CheckParm("-android_aspect") )
+        if( M_CheckParm("-android_aspect") )
 #endif
-        if (SDL_RenderSetLogicalSize(renderer, SCREENWIDTH, SCREENWIDTH * 3 / 4) < 0)
-            I_SDLError("SDL_RenderSetLogicalSize");
+        SDL_RenderSetLogicalSize(renderer, SCREENWIDTH, SCREENWIDTH * 3 / 4);
 
         src_rect.h = SCREENHEIGHT;
     }
@@ -1760,8 +1752,7 @@ void I_ToggleWidescreen(dboolean toggle)
 
     HU_InitMessages();
 
-    if (SDL_SetPaletteColors(palette, colors, 0, 256) < 0)
-        I_SDLError("SDL_SetPaletteColors");
+    SDL_SetPaletteColors(palette, colors, 0, 256);
 }
 
 #if defined(_WIN32)
@@ -1789,8 +1780,7 @@ void I_RestartGraphics(void)
 
 void I_ToggleFullscreen(void)
 {
-    if (SDL_SetWindowFullscreen(window, (!vid_fullscreen ? (M_StringCompare(vid_screenresolution, vid_screenresolution_desktop) ?
-        SDL_WINDOW_FULLSCREEN_DESKTOP : SDL_WINDOW_FULLSCREEN) : 0)) < 0)
+    if (SDL_SetWindowFullscreen(window, (vid_fullscreen ? 0 : SDL_WINDOW_FULLSCREEN_DESKTOP)) < 0)
     {
         menuactive = false;
         C_ShowConsole();
@@ -1893,8 +1883,6 @@ void I_InitGraphics(void)
 
     performancefrequency = SDL_GetPerformanceFrequency();
 
-    SDL_DisableScreenSaver();
-
     while (i < UCHAR_MAX)
         keys[i++] = true;
 
@@ -1913,17 +1901,10 @@ void I_InitGraphics(void)
 
 #if !defined(_WIN32)
     if (*vid_driver)
-    {
-        char    envstring[255];
-
-        M_snprintf(envstring, sizeof(envstring), "SDL_VIDEODRIVER=%s", vid_driver);
-        putenv(envstring);
-    }
+        SDL_setenv("SDL_VIDEODRIVER", vid_driver, true);
 #endif
 
-    if (SDL_InitSubSystem(SDL_INIT_VIDEO) < 0)
-        I_SDLError("SDL_InitSubSystem");
-
+    SDL_InitSubSystem(SDL_INIT_VIDEO);
     GetDisplays();
 
 #if defined(_DEBUG)
@@ -1935,7 +1916,7 @@ void I_InitGraphics(void)
     if (vid_fullscreen)
         SetShowCursor(false);
 
-    mapscreen = malloc(SCREENWIDTH * SCREENHEIGHT);
+    mapscreen = oscreen = malloc(SCREENWIDTH * SCREENHEIGHT);
     I_CreateExternalAutomap(true);
 
 #if defined(_WIN32)

@@ -47,11 +47,10 @@
 
 #define MAXVISPLANES    384
 
-visplane_t          *visplanes = NULL;
-visplane_t          *lastvisplane;
+static visplane_t   *visplanes = NULL;
+static visplane_t   *lastvisplane;
 visplane_t          *floorplane;
 visplane_t          *ceilingplane;
-static int          numvisplanes;
 
 int                *openings;                   // dropoff overflow
 int                *lastopening;                // dropoff overflow
@@ -129,7 +128,7 @@ static void R_MapPlane(int y, int x1, int x2)
     ds_xfrac = viewx + xoffs + viewcosdistance + dx * ds_xstep;
     ds_yfrac = -viewy + yoffs - viewsindistance + dx * ds_ystep;
 
-    ds_colormap = (fixedcolormap ? fixedcolormap : planezlight[BETWEEN(0, distance >> LIGHTZSHIFT, MAXLIGHTZ - 1)]);
+    ds_colormap = (fixedcolormap ? fixedcolormap : planezlight[MIN(distance >> LIGHTZSHIFT, MAXLIGHTZ - 1)]);
 
     ds_y = y;
     ds_x1 = x1;
@@ -160,6 +159,8 @@ void R_ClearPlanes(void)
 
 static void R_RaiseVisplanes(visplane_t **vp)
 {
+    static int  numvisplanes;
+
     if (lastvisplane - visplanes == numvisplanes)
     {
         int         numvisplanes_old = numvisplanes;
@@ -255,8 +256,7 @@ visplane_t *R_CheckPlane(visplane_t *pl, int start, int stop)
 
     for (x = intrl; x <= intrh && pl->top[x] == USHRT_MAX; x++);
 
-    // [crispy] fix HOM if ceilingplane and floorplane are the same
-    // visplane (e.g. both skies)
+    // [crispy] fix HOM if ceilingplane and floorplane are the same visplane (e.g. both skies)
     if (!(pl == floorplane && markceiling && floorplane == ceilingplane) && x > intrh)
     {
         pl->left = unionl;
@@ -289,15 +289,16 @@ static void R_MakeSpans(visplane_t *pl)
     // spanstart holds the start of a plane span
     // initialized to 0 at start
     static int  spanstart[SCREENHEIGHT];
+    int         stop = pl->right + 1;
 
     xoffs = pl->xoffs;
     yoffs = pl->yoffs;
     planeheight = ABS(pl->height - viewz);
-    planezlight = zlight[BETWEEN(0, (pl->lightlevel >> LIGHTSEGSHIFT) + extralight, LIGHTLEVELS - 1)];
+    planezlight = zlight[MIN((pl->lightlevel >> LIGHTSEGSHIFT) + extralight, LIGHTLEVELS - 1)];
     pl->top[pl->left - 1] = USHRT_MAX;
-    pl->top[pl->right + 1] = USHRT_MAX;
+    pl->top[stop] = USHRT_MAX;
 
-    for (int x = pl->left; x <= pl->right + 1; x++)
+    for (int x = pl->left; x <= stop; x++)
     {
         unsigned short  t1 = pl->top[x - 1];
         unsigned short  b1 = pl->bottom[x - 1];
@@ -333,16 +334,15 @@ static void R_MakeSpans(visplane_t *pl)
 //
 // R_DistortedFlat
 //
-// Generates a distorted flat from a normal one using a two-dimensional
-// sine wave pattern.
+// Generates a distorted flat from a normal one using a two-dimensional sine wave pattern.
 //
 static byte *R_DistortedFlat(int flatnum)
 {
     static int  lastflat = -1;
     static int  swirltic = -1;
     static int  offset[4096];
-    static byte *normalflat;
     static byte distortedflat[4096];
+    byte        *normalflat;
     int         leveltic = leveltime;
 
     // Already swirled this one?
@@ -375,7 +375,7 @@ static byte *R_DistortedFlat(int flatnum)
         swirltic = leveltime;
     }
 
-    normalflat = W_CacheLumpNum(firstflat + flatnum);
+    normalflat = lumpinfo[firstflat + flatnum]->cache;
 
     for (int i = 0; i < 4096; i++)
         distortedflat[i] = normalflat[offset[i]];
@@ -398,7 +398,7 @@ void R_DrawPlanes(void)
             if (picnum == skyflatnum || (picnum & PL_SKYFLAT))
             {
                 int             texture;
-                int             offset;
+                int             offset = skycolumnoffset >> FRACBITS;
                 angle_t         flip = 0;
                 const rpatch_t  *tex_patch;
 
@@ -434,15 +434,16 @@ void R_DrawPlanes(void)
                         dc_texturemid = dc_texturemid * dc_texheight / SKYSTRETCH_HEIGHT;
 
                     // We sometimes flip the picture horizontally.
-                    //
+
                     // DOOM always flipped the picture, so we make it optional,
                     // to make it easier to use the new feature, while to still
                     // allow old sky textures to be used.
                     flip = (l->special == TransferSkyTextureToTaggedSectors_Flipped ? 0u : ~0u);
                 }
-                else        // Normal DOOM sky, only one allowed per level
+                else
                 {
-                    texture = skytexture;                   // Default texture
+                    // Normal DOOM sky, only one allowed per level
+                    texture = skytexture;
                     dc_texheight = textureheight[texture] >> FRACBITS;
                     dc_texturemid = skytexturemid;
                 }
@@ -450,7 +451,6 @@ void R_DrawPlanes(void)
                 dc_colormap[0] = (viewplayer->fixedcolormap == INVERSECOLORMAP && r_textures ? fixedcolormap : fullcolormap);
                 dc_iscale = skyiscale;
                 tex_patch = R_CacheTextureCompositePatchNum(texture);
-                offset = skycolumnoffset >> FRACBITS;
 
                 for (int x = pl->left; x <= pl->right; x++)
                 {
@@ -464,25 +464,13 @@ void R_DrawPlanes(void)
                         skycolfunc();
                     }
                 }
-
-                R_UnlockTextureCompositePatchNum(texture);
             }
             else
             {
                 // regular flat
-                if (terraintypes[picnum] != SOLID && r_liquid_swirl)
-                {
-                    ds_source = R_DistortedFlat(picnum);
-                    R_MakeSpans(pl);
-                }
-                else
-                {
-                    int lumpnum = firstflat + flattranslation[picnum];
-
-                    ds_source = W_CacheLumpNum(lumpnum);
-                    R_MakeSpans(pl);
-                    W_ReleaseLumpNum(lumpnum);
-                }
+                ds_source = (terraintypes[picnum] != SOLID && r_liquid_swirl ? R_DistortedFlat(picnum) :
+                    lumpinfo[firstflat + flattranslation[picnum]]->cache);
+                R_MakeSpans(pl);
             }
         }
 }

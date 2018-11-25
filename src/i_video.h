@@ -71,9 +71,9 @@ void GetWindowPosition(void);
 void GetWindowSize(void);
 void GetScreenResolution(void);
 
-
 // Takes full 8 bit values.
 void I_SetPalette(byte *playpal);
+void I_SetSimplePalette(byte *playpal);
 
 void I_UpdateBlitFunc(dboolean shake);
 void I_Blit_Automap(void);
@@ -83,9 +83,6 @@ void I_DestroyExternalAutomap(void);
 void I_ToggleFullscreen(void);
 void I_SetPillarboxes(void);
 void I_SetMotionBlur(int percent);
-
-// Wait for vertical retrace or pause a bit.
-void I_WaitVBL(int count);
 
 void M_QuitDOOM(int choice);
 void R_SetViewSize(int blocks);

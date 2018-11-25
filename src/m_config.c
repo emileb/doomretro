@@ -41,6 +41,7 @@
 
 #include "c_cmds.h"
 #include "c_console.h"
+#include "d_iwad.h"
 #include "doomstat.h"
 #include "g_game.h"
 #include "i_gamepad.h"
@@ -202,6 +203,7 @@ static default_t cvars[] =
     CONFIG_VARIABLE_STRING       (wad,                                               NOVALUEALIAS      ),
 #endif
     CONFIG_VARIABLE_INT_PERCENT  (weaponbob,                                         NOVALUEALIAS      ),
+    CONFIG_VARIABLE_INT          (weaponbounce,                                      BOOLVALUEALIAS    ),
     CONFIG_VARIABLE_INT          (weaponrecoil,                                      BOOLVALUEALIAS    ),
     CONFIG_VARIABLE_INT          (wipe,                                              BOOLVALUEALIAS    ),
     BLANKLINE,
@@ -290,7 +292,7 @@ void M_SaveCVARs(void)
     int     p;
     FILE    *file;
 
-    if (!cvarsloaded || vanilla)
+    if (!cvarsloaded || vanilla || togglingvanilla)
         return;
 
     p = M_CheckParmWithArgs("-config", 1, 1);
@@ -483,7 +485,7 @@ static int ParseIntParameter(char *strparm, int valuealiastype)
         if (M_StringCompare(strparm, valuealiases[i].text) && valuealiastype == valuealiases[i].type)
             return valuealiases[i].value;
 
-    sscanf(strparm, "%10i", &parm);
+    sscanf(strparm, "%10d", &parm);
     return parm;
 }
 
@@ -841,6 +843,9 @@ static void M_CheckCVARs(void)
 
     weaponbob = BETWEEN(weaponbob_min, weaponbob, weaponbob_max);
 
+    if (weaponbounce != false && weaponbounce != true)
+        weaponbounce = weaponbounce_default;
+
     if (weaponrecoil != false && weaponrecoil != true)
         weaponrecoil = weaponrecoil_default;
 
@@ -863,6 +868,7 @@ void M_LoadCVARs(char *filename)
     if (!file)
     {
         M_CheckCVARs();
+        D_InitIWADFolder();
         M_SaveCVARs();
         C_Output("Created <b>%s</b>.", filename);
         cvarsloaded = true;
@@ -913,12 +919,8 @@ void M_LoadCVARs(char *filename)
 
         if (M_StringCompare(cvar, "bind"))
         {
-            if (!togglingvanilla)
-            {
-                bind_cmd_func2("bind", value);
-                bindcount++;
-            }
-
+            bind_cmd_func2("bind", value);
+            bindcount++;
             continue;
         }
         else if (M_StringCompare(cvar, "alias"))
@@ -1011,7 +1013,7 @@ void M_LoadCVARs(char *filename)
     if (!togglingvanilla)
     {
         C_Output("Loaded %s CVARs and %s player stats from <b>%s</b>.", commify(cvarcount), commify(statcount), filename);
-        C_Output("Bound %s controls.", commify(bindcount));
+        C_Output("Bound %s keyboard, mouse and gamepad controls.", commify(bindcount));
         M_CheckCVARs();
         cvarsloaded = true;
     }

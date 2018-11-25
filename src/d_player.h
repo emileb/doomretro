@@ -211,6 +211,9 @@ typedef struct player_s
     fixed_t         recoil;
     fixed_t         oldrecoil;
 
+    fixed_t         bounce;
+    fixed_t         bouncemax;
+
     // For playerstats cmd
     int             damageinflicted;
     int             damagereceived;

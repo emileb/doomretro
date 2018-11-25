@@ -163,7 +163,7 @@ static void P_XYMovement(mobj_t *mo)
     mobjtype_t  type = mo->type;
     int         flags = mo->flags;
     int         flags2 = mo->flags2;
-    dboolean    corpse = ((flags & MF_CORPSE) && type != MT_BARREL);
+    dboolean    corpse;
     int         stepdir = 0;
 
     if (!(mo->momx | mo->momy))
@@ -180,6 +180,7 @@ static void P_XYMovement(mobj_t *mo)
     }
 
     player = mo->player;
+    corpse = ((flags & MF_CORPSE) && type != MT_BARREL);
 
     // [BH] give smoke trails to rockets
     if (flags2 & MF2_SMOKETRAIL)
@@ -223,8 +224,7 @@ static void P_XYMovement(mobj_t *mo)
             // Add ability for objects other than players to bounce on ice
             if (!(flags & MF_MISSILE) && !player && blockline && mo->z <= mo->floorz && P_GetFriction(mo, NULL) > ORIG_FRICTION)
             {
-                fixed_t r = ((blockline->dx >> FRACBITS) * mo->momx
-                            + (blockline->dy >> FRACBITS) * mo->momy)
+                fixed_t r = ((blockline->dx >> FRACBITS) * mo->momx + (blockline->dy >> FRACBITS) * mo->momy)
                             / ((blockline->dx >> FRACBITS) * (blockline->dx >> FRACBITS)
                             + (blockline->dy >> FRACBITS) * (blockline->dy >> FRACBITS));
                 fixed_t x = FixedMul(r, blockline->dx);
@@ -284,8 +284,8 @@ static void P_XYMovement(mobj_t *mo)
         return;         // no friction when airborne
 
     // [BH] spawn random blood splats on floor as corpses slide
-    if (corpse && !(flags & MF_NOBLOOD) && mo->blood && r_corpses_slide && r_corpses_smearblood
-        && (mo->momx || mo->momy) && mo->bloodsplats && r_bloodsplats_max && !mo->nudge)
+    if (corpse && !(flags & MF_NOBLOOD) && mo->blood && r_corpses_slide && r_corpses_smearblood && (mo->momx || mo->momy)
+        && mo->bloodsplats && r_bloodsplats_max && !mo->nudge)
     {
         int blood = mobjinfo[mo->blood].blood;
 
@@ -309,8 +309,7 @@ static void P_XYMovement(mobj_t *mo)
     }
 
     if ((corpse || (flags2 & MF2_FALLING))
-        && (mo->momx > FRACUNIT / 4 || mo->momx < -FRACUNIT / 4
-            || mo->momy > FRACUNIT / 4 || mo->momy < -FRACUNIT / 4)
+        && (mo->momx > FRACUNIT / 4 || mo->momx < -FRACUNIT / 4 || mo->momy > FRACUNIT / 4 || mo->momy < -FRACUNIT / 4)
         && mo->floorz != mo->subsector->sector->floorheight)
         return;         // do not stop sliding if halfway off a step with some momentum
 
@@ -388,7 +387,7 @@ static void P_ZMovement(mobj_t *mo)
         fixed_t delta = (mo->target->z + (mo->height >> 1) - mo->z) * 3;
 
         if (P_ApproxDistance(mo->x - mo->target->x, mo->y - mo->target->y) < ABS(delta))
-            mo->z += (delta < 0 ? -FLOATSPEED : FLOATSPEED);
+            mo->z += SIGN(delta) * FLOATSPEED;
     }
 
     // clip movement
@@ -427,6 +426,9 @@ static void P_ZMovement(mobj_t *mo)
             if (player && player->mo == mo)
             {
                 player->jumptics = 7;
+
+                if (weaponbounce && !freeze)
+                    player->bouncemax = mo->momz >> 1;
 
                 if (mo->momz < -GRAVITY * 8)
                 {
@@ -561,9 +563,6 @@ void P_MobjThinker(mobj_t *mobj)
         mobj->oldangle = mobj->angle;
     }
 
-    if (freeze && !player)
-        return;
-
     if (mobj->nudge > 0)
         mobj->nudge--;
 
@@ -572,8 +571,8 @@ void P_MobjThinker(mobj_t *mobj)
     {
         P_XYMovement(mobj);
 
-        if (mobj->thinker.function == P_RemoveThinkerDelayed)   // killough
-            return;             // mobj was removed
+        if (mobj->thinker.function == P_RemoveThinkerDelayed)
+            return;
     }
 
     // [BH] don't clip sprite if no longer in liquid
@@ -581,8 +580,8 @@ void P_MobjThinker(mobj_t *mobj)
         mobj->flags2 &= ~MF2_FEETARECLIPPED;
 
     // [BH] bob objects in liquid
-    if ((flags2 & MF2_FEETARECLIPPED) && !(flags2 & MF2_NOLIQUIDBOB) && mobj->z <= sector->floorheight
-        && !mobj->momz && !sector->heightsec && r_liquid_bob)
+    if ((flags2 & MF2_FEETARECLIPPED) && !(flags2 & MF2_NOLIQUIDBOB) && mobj->z <= sector->floorheight && !mobj->momz
+        && !sector->heightsec && r_liquid_bob)
         mobj->z += animatedliquiddiffs[(mobj->floatbob + leveltime) & 63];
 
     // [BH] otherwise bob certain power-ups
@@ -624,8 +623,8 @@ void P_MobjThinker(mobj_t *mobj)
         else
             P_ZMovement(mobj);
 
-        if (mobj->thinker.function == P_RemoveThinkerDelayed)   // killough
-            return;             // mobj was removed
+        if (mobj->thinker.function == P_RemoveThinkerDelayed)
+            return;
     }
     else if (!(mobj->momx | mobj->momy) && !sentient(mobj))
     {
@@ -663,10 +662,10 @@ void P_MobjThinker(mobj_t *mobj)
 //
 void P_SetShadowColumnFunction(mobj_t *mobj)
 {
-    if (r_shadows_translucency)
-        mobj->shadowcolfunc = ((mobj->flags & MF_FUZZ) && r_textures ? R_DrawFuzzyShadowColumn : R_DrawShadowColumn);
+    if ((mobj->flags & MF_FUZZ) && r_textures)
+        mobj->shadowcolfunc = (r_shadows_translucency ? R_DrawFuzzyShadowColumn : R_DrawSolidFuzzyShadowColumn);
     else
-        mobj->shadowcolfunc = ((mobj->flags & MF_FUZZ) && r_textures ? R_DrawSolidFuzzyShadowColumn : R_DrawSolidShadowColumn);
+        mobj->shadowcolfunc = (r_shadows_translucency ? R_DrawShadowColumn : R_DrawSolidShadowColumn);
 }
 
 //
@@ -1008,8 +1007,7 @@ mobj_t *P_SpawnMapThing(mapthing_t *mthing, dboolean nomonsters)
     else if ((type >= Player2Start && type <= Player4Start) || type == PlayerDeathmatchStart)
         return NULL;
 
-    // check for appropriate skill level
-    if (mthing->options & 16)
+    if (mthing->options & MTF_NETGAME)
         return NULL;
 
     if (gameskill == sk_baby)
@@ -1031,6 +1029,7 @@ mobj_t *P_SpawnMapThing(mapthing_t *mthing, dboolean nomonsters)
         return NULL;
     }
 
+    // check for appropriate skill level
     if (!(mthing->options & (MTF_EASY | MTF_NORMAL | MTF_HARD)) && (!canmodify || !r_fixmaperrors) && type != VisualModeCamera)
     {
         if (mobjinfo[i].name1[0] != '\0')
@@ -1088,19 +1087,8 @@ mobj_t *P_SpawnMapThing(mapthing_t *mthing, dboolean nomonsters)
     mobj->angle = ((mthing->angle % 45) ? mthing->angle * (ANG45 / 45) : ANG45 * (mthing->angle / 45));
 
     // [BH] randomly mirror corpses
-    if ((flags & MF_CORPSE) && r_corpses_mirrored)
-    {
-        static int  prev;
-        int         r = M_RandomInt(1, 10);
-
-        if (r <= 5 + prev)
-        {
-            prev--;
-            mobj->flags2 |= MF2_MIRRORED;
-        }
-        else
-            prev++;
-    }
+    if ((flags & MF_CORPSE) && r_corpses_mirrored && (M_Random() & 1))
+        mobj->flags2 |= MF2_MIRRORED;
 
     // [BH] randomly mirror weapons
     if (r_mirroredweapons && (type == SuperShotgun || (type >= Shotgun && type <= BFG9000)) && (M_Random() & 1))
@@ -1156,7 +1144,6 @@ void P_SpawnPuff(fixed_t x, fixed_t y, fixed_t z, angle_t angle)
     th->tics = MAX(1, st->tics - (M_Random() & 3));
     th->sprite = st->sprite;
     th->frame = st->frame;
-    th->interpolate = true;
 
     th->colfunc = info->colfunc;
     th->altcolfunc = info->altcolfunc;
@@ -1181,15 +1168,14 @@ void P_SpawnPuff(fixed_t x, fixed_t y, fixed_t z, angle_t angle)
     {
         P_SetMobjState(th, S_PUFF3);
 
-        // [BH] vibrate XInput gamepads
-        if (gp_vibrate_damage && vibrate)
+        if (gp_vibrate_damage)
         {
-            int motorspeed = weaponinfo[wp_fist].motorspeed * gp_vibrate_damage / 100;
+            int strength = weaponinfo[wp_fist].strength * gp_vibrate_damage / 100;
 
             if (viewplayer->powers[pw_strength])
-                motorspeed *= 2;
+                strength *= 2;
 
-            XInputVibration(motorspeed);
+            I_GamepadVibration(strength);
             weaponvibrationtics = weaponinfo[wp_fist].tics;
         }
     }
@@ -1241,7 +1227,6 @@ void P_SpawnBlood(fixed_t x, fixed_t y, fixed_t z, angle_t angle, int damage, mo
         th->tics = MAX(1, st->tics - (M_Random() & 3));
         th->sprite = st->sprite;
         th->frame = st->frame;
-        th->interpolate = true;
 
         th->colfunc = info->colfunc;
         th->altcolfunc = info->altcolfunc;

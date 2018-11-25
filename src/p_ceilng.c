@@ -63,9 +63,6 @@ void T_MoveCeiling(ceiling_t *ceiling)
 {
     result_e    res;
 
-    if (freeze)
-        return;
-
     switch (ceiling->direction)
     {
         case 0:
@@ -252,9 +249,11 @@ dboolean EV_DoCeiling(line_t *line, ceiling_e type)
         // new ceiling thinker
         rtn = true;
         ceiling = Z_Calloc(1, sizeof(*ceiling), PU_LEVSPEC, NULL);
-        P_AddThinker(&ceiling->thinker);
-        sec->ceilingdata = ceiling;
+
         ceiling->thinker.function = T_MoveCeiling;
+        P_AddThinker(&ceiling->thinker);
+
+        sec->ceilingdata = ceiling;
         ceiling->sector = sec;
 
         switch (type)

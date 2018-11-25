@@ -113,7 +113,7 @@ unsigned int    stat_monsterskilled_zombiemen = 0;
 
 extern int      idclevtics;
 
-static void P_UpdateAmmoStat(ammotype_t ammotype, int num)
+void P_UpdateAmmoStat(ammotype_t ammotype, int num)
 {
     switch (ammotype)
     {
@@ -174,7 +174,7 @@ static int P_GiveAmmo(ammotype_t ammotype, int num, dboolean stat)
     oldammo = viewplayer->ammo[ammotype];
     viewplayer->ammo[ammotype] = MIN(oldammo + num, viewplayer->maxammo[ammotype]);
 
-    if (vid_widescreen && r_hud && !r_althud && num && ammotype == weaponinfo[viewplayer->readyweapon].ammotype)
+    if (num && ammotype == weaponinfo[viewplayer->readyweapon].ammotype)
         ammohighlight = I_GetTimeMS() + HUD_AMMO_HIGHLIGHT_WAIT;
 
     if (stat)
@@ -243,12 +243,7 @@ dboolean P_GiveBackpack(dboolean giveammo, dboolean stat)
     for (ammotype_t i = 0; i < NUMAMMO; i++)
     {
         if (viewplayer->ammo[i] < viewplayer->maxammo[i])
-        {
             result = true;
-
-            if (vid_widescreen && r_hud && !r_althud && i == weaponinfo[viewplayer->readyweapon].ammotype)
-                ammohighlight = I_GetTimeMS() + HUD_AMMO_HIGHLIGHT_WAIT;
-        }
 
         if (giveammo)
             P_GiveAmmo(i, 1, stat);
@@ -276,9 +271,7 @@ dboolean P_GiveFullAmmo(dboolean stat)
 
     if (result)
     {
-        if (vid_widescreen && r_hud && !r_althud)
-            ammohighlight = I_GetTimeMS() + HUD_AMMO_HIGHLIGHT_WAIT;
-
+        ammohighlight = I_GetTimeMS() + HUD_AMMO_HIGHLIGHT_WAIT;
         return true;
     }
 
@@ -313,14 +306,6 @@ static dboolean P_GiveWeapon(weapontype_t weapon, dboolean dropped, dboolean sta
 
         if (weaponinfo[weapon].priority == -1 || weaponinfo[weapon].priority > weaponinfo[viewplayer->readyweapon].priority)
             viewplayer->pendingweapon = weapon;
-    }
-
-    if (gaveammo && ammotype == weaponinfo[viewplayer->readyweapon].ammotype)
-    {
-        if (vid_widescreen && r_hud && !r_althud)
-            ammohighlight = I_GetTimeMS() + HUD_AMMO_HIGHLIGHT_WAIT;
-
-        return true;
     }
 
     return (gaveweapon || gaveammo);
@@ -391,7 +376,7 @@ dboolean P_GiveAllWeapons(void)
     return result;
 }
 
-static void P_UpdateHealthStat(int num)
+void P_UpdateHealthStat(int num)
 {
     viewplayer->itemspickedup_health += num;
     stat_itemspickedup_health = SafeAdd(stat_itemspickedup_health, num);
@@ -433,7 +418,7 @@ dboolean P_GiveMegaHealth(dboolean stat)
             healthhighlight = I_GetTimeMS() + HUD_HEALTH_HIGHLIGHT_WAIT;
 
             if (stat)
-                P_UpdateHealthStat(mega_health - viewplayer->health);
+                P_UpdateHealthStat(MAX(0, mega_health - viewplayer->health));
         }
 
         if (viewplayer->health < mega_health)
@@ -446,7 +431,7 @@ dboolean P_GiveMegaHealth(dboolean stat)
     return result;
 }
 
-static void P_UpdateArmorStat(int num)
+void P_UpdateArmorStat(int num)
 {
     viewplayer->itemspickedup_armor += num;
     stat_itemspickedup_armor = SafeAdd(stat_itemspickedup_armor, num);
@@ -454,8 +439,7 @@ static void P_UpdateArmorStat(int num)
 
 //
 // P_GiveArmor
-// Returns false if the armor is worse
-// than the current armor.
+// Returns false if the armor is worse than the current armor.
 //
 dboolean P_GiveArmor(armortype_t armortype, dboolean stat)
 {
@@ -809,7 +793,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, dboolean message, dbo
         case SPR_SOUL:
             if (!(viewplayer->cheats & CF_GODMODE))
             {
-                P_UpdateHealthStat(soul_health - viewplayer->health);
+                P_UpdateHealthStat(MAX(0, soul_health - viewplayer->health));
                 viewplayer->health = MIN(viewplayer->health + soul_health, max_soul);
                 viewplayer->mo->health = viewplayer->health;
                 healthhighlight = I_GetTimeMS() + HUD_HEALTH_HIGHLIGHT_WAIT;
@@ -1344,19 +1328,8 @@ void P_KillMobj(mobj_t *target, mobj_t *inflicter, mobj_t *source)
         if (!(target->flags & MF_FUZZ))
             target->bloodsplats = CORPSEBLOODSPLATS;
 
-        if (r_corpses_mirrored && (type != MT_CHAINGUY && type != MT_CYBORG))
-        {
-            static int  prev;
-            int         r = M_RandomInt(1, 10);
-
-            if (r <= 5 + prev)
-            {
-                prev--;
-                target->flags2 |= MF2_MIRRORED;
-            }
-            else
-                prev++;
-        }
+        if (r_corpses_mirrored && (type != MT_CHAINGUY && type != MT_CYBORG) && (M_Random() & 1))
+            target->flags2 |= MF2_MIRRORED;
     }
 
     if (target->flags & MF_COUNTKILL)
@@ -1414,15 +1387,14 @@ void P_KillMobj(mobj_t *target, mobj_t *inflicter, mobj_t *source)
     if (con_obituaries && !hacx && !(target->flags2 & MF2_MASSACRE))
     {
         char        *name = (*info->name1 ? info->name1 : "monster");
-        dboolean    defaultplayername = M_StringCompare(playername, playername_default);
 
         if (source)
         {
             if (inflicter && inflicter->type == MT_BARREL && type != MT_BARREL)
             {
                 if (target->player)
-                    C_Obituary("%s %s %s by an exploding barrel.", titlecase(playername), (defaultplayername ? "were" : "was"),
-                        (gibbed ? "gibbed" : "killed"));
+                    C_Obituary("%s %s %s by an exploding barrel.", titlecase(playername),
+                        (M_StringCompare(playername, playername_default) ? "were" : "was"), (gibbed ? "gibbed" : "killed"));
                 else
                     C_Obituary("%s %s was %s by an exploding barrel.", (isvowel(name[0]) ? "An" : "A"), name,
                         (gibbed ? "gibbed" : "killed"));
@@ -1430,6 +1402,7 @@ void P_KillMobj(mobj_t *target, mobj_t *inflicter, mobj_t *source)
             else if (source->player)
             {
                 weapontype_t    readyweapon = source->player->readyweapon;
+                dboolean        defaultplayername = M_StringCompare(playername, playername_default);
 
                 if (target->player)
                     C_Obituary("%s %s %s with %s own %s.", titlecase(playername),
@@ -1447,7 +1420,8 @@ void P_KillMobj(mobj_t *target, mobj_t *inflicter, mobj_t *source)
             {
                 if (source->type == MT_TFOG)
                     C_Obituary("%s%s %s telefragged.", (target->player ? "" : (isvowel(name[0]) ? "An " : "A ")),
-                        (target->player ? titlecase(playername) : name), (defaultplayername ? "were" : "was"));
+                        (target->player ? titlecase(playername) : name),
+                        (M_StringCompare(playername, playername_default) ? "were" : "was"));
                 else
                 {
                     char    *sourcename = (*source->info->name1 ? source->info->name1 : "monster");
@@ -1455,7 +1429,7 @@ void P_KillMobj(mobj_t *target, mobj_t *inflicter, mobj_t *source)
                     if (target->player)
                         C_Obituary("%s %s %s %s.", (isvowel(sourcename[0]) ? "An" : "A"), sourcename,
                             (type == MT_BARREL ? "exploded" : (gibbed ? "gibbed" : "killed")),
-                            (defaultplayername ? playername : titlecase(playername)));
+                            (M_StringCompare(playername, playername_default) ? playername : titlecase(playername)));
                     else
                         C_Obituary("%s %s %s %s %s.", (isvowel(sourcename[0]) ? "An" : "A"), sourcename,
                             (type == MT_BARREL ? "exploded" : (gibbed ? "gibbed" : "killed")),
@@ -1469,7 +1443,8 @@ void P_KillMobj(mobj_t *target, mobj_t *inflicter, mobj_t *source)
             sector_t    *sector = target->player->mo->subsector->sector;
 
             if (sector->ceilingdata && sector->ceilingheight - sector->floorheight < VIEWHEIGHT)
-                C_Obituary("%s %s crushed to death.", titlecase(playername), (defaultplayername ? "were" : "was"));
+                C_Obituary("%s %s crushed to death.", titlecase(playername),
+                    (M_StringCompare(playername, playername_default) ? "were" : "was"));
             else
             {
                 if (sector->terraintype != SOLID)
@@ -1479,7 +1454,15 @@ void P_KillMobj(mobj_t *target, mobj_t *inflicter, mobj_t *source)
                     C_Obituary("%s died in %s.", titlecase(playername), liquids[sector->terraintype]);
                 }
                 else
-                    C_Obituary("%s blew %s up.", titlecase(playername), (defaultplayername ? "yourself" : "themselves"));
+                {
+                    short   floorpic = sector->floorpic;
+
+                    if ((floorpic >= RROCK05 && floorpic <= RROCK08) || (floorpic >= SLIME09 && floorpic <= SLIME12))
+                        C_Obituary("%s died on molten rock.", titlecase(playername));
+                    else
+                        C_Obituary("%s blew %s up.", titlecase(playername),
+                            (M_StringCompare(playername, playername_default) ? "yourself" : "themselves"));
+                }
             }
         }
     }
@@ -1493,9 +1476,9 @@ void P_KillMobj(mobj_t *target, mobj_t *inflicter, mobj_t *source)
         if (tossdrop)
         {
             mo = P_SpawnMobj(target->x, target->y, target->floorz + target->height * 3 / 2 - 3 * FRACUNIT, info->droppeditem);
-            mo->momx = M_SubRandom() << 8;
-            mo->momy = M_SubRandom() << 8;
-            mo->momz = FRACUNIT * 2 + (M_Random() << 10);
+            mo->momx = (target->momx >> 1) + (M_SubRandom() << 8);
+            mo->momy = (target->momy >> 1) + (M_SubRandom() << 8);
+            mo->momz = FRACUNIT * 2 + (M_Random() << 9);
         }
         else
             mo = P_SpawnMobj(target->x, target->y, ONFLOORZ, info->droppeditem);
@@ -1598,10 +1581,8 @@ void P_DamageMobj(mobj_t *target, mobj_t *inflicter, mobj_t *source, int damage,
         if (target->subsector->sector->special == DamageNegative10Or20PercentHealthAndEndLevel && damage >= target->health)
             damage = target->health - 1;
 
-        // Below certain threshold,
-        // ignore damage in GOD mode, or with INVUL power.
-        if ((tplayer->cheats & CF_GODMODE) || idclevtics
-            || (damage < 1000 && tplayer->powers[pw_invulnerability]))
+        // below certain threshold, ignore damage in god mode, or with invulnerability power-up
+        if ((tplayer->cheats & CF_GODMODE) || idclevtics || (damage < 1000 && tplayer->powers[pw_invulnerability]))
             return;
 
         if (adjust && tplayer->armortype)
@@ -1642,9 +1623,9 @@ void P_DamageMobj(mobj_t *target, mobj_t *inflicter, mobj_t *source, int damage,
 
         tplayer->damagecount = MIN(damagecount, 100);
 
-        if (gp_vibrate_damage && vibrate)
+        if (gp_vibrate_damage)
         {
-            XInputVibration((30000 + (100 - MIN(tplayer->health, 100)) / 100 * 30000) * gp_vibrate_damage / 100);
+            I_GamepadVibration((30000 + (100 - MIN(tplayer->health, 100)) / 100 * 30000) * gp_vibrate_damage / 100);
             damagevibrationtics += BETWEEN(12, damage, 100);
         }
 
@@ -1689,8 +1670,7 @@ void P_DamageMobj(mobj_t *target, mobj_t *inflicter, mobj_t *source, int damage,
 
     if ((!target->threshold || type == MT_VILE) && source && source != target && source->type != MT_VILE)
     {
-        // if not intent on another player,
-        // chase after this one
+        // if not intent on another player, chase after this one
         if (!target->lastenemy || target->lastenemy->health <= 0 || !target->lastenemy->player)
             P_SetTarget(&target->lastenemy, target->target);    // remember last enemy - killough
 

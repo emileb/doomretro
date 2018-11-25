@@ -203,7 +203,7 @@ static int P_ThingToIndex(mobj_t *thing)
     if (!thing)
         return 0;
 
-    for (thinker_t *th = thinkerclasscap[th_mobj].cnext; th != &thinkerclasscap[th_mobj]; th = th->cnext)
+    for (thinker_t *th = thinkers[th_mobj].cnext; th != &thinkers[th_mobj]; th = th->cnext)
     {
         i++;
 
@@ -221,7 +221,7 @@ static mobj_t *P_IndexToThing(int index)
     if (!index)
         return NULL;
 
-    for (thinker_t *th = thinkerclasscap[th_mobj].cnext; th != &thinkerclasscap[th_mobj]; th = th->cnext)
+    for (thinker_t *th = thinkers[th_mobj].cnext; th != &thinkers[th_mobj]; th = th->cnext)
         if (++i == index)
             return (mobj_t *)th;
 
@@ -1106,7 +1106,7 @@ void P_UnArchiveWorld(void)
 void P_ArchiveThinkers(void)
 {
     // save off the current thinkers
-    for (thinker_t *th = thinkerclasscap[th_mobj].cnext; th != &thinkerclasscap[th_mobj]; th = th->cnext)
+    for (thinker_t *th = thinkers[th_mobj].cnext; th != &thinkers[th_mobj]; th = th->cnext)
     {
         saveg_write8(tc_mobj);
         saveg_write_pad();
@@ -1144,17 +1144,17 @@ static void P_SetNewTarget(mobj_t **mop, mobj_t *targ)
 //
 void P_UnArchiveThinkers(void)
 {
-    thinker_t   *currentthinker = thinkercap.next;
+    thinker_t   *currentthinker = thinkers[th_all].next;
 
     // remove all the current thinkers
-    while (currentthinker != &thinkercap)
+    while (currentthinker != &thinkers[th_all])
     {
         thinker_t   *next = currentthinker->next;
 
         if (currentthinker->function == P_MobjThinker || currentthinker->function == MusInfoThinker)
         {
             P_RemoveMobj((mobj_t *)currentthinker);
-            P_RemoveThinkerDelayed(currentthinker);     // fix mobj leak
+            P_RemoveThinkerDelayed(currentthinker);
         }
         else
             Z_Free(currentthinker);
@@ -1202,10 +1202,10 @@ void P_UnArchiveThinkers(void)
                 P_SetThingPosition(mobj);
 
                 mobj->thinker.function = (mobj->type == MT_MUSICSOURCE ? MusInfoThinker : P_MobjThinker);
+                P_AddThinker(&mobj->thinker);
                 mobj->colfunc = mobj->info->colfunc;
                 mobj->altcolfunc = mobj->info->altcolfunc;
                 P_SetShadowColumnFunction(mobj);
-                P_AddThinker(&mobj->thinker);
                 thingindex = MIN(thingindex + 1, TARGETLIMIT - 1);
                 break;
             }
@@ -1247,7 +1247,7 @@ void P_RestoreTargets(void)
 
     thingindex = 0;
 
-    for (thinker_t *th = thinkerclasscap[th_mobj].cnext; th != &thinkerclasscap[th_mobj]; th = th->cnext)
+    for (thinker_t *th = thinkers[th_mobj].cnext; th != &thinkers[th_mobj]; th = th->cnext)
     {
         mobj_t  *mo = (mobj_t *)th;
 
@@ -1267,7 +1267,7 @@ void P_ArchiveSpecials(void)
     button_t    *button_ptr = buttonlist;
 
     // save off the current thinkers
-    for (thinker_t *th = thinkerclasscap[th_misc].cnext; th != &thinkerclasscap[th_misc]; th = th->cnext)
+    for (thinker_t *th = thinkers[th_misc].cnext; th != &thinkers[th_misc]; th = th->cnext)
     {
         if (!th->function)
         {

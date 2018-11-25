@@ -44,10 +44,6 @@
 #include "m_controls.h"
 
 #if defined(_WIN32)
-#define snprintf    _snprintf
-#if (_MSC_VER < 1400)
-#define vsnprintf   _vsnprintf
-#endif
 #define strcasecmp  stricmp
 #define strncasecmp strnicmp
 #else
@@ -65,9 +61,9 @@
 #if defined(__GNUC__)
 
 #if defined(_WIN32) && !defined(__clang__)
-#define PACKEDATTR __attribute__((packed,gcc_struct))
+#define PACKEDATTR  __attribute__((packed,gcc_struct))
 #else
-#define PACKEDATTR __attribute__((packed))
+#define PACKEDATTR  __attribute__((packed))
 #endif
 
 #else
@@ -77,6 +73,10 @@
 //
 // Global parameters/defines.
 //
+
+#define DOOM1AND2   0
+#define DOOM1ONLY   1
+#define DOOM2ONLY   2
 
 // Game mode handling - identify IWAD version
 //  to handle IWAD dependent animations etc.
@@ -124,6 +124,8 @@ typedef enum
 
 // State updates, number of tics/second.
 #define TICRATE             35
+
+#define CARETBLINKTIME      350
 
 // The current state of the game: whether we are
 // playing, gazing at the intermission screen,

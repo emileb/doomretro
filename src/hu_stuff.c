@@ -61,8 +61,6 @@
 //
 // Locally used constants, shortcuts.
 //
-#define HU_TITLEX       3
-#define HU_TITLEY       (ORIGINALHEIGHT - ORIGINALSBARHEIGHT - hu_font[0]->height - 2)
 #define STSTR_BEHOLD2   "inVuln, bSrk, Inviso, Rad, Allmap or Lite-amp?"
 
 patch_t                 *hu_font[HU_FONTSIZE];
@@ -73,8 +71,6 @@ dboolean                message_dontfuckwithme;
 dboolean                message_clearable;
 static dboolean         message_external;
 static dboolean         message_nottobefuckedwith;
-int                     message_x;
-int                     message_y;
 
 dboolean                idbehold;
 dboolean                s_STSTR_BEHOLD2;
@@ -117,7 +113,6 @@ extern int              st_faceindex;
 
 static void (*hudfunc)(int, int, patch_t *, byte *);
 static void (*hudnumfunc)(int, int, patch_t *, byte *);
-static void (*godhudfunc)(int, int, patch_t *, byte *);
 
 static void (*althudfunc)(int, int, patch_t *, int, int);
 void (*althudtextfunc)(int, int, patch_t *, int);
@@ -179,7 +174,6 @@ void HU_SetTranslucency(void)
     {
         hudfunc = V_DrawTranslucentHUDPatch;
         hudnumfunc = V_DrawTranslucentHUDNumberPatch;
-        godhudfunc = V_DrawTranslucentYellowHUDPatch;
         althudfunc = V_DrawTranslucentAltHUDPatch;
         althudtextfunc =  V_DrawTranslucentAltHUDText;
         fillrectfunc = V_FillTransRect;
@@ -189,7 +183,6 @@ void HU_SetTranslucency(void)
     {
         hudfunc = V_DrawHUDPatch;
         hudnumfunc = V_DrawHUDPatch;
-        godhudfunc = V_DrawYellowHUDPatch;
         althudfunc = V_DrawAltHUDPatch;
         althudtextfunc = V_DrawAltHUDText;
         fillrectfunc = V_FillRect;
@@ -279,10 +272,21 @@ void HU_Start(void)
 
     while (M_StringWidth(s) > (r_messagescale == r_messagescale_small ? (SCREENWIDTH - 12) : (ORIGINALWIDTH - 6)))
     {
-        s[len - 1] = '.';
-        s[len] = '.';
-        s[len + 1] = '.';
-        s[len + 2] = '\0';
+        if (len >= 2 && s[len - 2] == ' ')
+        {
+            s[len - 2] = '.';
+            s[len - 1] = '.';
+            s[len] = '.';
+            s[len + 1] = '\0';
+        }
+        else
+        {
+            s[len - 1] = '.';
+            s[len] = '.';
+            s[len + 1] = '.';
+            s[len + 2] = '\0';
+        }
+
         len--;
     }
 
@@ -560,8 +564,6 @@ static patch_t  *altarmpatch;
 static patch_t  *altrightpatch;
 static patch_t  *altmarkpatch;
 static patch_t  *altmark2patch;
-static patch_t  *altkeypatch;
-static patch_t  *altskullpatch;
 
 int             white;
 static int      gray;
@@ -574,6 +576,8 @@ static int      yellow;
 static void HU_AltInit(void)
 {
     char    buffer[9];
+    patch_t *altkeypatch;
+    patch_t *altskullpatch;
 
     for (int i = 0; i < 10; i++)
     {
@@ -831,29 +835,29 @@ static void HU_DrawAltHUD(void)
     if ((powerup = viewplayer->powers[pw_invulnerability]))
     {
         max = INVULNTICS;
-        powerupbar = (powerup == -1 ? max : powerup);
+        powerupbar = (powerup == -1 ? INT_MAX : powerup);
     }
 
     if ((powerup = viewplayer->powers[pw_invisibility]) && (!powerupbar || (powerup >= 0 && powerup < powerupbar)))
     {
         max = INVISTICS;
-        powerupbar = (powerup == -1 ? max : powerup);
+        powerupbar = (powerup == -1 ? INT_MAX : powerup);
     }
 
     if ((powerup = viewplayer->powers[pw_ironfeet]) && (!powerupbar || (powerup >= 0 && powerup < powerupbar)))
     {
         max = IRONTICS;
-        powerupbar = (powerup == -1 ? max : powerup);
+        powerupbar = (powerup == -1 ? INT_MAX : powerup);
     }
 
     if ((powerup = viewplayer->powers[pw_infrared]) && (!powerupbar || (powerup >= 0 && powerup < powerupbar)))
     {
         max = INFRATICS;
-        powerupbar = (powerup == -1 ? max : powerup);
+        powerupbar = (powerup == -1 ? INT_MAX : powerup);
     }
 
-    if (!powerupbar && viewplayer->powers[pw_strength]
-        && ((viewplayer->readyweapon == wp_fist && viewplayer->pendingweapon == wp_nochange) || viewplayer->pendingweapon == wp_fist))
+    if (powerupbar == INT_MAX || (!powerupbar && viewplayer->powers[pw_strength]
+        && ((viewplayer->readyweapon == wp_fist && viewplayer->pendingweapon == wp_nochange) || viewplayer->pendingweapon == wp_fist)))
     {
         max = STARTFLASHING + 1;
         powerupbar = STARTFLASHING + 1;
@@ -874,11 +878,12 @@ void HU_DrawDisk(void)
 
 void HU_InitMessages(void)
 {
-    if (sscanf(r_messagepos, "(%10i,%10i)", &message_x, &message_y) != 2
-        || message_x < 0 || message_x >= SCREENWIDTH || message_y < 0 || message_y >= SCREENHEIGHT - SBARHEIGHT)
+    int x, y;
+
+    if (sscanf(r_messagepos, "(%10i,%10i)", &x, &y) != 2 || x < 0 || x >= SCREENWIDTH || y < 0 || y >= SCREENHEIGHT - SBARHEIGHT)
     {
-        message_x = HU_MSGX;
-        message_y = HU_MSGY;
+        x = HU_MSGX;
+        y = HU_MSGY;
         r_messagepos = r_messagepos_default;
         M_SaveCVARs();
     }
@@ -887,25 +892,25 @@ void HU_InitMessages(void)
     {
         if (r_messagescale == r_messagescale_small)
         {
-            w_message.l->x = BETWEEN(0, message_x * SCREENSCALE, SCREENWIDTH - M_StringWidth(w_message.l->l));
-            w_message.l->y = BETWEEN(0, message_y * SCREENSCALE, SCREENHEIGHT - SBARHEIGHT - hu_font[0]->height);
+            w_message.l->x = BETWEEN(0, x * SCREENSCALE, SCREENWIDTH - M_StringWidth(w_message.l->l));
+            w_message.l->y = BETWEEN(0, y * SCREENSCALE, SCREENHEIGHT - SBARHEIGHT - hu_font[0]->height);
         }
         else
         {
-            w_message.l->x = BETWEEN(0, message_x, ORIGINALWIDTH - M_StringWidth(w_message.l->l));
-            w_message.l->y = BETWEEN(0, message_y, ORIGINALHEIGHT - ORIGINALSBARHEIGHT - hu_font[0]->height);
+            w_message.l->x = BETWEEN(0, x, ORIGINALWIDTH - M_StringWidth(w_message.l->l));
+            w_message.l->y = BETWEEN(0, y, ORIGINALHEIGHT - ORIGINALSBARHEIGHT - hu_font[0]->height);
         }
-    }
 
-    if (r_messagescale == r_messagescale_small)
-    {
-        w_title.x = HU_TITLEX * SCREENSCALE;
-        w_title.y = SCREENHEIGHT - SBARHEIGHT - hu_font[0]->height - 4;
-    }
-    else
-    {
-        w_title.x = HU_TITLEX;
-        w_title.y = ORIGINALHEIGHT - ORIGINALSBARHEIGHT - hu_font[0]->height - 2;
+        if (r_messagescale == r_messagescale_small)
+        {
+            w_title.x = HU_TITLEX * SCREENSCALE;
+            w_title.y = SCREENHEIGHT - SBARHEIGHT - hu_font[0]->height - 4;
+        }
+        else
+        {
+            w_title.x = HU_TITLEX;
+            w_title.y = ORIGINALHEIGHT - ORIGINALSBARHEIGHT - hu_font[0]->height - 2;
+        }
     }
 }
 
@@ -914,7 +919,12 @@ void HU_Drawer(void)
     HUlib_drawSText(&w_message, message_external);
 
     if (automapactive)
-        HUlib_drawTextLine(&w_title, false);
+    {
+        if (vid_widescreen && r_althud)
+            HUlib_drawAltAutomapTextLine(&w_title);
+        else
+            HUlib_drawTextLine(&w_title, false);
+    }
     else
     {
         if (vid_widescreen && r_hud)
@@ -926,7 +936,12 @@ void HU_Drawer(void)
         }
 
         if (mapwindow)
-            HUlib_drawTextLine(&w_title, true);
+        {
+            if (vid_widescreen && r_althud)
+                HUlib_drawAltAutomapTextLine(&w_title);
+            else
+                HUlib_drawTextLine(&w_title, true);
+        }
     }
 }
 
@@ -997,7 +1012,7 @@ void HU_Ticker(void)
         }
         else
         {
-            int angle = (int)((double)viewangle * 90.0f / ANG90);
+            int angle = (int)(viewangle * 90.0 / ANG90);
 
             M_snprintf(buffer, sizeof(buffer), s_STSTR_MYPOS, (angle == 360 ? 0 : angle), viewx >> FRACBITS, viewy >> FRACBITS,
                 viewplayer->mo->z >> FRACBITS);
@@ -1023,10 +1038,21 @@ void HU_Ticker(void)
 
             while (M_StringWidth(message) > maxwidth)
             {
-                message[len - 1] = '.';
-                message[len] = '.';
-                message[len + 1] = '.';
-                message[len + 2] = '\0';
+                if (len >= 2 && message[len - 2] == ' ')
+                {
+                    message[len - 2] = '.';
+                    message[len - 1] = '.';
+                    message[len] = '.';
+                    message[len + 1] = '\0';
+                }
+                else
+                {
+                    message[len - 1] = '.';
+                    message[len] = '.';
+                    message[len + 1] = '.';
+                    message[len + 2] = '\0';
+                }
+
                 len--;
             }
 

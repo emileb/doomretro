@@ -55,27 +55,6 @@
 
 #define BARRELRANGE (512 * FRACUNIT)
 
-static dirtype_t opposite[] =
-{
-    DI_WEST,
-    DI_SOUTHWEST,
-    DI_SOUTH,
-    DI_SOUTHEAST,
-    DI_EAST,
-    DI_NORTHEAST,
-    DI_NORTH,
-    DI_NORTHWEST,
-    DI_NODIR
-};
-
-static dirtype_t diags[] =
-{
-    DI_NORTHWEST,
-    DI_NORTHEAST,
-    DI_SOUTHWEST,
-    DI_SOUTHEAST
-};
-
 int barrelms = 0;
 
 void A_Fall(mobj_t *actor, player_t *player, pspdef_t *psp);
@@ -412,6 +391,27 @@ static dboolean P_TryWalk(mobj_t *actor)
 //
 static void P_DoNewChaseDir(mobj_t *actor, fixed_t deltax, fixed_t deltay)
 {
+    dirtype_t opposite[] =
+    {
+        DI_WEST,
+        DI_SOUTHWEST,
+        DI_SOUTH,
+        DI_SOUTHEAST,
+        DI_EAST,
+        DI_NORTHEAST,
+        DI_NORTH,
+        DI_NORTHWEST,
+        DI_NODIR
+    };
+
+    dirtype_t diags[] =
+    {
+        DI_NORTHWEST,
+        DI_NORTHEAST,
+        DI_SOUTHWEST,
+        DI_SOUTHEAST
+    };
+
     dirtype_t       d[2];
     const dirtype_t olddir = actor->movedir;
     const dirtype_t turnaround = opposite[olddir];
@@ -613,7 +613,7 @@ static dboolean P_LookForMonsters(mobj_t *actor)
     if (!P_CheckSight(viewplayer->mo, actor))
         return false;           // player can't see monster
 
-    for (thinker_t *th = thinkerclasscap[th_mobj].cnext; th != &thinkerclasscap[th_mobj]; th = th->cnext)
+    for (thinker_t *th = thinkers[th_mobj].cnext; th != &thinkers[th_mobj]; th = th->cnext)
     {
         mobj_t  *mo = (mobj_t *)th;
 
@@ -716,7 +716,7 @@ void A_KeenDie(mobj_t *actor, player_t *player, pspdef_t *psp)
     A_Fall(actor, NULL, NULL);
 
     // scan the remaining thinkers to see if all Keens are dead
-    for (thinker_t *th = thinkerclasscap[th_mobj].cnext; th != &thinkerclasscap[th_mobj]; th = th->cnext)
+    for (thinker_t *th = thinkers[th_mobj].cnext; th != &thinkers[th_mobj]; th = th->cnext)
     {
         mobj_t  *mo = (mobj_t *)th;
 
@@ -1702,9 +1702,9 @@ void A_Explode(mobj_t *actor, player_t *player, pspdef_t *psp)
         {
             barrelms = I_GetTimeMS() + BARRELMS;
 
-            if (gp_vibrate_barrels && vibrate)
+            if (gp_vibrate_barrels)
             {
-                XInputVibration(20000 * gp_vibrate_barrels / 100);
+                I_GamepadVibration(20000 * gp_vibrate_barrels / 100);
                 barrelvibrationtics = TICRATE;
             }
         }
@@ -1796,7 +1796,7 @@ void A_BossDeath(mobj_t *actor, player_t *player, pspdef_t *psp)
     actor->health = 0;  // P_KillMobj() sets this to -1
 
     // scan the remaining thinkers to see if all bosses are dead
-    for (thinker_t *th = thinkerclasscap[th_mobj].cnext; th != &thinkerclasscap[th_mobj]; th = th->cnext)
+    for (thinker_t *th = thinkers[th_mobj].cnext; th != &thinkers[th_mobj]; th = th->cnext)
     {
         mobj_t  *mo = (mobj_t *)th;
 
@@ -1928,7 +1928,7 @@ static mobj_t *A_NextBrainTarget(void)
     mobj_t              *found = NULL;
 
     // find all the target spots
-    for (thinker_t *th = thinkerclasscap[th_mobj].cnext; th != &thinkerclasscap[th_mobj]; th = th->cnext)
+    for (thinker_t *th = thinkers[th_mobj].cnext; th != &thinkers[th_mobj]; th = th->cnext)
     {
         mobj_t  *mo = (mobj_t *)th;
 

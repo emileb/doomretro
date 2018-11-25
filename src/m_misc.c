@@ -39,6 +39,9 @@
 #if defined(_WIN32)
 #pragma warning( disable : 4091 )
 #include <ShlObj.h>
+#include <io.h>
+#include <sys/types.h>
+#include <sys/stat.h>
 #if defined(_MSC_VER)
 #include <direct.h>
 #endif
@@ -103,6 +106,22 @@ dboolean M_FileExists(const char *filename)
         // If we can't open because the file is a directory, the
         // "file" exists at least!
         return (errno == EISDIR);
+}
+
+// Check if a folder exists
+dboolean M_FolderExists(const char *folder)
+{
+#if defined(_WIN32)
+    if (!_access(folder, 0))
+    {
+        struct stat status;
+
+        stat(folder, &status);
+        return !!(status.st_mode & S_IFDIR);
+    }
+#endif
+
+    return false;
 }
 
 // Safe string copy function that works like OpenBSD's strlcpy().
@@ -170,7 +189,7 @@ char *M_GetAppDataFolder(void)
         // On Linux, store generated application files in /home/<username>/.config/doomretro
         char            *buffer;
 
-        if (!(buffer = getenv("HOME")))
+        if (!(buffer = SDL_getenv("HOME")))
             buffer = getpwuid(getuid())->pw_dir;
 
         return M_StringJoin(buffer, DIR_SEPARATOR_S".config"DIR_SEPARATOR_S, PACKAGE, NULL);
@@ -499,8 +518,8 @@ char *titlecase(const char *str)
 
         if (len > 1)
             for (int i = 1; i < len; i++)
-                if ((newstr[i - 1] != '\'' || newstr[i - 2] == ' ') && !isalnum((unsigned char)newstr[i - 1])
-                    && isalnum((unsigned char)newstr[i]))
+                if ((newstr[i - 1] != '\'' || (i >= 2 && newstr[i - 2] == ' '))
+                    && !isalnum((unsigned char)newstr[i - 1]) && isalnum((unsigned char)newstr[i]))
                     newstr[i] = toupper(newstr[i]);
     }
 
@@ -743,7 +762,7 @@ char *removeext(const char *file)
 
 dboolean isvowel(const char ch)
 {
-    return !!strchr("aeiou", ch);
+    return !!strchr("aeiouAEIOU", ch);
 }
 
 char *striptrailingzero(float value, int precision)

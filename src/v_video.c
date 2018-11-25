@@ -61,9 +61,8 @@
 #include "w_wad.h"
 #include "z_zone.h"
 
-#define BLACK       nearestcolors[0]
-#define DARKGRAY    nearestcolors[1]
-#define WHITE       4
+#define BLACK   nearestcolors[0]
+#define WHITE   4
 
 // Each screen is [SCREENWIDTH * SCREENHEIGHT];
 byte            *screens[5];
@@ -76,26 +75,6 @@ static int      pixelheight;
 char            *r_lowpixelsize = r_lowpixelsize_default;
 
 static char     screenshotfolder[MAX_PATH];
-
-static const byte redtoyellow[] =
-{
-      0,   1,   2,   3,   4,   5,   6,   7,   8,   9,  10,  11,  12,  13,  14,  15,
-     16,  17,  18,  19,  20,  21,  22,  23,  24,  25,  26,  27,  28,  29,  30,  31,
-     32,  33,  34,  35,  36,  37,  38,  39,  40,  41,  42,  43, 164, 164, 165, 165,
-     48,  49,  50,  51,  52,  53,  54,  55,  56,  57,  58,  59,  60,  61,  62,  63,
-     64,  65,  66,  67,  68,  69,  70,  71,  72,  73,  74,  75,  76,  77,  78,  79,
-     80,  81,  82,  83,  84,  85,  86,  87,  88,  89,  90,  91,  92,  93,  94,  95,
-     96,  97,  98,  99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111,
-    112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123, 124, 125, 126, 127,
-    128, 129, 130, 131, 132, 133, 134, 135, 136, 137, 138, 139, 140, 141, 142, 143,
-    144, 145, 146, 147, 148, 149, 150, 151, 152, 153, 154, 155, 156, 157, 158, 159,
-    160, 161, 162, 163, 164, 165, 166, 167, 168, 169, 170, 171, 172, 173, 174, 175,
-    230, 230, 231, 231, 160, 160, 161, 161, 162, 162, 163, 163, 164, 164, 165, 165,
-    192, 193, 194, 195, 196, 197, 198, 199, 200, 201, 202, 203, 204, 205, 206, 207,
-    208, 209, 210, 211, 212, 213, 214, 215, 216, 217, 218, 219, 220, 221, 222, 223,
-    224, 225, 226, 227, 228, 229, 230, 231, 232, 233, 234, 235, 236, 237, 238, 239,
-    240, 241, 242, 243, 244, 245, 246, 247, 248, 249, 250, 251, 252, 253, 254, 255
-};
 
 extern dboolean vanilla;
 
@@ -658,6 +637,7 @@ void V_DrawTranslucentAltHUDText(int x, int y, patch_t *patch, int color)
 {
     byte    *desttop = screens[0] + y * SCREENWIDTH + x;
     int     w = SHORT(patch->width);
+    byte    *tinttab = (automapactive ? tinttab25 : tinttab60);
 
     for (int col = 0; col < w; col++, desttop++)
     {
@@ -674,7 +654,7 @@ void V_DrawTranslucentAltHUDText(int x, int y, patch_t *patch, int color)
             while (count--)
             {
                 if (*source++ == WHITE)
-                    *dest = tinttab60[(*dest << 8) + color];
+                    *dest = tinttab[(*dest << 8) + color];
 
                 dest += SCREENWIDTH;
             }
@@ -799,39 +779,6 @@ void V_DrawHighlightedHUDNumberPatch(int x, int y, patch_t *patch, byte *translu
     }
 }
 
-void V_DrawYellowHUDPatch(int x, int y, patch_t *patch, byte *translucency)
-{
-    byte    *desttop;
-    int     w;
-
-    if (!translucency)
-        return;
-
-    desttop = screens[0] + y * SCREENWIDTH + x;
-    w = SHORT(patch->width);
-
-    for (int col = 0; col < w; col++, desttop++)
-    {
-        column_t    *column = (column_t *)((byte *)patch + LONG(patch->columnofs[col]));
-
-        // step through the posts in a column
-        while (column->topdelta != 0xFF)
-        {
-            byte    *source = (byte *)column + 3;
-            byte    *dest = desttop + column->topdelta * SCREENWIDTH;
-            int     count = column->length;
-
-            while (count--)
-            {
-                *dest = redtoyellow[*source++];
-                dest += SCREENWIDTH;
-            }
-
-            column = (column_t *)((byte *)column + column->length + 4);
-        }
-    }
-}
-
 void V_DrawTranslucentHUDPatch(int x, int y, patch_t *patch, byte *translucency)
 {
     byte    *desttop = screens[0] + y * SCREENWIDTH + x;
@@ -880,33 +827,6 @@ void V_DrawTranslucentHUDNumberPatch(int x, int y, patch_t *patch, byte *translu
                 byte    dot = *source++;
 
                 *dest = (dot == 109 ? tinttab33[*dest] : translucency[(dot << 8) + *dest]);
-                dest += SCREENWIDTH;
-            }
-
-            column = (column_t *)((byte *)column + column->length + 4);
-        }
-    }
-}
-
-void V_DrawTranslucentYellowHUDPatch(int x, int y, patch_t *patch, byte *translucency)
-{
-    byte    *desttop = screens[0] + y * SCREENWIDTH + x;
-    int     w = SHORT(patch->width);
-
-    for (int col = 0; col < w; col++, desttop++)
-    {
-        column_t    *column = (column_t *)((byte *)patch + LONG(patch->columnofs[col]));
-
-        // step through the posts in a column
-        while (column->topdelta != 0xFF)
-        {
-            byte    *source = (byte *)column + 3;
-            byte    *dest = desttop + column->topdelta * SCREENWIDTH;
-            int     count = column->length;
-
-            while (count--)
-            {
-                *dest = tinttab75[(redtoyellow[*source++] << 8) + *dest];
                 dest += SCREENWIDTH;
             }
 
@@ -1455,7 +1375,7 @@ void GetPixelSize(dboolean reset)
     int width = -1;
     int height = -1;
 
-    if (sscanf(r_lowpixelsize, "%10ix%10i", &width, &height) == 2
+    if (sscanf(r_lowpixelsize, "%10dx%10d", &width, &height) == 2
         && width > 0 && width <= SCREENWIDTH && height > 0 && height <= SCREENHEIGHT && (width >= 2 || height >= 2))
     {
         pixelwidth = width;
@@ -1582,24 +1502,31 @@ dboolean V_ScreenShot(void)
     char        mapname[128];
     int         count = 0;
 
-    switch (gamestate)
-    {
-        case GS_INTERMISSION:
-            M_StringCopy(mapname, "Intermission", sizeof(mapname));
-            break;
+    if (consoleactive)
+        M_StringCopy(mapname, "Console", sizeof(mapname));
+    else if (menuactive)
+        M_StringCopy(mapname, "Menu", sizeof(mapname));
+    else if (automapactive)
+        M_StringCopy(mapname, "Automap", sizeof(mapname));
+    else
+        switch (gamestate)
+        {
+            case GS_INTERMISSION:
+                M_StringCopy(mapname, "Intermission", sizeof(mapname));
+                break;
 
-        case GS_FINALE:
-            M_StringCopy(mapname, "Finale", sizeof(mapname));
-            break;
+            case GS_FINALE:
+                M_StringCopy(mapname, "Finale", sizeof(mapname));
+                break;
 
-        case GS_TITLESCREEN:
-            M_StringCopy(mapname, (splashscreen ? "Splash" : (titlesequence == 1 ? "Credits" : "Title")), sizeof(mapname));
-            break;
+            case GS_TITLESCREEN:
+                M_StringCopy(mapname, (splashscreen ? "Splash" : (titlesequence == 1 ? "Credits" : "Title")), sizeof(mapname));
+                break;
 
-        default:
-            M_StringCopy(mapname, (inhelpscreens ? "Help" : titlecase(maptitle)), sizeof(mapname));
-            break;
-    }
+            default:
+                M_StringCopy(mapname, (inhelpscreens ? "Help" : titlecase(maptitle)), sizeof(mapname));
+                break;
+        }
 
     if (M_StringStartsWith(mapname, "The "))
         M_snprintf(mapname, sizeof(mapname), "%s, The", M_SubString(mapname, 4, strlen(mapname) - 4));

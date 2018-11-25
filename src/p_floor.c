@@ -206,14 +206,8 @@ result_e T_MovePlane(sector_t *sector, fixed_t speed, fixed_t dest, dboolean cru
 // generalized line type behaviors.
 void T_MoveFloor(floormove_t *floor)
 {
-    sector_t    *sec;
-    result_e    res;
-
-    if (freeze)
-        return;
-
-    sec = floor->sector;
-    res = T_MovePlane(sec, floor->speed, floor->floordestheight, floor->crush, 0, floor->direction, false);
+    sector_t    *sec = floor->sector;
+    result_e    res = T_MovePlane(sec, floor->speed, floor->floordestheight, floor->crush, 0, floor->direction, false);
 
     if (!(leveltime & 7)
         // [BH] don't make sound once floor is at its destination height
@@ -315,30 +309,23 @@ void T_MoveElevator(elevator_t *elevator)
 {
     result_e    res;
 
-    if (freeze)
-        return;
-
     if (elevator->direction < 0)                // moving down
     {
         // jff 4/7/98 reverse order of ceiling/floor
-        res = T_MovePlane(elevator->sector, elevator->speed, elevator->ceilingdestheight, false, 1,
-            elevator->direction, true);
+        res = T_MovePlane(elevator->sector, elevator->speed, elevator->ceilingdestheight, false, 1, elevator->direction, true);
 
         // jff 4/7/98 don't move ceil if blocked
         if (res == ok || res == pastdest)
-            T_MovePlane(elevator->sector, elevator->speed, elevator->floordestheight, false, 0,
-                elevator->direction, true);
+            T_MovePlane(elevator->sector, elevator->speed, elevator->floordestheight, false, 0, elevator->direction, true);
     }
     else                                        // up
     {
         // jff 4/7/98 reverse order of ceiling/floor
-        res = T_MovePlane(elevator->sector, elevator->speed, elevator->floordestheight, false, 0,
-            elevator->direction, true);
+        res = T_MovePlane(elevator->sector, elevator->speed, elevator->floordestheight, false, 0, elevator->direction, true);
 
         // jff 4/7/98 don't move floor if blocked
         if (res == ok || res == pastdest)
-            T_MovePlane(elevator->sector, elevator->speed, elevator->ceilingdestheight, false, 1,
-                elevator->direction, true);
+            T_MovePlane(elevator->sector, elevator->speed, elevator->ceilingdestheight, false, 1, elevator->direction, true);
     }
 
     // make floor move sound
@@ -349,7 +336,7 @@ void T_MoveElevator(elevator_t *elevator)
     {
         elevator->sector->floordata = NULL;
         elevator->sector->ceilingdata = NULL;
-        P_RemoveThinker(&elevator->thinker);     // remove elevator from actives
+        P_RemoveThinker(&elevator->thinker);    // remove elevator from actives
 
         // make floor stop sound
         S_StartSectorSound(&elevator->sector->soundorg, sfx_pstop);
@@ -376,9 +363,11 @@ dboolean EV_DoFloor(line_t *line, floor_e floortype)
         // new floor thinker
         rtn = true;
         floor = Z_Calloc(1, sizeof(*floor), PU_LEVSPEC, NULL);
-        P_AddThinker(&floor->thinker);
-        sec->floordata = floor;
+
         floor->thinker.function = T_MoveFloor;
+        P_AddThinker(&floor->thinker);
+
+        sec->floordata = floor;
         floor->type = floortype;
 
         switch (floortype)
@@ -659,9 +648,11 @@ dboolean EV_BuildStairs(line_t *line, fixed_t speed, fixed_t stairsize, dboolean
         // new floor thinker
         rtn = true;
         floor = Z_Calloc(1, sizeof(*floor), PU_LEVSPEC, NULL);
-        P_AddThinker(&floor->thinker);
-        sec->floordata = floor;
+
         floor->thinker.function = T_MoveFloor;
+        P_AddThinker(&floor->thinker);
+
+        sec->floordata = floor;
         floor->direction = 1;
         floor->sector = sec;
 
@@ -705,10 +696,11 @@ dboolean EV_BuildStairs(line_t *line, fixed_t speed, fixed_t stairsize, dboolean
                 sec = tsec;
                 secnum = tsec->id;
                 floor = Z_Calloc(1, sizeof(*floor), PU_LEVSPEC, NULL);
+
+                floor->thinker.function = T_MoveFloor;
                 P_AddThinker(&floor->thinker);
 
                 sec->floordata = floor;
-                floor->thinker.function = T_MoveFloor;
                 floor->direction = 1;
                 floor->sector = sec;
                 floor->speed = speed;
@@ -751,10 +743,12 @@ dboolean EV_DoElevator(line_t *line, elevator_e elevtype)
         // create and initialize new elevator thinker
         rtn = true;
         elevator = Z_Calloc(1, sizeof(*elevator), PU_LEVSPEC, NULL);
+
+        elevator->thinker.function = T_MoveElevator;
         P_AddThinker(&elevator->thinker);
+
         sec->floordata = elevator;
         sec->ceilingdata = elevator;
-        elevator->thinker.function = T_MoveElevator;
         elevator->type = elevtype;
 
         // set up the fields according to the type of elevator action

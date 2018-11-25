@@ -42,10 +42,8 @@
 #pragma comment(lib, "winmm.lib")
 
 #include <Windows.h>
-#include <Commdlg.h>
-#include <Lmcons.h>
-#include <MMSystem.h>
-#include <ShellAPI.h>
+#include <commdlg.h>
+#include <mmsystem.h>
 #endif
 
 #include "am_map.h"
@@ -125,7 +123,7 @@ dboolean            advancetitle;
 dboolean            dowipe;
 static dboolean     forcewipe;
 
-dboolean            splashscreen;
+dboolean            splashscreen = false;
 
 static byte         *playpal;
 static int          startuptimer;
@@ -135,11 +133,19 @@ static dboolean     error;
 
 struct tm           *gamestarttime;
 
+extern evtype_t     lasteventtype;
+
+#if defined(_WIN32)
+extern HANDLE       CapFPSEvent;
+#endif
+
 //
 // D_PostEvent
 //
 void D_PostEvent(event_t *ev)
 {
+    lasteventtype = ev->type;
+
     if (C_Responder(ev))
         return; // console ate the event
 
@@ -320,6 +326,11 @@ void D_Display(void)
         blitfunc();             // blit buffer
         mapblitfunc();
 
+#if defined(_WIN32)
+        if (CapFPSEvent)
+            WaitForSingleObject(CapFPSEvent, 1000);
+#endif
+
         // Figure out how far into the current tic we're in as a fixed_t
         if (vid_capfps != TICRATE)
             fractionaltic = I_GetTimeMS() * TICRATE % 1000 * FRACUNIT / 1000;
@@ -350,6 +361,11 @@ void D_Display(void)
 #endif
         blitfunc();             // blit buffer
         mapblitfunc();
+
+#if defined(_WIN32)
+        if (CapFPSEvent)
+            WaitForSingleObject(CapFPSEvent, 1000);
+#endif
     } while (!done);
 }
 
@@ -359,14 +375,14 @@ void D_Display(void)
 static void D_DoomLoop(void)
 {
     time_t      rawtime;
-    player_t    tempplayer;
+    player_t    player;
 
     R_ExecuteSetViewSize();
 
     time(&rawtime);
     gamestarttime = localtime(&rawtime);
 
-    viewplayer = &tempplayer;
+    viewplayer = &player;
     viewplayer->damagecount = 0;
 
     while (true)
@@ -398,19 +414,19 @@ static byte     *splashpal;
 //
 void D_PageTicker(void)
 {
-    if (!menuactive && !startingnewgame && !consoleactive)
+    static int  pagewait;
+
+    if (menuactive || startingnewgame || consoleactive)
+        return;
+
+    if (pagewait < I_GetTime())
     {
-        static int  pagewait;
-
-        if (pagewait < I_GetTime())
-        {
-            pagetic--;
-            pagewait = I_GetTime();
-        }
-
-        if (pagetic < 0)
-            D_AdvanceTitle();
+        pagetic--;
+        pagewait = I_GetTime();
     }
+
+    if (pagetic < 0)
+        D_AdvanceTitle();
 }
 
 //
@@ -420,8 +436,12 @@ void D_PageDrawer(void)
 {
     if (splashscreen)
     {
-        I_SetPalette(splashpal + (pagetic <= 9 ? 9 - pagetic : (pagetic >= 95 ? pagetic - 95 : 0)) * 768);
-        V_DrawBigPatch(0, 0, 0, splashlump);
+        static int  prevtic;
+
+        if (pagetic != prevtic)
+            I_SetSimplePalette(splashpal + (pagetic <= 9 ? (9 - pagetic) * 768 : (pagetic >= 94 ? (pagetic - 94) * 768 : 0)));
+
+        prevtic = pagetic;
     }
     else if (pagelump)
         V_DrawPagePatch(pagelump);
@@ -460,8 +480,6 @@ void D_AdvanceTitle(void)
 //
 void D_DoAdvanceTitle(void)
 {
-    static dboolean flag = true;
-
     viewplayer->playerstate = PST_LIVE;  // not reborn
     advancetitle = false;
     paused = false;
@@ -474,9 +492,15 @@ void D_DoAdvanceTitle(void)
     {
         pagetic = 3 * TICRATE;
         splashscreen = true;
+        titlesequence = 1;
+        V_DrawBigPatch(0, 0, 0, splashlump);
+        return;
     }
-    else if (titlesequence == 1)
+
+    if (titlesequence == 1)
     {
+        static dboolean flag = true;
+
         if (flag)
         {
             flag = false;
@@ -652,7 +676,7 @@ static void LoadDehFile(char *path)
         }
         else
         {
-            char    *dehpath = FindDehPath(path, ".deh", ".[Dd][Ee][Hh]");
+            dehpath = FindDehPath(path, ".deh", ".[Dd][Ee][Hh]");
 
             if (dehpath && !DehFileProcessed(dehpath))
             {
@@ -707,10 +731,7 @@ static dboolean D_IsUnsupportedIWAD(char *filename)
         {
             static char buffer[1024];
 
-#if defined(_WIN32)
-            PlaySound((LPCTSTR)SND_ALIAS_SYSTEMHAND, NULL, (SND_ALIAS_ID | SND_ASYNC));
-#endif
-            M_snprintf(buffer, sizeof(buffer), PACKAGE_NAME" doesn't support %s yet.", unsupported[i].title);
+            M_snprintf(buffer, sizeof(buffer), PACKAGE_NAME" doesn't support %s.", unsupported[i].title);
             SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_WARNING, PACKAGE_NAME, buffer, NULL);
             error = true;
             return true;
@@ -1654,7 +1675,7 @@ static void D_DoomMainSetup(void)
         {
             scale = atoi(myargv[p + 1]);
 
-            if (scale >= 10 && scale <= 400)
+            if (scale >= 10 && scale <= 400 && scale != 100)
                 C_Output("A <b>-turbo</b> parameter was found on the command-line. The player will be %i%% their normal speed.", scale);
             else
                 scale = 100;
@@ -1662,7 +1683,8 @@ static void D_DoomMainSetup(void)
         else
             C_Output("A <b>-turbo</b> parameter was found on the command-line. The player will be twice as fast.");
 
-        G_SetMovementSpeed(scale);
+        if (scale != 100)
+            G_SetMovementSpeed(scale);
 
         if (scale > turbo_default)
         {
@@ -1709,9 +1731,6 @@ static void D_DoomMainSetup(void)
                 {
                     static char buffer[256];
 
-#if defined(_WIN32)
-                    PlaySound((LPCTSTR)SND_ALIAS_SYSTEMHAND, NULL, (SND_ALIAS_ID | SND_ASYNC));
-#endif
                     M_snprintf(buffer, sizeof(buffer), PACKAGE_NAME" couldn't find %s.", (*wad ? wad : "any IWADs"));
                     SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_WARNING, PACKAGE_NAME, buffer, NULL);
                     wad = "";
@@ -1752,9 +1771,6 @@ static void D_DoomMainSetup(void)
 
     W_Init();
 
-    if (!CheckPackageWADVersion())
-        I_Error("%s is the wrong version.", packagewad);
-
     FREEDM = (W_CheckNumForName("FREEDM") >= 0);
 
     DMENUPIC = (W_CheckNumForName("DMENUPIC") >= 0);
@@ -1768,7 +1784,6 @@ static void D_DoomMainSetup(void)
     M_MSGOFF = (W_CheckMultipleLumps("M_MSGOFF") > 1);
     M_MSGON = (W_CheckMultipleLumps("M_MSGON") > 1);
     M_NEWG = (W_CheckMultipleLumps("M_NEWG") > 1);
-    M_NGAME = (W_CheckMultipleLumps("M_NGAME") > 1);
     M_NMARE = (W_CheckMultipleLumps("M_NMARE") > 1);
     M_OPTTTL = (W_CheckMultipleLumps("M_OPTTTL") > 1);
     M_PAUSE = (W_CheckMultipleLumps("M_PAUSE") > 1);
@@ -1792,6 +1807,10 @@ static void D_DoomMainSetup(void)
     D_IdentifyVersion();
     InitGameVersion();
     D_ProcessDehInWad();
+
+    if (!M_StringCompare(s_VERSION, PACKAGE_NAMEANDVERSIONSTRING))
+        I_Error("%s is the wrong version.", packagewad);
+
     D_SetGameDescription();
 
     if (nerve && expansion == 2)

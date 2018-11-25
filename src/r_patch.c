@@ -66,8 +66,10 @@
 **---------------------------------------------------------------------------
 */
 
+#include "c_console.h"
 #include "i_swap.h"
 #include "i_system.h"
+#include "m_misc.h"
 #include "r_main.h"
 #include "w_wad.h"
 #include "z_zone.h"
@@ -88,6 +90,7 @@ static short        BIGDOOR7;
 static short        FIREBLU1;
 static short        SKY1;
 
+extern int          numspritelumps;
 extern int          numtextures;
 extern texture_t    **textures;
 
@@ -100,6 +103,12 @@ void R_InitPatches(void)
     BIGDOOR7 = R_CheckTextureNumForName("BIGDOOR7");
     FIREBLU1 = R_CheckTextureNumForName("FIREBLU1");
     SKY1 = R_CheckTextureNumForName("SKY1");
+
+    for (int i = 0; i < numspritelumps; i++)
+        R_CachePatchNum(firstspritelump + i);
+
+    for (int i = 0; i < numtextures; i++)
+        R_CacheTextureCompositePatchNum(i);
 }
 
 static dboolean getIsSolidAtSpot(const column_t *column, int spot)
@@ -177,8 +186,15 @@ static void createPatch(int id)
     const unsigned char *oldColumnPixelData;
     int                 numPostsUsedSoFar;
 
-    if (!CheckIfPatch(patchNum))
-        I_Error("createPatch: Unknown patch format %s.", (patchNum < numlumps ? lumpinfo[patchNum]->name : NULL));
+    if (!CheckIfPatch(patchNum) && patchNum < numlumps)
+    {
+        char    *name = lumpinfo[patchNum]->name;
+
+        if (!M_StringCompare(name, "HI_START") && !M_StringCompare(name, "HI_END"))
+            C_Warning("The patch <b>%s</b> is of an unknown format.", name);
+
+        return;
+    }
 
     oldPatch = (const patch_t *)W_CacheLumpNum(patchNum);
 
@@ -596,18 +612,7 @@ const rpatch_t *R_CachePatchNum(int id)
     if (!patches[id].data)
         createPatch(id);
 
-    if (!patches[id].locks)
-        Z_ChangeTag(patches[id].data, PU_STATIC);
-
-    patches[id].locks++;
-
     return &patches[id];
-}
-
-void R_UnlockPatchNum(int id)
-{
-    if (!--patches[id].locks)
-        Z_ChangeTag(patches[id].data, PU_CACHE);
 }
 
 const rpatch_t *R_CacheTextureCompositePatchNum(int id)
@@ -615,19 +620,7 @@ const rpatch_t *R_CacheTextureCompositePatchNum(int id)
     if (!texture_composites[id].data)
         createTextureCompositePatch(id);
 
-    // cph - if wasn't locked but now is, tell z_zone to hold it
-    if (!texture_composites[id].locks)
-        Z_ChangeTag(texture_composites[id].data, PU_STATIC);
-
-    texture_composites[id].locks++;
-
     return &texture_composites[id];
-}
-
-void R_UnlockTextureCompositePatchNum(int id)
-{
-    if (!--texture_composites[id].locks)
-        Z_ChangeTag(texture_composites[id].data, PU_CACHE);
 }
 
 const rcolumn_t *R_GetPatchColumnWrapped(const rpatch_t *patch, int columnIndex)

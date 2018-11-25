@@ -1,3 +1,64 @@
+### DOOM Retro v2.7.5
+
+* Optimizations have been made to further improve the overall performance and stability of *DOOM Retro*.
+* Minor changes have been made to text that is output to the console.
+* Further improvements have been made to the console’s autocomplete feature.
+* The following changes have been made to the support of gamepads:
+  * The buttons on many *DirectInput* and *XInput* gamepads are now mapped correctly.
+  * Gamepads will no longer vibrate if the player punches the air.
+  * The `guide` button found on some gamepads can now be bound to an action using the `bind` CCMD.
+* A bug has been fixed whereby the flash of the player’s weapon would sometimes be positioned incorrectly if the player was firing when dropping down from a higher sector and the `weaponbounce` CVAR was `on`.
+* Further improvements have been made to the support of `DEHACKED` lumps.
+
+---
+
+###### Sunday, November 4, 2018
+
+### DOOM Retro v2.7.4
+
+* *DOOM Retro* now uses [*SDL v2.0.9*](https://www.libsdl.org), [*SDL_mixer v2.0.4*](https://www.libsdl.org/SDL_mixer) and [*SDL_image v2.0.4*](https://www.libsdl.org/SDL_image).
+* When *DOOM Retro* is opened for the first time, the WAD launcher will now try to find a common *DOOM* or *DOOM II* installation.
+* Optimizations have been made to further improve the overall performance and stability of *DOOM Retro*.
+* Minor changes have been made to text that is output to the console.
+* Further improvements have been made to the console’s autocomplete feature.
+* The fuzz effect of spectres, as well as the player’s weapon when they have a partial invisibility power-up, are now paused when freeze mode is on.
+* The fuzz effect of spectres is now rendered correctly when the player has an invulnerability power-up.
+* The sky will now be rendered correctly when the `r_skycolor` CVAR is a value other than `none` and the player has an invulnerability power-up.
+* Further improvements have been made to the support of `DEHACKED` and `MAPINFO` lumps.
+* The player’s weapon will now bounce slightly when they drop down from a greater height. This can be disabled using the new `weaponbounce` CVAR, which is `on` by default and `off` when vanilla mode is on.
+* Monsters will no longer infight if no target mode is on and the player dies.
+* If the `+alwaysrun` action is bound to the <kbd>CAPSLOCK</kbd> key, then that key will now be toggled on or off as necessary when *DOOM Retro’s* window gains or loses focus, and not just when it is closed.
+* Any screen shake or palette effect will now be canceled when pressing <kbd>F7</kbd> to end a game, or <kbd>F9</kbd> to quicksave a game.
+* The <kbd>F12</kbd> key can now be bound to an action using the `bind` CCMD.
+* The following changes have been made to vanilla mode:
+  * Certain controls that weren’t present in *Vanilla DOOM* will now be unbound.
+  * The right mouse button will be bound to the `+strafe` action.
+  * The automap’s grid is now turned off since it was off by default and its state was never saved in *Vanilla DOOM*.
+* Minor improvements have been made to *DOOM Retro’s* renderer.
+* The player’s weapon will now rise more smoothly at the start of a map.
+* If the original music of *DOOM* or *DOOM II* is being played in a map, then the music’s composer, [Bobby Prince](https://doomwiki.org/wiki/Bobby_Prince), is now displayed by the `mapstats` CCMD.
+* The console will now automatically close when a cheat is entered.
+* When the `tossdrop` CVAR is `on`, if a monster is killed and then drops an item, some of the corpse’s momentum is now also applied to that item.
+* A bug has been fixed whereby the `am_allmapfdwallcolor` CVAR was used instead of the `am_allmapwallcolor` CVAR to draw solid walls in the automap when the player had a computer area map power-up.
+* Brightmaps have now been applied to the `SW2GARG`, `SW2LION` and `SW2SATYR` textures when the `r_brightmaps` CVAR is `on`.
+* The correct obituary will now be displayed in the console when the player dies on molten rock.
+* If both the `r_althud` and `vid_widescreen` CVARs are `on`, and the automap is open, both player messages and the map’s title will now be displayed using *DOOM Retro’s* alternate character set.
+* A bug has been fixed whereby gridlines in the top and bottom right corners of the automap weren’t being displayed in some instances when the `am_grid` CVAR was `on`.
+* The secret maps will no longer be included when entering `map last`, `map next` or `map random` in the console.
+* If a CCMD that requires one or more parameters is entered in the console without those parameters, a description of that CCMD will now be displayed.
+* Savegames will now be saved in the correct folder when playing [*Freedoom: Phase 1*](http://freedoom.github.io/) or [*Freedoom: Phase 2*](http://freedoom.github.io/).
+* The behavior of the `-savedir` command-line parameter has changed. Savegames will now be placed directly in the folder specified, rather than in a subfolder based on the name of the WAD loaded.
+* `-save` may be now be used as an alternative to `-savedir` on the command-line.
+* A bug has been fixed whereby the player’s path in the automap wasn’t being shown correctly if both the `am_path` CVAR and no clipping mode were on.
+* If the player has more than one power-up, the countdown bar in the alternate widescreen HUD will now always show the power-up that will run out first.
+* If an SFX lump in a PWAD is in an unrecognized format, the original lump in the IWAD will be played instead.
+* The `+use` action can no longer be used if the `autouse` CVAR is `on`.
+* Items dropped by monsters when they are killed will now be rendered correctly if dropped on a moving platform and the `vid_capfps` CVAR is a value other than `35`.
+
+---
+
+###### Saturday, September 8, 2018
+
 ### DOOM Retro v2.7.3
 
 * Optimizations have been made to further improve the overall performance and stability of *DOOM Retro*.

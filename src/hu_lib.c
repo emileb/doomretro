@@ -122,8 +122,9 @@ static void HU_drawChar(int x, int y, int ch)
 static void HUlib_drawAltHUDTextLine(hu_textline_t *l)
 {
     unsigned char   prevletter = '\0';
-    int             x = HU_ALTHUDMSGX;
-    int             color = (((viewplayer->fixedcolormap == INVERSECOLORMAP) ^ (!r_textures)) ? colormaps[0][32 * 256 + white] : white);
+    int             x = (automapactive ? 10 : HU_ALTHUDMSGX);
+    int             color = (((viewplayer->fixedcolormap == INVERSECOLORMAP) ^ (!r_textures)) && !automapactive ?
+                        colormaps[0][32 * 256 + white] : white);
     int             len = l->len;
 
     for (int i = 0; i < len; i++)
@@ -159,9 +160,47 @@ static void HUlib_drawAltHUDTextLine(hu_textline_t *l)
     }
 }
 
+void HUlib_drawAltAutomapTextLine(hu_textline_t *l)
+{
+    unsigned char   prevletter = '\0';
+    int             x = 10;
+    int             len = l->len;
+
+    for (int i = 0; i < len; i++)
+    {
+        unsigned char   letter = l->l[i];
+        unsigned char   nextletter = l->l[i + 1];
+        patch_t         *patch;
+        int             j = 0;
+
+        if (letter == 194 && nextletter == 176)
+        {
+            patch = degree;
+            i++;
+        }
+        else
+            patch = consolefont[letter - CONSOLEFONTSTART];
+
+        // [BH] apply kerning to certain character pairs
+        while (altkern[j].char1)
+        {
+            if (prevletter == altkern[j].char1 && letter == altkern[j].char2)
+            {
+                x += altkern[j].adjust;
+                break;
+            }
+
+            j++;
+        }
+
+        althudtextfunc(x, SCREENHEIGHT - SBARHEIGHT - 16, patch, white);
+        x += SHORT(patch->width);
+        prevletter = letter;
+    }
+}
+
 kern_t kern[] =
 {
-    { ' ', '(',  -2 },
     { '.', '1',  -1 },
     { '.', '7',  -1 },
     { '.', '\"', -1 },
@@ -234,9 +273,6 @@ void HUlib_drawTextLine(hu_textline_t *l, dboolean external)
             {
                 // [BH] display lump from PWAD with shadow
                 w = SHORT(l->f[c - l->sc]->width);
-
-                if (prev == ' ' && c == '(')
-                    x -= 2;
 
                 if (r_messagescale == r_messagescale_big)
                     V_DrawPatchToTempScreen(x, l->y, l->f[c - l->sc]);
@@ -410,7 +446,7 @@ void HUlib_drawSText(hu_stext_t *s, dboolean external)
         l = &s->l[idx];
 
         // need a decision made here on whether to skip the draw
-        if (vid_widescreen && r_althud && !automapactive)
+        if (vid_widescreen && r_althud)
             HUlib_drawAltHUDTextLine(l);
         else
             HUlib_drawTextLine(l, external);

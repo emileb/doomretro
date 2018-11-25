@@ -103,10 +103,10 @@ dboolean        autoload = autoload_default;
 
 #define MAXPLMOVE       forwardmove[1]
 
-fixed_t  forwardmove[2] = { FORWARDMOVE0, FORWARDMOVE1 };
-fixed_t  sidemove[2] = { SIDEMOVE0, SIDEMOVE1 };
-fixed_t  angleturn[3] = { 640, 1280, 320 };     // + slow turn
-fixed_t  gamepadangleturn[2] = { 640, 960 };
+fixed_t         forwardmove[2] = { FORWARDMOVE0, FORWARDMOVE1 };
+fixed_t         sidemove[2] = { SIDEMOVE0, SIDEMOVE1 };
+fixed_t         angleturn[3] = { 640, 1280, 320 };     // + slow turn
+static fixed_t  gamepadangleturn[2] = { 640, 960 };
 
 #define NUMWEAPONKEYS   7
 
@@ -250,8 +250,7 @@ void G_BuildTiccmd(ticcmd_t *cmd)
     run = (gamekeydown[keyboardrun] ^ mousebuttons[mouserun] ^ (!!(gamepadbuttons & gamepadrun)) ^ alwaysrun);
     usemouselook = (mouselook || gamekeydown[keyboardmouselook] || mousebuttons[mousemouselook] || (gamepadbuttons & gamepadmouselook));
 
-    // use two stage accelerative turning
-    // on the keyboard
+    // use two stage accelerative turning on the keyboard
     if (gamekeydown[keyboardright] || gamekeydown[keyboardleft] || (gamepadbuttons & gamepadleft) || (gamepadbuttons & gamepadright))
         turnheld++;
     else
@@ -442,13 +441,17 @@ void G_BuildTiccmd(ticcmd_t *cmd)
         mousey = 0;
     }
 
+
 #ifdef __ANDROID__
     extern void G_AndroidBuildTiccmd(ticcmd_t *cmd);
     G_AndroidBuildTiccmd(cmd);
 #endif
 
-    cmd->forwardmove += BETWEEN(-MAXPLMOVE, forward, MAXPLMOVE);
-    cmd->sidemove += BETWEEN(-MAXPLMOVE, side, MAXPLMOVE);
+    if (forward)
+        cmd->forwardmove += BETWEEN(-MAXPLMOVE, forward, MAXPLMOVE);
+
+    if (side)
+        cmd->sidemove += BETWEEN(-MAXPLMOVE, side, MAXPLMOVE);
 
     // special buttons
     if (sendpause)
@@ -545,6 +548,9 @@ void G_DoLoadLevel(void)
     // [BH] Reset player's health, armor, weapons and ammo on pistol start
     if (pistolstart || P_GetMapPistolStart(map))
         G_ResetPlayer();
+
+    nojump = P_GetMapNoJump(map);
+    nomouselook = P_GetMapNoMouselook(map);
 
     if (pendinggameskill)
     {
@@ -685,7 +691,7 @@ dboolean G_Responder(event_t *ev)
             return true;        // status window ate it
 
         if (AM_Responder(ev))
-            return true;        // Automap ate it
+            return true;        // automap ate it
     }
 
     if (gamestate == GS_FINALE)
@@ -721,13 +727,6 @@ dboolean G_Responder(event_t *ev)
 
                 if (keyactionlist[key][0])
                     C_ExecuteInputString(keyactionlist[key]);
-
-                if (vibrate)
-                {
-                    vibrate = false;
-                    idlemotorspeed = 0;
-                    XInputVibration(idlemotorspeed);
-                }
             }
 
             return true;        // eat key down events
@@ -750,13 +749,6 @@ dboolean G_Responder(event_t *ev)
             if (mouseactionlist[mousebutton][0])
                 C_ExecuteInputString(mouseactionlist[mousebutton]);
 
-            if (vibrate && mousebutton)
-            {
-                vibrate = false;
-                idlemotorspeed = 0;
-                XInputVibration(idlemotorspeed);
-            }
-
             if (!automapactive && !menuactive && !paused)
             {
                 if (mousenextweapon < MAX_MOUSE_BUTTONS && mousebuttons[mousenextweapon])
@@ -775,13 +767,6 @@ dboolean G_Responder(event_t *ev)
         }
 
         case ev_mousewheel:
-            if (vibrate)
-            {
-                vibrate = false;
-                idlemotorspeed = 0;
-                XInputVibration(idlemotorspeed);
-            }
-
             if (!automapactive && !menuactive && !paused)
             {
                 if (ev->data1 < 0)
@@ -863,8 +848,6 @@ static char savename[256];
 //
 void G_Ticker(void)
 {
-    ticcmd_t            *cmd;
-
     // Game state the last time G_Ticker was called.
     static gamestate_t  oldgamestate;
 
@@ -931,8 +914,7 @@ void G_Ticker(void)
 
     // get commands, check consistency,
     // and build new consistency check
-    cmd = &viewplayer->cmd;
-    memcpy(cmd, &localcmds[gametime % BACKUPTICS], sizeof(ticcmd_t));
+    memcpy(&viewplayer->cmd, &localcmds[gametime % BACKUPTICS], sizeof(ticcmd_t));
 
     // check for special buttons
     if (viewplayer->cmd.buttons & BT_SPECIAL)
@@ -943,29 +925,16 @@ void G_Ticker(void)
                 if ((paused = !paused))
                 {
                     S_PauseSound();
-
-                    if ((gp_vibrate_barrels || gp_vibrate_damage || gp_vibrate_weapons) && vibrate)
-                    {
-                        restoremotorspeed = idlemotorspeed;
-                        idlemotorspeed = 0;
-                        XInputVibration(idlemotorspeed);
-                    }
-
+                    S_StartSound(NULL, sfx_swtchn);
                     viewplayer->fixedcolormap = 0;
                     I_SetPalette(W_CacheLumpName("PLAYPAL"));
                     I_UpdateBlitFunc(false);
+                    I_StopGamepadVibration();
                 }
                 else
                 {
                     S_ResumeSound();
                     S_StartSound(NULL, sfx_swtchx);
-
-                    if ((gp_vibrate_barrels || gp_vibrate_damage || gp_vibrate_weapons) && vibrate)
-                    {
-                        idlemotorspeed = restoremotorspeed;
-                        XInputVibration(idlemotorspeed);
-                    }
-
                     I_SetPalette((byte *)W_CacheLumpName("PLAYPAL") + st_palette * 768);
                 }
 
@@ -1067,7 +1036,6 @@ void G_PlayerReborn(void)
 
     G_SetInitialWeapon();
 
-    markpointnum = 0;
     infight = false;
     barrelms = 0;
 }
@@ -1206,7 +1174,6 @@ static void G_DoCompleted(void)
     }
 
     if (gamemode != commercial)
-    {
         switch (gamemap)
         {
             case 8:
@@ -1224,7 +1191,6 @@ static void G_DoCompleted(void)
                 viewplayer->didsecret = true;
                 break;
         }
-    }
 
     wminfo.didsecret = viewplayer->didsecret;
     wminfo.epsd = gameepisode - 1;
@@ -1232,12 +1198,11 @@ static void G_DoCompleted(void)
 
     if (secretexit && secretnextmap > 0)
         wminfo.next = secretnextmap - 1;
-    else if (nextmap > 0)
-        wminfo.next = nextmap - 1;
     else if (gamemode == commercial)
     {
-        // wminfo.next is 0 biased, unlike gamemap
-        if (secretexit)
+        if (nextmap > 0)
+            wminfo.next = nextmap - 1;
+        else if (secretexit)
         {
             switch (gamemap)
             {
@@ -1293,7 +1258,9 @@ static void G_DoCompleted(void)
     }
     else
     {
-        if (secretexit)
+        if (nextmap > 0)
+            wminfo.next = nextmap - (gameepisode - 1) * 10 - 1;
+        else if (secretexit)
             wminfo.next = 8;            // go to secret level
         else if (gamemap == 9)
         {
@@ -1415,7 +1382,6 @@ static void G_DoWorldDone(void)
     gamemap = wminfo.next + 1;
     G_DoLoadLevel();
     viewactive = true;
-    markpointnum = 0;
 }
 
 void G_LoadGame(char *name)
@@ -1598,7 +1564,6 @@ void G_DeferredInitNew(skill_t skill, int ep, int map)
     d_episode = ep;
     d_map = map;
     gameaction = ga_newgame;
-    markpointnum = 0;
     startingnewgame = true;
     infight = false;
 }
@@ -1615,7 +1580,6 @@ void G_DeferredLoadLevel(skill_t skill, int ep, int map)
     d_episode = ep;
     d_map = map;
     gameaction = ga_loadlevel;
-    markpointnum = 0;
     infight = false;
     sector_list = NULL;
 
@@ -1634,7 +1598,6 @@ static void G_DoNewGame(void)
     st_facecount = ST_STRAIGHTFACECOUNT;
     G_InitNew(d_skill, d_episode, d_map);
     gameaction = ga_nothing;
-    markpointnum = 0;
     infight = false;
 }
 

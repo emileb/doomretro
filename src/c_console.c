@@ -80,8 +80,6 @@
 
 #define CONSOLEINPUTPIXELWIDTH  (CONSOLEWIDTH - CONSOLETEXTX - brandwidth - 2)
 
-#define CARETBLINKTIME          350
-
 console_t               *console;
 
 dboolean                consoleactive;
@@ -170,7 +168,6 @@ static int              consolecolors[STRINGTYPES];
 
 static dboolean         scrollbardrawn;
 
-extern char             autocompletelist[][255];
 extern int              fps;
 extern int              refreshrate;
 extern dboolean         dowipe;
@@ -603,7 +600,7 @@ void C_Init(void)
     timestampx = CONSOLEWIDTH - C_TextWidth("00:00:00", false, false) - CONSOLETEXTX * 2 - CONSOLESCROLLBARWIDTH + 1;
     zerowidth = SHORT(consolefont['0' - CONSOLEFONTSTART]->width);
 
-    while (*autocompletelist[++numautocomplete]);
+    while (*autocompletelist[++numautocomplete].text);
 }
 
 void C_ShowConsole(void)
@@ -709,7 +706,8 @@ static void C_DrawBackground(int height)
     }
 
     // draw branding
-    V_DrawConsolePatch(CONSOLEWIDTH - brandwidth, consoleheight - brandheight + 2, brand, 4, consolebrandcolor1, 180, consolebrandcolor2);
+    V_DrawConsolePatch(CONSOLEWIDTH - brandwidth, consoleheight - brandheight + 2, brand, 4, consolebrandcolor1, 180,
+        consolebrandcolor2);
 
     // draw bottom edge
     for (int i = height - CONSOLEWIDTH * 3; i < height; i++)
@@ -815,8 +813,8 @@ static void C_DrawConsoleText(int x, int y, char *text, const int color1, const 
 
             if (patch)
             {
-                V_DrawConsoleTextPatch(x, y, patch, (lastcolor1 = (bold == 1 ? boldcolor : (bold == 2 ? color1 :
-                    (italics ? (color1 == consolewarningcolor ? color1 : consoleitalicscolor) : color1)))), color2, italics, translucency);
+                V_DrawConsoleTextPatch(x, y, patch, (lastcolor1 = (bold == 1 ? boldcolor : (bold == 2 ? color1 : (italics ?
+                    (color1 == consolewarningcolor ? color1 : consoleitalicscolor) : color1)))), color2, italics, translucency);
                 x += SHORT(patch->width);
             }
 
@@ -982,17 +980,17 @@ void C_Drawer(void)
         consoleactive = (consoledirection == 1);
 
         // cancel any gamepad vibrations
-        if (!prevconsoleactive && (gp_vibrate_barrels || gp_vibrate_damage || gp_vibrate_weapons) && vibrate)
+        if (!prevconsoleactive && (gp_vibrate_barrels || gp_vibrate_damage || gp_vibrate_weapons))
         {
             if (consoleactive)
             {
-                restoremotorspeed = idlemotorspeed;
-                idlemotorspeed = 0;
+                restorevibrationstrength = idlevibrationstrength;
+                idlevibrationstrength = 0;
             }
             else
-                idlemotorspeed = restoremotorspeed;
+                idlevibrationstrength = restorevibrationstrength;
 
-            XInputVibration(idlemotorspeed);
+            I_GamepadVibration(idlevibrationstrength);
         }
 
         // cancel any screen shake
@@ -1032,8 +1030,8 @@ void C_Drawer(void)
                         tinttab66, notabs, true, true);
                 }
                 else
-                    C_DrawConsoleText(CONSOLETEXTX, y, console[i].string, consoleplayermessagecolor, NOBACKGROUNDCOLOR, consoleboldcolor,
-                        tinttab66, notabs, true, true);
+                    C_DrawConsoleText(CONSOLETEXTX, y, console[i].string, consoleplayermessagecolor, NOBACKGROUNDCOLOR,
+                        consoleboldcolor, tinttab66, notabs, true, true);
 
                     if (con_timestamps)
                         C_DrawTimeStamp(timestampx, y, console[i].tics);
@@ -1081,7 +1079,8 @@ void C_Drawer(void)
             lefttext[i] = consoleinput[i];
 
         lefttext[i] = '\0';
-        C_DrawConsoleText(x, CONSOLEHEIGHT - 17, lefttext, consoleinputcolor, NOBACKGROUNDCOLOR, NOBOLDCOLOR, NULL, notabs, false, true);
+        C_DrawConsoleText(x, CONSOLEHEIGHT - 17, lefttext, consoleinputcolor, NOBACKGROUNDCOLOR, NOBOLDCOLOR, NULL, notabs, false,
+            true);
         x += C_TextWidth(lefttext, false, true);
 
         // draw any selected text to left of caret
@@ -1260,11 +1259,13 @@ dboolean C_ValidateInput(const char *input)
             {
                 C_Input(input);
 
-                if (consoleactive)
-                    C_HideConsoleFast();
-
                 if (actions[i].func)
+                {
+                    if (consoleactive)
+                        C_HideConsoleFast();
+
                     actions[i].func();
+                }
 
                 return true;
             }
@@ -1538,10 +1539,11 @@ dboolean C_Responder(event_t *ev)
                         int         spaces2;
                         dboolean    endspace2;
                         int         len2;
+                        int         game;
 
                         autocomplete += direction;
-                        M_StringCopy(output, (GetCapsLockState() ? uppercase(autocompletelist[autocomplete]) :
-                            autocompletelist[autocomplete]), sizeof(output));
+                        M_StringCopy(output, (GetCapsLockState() ? uppercase(autocompletelist[autocomplete].text) :
+                            autocompletelist[autocomplete].text), sizeof(output));
 
                         if (M_StringCompare(output, input))
                             continue;
@@ -1549,8 +1551,10 @@ dboolean C_Responder(event_t *ev)
                         len2 = (int)strlen(output);
                         spaces2 = numspaces(output);
                         endspace2 = (output[len2 - 1] == ' ');
+                        game = autocompletelist[autocomplete].game;
 
-                        if (M_StringStartsWith(output, input)
+                        if ((game == DOOM1AND2 || (gamemission == doom && game == DOOM1ONLY) || (gamemission != doom && game == DOOM2ONLY))
+                            && M_StringStartsWith(output, input)
                             && input[strlen(input) - 1] != '+'
                             && ((!spaces1 && (!spaces2 || (spaces2 == 1 && endspace2)))
                                 || (spaces1 == 1 && !endspace1 && (spaces2 == 1 || (spaces2 == 2 && endspace2)))

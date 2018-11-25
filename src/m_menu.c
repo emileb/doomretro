@@ -113,8 +113,6 @@ dboolean        startingnewgame;
 
 static char     savegamestrings[10][SAVESTRINGSIZE];
 
-static char     endstring[160];
-
 static short    itemOn;                 // menu item skull is on
 static short    skullAnimCounter;       // skull animation counter
 static short    whichSkull;             // which skull to draw
@@ -123,16 +121,8 @@ static int      functionkey;
 
 static dboolean usinggamepad;
 
-// graphic name of skulls
-static char     *skullName[2] = { "M_SKULL1", "M_SKULL2" };
-
 // current menudef
 static menu_t   *currentMenu;
-
-static byte     tempscreen1[SCREENWIDTH * SCREENHEIGHT];
-static byte     tempscreen2[SCREENWIDTH * SCREENHEIGHT];
-static byte     blurscreen1[SCREENWIDTH * SCREENHEIGHT];
-static byte     blurscreen2[(SCREENHEIGHT - SBARHEIGHT) * SCREENWIDTH];
 
 dboolean        blurred;
 
@@ -258,7 +248,7 @@ menu_t EpiDef =
     &MainDef,
     EpisodeMenu,
     M_DrawEpisode,
-    39, 69,
+    41, 69,
     ep1
 };
 
@@ -285,7 +275,7 @@ menu_t ExpDef =
     &MainDef,
     ExpansionMenu,
     M_DrawExpansion,
-    39, 69,
+    41, 69,
     ex1
 };
 
@@ -318,7 +308,7 @@ menu_t NewDef =
     &EpiDef,
     NewGameMenu,
     M_DrawNewGame,
-    39, 69,
+    45, 69,
     hurtme
 };
 
@@ -504,18 +494,23 @@ static void BlurScreen(byte *screen, byte *tempscreen, byte *blurscreen)
 //
 void M_DarkBackground(void)
 {
-    height = (SCREENHEIGHT - vid_widescreen * SBARHEIGHT) * SCREENWIDTH;
+    static byte blurscreen1[SCREENWIDTH * SCREENHEIGHT];
+    static byte blurscreen2[(SCREENHEIGHT - SBARHEIGHT) * SCREENWIDTH];
+
+    height = (SCREENHEIGHT - (vid_widescreen && gamestate == GS_LEVEL) * SBARHEIGHT) * SCREENWIDTH;
 
     if (!blurred)
     {
-        BlurScreen(screens[0], tempscreen1, blurscreen1);
+        byte    tempscreen[SCREENWIDTH * SCREENHEIGHT];
+
+        BlurScreen(screens[0], tempscreen, blurscreen1);
 
         for (int i = 0; i < height; i++)
             blurscreen1[i] = tinttab50[blurscreen1[i]];
 
         if (mapwindow)
         {
-            BlurScreen(mapscreen, tempscreen2, blurscreen2);
+            BlurScreen(mapscreen, tempscreen, blurscreen2);
 
             for (int i = 0; i < (SCREENHEIGHT - SBARHEIGHT) * SCREENWIDTH; i++)
                 blurscreen2[i] = tinttab50[blurscreen2[i]];
@@ -700,7 +695,7 @@ void M_DrawString(int x, int y, char *str)
         }
 
         if (j == -1)
-            x += 9;
+            x += 7;
         else
         {
             M_DrawChar(x, y, j, overlapping);
@@ -734,7 +729,7 @@ static int M_BigStringWidth(char *str)
             k++;
         }
 
-        w += (j == -1 ? 9 : (int)strlen(redcharset[j]) / 18 - 2);
+        w += (j == -1 ? 7 : (int)strlen(redcharset[j]) / 18 - 2);
         prev = str[i];
     }
 
@@ -859,20 +854,20 @@ static byte saveg_read8(FILE *file)
 //
 static dboolean M_CheckSaveGame(void)
 {
-    FILE    *handle = fopen(P_SaveGameFile(itemOn), "rb");
+    FILE    *file = fopen(P_SaveGameFile(itemOn), "rb");
     int     ep;
     int     mission;
 
-    if (!handle)
+    if (!file)
         return true;
 
     for (int i = 0; i < SAVESTRINGSIZE + VERSIONSIZE + 1; i++)
-        saveg_read8(handle);
+        saveg_read8(file);
 
-    ep = saveg_read8(handle);
-    saveg_read8(handle);
-    mission = saveg_read8(handle);
-    fclose(handle);
+    ep = saveg_read8(file);
+    saveg_read8(file);
+    mission = saveg_read8(file);
+    fclose(file);
 
     // switch expansions if necessary
     if (mission == doom2)
@@ -1004,10 +999,9 @@ static void M_LoadSelect(int choice)
 
         M_StringCopy(name, P_SaveGameFile(choice), sizeof(name));
         S_StartSound(NULL, sfx_pistol);
-        I_WaitVBL(2 * TICRATE);
+        I_Sleep(1000);
         functionkey = 0;
         quickSaveSlot = choice;
-        vibrate = false;
         M_ClearMenus();
         G_LoadGame(name);
     }
@@ -1027,8 +1021,6 @@ static void M_LoadGame(int choice)
     M_SetupNextMenu(&LoadDef);
     M_ReadSaveStrings();
 }
-
-#define CARETBLINKTIME  350
 
 static dboolean showcaret;
 static int      caretwait;
@@ -1249,10 +1241,21 @@ void M_UpdateSaveGameName(int i)
 
         while (M_StringWidth(savegamestrings[i]) > SAVESTRINGPIXELWIDTH)
         {
-            savegamestrings[i][len - 1] = '.';
-            savegamestrings[i][len] = '.';
-            savegamestrings[i][len + 1] = '.';
-            savegamestrings[i][len + 2] = '\0';
+            if (len >= 2 && savegamestrings[i][len - 2] == ' ')
+            {
+                savegamestrings[i][len - 2] = '.';
+                savegamestrings[i][len - 1] = '.';
+                savegamestrings[i][len] = '.';
+                savegamestrings[i][len + 1] = '\0';
+            }
+            else
+            {
+                savegamestrings[i][len - 1] = '.';
+                savegamestrings[i][len] = '.';
+                savegamestrings[i][len + 1] = '.';
+                savegamestrings[i][len + 2] = '\0';
+            }
+
             len--;
         }
     }
@@ -1651,9 +1654,8 @@ static void M_VerifyNightmare(int key)
     else
     {
         S_StartSound(NULL, sfx_swtchx);
-        I_WaitVBL(2 * TICRATE);
+        I_Sleep(1000);
         quickSaveSlot = -1;
-        vibrate = false;
         M_ClearMenus();
         G_DeferredInitNew((skill_t)nightmare, epi + 1, 1);
     }
@@ -1676,9 +1678,8 @@ static void M_ChooseSkill(int choice)
 
     HU_DrawDisk();
     S_StartSound(NULL, sfx_pistol);
-    I_WaitVBL(2 * TICRATE);
+    I_Sleep(1000);
     quickSaveSlot = -1;
-    vibrate = false;
     M_ClearMenus();
     G_DeferredInitNew((skill_t)choice, epi + 1, 1);
 }
@@ -1730,31 +1731,31 @@ static void M_DrawOptions(void)
     if (messages)
     {
         if (M_MSGON)
-            M_DrawPatchWithShadow(OptionsDef.x + 125, OptionsDef.y + 16 * msgs + OFFSET, W_CacheLumpName("M_MSGON"));
+            M_DrawPatchWithShadow(OptionsDef.x + 122, OptionsDef.y + 16 * msgs + OFFSET, W_CacheLumpName("M_MSGON"));
         else
-            M_DrawString(OptionsDef.x + 125, OptionsDef.y + 16 * msgs + OFFSET, s_M_ON);
+            M_DrawString(OptionsDef.x + 122, OptionsDef.y + 16 * msgs + OFFSET, s_M_ON);
     }
     else
     {
         if (M_MSGOFF)
-            M_DrawPatchWithShadow(OptionsDef.x + 125, OptionsDef.y + 16 * msgs + OFFSET, W_CacheLumpName("M_MSGOFF"));
+            M_DrawPatchWithShadow(OptionsDef.x + 122, OptionsDef.y + 16 * msgs + OFFSET, W_CacheLumpName("M_MSGOFF"));
         else
-            M_DrawString(OptionsDef.x + 125, OptionsDef.y + 16 * msgs + OFFSET, s_M_OFF);
+            M_DrawString(OptionsDef.x + 122, OptionsDef.y + 16 * msgs + OFFSET, s_M_OFF);
     }
 
     if (r_detail == r_detail_low)
     {
         if (M_GDLOW)
-            M_DrawPatchWithShadow(OptionsDef.x + 180, OptionsDef.y + 16 * detail + OFFSET, W_CacheLumpName("M_GDLOW"));
+            M_DrawPatchWithShadow(OptionsDef.x + 176, OptionsDef.y + 16 * detail + OFFSET, W_CacheLumpName("M_GDLOW"));
         else
-            M_DrawString(OptionsDef.x + 177, OptionsDef.y + 16 * detail + OFFSET, s_M_LOW);
+            M_DrawString(OptionsDef.x + 173, OptionsDef.y + 16 * detail + OFFSET, s_M_LOW);
     }
     else
     {
         if (M_GDHIGH)
-            M_DrawPatchWithShadow(OptionsDef.x + 180, OptionsDef.y + 16 * detail + OFFSET, W_CacheLumpName("M_GDHIGH"));
+            M_DrawPatchWithShadow(OptionsDef.x + 176, OptionsDef.y + 16 * detail + OFFSET, W_CacheLumpName("M_GDHIGH"));
         else
-            M_DrawString(OptionsDef.x + 177, OptionsDef.y + 16 * detail + OFFSET, s_M_HIGH);
+            M_DrawString(OptionsDef.x + 173, OptionsDef.y + 16 * detail + OFFSET, s_M_HIGH);
     }
 
     M_DrawThermo(OptionsDef.x - 1, OptionsDef.y + 16 * (scrnsize + 1) + OFFSET + !hacx, 9,
@@ -1847,7 +1848,7 @@ static void M_EndGameResponse(int key)
     viewactive = false;
     automapactive = false;
     S_StartSound(NULL, sfx_swtchx);
-    I_WaitVBL(2 * TICRATE);
+    I_Sleep(1000);
     MainDef.lastOn = 0;
     st_palette = 0;
     M_EndingGame();
@@ -1955,6 +1956,8 @@ static char *M_SelectEndMessage(void)
 
 void M_QuitDOOM(int choice)
 {
+    static char endstring[160];
+
     quitting = true;
     M_snprintf(endstring, sizeof(endstring), "%s\n\n%s", M_SelectEndMessage(), (usinggamepad ? s_DOSA : s_DOSY));
 #ifndef __ANDROID__
@@ -2195,6 +2198,9 @@ void M_StartMessage(char *string, void *routine, dboolean input)
     messageNeedsInput = input;
     blurred = false;
     menuactive = true;
+
+    I_SetPalette(W_CacheLumpName("PLAYPAL"));
+    I_UpdateBlitFunc(false);
 }
 
 //
@@ -3426,11 +3432,11 @@ void M_StartControlPanel(void)
 
     S_StopSounds();
 
-    if ((gp_vibrate_barrels || gp_vibrate_damage || gp_vibrate_weapons) && vibrate)
+    if (gp_vibrate_barrels || gp_vibrate_damage || gp_vibrate_weapons)
     {
-        restoremotorspeed = idlemotorspeed;
-        idlemotorspeed = 0;
-        XInputVibration(idlemotorspeed);
+        restorevibrationstrength = idlevibrationstrength;
+        idlevibrationstrength = 0;
+        I_StopGamepadVibration();
     }
 
     viewplayer->fixedcolormap = 0;
@@ -3468,7 +3474,7 @@ void M_Drawer(void)
 
         M_DarkBackground();
 
-        if (vid_widescreen)
+        if (vid_widescreen && gamestate == GS_LEVEL)
             y = viewwindowy / 2 + (viewheight / 2 - M_StringHeight(messageString)) / 2 - 1;
         else
             y = (ORIGINALHEIGHT - M_StringHeight(messageString)) / 2 - 1;
@@ -3525,6 +3531,8 @@ void M_Drawer(void)
     if (currentMenu != &ReadDef)
     {
         // DRAW SKULL
+        char    *skullName[2] = { "M_SKULL1", "M_SKULL2" };
+
         if (currentMenu == &LoadDef || currentMenu == &SaveDef)
         {
             patch_t *patch = W_CacheLumpName(skullName[whichSkull]);
@@ -3568,7 +3576,7 @@ void M_Drawer(void)
             }
 
             if (M_SKULL1)
-                M_DrawPatchWithShadow(x - 32, yy, patch);
+                M_DrawPatchWithShadow(x - 30, yy, patch);
             else
                 M_DrawPatchWithShadow(x - 26, yy + 2, patch);
 
@@ -3607,10 +3615,10 @@ void M_ClearMenus(void)
 {
     menuactive = false;
 
-    if ((gp_vibrate_barrels || gp_vibrate_damage || gp_vibrate_weapons) && vibrate)
+    if (gp_vibrate_barrels || gp_vibrate_damage || gp_vibrate_weapons)
     {
-        idlemotorspeed = restoremotorspeed;
-        XInputVibration(idlemotorspeed);
+        idlevibrationstrength = restorevibrationstrength;
+        I_GamepadVibration(idlevibrationstrength);
     }
 
     if (gamestate == GS_LEVEL)
@@ -3624,6 +3632,7 @@ static void M_SetupNextMenu(menu_t *menudef)
 {
     currentMenu = menudef;
     itemOn = currentMenu->lastOn;
+    whichSkull = 0;
 }
 
 //
@@ -3647,7 +3656,6 @@ void M_Init(void)
     currentMenu = &MainDef;
     menuactive = false;
     itemOn = currentMenu->lastOn;
-    whichSkull = 0;
     skullAnimCounter = 10;
     messageToPrint = false;
     messageString = NULL;
