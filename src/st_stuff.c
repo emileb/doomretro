@@ -1024,7 +1024,9 @@ dboolean ST_Responder(event_t *ev)
             return true;
         }
 
+#ifndef __ANDROID__ // Stop keyboard hiding on every key
         C_HideConsole();
+#endif
     }
 
     return false;
