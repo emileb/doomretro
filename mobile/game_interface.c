@@ -386,40 +386,19 @@ void Mobile_AM_controls(double *zoom, fixed_t *pan_x, fixed_t *pan_y )
 #define SIDEMOVE0       0x18
 #define SIDEMOVE1       0x28
 
-static int mlooky = 0;
 //Called from the game
 void G_AndroidBuildTiccmd(ticcmd_t *cmd)
 {
 	cmd->forwardmove  += forwardmove_android * FORWARDMOVE1;
 	cmd->sidemove  += sidemove_android   *  SIDEMOVE1;
 
-
-    mlooky += look_pitch_mouse * 10000;
-    look_pitch_mouse = 0;
-
-    mlooky += look_pitch_joy * 300;
-
-	//LOGI("mlooky = %d",mlooky);
-
-	if (abs(mlooky) > 100)
-	{
-		int look = -mlooky/100;
-		if (look > 7) look = 7;
-		if (look < -7) look = -7;
-
-		if (look < 0)
-		{
-			look += 16;
-		}
-
-		mlooky = 0;
-	}
-
-
     cmd->angleturn += look_yaw_mouse * 80000;
     look_yaw_mouse = 0;
-
     cmd->angleturn += look_yaw_joy * 1000;
+
+    cmd->lookdir += look_pitch_mouse * 7000;
+    look_pitch_mouse = 0;
+    cmd->lookdir += look_pitch_joy * -200;
 
 	if (newweapon != -1)
 	{
