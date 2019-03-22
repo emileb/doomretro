@@ -6,13 +6,13 @@
 
 ========================================================================
 
-  Copyright © 1993-2012 id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2018 Brad Harding.
+  Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
+  Copyright © 2013-2019 by Brad Harding.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
 
-  This file is part of DOOM Retro.
+  This file is a part of DOOM Retro.
 
   DOOM Retro is free software: you can redistribute it and/or modify it
   under the terms of the GNU General Public License as published by the
@@ -28,7 +28,7 @@
   along with DOOM Retro. If not, see <https://www.gnu.org/licenses/>.
 
   DOOM is a registered trademark of id Software LLC, a ZeniMax Media
-  company, in the US and/or other countries and is used without
+  company, in the US and/or other countries, and is used without
   permission. All other trademarks are the property of their respective
   holders. DOOM Retro is in no way affiliated with nor endorsed by
   id Software.
@@ -42,12 +42,10 @@
 #include "d_deh.h"
 #include "doomstat.h"
 #include "hu_stuff.h"
-#include "i_gamepad.h"
 #include "i_swap.h"
 #include "m_config.h"
 #include "m_misc.h"
 #include "m_random.h"
-#include "p_local.h"
 #include "s_sound.h"
 #include "v_data.h"
 #include "v_video.h"
@@ -89,7 +87,7 @@ extern int              acceleratestage;        // accelerate intermission scree
 //
 static void F_ConsoleFinaleText(void)
 {
-    char    *text = strdup(finaletext);
+    char    *text = M_StringDuplicate(finaletext);
     char    *p = strtok(text, "\n");
 
     while (p)
@@ -104,8 +102,6 @@ static void F_ConsoleFinaleText(void)
 //
 void F_StartFinale(void)
 {
-    gameaction = ga_nothing;
-    gamestate = GS_FINALE;
     viewactive = false;
     automapactive = false;
 
@@ -207,6 +203,15 @@ void F_StartFinale(void)
             break;
     }
 
+    if (strlen(finaletext) <= 1)
+    {
+        gameaction = ga_worlddone;
+        return;
+    }
+
+    gameaction = ga_nothing;
+    gamestate = GS_FINALE;
+
     finalestage = F_STAGE_TEXT;
     finalecount = 0;
 
@@ -277,7 +282,6 @@ void M_DrawSmallChar(int x, int y, int i, dboolean shadow);
 
 static void F_TextWrite(void)
 {
-
     // draw some of the text onto the screen
     byte        *src;
     byte        *dest;
@@ -343,7 +347,7 @@ static void F_TextWrite(void)
 
         if (c < 0 || c >= HU_FONTSIZE)
         {
-            cx += (prev == '.' || prev == '!' || prev == '?' || prev == '\"' ? 5 : 3);
+            cx += (prev == '.' || prev == '!' || prev == '?' || prev == '"' ? 5 : 3);
             prev = letter;
             continue;
         }
@@ -359,7 +363,7 @@ static void F_TextWrite(void)
 
             if (prev == ' ')
             {
-                if (letter == '\"')
+                if (letter == '"')
                     c = 64;
                 else if (letter == '\'')
                     c = 65;
@@ -425,6 +429,21 @@ static dboolean castattacking;
 
 dboolean        firstevent;
 
+// [crispy] randomize seestate and deathstate sounds in the cast
+static int F_RandomizeSound(int sound)
+{
+    if (sound >= sfx_posit1 && sound <= sfx_posit3)
+        return sfx_posit1 + M_Random() % 3;
+    else if (sound == sfx_bgsit1 || sound == sfx_bgsit2)
+        return sfx_bgsit1 + M_Random() % 2;
+    else if (sound >= sfx_podth1 && sound <= sfx_podth3)
+        return sfx_podth1 + M_Random() % 3;
+    else if (sound == sfx_bgdth1 || sound == sfx_bgdth2)
+        return sfx_bgdth1 + M_Random() % 2;
+    else
+        return sound;
+}
+
 //
 // F_StartCast
 //
@@ -447,6 +466,9 @@ static void F_StartCast(void)
         s_CC_HERO = playername;
 
     S_ChangeMusic(mus_evil, true, false, false);
+
+    if (mobjinfo[castordertype[castnum]].seesound)
+        S_StartSound(NULL, F_RandomizeSound(mobjinfo[castordertype[castnum]].seesound));
 }
 
 //
@@ -467,7 +489,7 @@ static void F_CastTicker(void)
             castnum = 0;
 
         if (mobjinfo[castordertype[castnum]].seesound)
-            S_StartSound(NULL, mobjinfo[castordertype[castnum]].seesound);
+            S_StartSound(NULL, F_RandomizeSound(mobjinfo[castordertype[castnum]].seesound));
 
         caststate = &states[mobjinfo[castordertype[castnum]].seestate];
         castframes = 0;
@@ -694,7 +716,7 @@ static dboolean F_CastResponder(event_t *ev)
     castattacking = false;
 
     if (mobjinfo[type].deathsound)
-        S_StartSound(NULL, mobjinfo[type].deathsound);
+        S_StartSound(NULL, F_RandomizeSound(mobjinfo[type].deathsound));
 
     return true;
 }

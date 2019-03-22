@@ -6,13 +6,13 @@
 
 ========================================================================
 
-  Copyright © 1993-2012 id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2018 Brad Harding.
+  Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
+  Copyright © 2013-2019 by Brad Harding.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
 
-  This file is part of DOOM Retro.
+  This file is a part of DOOM Retro.
 
   DOOM Retro is free software: you can redistribute it and/or modify it
   under the terms of the GNU General Public License as published by the
@@ -28,7 +28,7 @@
   along with DOOM Retro. If not, see <https://www.gnu.org/licenses/>.
 
   DOOM is a registered trademark of id Software LLC, a ZeniMax Media
-  company, in the US and/or other countries and is used without
+  company, in the US and/or other countries, and is used without
   permission. All other trademarks are the property of their respective
   holders. DOOM Retro is in no way affiliated with nor endorsed by
   id Software.
@@ -57,6 +57,8 @@ void P_InitPicAnims(void);
 void P_SetTimer(int minutes);
 void P_SpawnSpecials(void);
 void P_SetLiquids(void);
+dboolean P_IsLiquidSector(sector_t *sector);
+dboolean P_IsLiquidFlat(int floorpic);
 void P_SetLifts(void);
 
 // every tic
@@ -554,6 +556,7 @@ dboolean EV_DoChange(line_t *line, change_e changetype);
 dboolean EV_DoElevator(line_t *line, elevator_e elevtype);
 void T_MoveFloor(floormove_t *floor);
 void T_MoveElevator(elevator_t *elevator);
+void P_CheckTerrainType(sector_t *sector);
 
 // killough 3/7/98: Add generalized scroll effects
 typedef struct
@@ -613,11 +616,11 @@ dboolean EV_SilentLineTeleport(line_t *line, int side, mobj_t *thing, dboolean r
 
 // jff 3/14/98 add bits and shifts for generalized sector types
 
-#define DAMAGE_MASK             0x60
+#define DAMAGE_MASK             0x0060
 #define DAMAGE_SHIFT            5
-#define SECRET_MASK             0x80
-#define FRICTION_MASK           0x100
-#define PUSH_MASK               0x200
+#define SECRET_MASK             0x0080
+#define FRICTION_MASK           0x0100
+#define PUSH_MASK               0x0200
 
 // jff 02/04/98 Define masks, shifts, for fields in
 // generalized linedef types

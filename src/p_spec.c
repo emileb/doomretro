@@ -6,13 +6,13 @@
 
 ========================================================================
 
-  Copyright © 1993-2012 id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2018 Brad Harding.
+  Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
+  Copyright © 2013-2019 by Brad Harding.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
 
-  This file is part of DOOM Retro.
+  This file is a part of DOOM Retro.
 
   DOOM Retro is free software: you can redistribute it and/or modify it
   under the terms of the GNU General Public License as published by the
@@ -28,7 +28,7 @@
   along with DOOM Retro. If not, see <https://www.gnu.org/licenses/>.
 
   DOOM is a registered trademark of id Software LLC, a ZeniMax Media
-  company, in the US and/or other countries and is used without
+  company, in the US and/or other countries, and is used without
   permission. All other trademarks are the property of their respective
   holders. DOOM Retro is in no way affiliated with nor endorsed by
   id Software.
@@ -113,7 +113,7 @@ fixed_t animatedliquiddiffs[64] =
 };
 
 static anim_t       *lastanim;
-static anim_t       *anims;                 // new structure w/o limits -- killough
+static anim_t       *anims;             // new structure w/o limits -- killough
 
 terraintype_t       *terraintypes;
 dboolean            *isteleport;
@@ -127,6 +127,31 @@ extern dboolean     canmodify;
 extern int          numflats;
 extern texture_t    **textures;
 
+struct
+{
+    char            *startname;
+    char            *endname;
+    terraintype_t   terraintype;
+} texturepacks[] = {
+    { "GRAYSLM1", "GRAYSLM4", GRAYSLIME },
+    { "OBLODA01", "OBLODA08", BLOOD     },
+    { "OGOOPY01", "OGOOPY08", GOOP      },
+    { "OICYWA01", "OICYWA08", ICYWATER  },
+    { "OLAVAC01", "OLAVAC08", LAVA      },
+    { "OLAVAD01", "OLAVAD08", LAVA      },
+    { "ONUKEA01", "ONUKEA08", NUKAGE    },
+    { "OSLUDG01", "OSLUDG08", SLUDGE    },
+    { "OTAR__01", "OTAR__08", TAR       },
+    { "OWATER01", "OWATER08", SLUDGE    },
+    { "",         "",         0         }
+};
+
+static void SetTerrainType(anim_t *anim, terraintype_t terraintype)
+{
+    for (int i = anim->basepic; i < anim->basepic + anim->numpics; i++)
+        terraintypes[i] = terraintype;
+}
+
 //
 // P_InitPicAnims
 //
@@ -137,16 +162,18 @@ void P_InitPicAnims(void)
     int         lump = W_GetNumForName("ANIMATED");
     animdef_t   *animdefs = W_CacheLumpNum(lump);
 
-    short       nukagestart = R_CheckFlatNumForName("NUKAGE1");
-    short       nukageend = R_CheckFlatNumForName("NUKAGE3");
-    short       fwaterstart = R_CheckFlatNumForName("FWATER1");
-    short       fwaterend = R_CheckFlatNumForName("FWATER4");
-    short       swaterstart = R_CheckFlatNumForName("SWATER1");
-    short       swaterend = R_CheckFlatNumForName("SWATER4");
-    short       lavastart = R_CheckFlatNumForName("LAVA1");
-    short       lavaend = R_CheckFlatNumForName("LAVA4");
-    short       bloodstart = R_CheckFlatNumForName("BLOOD1");
-    short       bloodend = R_CheckFlatNumForName("BLOOD3");
+    short       NUKAGE1 = R_CheckFlatNumForName("NUKAGE1");
+    short       NUKAGE3 = R_CheckFlatNumForName("NUKAGE3");
+    short       FWATER1 = R_CheckFlatNumForName("FWATER1");
+    short       FWATER4 = R_CheckFlatNumForName("FWATER4");
+    short       SWATER1 = R_CheckFlatNumForName("SWATER1");
+    short       SWATER4 = R_CheckFlatNumForName("SWATER4");
+    short       LAVA1 = R_CheckFlatNumForName("LAVA1");
+    short       LAVA4 = R_CheckFlatNumForName("LAVA4");
+    short       BLOOD1 = R_CheckFlatNumForName("BLOOD1");
+    short       BLOOD3 = R_CheckFlatNumForName("BLOOD3");
+    short       SLIME01 = R_CheckFlatNumForName("SLIME01");
+    short       SLIME08 = R_CheckFlatNumForName("SLIME08");
 
     terraintypes = Z_Calloc(1, size, PU_STATIC, NULL);
     isteleport = Z_Calloc(1, size, PU_STATIC, NULL);
@@ -187,26 +214,87 @@ void P_InitPicAnims(void)
         }
         else
         {
+            int         basepic;
+            dboolean    isliquid = false;
+
             if (R_CheckFlatNumForName(animdefs[i].startname) == -1)
                 continue;
 
             lastanim->picnum = R_FlatNumForName(animdefs[i].endname);
-            lastanim->basepic = R_FlatNumForName(animdefs[i].startname);
+            lastanim->basepic = basepic = R_FlatNumForName(animdefs[i].startname);
 
-            lastanim->numpics = lastanim->picnum - lastanim->basepic + 1;
+            lastanim->numpics = lastanim->picnum - basepic + 1;
             lastanim->istexture = false;
 
-            for (int j = lastanim->basepic; j < lastanim->basepic + lastanim->numpics; j++)
-                if (j >= nukagestart && j <= nukageend)
-                    terraintypes[j] = NUKAGE;
-                else if ((j >= fwaterstart && j <= fwaterend) || (j >= swaterstart && j <= swaterend))
-                    terraintypes[j] = WATER;
-                else if (j >= lavastart && j <= lavaend)
-                    terraintypes[j] = LAVA;
-                else if (j >= bloodstart && j <= bloodend)
-                    terraintypes[j] = BLOOD;
-                else
-                    terraintypes[j] = SLIME;
+            // Check if flat is liquid in IWAD
+            if (basepic >= NUKAGE1 && basepic <= NUKAGE3)
+            {
+                SetTerrainType(lastanim, NUKAGE);
+                isliquid = true;
+            }
+            else if ((basepic >= FWATER1 && basepic <= FWATER4) || (basepic >= SWATER1 && basepic <= SWATER4))
+            {
+                SetTerrainType(lastanim, WATER);
+                isliquid = true;
+            }
+            else if (basepic >= LAVA1 && basepic <= LAVA4)
+            {
+                SetTerrainType(lastanim, LAVA);
+                isliquid = true;
+            }
+            else if (basepic >= BLOOD1 && basepic <= BLOOD3)
+            {
+                SetTerrainType(lastanim, BLOOD);
+                isliquid = true;
+            }
+            else if (basepic >= SLIME01 && basepic <= SLIME08)
+            {
+                SetTerrainType(lastanim, SLIME);
+                isliquid = true;
+            }
+
+            // Check if name of flat indicates it is liquid
+            if (!isliquid)
+            {
+                if (M_StrCaseStr(animdefs[i].startname, "NUK"))
+                {
+                    SetTerrainType(lastanim, NUKAGE);
+                    isliquid = true;
+                }
+                else if (M_StrCaseStr(animdefs[i].startname, "WATER") || M_StrCaseStr(animdefs[i].startname, "WTR")
+                    || M_StrCaseStr(animdefs[i].startname, "WAVE"))
+                {
+                    SetTerrainType(lastanim, WATER);
+                    isliquid = true;
+                }
+                else if (M_StrCaseStr(animdefs[i].startname, "LAV"))
+                {
+                    SetTerrainType(lastanim, LAVA);
+                    isliquid = true;
+                }
+                else if (M_StrCaseStr(animdefs[i].startname, "BLOOD"))
+                {
+                    SetTerrainType(lastanim, BLOOD);
+                    isliquid = true;
+                }
+                else if ((M_StrCaseStr(animdefs[i].startname, "SLIM") && (basepic < SLIME09 || basepic > SLIME12))
+                    || M_StrCaseStr(animdefs[i].startname, "SLM"))
+                {
+                    SetTerrainType(lastanim, SLIME);
+                    isliquid = true;
+                }
+            }
+
+            // Check if flat is liquid in popular texture packs
+            if (!isliquid)
+                for (int j = 0; *texturepacks[j].startname; j++)
+                    if (basepic >= R_CheckFlatNumForName(texturepacks[j].startname)
+                        && basepic <= R_CheckFlatNumForName(texturepacks[j].endname))
+                    {
+                        SetTerrainType(lastanim, texturepacks[j].terraintype);
+                        isliquid = true;
+                        break;
+                    }
         }
 
         if (lastanim->numpics < 2)
@@ -222,21 +310,28 @@ void P_InitPicAnims(void)
 
     W_ReleaseLumpNum(lump);
 
-    // [BH] parse DRCOMPAT lump to find animated textures that are not liquid in current wad
     SC_Open("DRCOMPAT");
 
     while (SC_GetString())
-        if (M_StringCompare(sc_String, "NOLIQUID"))
+    {
+        dboolean    noliquid = M_StringCompare(sc_String, "NOLIQUID");
+
+        if (noliquid || M_StringCompare(sc_String, "LIQUID"))
         {
-            int lump;
+            int first;
+            int last;
 
             SC_MustGetString();
-            lump = R_CheckFlatNumForName(sc_String);
+            first = R_CheckFlatNumForName(sc_String);
+            SC_MustGetString();
+            last = R_CheckFlatNumForName(sc_String);
             SC_MustGetString();
 
-            if (lump >= 0 && M_StringCompare(leafname(lumpinfo[firstflat + lump]->wadfile->path), sc_String))
-                terraintypes[lump] = SOLID;
+            if (first >= 0 && last >= 0 && M_StringCompare(leafname(lumpinfo[firstflat + first]->wadfile->path), sc_String))
+                for (int i = first; i <= last; i++)
+                    terraintypes[i] = (noliquid ? SOLID : LIQUID);
         }
+    }
 
     SC_Close();
 
@@ -667,9 +762,8 @@ fixed_t P_FindHighestCeilingSurrounding(sector_t *sec)
 // killough 11/98: reformatted
 fixed_t P_FindShortestTextureAround(int secnum)
 {
-    const sector_t  *sec = sectors + secnum;
-    const int       linecount = sec->linecount;
-    int             minsize = 32000 * FRACUNIT;
+    const int   linecount = sectors[secnum].linecount;
+    int         minsize = 32000 * FRACUNIT;
 
     for (int i = 0; i < linecount; i++)
         if (twoSided(secnum, i))
@@ -700,9 +794,8 @@ fixed_t P_FindShortestTextureAround(int secnum)
 // killough 11/98: reformatted
 fixed_t P_FindShortestUpperAround(int secnum)
 {
-    const sector_t  *sec = sectors + secnum;
-    const int       linecount = sec->linecount;
-    int             minsize = 32000 * FRACUNIT;
+    const int   linecount = sectors[secnum].linecount;
+    int         minsize = 32000 * FRACUNIT;
 
     for (int i = 0; i < linecount; i++)
         if (twoSided(secnum, i))
@@ -943,7 +1036,6 @@ dboolean P_CanUnlockGenDoor(line_t *line)
                     (viewplayer->cards[it_yellowskull] == CARDNOTFOUNDYET ? "keycard or skull key" : "keycard"));
                 HU_PlayerMessage(buffer, false, false);
                 S_StartSound(viewplayer->mo, sfx_noway);
-
                 return false;
             }
 
@@ -1052,7 +1144,7 @@ dboolean P_SectorActive(special_e t, sector_t *sec)
     return (t == floor_special ? !!sec->floordata :     // return whether
         (t == ceiling_special ? !!sec->ceilingdata :    // thinker of same
         (t == lighting_special ? !!sec->lightingdata :  // type is active
-        true)));        // don't know which special, must be active, shouldn't be here
+        true)));                                        // don't know which special, must be active, shouldn't be here
 }
 
 //
@@ -1154,6 +1246,7 @@ void P_CrossSpecialLine(line_t *line, int side, mobj_t *thing)
 {
     // Triggers that other things can activate
     if (!thing->player)
+    {
         // Things that should NOT trigger specials...
         switch (thing->type)
         {
@@ -1173,13 +1266,14 @@ void P_CrossSpecialLine(line_t *line, int side, mobj_t *thing)
                 break;
         }
 
-    // [BH] Corpses can't trigger specials
-    if (thing->flags & MF_CORPSE)
-        return;
+        // [BH] Corpses can't trigger specials
+        if ((thing->flags & MF_CORPSE) && thing->type != MT_BARREL)
+            return;
+    }
 
     // jff 02/04/98 add check here for generalized linedef types
     {
-        // pointer to line function is NULL by default, set non-null if
+        // pointer to line function is NULL by default, set non-NULL if
         // line special is walkover generalized linedef type
         dboolean (*linefunc)(line_t *line) = NULL;
 
@@ -1188,7 +1282,7 @@ void P_CrossSpecialLine(line_t *line, int side, mobj_t *thing)
         {
             if (!thing->player)
                 if ((line->special & FloorChange) || !(line->special & FloorModel))
-                    return;             // FloorModel is "Allow Monsters" if FloorChange is 0
+                    return;                     // FloorModel is "Allow Monsters" if FloorChange is 0
 
             linefunc = EV_DoGenFloor;
         }
@@ -1196,7 +1290,7 @@ void P_CrossSpecialLine(line_t *line, int side, mobj_t *thing)
         {
             if (!thing->player)
                 if ((line->special & CeilingChange) || !(line->special & CeilingModel))
-                    return;             // CeilingModel is "Allow Monsters" if CeilingChange is 0
+                    return;                     // CeilingModel is "Allow Monsters" if CeilingChange is 0
 
             linefunc = EV_DoGenCeiling;
         }
@@ -1216,7 +1310,7 @@ void P_CrossSpecialLine(line_t *line, int side, mobj_t *thing)
         else if (line->special >= GenLockedBase)
         {
             if (!thing->player)
-                return;                 // monsters disallowed from unlocking doors
+                return;                         // monsters disallowed from unlocking doors
 
             if ((line->special & TriggerType) == WalkOnce || (line->special & TriggerType) == WalkMany)
             {
@@ -1233,7 +1327,7 @@ void P_CrossSpecialLine(line_t *line, int side, mobj_t *thing)
         {
             if (!thing->player)
                 if (!(line->special & LiftMonster))
-                    return;             // monsters disallowed
+                    return;                     // monsters disallowed
 
             linefunc = EV_DoGenLift;
         }
@@ -1241,7 +1335,7 @@ void P_CrossSpecialLine(line_t *line, int side, mobj_t *thing)
         {
             if (!thing->player)
                 if (!(line->special & StairMonster))
-                    return;             // monsters disallowed
+                    return;                     // monsters disallowed
 
             linefunc = EV_DoGenStairs;
         }
@@ -1249,7 +1343,7 @@ void P_CrossSpecialLine(line_t *line, int side, mobj_t *thing)
         {
             if (!thing->player)
                 if (!(line->special & CrusherMonster))
-                    return;             // monsters disallowed
+                    return;                     // monsters disallowed
 
             linefunc = EV_DoGenCrusher;
         }
@@ -1306,7 +1400,7 @@ void P_CrossSpecialLine(line_t *line, int side, mobj_t *thing)
             return;
     }
 
-    if (!P_CheckTag(line))      // jff 2/27/98 disallow zero tag on some types
+    if (!P_CheckTag(line))                      // jff 2/27/98 disallow zero tag on some types
         return;
 
     switch (line->special)
@@ -2242,7 +2336,7 @@ void P_UpdateSpecials(void)
             if (!--buttonlist[i].btimer)
             {
                 line_t      *line = buttonlist[i].line;
-                sector_t    *backsector = line->backsector;
+                sector_t    *sector = line->backsector;
                 int         sidenum = line->sidenum[0];
                 short       toptexture = sides[sidenum].toptexture;
                 short       midtexture = sides[sidenum].midtexture;
@@ -2288,7 +2382,7 @@ void P_UpdateSpecials(void)
                         break;
                 }
 
-                if (!backsector || (!backsector->floordata && !backsector->ceilingdata) || line->tag != backsector->tag)
+                if (!sector || (!sector->floordata && !sector->ceilingdata) || line->tag != sector->tag)
                     S_StartSectorSound(buttonlist[i].soundorg, sfx_swtchn);
             }
 }
@@ -2298,16 +2392,13 @@ void P_UpdateSpecials(void)
 //
 dboolean EV_DoDonut(line_t *line)
 {
-    sector_t    *s1;
-    sector_t    *s2;
-    sector_t    *s3;
     int         secnum = -1;
     dboolean    rtn = false;
-    floormove_t *floor;
 
     while ((secnum = P_FindSectorFromLineTag(line, secnum)) >= 0)
     {
-        s1 = sectors + secnum;
+        sector_t    *s1 = sectors + secnum;
+        sector_t    *s2;
 
         // ALREADY MOVING? IF SO, KEEP GOING...
         if (P_SectorActive(floor_special, s1))
@@ -2323,7 +2414,8 @@ dboolean EV_DoDonut(line_t *line)
 
         for (int i = 0; i < s2->linecount; i++)
         {
-            s3 = s2->lines[i]->backsector;
+            sector_t    *s3 = s2->lines[i]->backsector;
+            floormove_t *floor;
 
             if (!s3 || s3 == s1)
                 continue;
@@ -2361,6 +2453,7 @@ dboolean EV_DoDonut(line_t *line)
             break;
         }
     }
+
     return rtn;
 }
 
@@ -2422,7 +2515,6 @@ void P_SpawnSpecials(void)
 
             case DamageNegative10Or20PercentHealthAndLightBlinks_2Hz:
                 P_SpawnStrobeFlash(sector, FASTDARK, false);
-                sector->special = DamageNegative10Or20PercentHealthAndLightBlinks_2Hz;
                 break;
 
             case LightGlows_1PlusSec:
@@ -2966,6 +3058,7 @@ static dboolean PIT_PushThing(mobj_t *thing)
         // Removes angular distortion, and makes effort required
         // to stay close to source, grow increasingly hard as you
         // get closer, as expected. Still, it doesn't consider z :(
+        if (speed > 0)
         {
             int x = (thing->x - sx) >> FRACBITS;
             int y = (thing->y - sy) >> FRACBITS;
@@ -3038,10 +3131,10 @@ void T_Pusher(pusher_t *p)
         tmbbox[BOXRIGHT] = p->x + radius;
         tmbbox[BOXLEFT] = p->x - radius;
 
-        xl = (tmbbox[BOXLEFT] - bmaporgx - MAXRADIUS) >> MAPBLOCKSHIFT;
-        xh = (tmbbox[BOXRIGHT] - bmaporgx + MAXRADIUS) >> MAPBLOCKSHIFT;
-        yl = (tmbbox[BOXBOTTOM] - bmaporgy - MAXRADIUS) >> MAPBLOCKSHIFT;
-        yh = (tmbbox[BOXTOP] - bmaporgy + MAXRADIUS) >> MAPBLOCKSHIFT;
+        xl = P_GetSafeBlockX(tmbbox[BOXLEFT] - bmaporgx - MAXRADIUS);
+        xh = P_GetSafeBlockX(tmbbox[BOXRIGHT] - bmaporgx + MAXRADIUS);
+        yl = P_GetSafeBlockY(tmbbox[BOXBOTTOM] - bmaporgy - MAXRADIUS);
+        yh = P_GetSafeBlockY(tmbbox[BOXTOP] - bmaporgy + MAXRADIUS);
 
         for (int bx = xl; bx <= xh; bx++)
             for (int by = yl; by <= yh; by++)

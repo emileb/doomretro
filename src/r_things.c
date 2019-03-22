@@ -6,13 +6,13 @@
 
 ========================================================================
 
-  Copyright © 1993-2012 id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2018 Brad Harding.
+  Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
+  Copyright © 2013-2019 by Brad Harding.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
 
-  This file is part of DOOM Retro.
+  This file is a part of DOOM Retro.
 
   DOOM Retro is free software: you can redistribute it and/or modify it
   under the terms of the GNU General Public License as published by the
@@ -28,7 +28,7 @@
   along with DOOM Retro. If not, see <https://www.gnu.org/licenses/>.
 
   DOOM is a registered trademark of id Software LLC, a ZeniMax Media
-  company, in the US and/or other countries and is used without
+  company, in the US and/or other countries, and is used without
   permission. All other trademarks are the property of their respective
   holders. DOOM Retro is in no way affiliated with nor endorsed by
   id Software.
@@ -39,7 +39,6 @@
 #include "c_console.h"
 #include "doomstat.h"
 #include "i_colors.h"
-#include "i_swap.h"
 #include "i_system.h"
 #include "m_config.h"
 #include "m_menu.h"
@@ -94,6 +93,7 @@ extern dboolean         drawbloodsplats;
 extern dboolean         notranslucency;
 extern dboolean         SHT2A0;
 extern dboolean         skippsprinterp;
+extern dboolean         vanilla;
 
 //
 // R_InstallSpriteLump
@@ -950,7 +950,7 @@ static void R_DrawPlayerSprite(pspdef_t *psp, dboolean invisibility, dboolean al
     int             lump = sprframe->lump[0];
 
     // calculate edges of the shape
-    tx = psp->sx - ORIGINALWIDTH / 2 * FRACUNIT - (altered ? spriteoffset[lump] : newspriteoffset[lump]);
+    tx = psp->sx - ORIGINALWIDTH / 2 * FRACUNIT - (altered && !vanilla ? spriteoffset[lump] : newspriteoffset[lump]);
     x1 = (centerxfrac + FRACUNIT / 2 + FixedMul(tx, pspritescale)) >> FRACBITS;
     x2 = ((centerxfrac + FRACUNIT / 2 + FixedMul(tx + spritewidth[lump], pspritescale)) >> FRACBITS) - 1;
 
@@ -1003,7 +1003,7 @@ static void R_DrawPlayerSprite(pspdef_t *psp, dboolean invisibility, dboolean al
         }
     }
 
-    vis->texturemid += FixedMul(((centery - viewheight / 2) << FRACBITS), pspriteiscale) - viewplayer->lookdir * 0x5C0;
+    vis->texturemid += FixedMul(((centery - viewheight / 2) << FRACBITS), pspriteiscale) - viewplayer->lookdir * 0x05C0;
 
     if (invisibility)
     {
@@ -1363,6 +1363,6 @@ void R_DrawMasked(void)
             R_RenderMaskedSegRange(ds, ds->x1, ds->x2);
 
     // draw the psprites on top of everything
-    if (r_playersprites && !inhelpscreens)
+    if (r_playersprites && !inhelpscreens && !menuactive)
         R_DrawPlayerSprites();
 }

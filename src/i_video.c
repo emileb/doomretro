@@ -6,13 +6,13 @@
 
 ========================================================================
 
-  Copyright © 1993-2012 id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2018 Brad Harding.
+  Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
+  Copyright © 2013-2019 by Brad Harding.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
 
-  This file is part of DOOM Retro.
+  This file is a part of DOOM Retro.
 
   DOOM Retro is free software: you can redistribute it and/or modify it
   under the terms of the GNU General Public License as published by the
@@ -28,7 +28,7 @@
   along with DOOM Retro. If not, see <https://www.gnu.org/licenses/>.
 
   DOOM is a registered trademark of id Software LLC, a ZeniMax Media
-  company, in the US and/or other countries and is used without
+  company, in the US and/or other countries, and is used without
   permission. All other trademarks are the property of their respective
   holders. DOOM Retro is in no way affiliated with nor endorsed by
   id Software.
@@ -62,7 +62,6 @@
 #include "v_video.h"
 #include "version.h"
 #include "w_wad.h"
-#include "z_zone.h"
 
 #define MAXDISPLAYS         8
 
@@ -402,13 +401,7 @@ void I_ShutdownKeyboard(void)
 
 static int AccelerateMouse(int value)
 {
-    if (value < 0)
-        return -AccelerateMouse(-value);
-
-    if (value > 10)
-        return (value * 2 - 10);
-    else
-        return value;
+    return (value > 10 ? value * 2 - 10 : (value < -10 ? value * 2 + 10 : value));
 }
 
 static short __inline clamp(short value, short deadzone)
@@ -416,10 +409,8 @@ static short __inline clamp(short value, short deadzone)
     return (ABS(value) < deadzone ? 0 : (gp_analog ? MAX(-SHRT_MAX, value) : SIGN(value) * SHRT_MAX));
 }
 
-dboolean        altdown;
-dboolean        noinput = true;
-dboolean        waspaused;
-static dboolean button;
+dboolean    altdown;
+dboolean    waspaused;
 
 static void I_GetEvent(void)
 {
@@ -454,9 +445,6 @@ static void I_GetEvent(void)
                 break;
 
             case SDL_KEYDOWN:
-                if (noinput)
-                    return;
-
                 event.type = ev_keydown;
                 event.data1 = translatekey[Event->key.keysym.scancode];
                 event.data2 = Event->key.keysym.sym;
@@ -490,7 +478,6 @@ static void I_GetEvent(void)
 
                     if (idbehold && keys[event.data2])
                     {
-                        message_clearable = true;
                         idbehold = false;
                         HU_ClearMessages();
                     }
@@ -528,27 +515,21 @@ static void I_GetEvent(void)
                 break;
 
             case SDL_MOUSEBUTTONDOWN:
-                if (noinput)
-                    return;
-
                 idclev = false;
                 idmus = false;
 
                 if (idbehold)
                 {
-                    message_clearable = true;
                     HU_ClearMessages();
                     idbehold = false;
                 }
 
                 mousebuttonstate |= buttons[Event->button.button];
-                button = true;
                 break;
 
             case SDL_MOUSEBUTTONUP:
                 keydown = 0;
                 mousebuttonstate &= ~buttons[Event->button.button];
-                button = true;
                 break;
 
             case SDL_MOUSEWHEEL:
@@ -665,8 +646,6 @@ static void I_GetEvent(void)
 
                             if (gamestate == GS_LEVEL && !paused)
                             {
-                                blurred = false;
-
                                 if (menuactive || consoleactive)
                                     S_PauseSound();
                                 else
@@ -689,7 +668,7 @@ static void I_GetEvent(void)
                                 windowwidth = Event->window.data1;
                                 windowheight = Event->window.data2;
                                 M_snprintf(size, sizeof(size), "%sx%s", commify(windowwidth), commify(windowheight));
-                                vid_windowsize = strdup(size);
+                                vid_windowsize = M_StringDuplicate(size);
                                 M_SaveCVARs();
 
                                 displaywidth = windowwidth;
@@ -708,7 +687,7 @@ static void I_GetEvent(void)
                                 windowx = Event->window.data1;
                                 windowy = Event->window.data2;
                                 M_snprintf(pos, sizeof(pos), "(%i,%i)", windowx, windowy);
-                                vid_windowpos = strdup(pos);
+                                vid_windowpos = M_StringDuplicate(pos);
                                 vid_display = SDL_GetWindowDisplayIndex(window) + 1;
                                 M_SaveCVARs();
                             }
@@ -725,14 +704,12 @@ static void I_GetEvent(void)
 
 static void I_ReadMouse(void)
 {
-    int x, y;
-
-    if (startingnewgame)
-        SDL_GetRelativeMouseState(NULL, NULL);
+    int         x, y;
+    static int  prevmousebuttonstate = -1;
 
     SDL_GetRelativeMouseState(&x, &y);
 
-    if (x || y || button)
+    if (x || y || mousebuttonstate != prevmousebuttonstate)
     {
         event_t ev;
 
@@ -742,16 +719,16 @@ static void I_ReadMouse(void)
         if (m_acceleration)
         {
             ev.data2 = AccelerateMouse(x);
-            ev.data3 = -AccelerateMouse(y);
+            ev.data3 = AccelerateMouse(y);
         }
         else
         {
             ev.data2 = x;
-            ev.data3 = -y;
+            ev.data3 = y;
         }
 
         D_PostEvent(&ev);
-        button = false;
+        prevmousebuttonstate = mousebuttonstate;
     }
 }
 
@@ -800,6 +777,11 @@ static void GetUpscaledTextureSize(int width, int height)
     upscaledwidth = MIN(width / SCREENWIDTH + !!(width % SCREENWIDTH), MAXUPSCALEWIDTH);
     upscaledheight = MIN(height / SCREENHEIGHT + !!(height % SCREENHEIGHT), MAXUPSCALEHEIGHT);
 }
+
+void (*blitfunc)(void);
+void (*mapblitfunc)(void);
+
+void nullfunc(void) {}
 
 static uint64_t performancefrequency;
 uint64_t        starttime;
@@ -970,10 +952,6 @@ void I_Blit_Automap_NearestLinear(void)
     SDL_RenderCopy(maprenderer, maptexture_upscaled, NULL, NULL);
     SDL_RenderPresent(maprenderer);
 }
-
-void (*blitfunc)(void);
-void (*mapblitfunc)(void);
-static void nullfunc(void) {}
 
 void I_UpdateBlitFunc(dboolean shake)
 {
@@ -1199,24 +1177,32 @@ void GetWindowSize(void)
     }
     else
     {
-        int w = atoi(uncommify(width));
-        int h = atoi(uncommify(height));
+        char    *width_str = uncommify(width);
+        char    *height_str = uncommify(height);
+        int     w = atoi(width_str);
+        int     h = atoi(height_str);
 
         if (w < ORIGINALWIDTH + windowborderwidth || h < ORIGINALWIDTH * 3 / 4 + windowborderheight)
         {
             char    size[16];
+            char    *windowwidth_str = commify((windowwidth = ORIGINALWIDTH + windowborderwidth));
+            char    *windowheight_str = commify((windowheight = ORIGINALWIDTH * 3 / 4 + windowborderheight));
 
-            windowwidth = ORIGINALWIDTH + windowborderwidth;
-            windowheight = ORIGINALWIDTH * 3 / 4 + windowborderheight;
-            M_snprintf(size, sizeof(size), "%sx%s", commify(windowwidth), commify(windowheight));
-            vid_windowsize = strdup(size);
+            M_snprintf(size, sizeof(size), "%sx%s", windowwidth_str, windowheight_str);
+            vid_windowsize = M_StringDuplicate(size);
             M_SaveCVARs();
+
+            free(windowwidth_str);
+            free(windowheight_str);
         }
         else
         {
             windowwidth = w;
             windowheight = h;
         }
+
+        free(width_str);
+        free(height_str);
     }
 
     free(width);
@@ -1267,62 +1253,19 @@ void GetScreenResolution(void)
     }
 }
 
-static const resolution_t resolutions[] =
-{
-    {  960,  640, "DVGA",   "3:2"   }, {  960,  720, "",       "4:3"   }, { 1024,  640, "",       "16:10" },
-    { 1024,  768, "XGA",    "4:3"   }, { 1136,  640, "",       "16:9"  }, { 1152,  720, "",       "3:2"   },
-    { 1152,  768, "WXGA",   "3:2"   }, { 1152,  864, "XGA+",   "4:3"   }, { 1280,  720, "WXGA",   "16:9"  },
-    { 1280,  768, "WXGA",   "5:3"   }, { 1280,  800, "WXGA",   "16:10" }, { 1280,  864, "",       "3:2"   },
-    { 1280,  960, "SXGA-",  "4:3"   }, { 1280, 1024, "SXGA",   "5:4"   }, { 1360,  768, "FWXGA",  "16:9"  },
-    { 1366,  768, "FWXGA",  "16:9"  }, { 1400, 1050, "SXGA+",  "4:3"   }, { 1440,  900, "WXGA+",  "16:10" },
-    { 1440,  960, "FWXGA+", "3:2"   }, { 1600,  900, "HD+",    "16:9"  }, { 1600, 1024, "WSXGA",  "3:2"   },
-    { 1600, 1200, "UXGA",   "4:3"   }, { 1680, 1050, "WSXGA+", "16:10" }, { 1792, 1344, "",       "4:3"   },
-    { 1856, 1392, "",       "4:3"   }, { 1920, 1080, "FHD",    "16:9"  }, { 1920, 1200, "WUXGA",  "16:10" },
-    { 1920, 1280, "",       "3:2"   }, { 1920, 1440, "",       "4:3"   }, { 2048, 1152, "QWXGA",  "16:9"  },
-    { 2048, 1536, "QXGA",   "4:3"   }, { 2160, 1440, "",       "3:2"   }, { 2560, 1080, "",       "21:9"  },
-    { 2560, 1440, "QHD",    "16:9", }, { 2560, 1600, "WQXGA",  "16:10" }, { 2560, 1920, "",       "4:3"   },
-    { 2560, 2048, "QSXGA",  "5:4"   }, { 2880, 1620, "",       "16:9"  }, { 2880, 1800, "",       "16:10" },
-    { 3200, 1800, "WQXGA+", "16:9"  }, { 3200, 2048, "WQSXGA", "25:16" }, { 3200, 2400, "QUXGA",  "4:3"   },
-    { 3440, 1440, "",       "21:9"  }, { 3840, 2160, "UHD",    "16:9"  }, { 3840, 2400, "WQUXGA", "16:10" },
-    { 4096, 2160, "DCI",    "19:10" }, { 4096, 2560, "4K",     "16:10" }, { 4096, 3072, "HXGA",   "4:3"   },
-    { 5120, 2160, "4K",     "21:9"  }, { 5120, 2880, "UHD+",   "16:9"  }, { 5120, 3200, "WHXGA",  "16:10" },
-    { 5120, 4096, "HSXGA",  "5:4"   }, { 5760, 3240, "",       "16:9"  }, { 6400, 4096, "WHSXGA", "25:16" },
-    { 6400, 4800, "",       "4:3"   }, { 7680, 4320, "FUHD",   "16:9"  }, { 7680, 4800, "WHUXGA", "16:10" },
-    { 8192, 5120, "FUHD",   "16:10" }, {    0,    0, "",       ""      }
-};
-
-static char *getacronym(int width, int height)
-{
-    int i = 0;
-
-    while (resolutions[i].width)
-    {
-        if (width == resolutions[i].width && height == resolutions[i].height)
-            return resolutions[i].acronym;
-
-        i++;
-    }
-
-    return "";
-}
-
 static char *getaspectratio(int width, int height)
 {
-    int         i = 0;
-    int         hcf;
+    int         hcf = gcd(width, height);
     static char ratio[10];
 
-    while (resolutions[i].width)
-    {
-        if (width == resolutions[i].width && height == resolutions[i].height)
-            return resolutions[i].aspectratio;
-
-        i++;
-    }
-
-    hcf = gcd(width, height);
     width /= hcf;
     height /= hcf;
+
+    if (width == 8)
+    {
+        width = 16;
+        height *= 2;
+    }
 
     M_snprintf(ratio, sizeof(ratio), "%i:%i", width, height);
     return ratio;
@@ -1361,22 +1304,19 @@ static void SetVideoMode(dboolean output)
     Uint32              rmask, gmask, bmask, amask;
     int                 bpp;
     SDL_RendererInfo    rendererinfo;
+    const char          *displayname = SDL_GetDisplayName((displayindex = vid_display - 1));
 
-    displayindex = vid_display - 1;
-
-    if (displayindex < 0 || displayindex >= numdisplays)
+    if (displayindex < 0 || displayindex >= numdisplays || !displayname)
     {
         if (output)
             C_Warning("Unable to find display %i.", vid_display);
 
-        displayindex = vid_display_default - 1;
+        displayname = SDL_GetDisplayName((displayindex = vid_display_default - 1));
     }
 
     if (output)
     {
-        const char  *displayname = SDL_GetDisplayName(displayindex);
-
-        if (*displayname)
+        if (displayname)
             C_Output("Using display %i of %i called \"%s\".", displayindex + 1, numdisplays, displayname);
         else
             C_Output("Using display %i of %i.", displayindex + 1, numdisplays);
@@ -1413,15 +1353,13 @@ static void SetVideoMode(dboolean output)
 
     if (vid_fullscreen)
     {
-        char    *acronym;
-        char    *ratio;
-
         if (!screenwidth && !screenheight)
         {
             width = displays[displayindex].w;
             height = displays[displayindex].h;
-            acronym = getacronym(width, height);
-            ratio = getaspectratio(width, height);
+
+            if (!width || !height)
+                I_Error("Graphics couldn't be initialized.");
 
 
 #ifdef __ANDROID__
@@ -1432,22 +1370,36 @@ static void SetVideoMode(dboolean output)
 
 
             if (output)
-                C_Output("Staying at the desktop resolution of %s\xD7%s%s%s%s with a %s aspect ratio.",
-                    commify(width), commify(height), (*acronym ? " (" : ""), acronym, (*acronym ? ")" : ""), ratio);
+            {
+                char    *width_str = commify(width);
+                char    *height_str = commify(height);
+
+                C_Output("Staying at the native desktop resolution of %s\xD7%s with a %s aspect ratio.",
+                    width_str, height_str, getaspectratio(width, height));
+
+                free(width_str);
+                free(height_str);
+            }
         }
         else
         {
             width = screenwidth;
             height = screenheight;
-            acronym = getacronym(width, height);
-            ratio = getaspectratio(width, height);
 
             window = SDL_CreateWindow(PACKAGE_NAME, SDL_WINDOWPOS_UNDEFINED_DISPLAY(displayindex),
                 SDL_WINDOWPOS_UNDEFINED_DISPLAY(displayindex), width, height, (windowflags | SDL_WINDOW_FULLSCREEN));
 
             if (output)
-                C_Output("Switched to a resolution of %s\xD7%s%s%s%s with a %s aspect ratio.",
-                    commify(width), commify(height), (*acronym ? " (" : ""), acronym, (*acronym ? ")" : ""), ratio);
+            {
+                char    *width_str = commify(width);
+                char    *height_str = commify(height);
+
+                C_Output("Switched to a resolution of %s\xD7%s with a %s aspect ratio.",
+                    width_str, height_str, getaspectratio(width, height));
+
+                free(width_str);
+                free(height_str);
+            }
         }
     }
     else
@@ -1468,16 +1420,30 @@ static void SetVideoMode(dboolean output)
                 SDL_WINDOWPOS_CENTERED_DISPLAY(displayindex), width, height, windowflags);
 
             if (output)
-                C_Output("Created a resizable window with dimensions %s\xD7%s centered on the screen.",
-                    commify(width), commify(height));
+            {
+                char    *width_str = commify(width);
+                char    *height_str = commify(height);
+
+                C_Output("Created a resizable window with dimensions %s\xD7%s centered on the screen.", width_str, height_str);
+
+                free(width_str);
+                free(height_str);
+            }
         }
         else
         {
             window = SDL_CreateWindow(PACKAGE_NAME, windowx, windowy, width, height, windowflags);
 
             if (output)
-                C_Output("Created a resizable window with dimensions %s\xD7%s at (%i,%i).",
-                    commify(width), commify(height), windowx, windowy);
+            {
+                char    *width_str = commify(width);
+                char    *height_str = commify(height);
+
+                C_Output("Created a resizable window with dimensions %s\xD7%s at (%i,%i).", width_str, height_str, windowx, windowy);
+
+                free(width_str);
+                free(height_str);
+            }
         }
     }
 
@@ -1589,16 +1555,42 @@ static void SetVideoMode(dboolean output)
         {
             if (nearestlinear)
             {
+                char    *upscaledwidth_str = commify(upscaledwidth * SCREENWIDTH);
+                char    *upscaledheight_str = commify(upscaledheight * SCREENHEIGHT);
+                char    *width_str = commify(height * 4 / 3);
+                char    *height_str = commify(height);
+
                 C_Output("The %i\xD7%i screen is scaled up to %s\xD7%s using nearest-neighbor interpolation.",
-                    SCREENWIDTH, SCREENHEIGHT, commify(upscaledwidth * SCREENWIDTH), commify(upscaledheight * SCREENHEIGHT));
-                C_Output("It is then scaled down to %s\xD7%s using linear filtering.", commify(height * 4 / 3), commify(height));
+                    SCREENWIDTH, SCREENHEIGHT, upscaledwidth_str, upscaledheight_str);
+                C_Output("It is then scaled down to %s\xD7%s using linear filtering.", width_str, height_str);
+
+                free(upscaledwidth_str);
+                free(upscaledheight_str);
+                free(width_str);
+                free(height_str);
             }
             else if (M_StringCompare(vid_scalefilter, vid_scalefilter_linear) && !software)
+            {
+                char    *width_str = commify(height * 4 / 3);
+                char    *height_str = commify(height);
+
                 C_Output("The %i\xD7%i screen is scaled up to %s\xD7%s using linear filtering.",
-                    SCREENWIDTH, SCREENHEIGHT, commify(height * 4 / 3), commify(height));
+                    SCREENWIDTH, SCREENHEIGHT, width_str, height_str);
+
+                free(width_str);
+                free(height_str);
+            }
             else
+            {
+                char    *width_str = commify(height * 4 / 3);
+                char    *height_str = commify(height);
+
                 C_Output("The %i\xD7%i screen is scaled up to %s\xD7%s using nearest-neighbor interpolation.",
-                    SCREENWIDTH, SCREENHEIGHT, commify(height * 4 / 3), commify(height));
+                    SCREENWIDTH, SCREENHEIGHT, width_str, height_str);
+
+                free(width_str);
+                free(height_str);
+            }
         }
 
         I_CapFPS(0);
@@ -1623,7 +1615,12 @@ static void SetVideoMode(dboolean output)
                     I_CapFPS(vid_capfps);
 
                     if (output)
-                        C_Output("The framerate is capped at %s FPS.", commify(vid_capfps));
+                    {
+                        char    *vid_capfps_str = commify(vid_capfps);
+
+                        C_Output("The framerate is capped at %s FPS.", vid_capfps_str);
+                        free(vid_capfps_str);
+                    }
                 }
             }
         }
@@ -1643,7 +1640,12 @@ static void SetVideoMode(dboolean output)
                 }
 
                 if (vid_capfps)
-                    C_Output("The framerate is capped at %s FPS.", commify(vid_capfps));
+                {
+                    char    *vid_capfps_str = commify(vid_capfps);
+
+                    C_Output("The framerate is capped at %s FPS.", vid_capfps_str);
+                    free(vid_capfps_str);
+                }
                 else
                     C_Output("The framerate is uncapped.");
             }
@@ -1725,11 +1727,17 @@ void I_ToggleWidescreen(dboolean toggle)
     {
         vid_widescreen = true;
 
+
 #ifdef __ANDROID__
         if( M_CheckParm("-android_aspect") )
+        {
 #endif
-        SDL_RenderSetLogicalSize(renderer, SCREENWIDTH, SCREENWIDTH * 10 / 16);
 
+        SDL_RenderSetLogicalSize(renderer, 0, 0);
+        SDL_RenderSetLogicalSize(renderer, SCREENWIDTH, SCREENWIDTH * 10 / 16);
+#ifdef __ANDROID__
+        }
+#endif
         src_rect.h = SCREENHEIGHT - SBARHEIGHT;
     }
     else
@@ -1739,18 +1747,22 @@ void I_ToggleWidescreen(dboolean toggle)
         if (gamestate == GS_LEVEL)
             ST_doRefresh();
 
+
 #ifdef __ANDROID__
         if( M_CheckParm("-android_aspect") )
+        {
 #endif
-        SDL_RenderSetLogicalSize(renderer, SCREENWIDTH, SCREENWIDTH * 3 / 4);
 
+        SDL_RenderSetLogicalSize(renderer, 0, 0);
+        SDL_RenderSetLogicalSize(renderer, SCREENWIDTH, SCREENWIDTH * 3 / 4);
+#ifdef __ANDROID__
+        }
+#endif
         src_rect.h = SCREENHEIGHT;
     }
 
     returntowidescreen = false;
     setsizeneeded = true;
-
-    HU_InitMessages();
 
     SDL_SetPaletteColors(palette, colors, 0, 256);
 }
@@ -1865,7 +1877,6 @@ void I_InitKeyboard(void)
 
 void I_InitGraphics(void)
 {
-    int         i = 0;
     SDL_Event   dummy;
     SDL_version linked;
     SDL_version compiled;
@@ -1883,8 +1894,8 @@ void I_InitGraphics(void)
 
     performancefrequency = SDL_GetPerformanceFrequency();
 
-    while (i < UCHAR_MAX)
-        keys[i++] = true;
+    for (int i = 0; i < UCHAR_MAX; i++)
+        keys[i] = true;
 
     keys['v'] = keys['V'] = false;
     keys['s'] = keys['S'] = false;
@@ -1928,6 +1939,7 @@ void I_InitGraphics(void)
     SDL_SetWindowTitle(window, PACKAGE_NAME);
 
     I_UpdateBlitFunc(false);
+    memset(screens[0], nearestblack, SCREENWIDTH * SCREENHEIGHT);
     blitfunc();
 
     while (SDL_PollEvent(&dummy));

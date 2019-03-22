@@ -6,13 +6,13 @@
 
 ========================================================================
 
-  Copyright © 1993-2012 id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2018 Brad Harding.
+  Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
+  Copyright © 2013-2019 by Brad Harding.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
 
-  This file is part of DOOM Retro.
+  This file is a part of DOOM Retro.
 
   DOOM Retro is free software: you can redistribute it and/or modify it
   under the terms of the GNU General Public License as published by the
@@ -28,7 +28,7 @@
   along with DOOM Retro. If not, see <https://www.gnu.org/licenses/>.
 
   DOOM is a registered trademark of id Software LLC, a ZeniMax Media
-  company, in the US and/or other countries and is used without
+  company, in the US and/or other countries, and is used without
   permission. All other trademarks are the property of their respective
   holders. DOOM Retro is in no way affiliated with nor endorsed by
   id Software.
@@ -56,14 +56,15 @@ void V_FillRect(int scrn, int x, int y, int width, int height, int color, dboole
 void V_FillTransRect(int scrn, int x, int y, int width, int height, int color, dboolean right);
 
 void V_DrawPatch(int x, int y, int scrn, patch_t *patch);
+void V_DrawSTBARPatch(int x, int y, patch_t *patch);
 void V_DrawBigPatch(int x, int y, int scrn, patch_t *patch);
+void V_DrawBigTranslucentPatch(int x, int y, patch_t *patch);
 void V_DrawConsoleTextPatch(int x, int y, patch_t *patch, int color, int backgroundcolor, dboolean italics, byte *translucency);
-void V_DrawConsolePatch(int x, int y, patch_t *patch, int color1a, int color1b, int color2a, int color2b);
 void V_DrawShadowPatch(int x, int y, patch_t *patch);
 void V_DrawSolidShadowPatch(int x, int y, patch_t *patch);
 void V_DrawSpectreShadowPatch(int x, int y, patch_t *patch);
 void V_DrawSolidSpectreShadowPatch(int x, int y, patch_t *patch);
-dboolean V_EmptyPatch(patch_t *patch);
+dboolean V_IsEmptyPatch(patch_t *patch);
 void V_DrawPatchWithShadow(int x, int y, patch_t *patch, dboolean flag);
 void V_DrawFlippedPatch(int x, int y, patch_t *patch);
 void V_DrawFlippedShadowPatch(int x, int y, patch_t *patch);
@@ -88,7 +89,7 @@ void V_DrawAltHUDText(int x, int y, patch_t *patch, int color);
 void V_DrawTranslucentAltHUDText(int x, int y, patch_t *patch, int color);
 void V_DrawPagePatch(patch_t *patch);
 
-void V_DrawPixel(int x, int y, byte color, dboolean shadow);
+void V_DrawPixel(int x, int y, byte color, dboolean drawshadow);
 
 void GetPixelSize(dboolean reset);
 void V_LowGraphicDetail(void);

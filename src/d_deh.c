@@ -6,13 +6,13 @@
 
 ========================================================================
 
-  Copyright © 1993-2012 id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2018 Brad Harding.
+  Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
+  Copyright © 2013-2019 by Brad Harding.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
 
-  This file is part of DOOM Retro.
+  This file is a part of DOOM Retro.
 
   DOOM Retro is free software: you can redistribute it and/or modify it
   under the terms of the GNU General Public License as published by the
@@ -28,7 +28,7 @@
   along with DOOM Retro. If not, see <https://www.gnu.org/licenses/>.
 
   DOOM is a registered trademark of id Software LLC, a ZeniMax Media
-  company, in the US and/or other countries and is used without
+  company, in the US and/or other countries, and is used without
   permission. All other trademarks are the property of their respective
   holders. DOOM Retro is in no way affiliated with nor endorsed by
   id Software.
@@ -43,13 +43,10 @@
 #include "doomstat.h"
 #include "dstrings.h"
 #include "i_system.h"
-#include "info.h"
 #include "m_cheat.h"
 #include "m_misc.h"
 #include "p_local.h"
 #include "sounds.h"
-#include "sprites.h"
-#include "version.h"
 #include "w_wad.h"
 #include "z_zone.h"
 
@@ -686,7 +683,7 @@ char    *s_OB_FRIENDLY4 = "";
 
 // Do this for a lookup--the pointer (loaded above) is cross-referenced
 // to a string key that is the same as the define above. We will use
-// strdups to set these new values that we read from the file, orphaning
+// M_StringDuplicates to set these new values that we read from the file, orphaning
 // the original value set above.
 
 deh_strs deh_strlookup[] =
@@ -1250,8 +1247,6 @@ deh_strs deh_strlookup[] =
 
 static const int deh_numstrlookup = sizeof(deh_strlookup) / sizeof(deh_strlookup[0]);
 
-char *deh_newlevel = "NEWLEVEL";
-
 char **mapnames[] =     // DOOM shareware/registered/retail (Ultimate) names.
 {
     &s_HUSTR_E1M1,
@@ -1290,15 +1285,15 @@ char **mapnames[] =     // DOOM shareware/registered/retail (Ultimate) names.
     &s_HUSTR_E4M7,
     &s_HUSTR_E4M8,
     &s_HUSTR_E4M9,
-    &deh_newlevel,      // spares? Unused.
-    &deh_newlevel,
-    &deh_newlevel,
-    &deh_newlevel,
-    &deh_newlevel,
-    &deh_newlevel,
-    &deh_newlevel,
-    &deh_newlevel,
-    &deh_newlevel
+    &s_HUSTR_E5M1,
+    &s_HUSTR_E5M2,
+    &s_HUSTR_E5M3,
+    &s_HUSTR_E5M4,
+    &s_HUSTR_E5M5,
+    &s_HUSTR_E5M6,
+    &s_HUSTR_E5M7,
+    &s_HUSTR_E5M8,
+    &s_HUSTR_E5M9
 };
 
 char **mapnames2[] =    // DOOM 2 map names.
@@ -2034,7 +2029,7 @@ void ProcessDehFile(char *filename, int lumpnum)
     // loop until end of file
     while (dehfgets(inbuffer, sizeof(inbuffer), filein))
     {
-        dboolean        match;
+        dboolean        match = false;
         unsigned int    i;
         unsigned int    last_i = DEH_BLOCKMAX - 1;
         long            filepos = 0;
@@ -2044,7 +2039,7 @@ void ProcessDehFile(char *filename, int lumpnum)
         if (devparm)
             C_Output("Line = \"%s\"", inbuffer);
 
-        if (!*inbuffer || *inbuffer == '#' || *inbuffer == ' ')
+        if (!*inbuffer || *inbuffer == '#' || *inbuffer == ' ' || (*inbuffer == '/' && *(inbuffer + 1) == '/'))
             continue;   // Blank line or comment line
 
         // -- If DEH_BLOCKMAX is set right, the processing is independently
@@ -2089,7 +2084,7 @@ void ProcessDehFile(char *filename, int lumpnum)
             continue;
         }
 
-        for (match = false, i = 0; i < DEH_BLOCKMAX; i++)
+        for (i = 0; i < DEH_BLOCKMAX; i++)
             if (!strncasecmp(inbuffer, deh_blocks[i].key, strlen(deh_blocks[i].key)))
             {
                 if (i < DEH_BLOCKMAX - 1)
@@ -2127,12 +2122,27 @@ void ProcessDehFile(char *filename, int lumpnum)
         dehcount++;
 
     if (infile.lump)
-        C_Output("Parsed %s line%s in the <b>%s</b> lump in %s <b>%s</b>.", commify(linecount), (linecount > 1 ? "s" : ""),
-            uppercase(lumpinfo[lumpnum]->name), (W_WadType(filename) == IWAD ? "IWAD" : "PWAD"), filename);
+    {
+        char    *linecount_str = commify(linecount);
+        char    *lumpname = uppercase(lumpinfo[lumpnum]->name);
+
+        C_Output("Parsed %s line%s in the <b>%s</b> lump in %s <b>%s</b>.",
+            linecount_str, (linecount > 1 ? "s" : ""), lumpname, (W_WadType(filename) == IWAD ? "IWAD" : "PWAD"), filename);
+
+        free(linecount_str);
+        free(lumpname);
+    }
     else
-        C_Output("Parsed %s line%s in the <i><b>DeHackEd</b></i>%s file <b>%s</b>.", commify(linecount),
-            (linecount > 1 ? "s" : ""), (M_StringEndsWith(uppercase(filename), "BEX") ?
-            " with <i><b>BOOM</b></i> extensions" : ""), GetCorrectCase(filename));
+    {
+        char    *linecount_str = commify(linecount);
+        char    *filename_free = uppercase(filename);
+
+        C_Output("Parsed %s line%s in the <i><b>DeHackEd</b></i>%s file <b>%s</b>.", linecount_str, (linecount > 1 ? "s" : ""),
+            (M_StringEndsWith(filename_free, "BEX") ? " with <i><b>BOOM</b></i> extensions" : ""), GetCorrectCase(filename));
+
+        free(linecount_str);
+        free(filename_free);
+    }
 }
 
 // ====================================================================
@@ -2252,6 +2262,7 @@ static void deh_procThing(DEHFILE *fpin, char *line)
         // e6y: Correction of wrong processing of Bits parameter if its value is equal to zero
         int         bGetData;
         dboolean    gibhealth = false;
+        dboolean    string = false;
 
         if (!dehfgets(inbuffer, sizeof(inbuffer), fpin))
             break;
@@ -2279,8 +2290,7 @@ static void deh_procThing(DEHFILE *fpin, char *line)
             if (M_StringCompare(key, "Bits"))
             {
                 // bit set
-                // e6y: Correction of wrong processing of Bits parameter if its value is equal to
-                // zero
+                // e6y: Correction of wrong processing of Bits parameter if its value is equal to zero
                 if (bGetData == 1)
                     mobjinfo[indexnum].flags = value;
                 else
@@ -2367,18 +2377,6 @@ static void deh_procThing(DEHFILE *fpin, char *line)
                     mobjinfo[indexnum].flags2 = value;
                 }
             }
-            else if (M_StringCompare(key, "Name1"))
-                M_StringCopy(mobjinfo[indexnum].name1, strval, 100);
-            else if (M_StringCompare(key, "Plural1"))
-                M_StringCopy(mobjinfo[indexnum].plural1, strval, 100);
-            else if (M_StringCompare(key, "Name2"))
-                M_StringCopy(mobjinfo[indexnum].name2, strval, 100);
-            else if (M_StringCompare(key, "Plural2"))
-                M_StringCopy(mobjinfo[indexnum].plural2, strval, 100);
-            else if (M_StringCompare(key, "Name3"))
-                M_StringCopy(mobjinfo[indexnum].name3, strval, 100);
-            else if (M_StringCompare(key, "Plural3"))
-                M_StringCopy(mobjinfo[indexnum].plural3, strval, 100);
             else
             {
                 pix = (int *)&mobjinfo[indexnum];
@@ -2395,6 +2393,22 @@ static void deh_procThing(DEHFILE *fpin, char *line)
             if (devparm)
                 C_Output("Assigned %i to %s (%i) at index %i.", (int)value, key, indexnum, ix);
         }
+
+        if ((string = M_StringCompare(key, "Name1")))
+            M_StringCopy(mobjinfo[indexnum].name1, lowercase(trimwhitespace(strval)), 100);
+        else if ((string = M_StringCompare(key, "Plural1")))
+            M_StringCopy(mobjinfo[indexnum].plural1, lowercase(trimwhitespace(strval)), 100);
+        else if ((string = M_StringCompare(key, "Name2")))
+            M_StringCopy(mobjinfo[indexnum].name2, lowercase(trimwhitespace(strval)), 100);
+        else if ((string = M_StringCompare(key, "Plural2")))
+            M_StringCopy(mobjinfo[indexnum].plural2, lowercase(trimwhitespace(strval)), 100);
+        else if ((string = M_StringCompare(key, "Name3")))
+            M_StringCopy(mobjinfo[indexnum].name3, lowercase(trimwhitespace(strval)), 100);
+        else if ((string = M_StringCompare(key, "Plural3")))
+            M_StringCopy(mobjinfo[indexnum].plural3, lowercase(trimwhitespace(strval)), 100);
+
+        if (string && devparm)
+            C_Output("Assigned %s to %s (%i) at index %i.", lowercase(trimwhitespace(strval)), key, indexnum, ix);
 
         if (!gibhealth && mobjinfo[indexnum].spawnhealth && !mobjinfo[indexnum].gibhealth)
             mobjinfo[indexnum].gibhealth = -mobjinfo[indexnum].spawnhealth;
@@ -2568,8 +2582,7 @@ static void deh_procPointer(DEHFILE *fpin, char *line)
             states[indexnum].action = deh_codeptr[value];
 
             if (devparm)
-                C_Output(" - applied %p from codeptr[%ld] to states[%i]", (void *)deh_codeptr[value], value,
-                    indexnum);
+                C_Output(" - applied %p from codeptr[%ld] to states[%i]", (void *)deh_codeptr[value], value, indexnum);
 
             // Write BEX-oriented line to match:
             for (int i = 0; i < arrlen(deh_bexptrs); i++)
@@ -2582,8 +2595,7 @@ static void deh_procPointer(DEHFILE *fpin, char *line)
                 }
         }
         else
-            C_Warning("Invalid frame pointer index for \"%s\" at %ld, xref %p.", key, value,
-                (void *)deh_codeptr[value]);
+            C_Warning("Invalid frame pointer index for \"%s\" at %ld, xref %p.", key, value, (void *)deh_codeptr[value]);
     }
 }
 
@@ -2842,7 +2854,7 @@ static void deh_procPars(DEHFILE *fpin, char *line) // extension
         if (!dehfgets(inbuffer, sizeof(inbuffer), fpin))
             break;
 
-        if (*inbuffer == '#')
+        if (*inbuffer == '#' || (*inbuffer == '/' && *(inbuffer + 1) == '/'))
             continue;                           // skip comment lines
 
         lfstrip(lowercase(inbuffer));           // lowercase it
@@ -2864,8 +2876,7 @@ static void deh_procPars(DEHFILE *fpin, char *line) // extension
                     oldpar = cpars[level - 1];
 
                     if (devparm)
-                        C_Output("Changed par time for MAP%02d from %i to %i seconds", level, oldpar,
-                            partime);
+                        C_Output("Changed par time for MAP%02d from %i to %i seconds", level, oldpar, partime);
 
                     cpars[level - 1] = partime;
                 }
@@ -2886,8 +2897,7 @@ static void deh_procPars(DEHFILE *fpin, char *line) // extension
                 pars[episode][level] = partime;
 
                 if (devparm)
-                    C_Output("Changed par time for E%iM%i from %i to %i seconds", episode, level, oldpar,
-                        partime);
+                    C_Output("Changed par time for E%iM%i from %i to %i seconds", episode, level, oldpar, partime);
             }
         }
     }
@@ -2944,8 +2954,8 @@ static void deh_procCheat(DEHFILE *fpin, char *line)
             while (*p == ' ')
                 p++;
 
-            cheat_mus.sequence = strdup(p);
-            cheat_mus_xy.sequence = strdup(p);
+            cheat_mus.sequence = M_StringDuplicate(p);
+            cheat_mus_xy.sequence = M_StringDuplicate(p);
             success = true;
         }
         else if (M_StringCompare(key, deh_cheat[1]))
@@ -2958,7 +2968,7 @@ static void deh_procCheat(DEHFILE *fpin, char *line)
             while (*p == ' ')
                 p++;
 
-            cheat_choppers.sequence = strdup(p);
+            cheat_choppers.sequence = M_StringDuplicate(p);
             success = true;
         }
         else if (M_StringCompare(key, deh_cheat[2]))
@@ -2971,7 +2981,7 @@ static void deh_procCheat(DEHFILE *fpin, char *line)
             while (*p == ' ')
                 p++;
 
-            cheat_god.sequence = strdup(p);
+            cheat_god.sequence = M_StringDuplicate(p);
             success = true;
         }
         else if (M_StringCompare(key, deh_cheat[3]))
@@ -2984,7 +2994,7 @@ static void deh_procCheat(DEHFILE *fpin, char *line)
             while (*p == ' ')
                 p++;
 
-            cheat_ammo.sequence = strdup(p);
+            cheat_ammo.sequence = M_StringDuplicate(p);
             success = true;
         }
         else if (M_StringCompare(key, deh_cheat[4]))
@@ -2997,7 +3007,7 @@ static void deh_procCheat(DEHFILE *fpin, char *line)
             while (*p == ' ')
                 p++;
 
-            cheat_ammonokey.sequence = strdup(p);
+            cheat_ammonokey.sequence = M_StringDuplicate(p);
             success = true;
         }
         else if (M_StringCompare(key, deh_cheat[5]))
@@ -3010,7 +3020,7 @@ static void deh_procCheat(DEHFILE *fpin, char *line)
             while (*p == ' ')
                 p++;
 
-            cheat_noclip.sequence = strdup(p);
+            cheat_noclip.sequence = M_StringDuplicate(p);
             success = true;
         }
         else if (M_StringCompare(key, deh_cheat[6]))
@@ -3023,7 +3033,7 @@ static void deh_procCheat(DEHFILE *fpin, char *line)
             while (*p == ' ')
                 p++;
 
-            cheat_commercial_noclip.sequence = strdup(p);
+            cheat_commercial_noclip.sequence = M_StringDuplicate(p);
             success = true;
         }
         else if (M_StringCompare(key, deh_cheat[7]))
@@ -3036,7 +3046,7 @@ static void deh_procCheat(DEHFILE *fpin, char *line)
             while (*p == ' ')
                 p++;
 
-            cheat_powerup[0].sequence = strdup(p);
+            cheat_powerup[0].sequence = M_StringDuplicate(p);
             success = true;
         }
         else if (M_StringCompare(key, deh_cheat[8]))
@@ -3049,7 +3059,7 @@ static void deh_procCheat(DEHFILE *fpin, char *line)
             while (*p == ' ')
                 p++;
 
-            cheat_powerup[1].sequence = strdup(p);
+            cheat_powerup[1].sequence = M_StringDuplicate(p);
             success = true;
         }
         else if (M_StringCompare(key, deh_cheat[9]))
@@ -3062,7 +3072,7 @@ static void deh_procCheat(DEHFILE *fpin, char *line)
             while (*p == ' ')
                 p++;
 
-            cheat_powerup[2].sequence = strdup(p);
+            cheat_powerup[2].sequence = M_StringDuplicate(p);
             success = true;
         }
         else if (M_StringCompare(key, deh_cheat[10]))
@@ -3075,7 +3085,7 @@ static void deh_procCheat(DEHFILE *fpin, char *line)
             while (*p == ' ')
                 p++;
 
-            cheat_powerup[3].sequence = strdup(p);
+            cheat_powerup[3].sequence = M_StringDuplicate(p);
             success = true;
         }
         else if (M_StringCompare(key, deh_cheat[11]))
@@ -3088,7 +3098,7 @@ static void deh_procCheat(DEHFILE *fpin, char *line)
             while (*p == ' ')
                 p++;
 
-            cheat_powerup[4].sequence = strdup(p);
+            cheat_powerup[4].sequence = M_StringDuplicate(p);
             success = true;
         }
         else if (M_StringCompare(key, deh_cheat[12]))
@@ -3101,7 +3111,7 @@ static void deh_procCheat(DEHFILE *fpin, char *line)
             while (*p == ' ')
                 p++;
 
-            cheat_powerup[5].sequence = strdup(p);
+            cheat_powerup[5].sequence = M_StringDuplicate(p);
             success = true;
         }
         else if (M_StringCompare(key, deh_cheat[13]))
@@ -3114,7 +3124,7 @@ static void deh_procCheat(DEHFILE *fpin, char *line)
             while (*p == ' ')
                 p++;
 
-            cheat_powerup[6].sequence = strdup(p);
+            cheat_powerup[6].sequence = M_StringDuplicate(p);
             success = true;
         }
         else if (M_StringCompare(key, deh_cheat[14]))
@@ -3127,8 +3137,8 @@ static void deh_procCheat(DEHFILE *fpin, char *line)
             while (*p == ' ')
                 p++;
 
-            cheat_clev.sequence = strdup(p);
-            cheat_clev_xy.sequence = strdup(p);
+            cheat_clev.sequence = M_StringDuplicate(p);
+            cheat_clev_xy.sequence = M_StringDuplicate(p);
             success = true;
         }
         else if (M_StringCompare(key, deh_cheat[15]))
@@ -3141,7 +3151,7 @@ static void deh_procCheat(DEHFILE *fpin, char *line)
             while (*p == ' ')
                 p++;
 
-            cheat_mypos.sequence = strdup(p);
+            cheat_mypos.sequence = M_StringDuplicate(p);
             success = true;
         }
 
@@ -3291,14 +3301,13 @@ static void deh_procText(DEHFILE *fpin, char *line)
             if (!strncasecmp(sprnames[i], inbuffer, fromlen))           // not first char
             {
                 if (devparm)
-                    C_Output("Changing name of sprite at index %i from %s to %*s", i, sprnames[i], tolen,
-                        &inbuffer[fromlen]);
+                    C_Output("Changing name of sprite at index %i from %s to %*s", i, sprnames[i], tolen, &inbuffer[fromlen]);
 
-                // Ty 03/18/98 - not using strdup because length is fixed
+                // Ty 03/18/98 - not using M_StringDuplicate because length is fixed
 
                 // killough 10/98: but it's an array of pointers, so we must
-                // use strdup unless we redeclare sprnames and change all else
-                sprnames[i] = strdup(sprnames[i]);
+                // use M_StringDuplicate unless we redeclare sprnames and change all else
+                sprnames[i] = M_StringDuplicate(sprnames[i]);
 
                 strncpy(sprnames[i], &inbuffer[fromlen], tolen);
                 found = true;
@@ -3325,8 +3334,7 @@ static void deh_procText(DEHFILE *fpin, char *line)
             if (!strncasecmp(S_sfx[i].name, inbuffer, fromlen))
             {
                 if (devparm)
-                    C_Output("Changing name of sfx from %s to %*s", S_sfx[i].name, usedlen,
-                        &inbuffer[fromlen]);
+                    C_Output("Changing name of sfx from %s to %*s", S_sfx[i].name, usedlen, &inbuffer[fromlen]);
 
                 strncpy(S_sfx[i].name, &inbuffer[fromlen], 9);
                 found = true;
@@ -3345,8 +3353,7 @@ static void deh_procText(DEHFILE *fpin, char *line)
                 if (!strncasecmp(S_music[i].name, inbuffer, fromlen))
                 {
                     if (devparm)
-                        C_Output("Changing name of music from %s to %*s", S_music[i].name, usedlen,
-                            &inbuffer[fromlen]);
+                        C_Output("Changing name of music from %s to %*s", S_music[i].name, usedlen, &inbuffer[fromlen]);
 
                     strncpy(S_music[i].name, &inbuffer[fromlen], 9);
                     found = true;
@@ -3359,12 +3366,12 @@ static void deh_procText(DEHFILE *fpin, char *line)
     if (!found) // Nothing we want to handle here -- see if strings can deal with it.
     {
         if (devparm)
-            C_Output("Checking text area through strings for \"%.12s%s\" from = %i to = %i", inbuffer,
-            (strlen(inbuffer) > 12 ? "..." : ""), fromlen, tolen);
+            C_Output("Checking text area through strings for \"%.12s%s\" from = %i to = %i",
+                inbuffer, (strlen(inbuffer) > 12 ? "..." : ""), fromlen, tolen);
 
         if (fromlen <= (int)strlen(inbuffer))
         {
-            line2 = strdup(&inbuffer[fromlen]);
+            line2 = M_StringDuplicate(&inbuffer[fromlen]);
             inbuffer[fromlen] = '\0';
         }
 
@@ -3419,7 +3426,7 @@ static void deh_procStrings(DEHFILE *fpin, char *line)
         if (!dehfgets(inbuffer, sizeof(inbuffer), fpin))
             break;
 
-        if (*inbuffer == '#')
+        if (*inbuffer == '#' || (*inbuffer == '/' && *(inbuffer + 1) == '/'))
             continue;                   // skip comment lines
 
         lfstrip(inbuffer);
@@ -3485,8 +3492,7 @@ static dboolean deh_procStringSub(char *key, char *lookfor, char *newstring)
 
     for (int i = 0; i < deh_numstrlookup; i++)
     {
-        found = (lookfor ? M_StringCompare(*deh_strlookup[i].ppstr, lookfor) :
-            M_StringCompare(deh_strlookup[i].lookup, key));
+        found = (lookfor ? M_StringCompare(*deh_strlookup[i].ppstr, lookfor) : M_StringCompare(deh_strlookup[i].lookup, key));
 
         if (found)
         {
@@ -3495,24 +3501,19 @@ static dboolean deh_procStringSub(char *key, char *lookfor, char *newstring)
             if (deh_strlookup[i].assigned)
                 break;
 
-            *deh_strlookup[i].ppstr = t = strdup(newstring);    // orphan originalstring
-            found = true;
+            *deh_strlookup[i].ppstr = t = M_StringDuplicate(newstring);     // orphan originalstring
 
-            // Handle embedded \n's in the incoming string, convert to 0x0a's
-            {
-                char    *s;
+            // Handle embedded \n's in the incoming string, convert to 0x0A's
+            for (char *s = *deh_strlookup[i].ppstr; *s; s++, t++)
+                if (*s == '\\' && (s[1] == 'n' || s[1] == 'N'))             // found one
+                {
+                    s++;
+                    *t = '\n';                                              // skip one extra for second character
+                }
+                else
+                    *t = *s;
 
-                for (s = *deh_strlookup[i].ppstr; *s; s++, t++)
-                    if (*s == '\\' && (s[1] == 'n' || s[1] == 'N'))     // found one
-                    {
-                        s++;
-                        *t = '\n';      // skip one extra for second character
-                    }
-                    else
-                        *t = *s;
-
-                *t = '\0';              // cap off the target string
-            }
+            *t = '\0';                                                      // cap off the target string
 
             if (devparm)
             {
@@ -3520,9 +3521,8 @@ static dboolean deh_procStringSub(char *key, char *lookfor, char *newstring)
                     C_Output("Assigned key %s to \"%s\"", key, newstring);
                 else
                 {
-                    C_Output("Assigned \"%.12s%s\" to \"%.12s%s\" at key %s", lookfor,
-                        (strlen(lookfor) > 12 ? "..." : ""), newstring,
-                        (strlen(newstring) > 12 ? "..." : ""), deh_strlookup[i].lookup);
+                    C_Output("Assigned \"%.12s%s\" to \"%.12s%s\" at key %s", lookfor, (strlen(lookfor) > 12 ? "..." : ""),
+                        newstring, (strlen(newstring) > 12 ? "..." : ""), deh_strlookup[i].lookup);
                     C_Output("*BEX FORMAT:");
                     C_Output("%s = %s", deh_strlookup[i].lookup, dehReformatStr(newstring));
                     C_Output("*END BEX");

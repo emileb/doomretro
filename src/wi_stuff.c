@@ -6,13 +6,13 @@
 
 ========================================================================
 
-  Copyright © 1993-2012 id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2018 Brad Harding.
+  Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
+  Copyright © 2013-2019 by Brad Harding.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
 
-  This file is part of DOOM Retro.
+  This file is a part of DOOM Retro.
 
   DOOM Retro is free software: you can redistribute it and/or modify it
   under the terms of the GNU General Public License as published by the
@@ -28,7 +28,7 @@
   along with DOOM Retro. If not, see <https://www.gnu.org/licenses/>.
 
   DOOM is a registered trademark of id Software LLC, a ZeniMax Media
-  company, in the US and/or other countries and is used without
+  company, in the US and/or other countries, and is used without
   permission. All other trademarks are the property of their respective
   holders. DOOM Retro is in no way affiliated with nor endorsed by
   id Software.
@@ -394,8 +394,16 @@ static void WI_drawLF(void)
 
         if (W_CheckMultipleLumps(name) > 1 && !nerve)
         {
-            V_DrawPatchWithShadow((ORIGINALWIDTH - SHORT(lnames[wbs->last]->width)) / 2 + 1, y + 1, lnames[wbs->last], false);
-            y += SHORT(lnames[wbs->last]->height) + 2;
+            patch_t *patch = lnames[wbs->last];
+            short   width = SHORT(patch->width);
+            short   height = SHORT(patch->height);
+
+            if (width == ORIGINALWIDTH || height == ORIGINALHEIGHT)
+                V_DrawPagePatch(patch);
+            else
+                V_DrawPatchWithShadow((ORIGINALWIDTH - width) / 2 + 1, y + 1, patch, false);
+
+            y += height + 2;
         }
         else
         {
@@ -405,7 +413,7 @@ static void WI_drawLF(void)
     }
 
     if (y >= ORIGINALHEIGHT)
-        y = WI_TITLEY + 33;
+        y = WI_TITLEY + 24;
 
     // draw "Finished!"
     V_DrawPatchWithShadow(x + 1, y + 1, finished, false);
@@ -440,7 +448,16 @@ static void WI_drawEL(void)
             M_snprintf(name, sizeof(name), "WILV%i%i", wbs->epsd, wbs->next);
 
         if (W_CheckMultipleLumps(name) > 1 && !nerve)
-            V_DrawPatchWithShadow((ORIGINALWIDTH - SHORT(lnames[wbs->next]->width)) / 2 + 1, y + 1, lnames[wbs->next], false);
+        {
+            patch_t *patch = lnames[wbs->next];
+            short   width = SHORT(patch->width);
+            short   height = SHORT(patch->height);
+
+            if (width == ORIGINALWIDTH || height == ORIGINALHEIGHT)
+                V_DrawPagePatch(patch);
+            else
+                V_DrawPatchWithShadow((ORIGINALWIDTH - width) / 2 + 1, y + 1, patch, false);
+        }
         else
             WI_drawWILV(y, nextmapname);
     }
@@ -651,7 +668,6 @@ static void WI_drawTime(int x, int y, int t)
             // draw
             if (div == 60 || t / div)
                 V_DrawPatchWithShadow(x + 1, y + 1, colon, true);
-
         } while (t / div);
 
         if (t < 60)
@@ -761,7 +777,7 @@ static int  sp_state;
 
 static void WI_initStats(void)
 {
-    const int   tabs[8] = { 65, 0, 0, 0, 0, 0, 0, 0 };
+    const int   tabs[8] = { 100, 0, 0, 0, 0, 0, 0, 0 };
 
     state = StatCount;
     acceleratestage = 0;
@@ -782,7 +798,7 @@ static void WI_initStats(void)
     C_TabbedOutput(tabs, "Time\t<b>%.2i:%.2i</b>", wbs->stime / TICRATE / 60, wbs->stime / TICRATE % 60);
 
     if (wbs->partime)
-        C_TabbedOutput(tabs, "Par\t<b>%.2i:%.2i</b>", wbs->partime / TICRATE / 60, wbs->partime / TICRATE % 60);
+        C_TabbedOutput(tabs, "Par time\t<b>%.2i:%.2i</b>", wbs->partime / TICRATE / 60, wbs->partime / TICRATE % 60);
 
     WI_initAnimatedBack();
 }
@@ -1165,8 +1181,6 @@ void WI_Drawer(void)
             break;
     }
 }
-
-extern char maptitle[128];
 
 void P_MapName(int ep, int map);
 

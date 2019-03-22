@@ -6,13 +6,13 @@
 
 ========================================================================
 
-  Copyright © 1993-2012 id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2018 Brad Harding.
+  Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
+  Copyright © 2013-2019 by Brad Harding.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
 
-  This file is part of DOOM Retro.
+  This file is a part of DOOM Retro.
 
   DOOM Retro is free software: you can redistribute it and/or modify it
   under the terms of the GNU General Public License as published by the
@@ -28,7 +28,7 @@
   along with DOOM Retro. If not, see <https://www.gnu.org/licenses/>.
 
   DOOM is a registered trademark of id Software LLC, a ZeniMax Media
-  company, in the US and/or other countries and is used without
+  company, in the US and/or other countries, and is used without
   permission. All other trademarks are the property of their respective
   holders. DOOM Retro is in no way affiliated with nor endorsed by
   id Software.
@@ -44,15 +44,14 @@
 #include "doomstat.h"
 #include "hu_lib.h"
 #include "hu_stuff.h"
-#include "m_misc.h"
 #include "i_colors.h"
 #include "i_swap.h"
 #include "i_timer.h"
 #include "m_argv.h"
-#include "m_menu.h"
 #include "m_config.h"
+#include "m_menu.h"
+#include "m_misc.h"
 #include "p_local.h"
-#include "r_main.h"
 #include "st_stuff.h"
 #include "v_video.h"
 #include "w_wad.h"
@@ -61,6 +60,14 @@
 //
 // Locally used constants, shortcuts.
 //
+#define WHITE           4
+#define GRAY            92
+#define DARKGRAY        102
+#define GREEN           114
+#define RED             180
+#define BLUE            198
+#define YELLOW          231
+
 #define STSTR_BEHOLD2   "inVuln, bSrk, Inviso, Rad, Allmap or Lite-amp?"
 
 patch_t                 *hu_font[HU_FONTSIZE];
@@ -68,7 +75,7 @@ static hu_textline_t    w_title;
 
 dboolean                message_on;
 dboolean                message_dontfuckwithme;
-dboolean                message_clearable;
+dboolean                message_menu;
 static dboolean         message_external;
 static dboolean         message_nottobefuckedwith;
 
@@ -84,18 +91,20 @@ static dboolean         headsupactive;
 
 byte                    *tempscreen;
 
+static byte             *crosshaircolor;
+
 static patch_t          *minuspatch;
 static short            minuspatchwidth;
+static int              minuspatchy;
 static patch_t          *greenarmorpatch;
 static patch_t          *bluearmorpatch;
 
+dboolean                crosshair = crosshair_default;
 char                    *playername = playername_default;
 dboolean                r_althud = r_althud_default;
 dboolean                r_diskicon = r_diskicon_default;
 dboolean                r_hud = r_hud_default;
 dboolean                r_hud_translucency = r_hud_translucency_default;
-int                     r_messagescale = r_messagescale_default;
-char                    *r_messagepos = r_messagepos_default;
 
 static patch_t          *stdisk;
 static short            stdiskwidth;
@@ -110,6 +119,10 @@ extern dboolean         emptytallpercent;
 extern int              caretcolor;
 extern patch_t          *faces[ST_NUMFACES];
 extern int              st_faceindex;
+extern dboolean         usemouselook;
+extern dboolean         vanilla;
+
+void A_WeaponReady(mobj_t *actor, player_t *player, pspdef_t *psp);
 
 static void (*hudfunc)(int, int, patch_t *, byte *);
 static void (*hudnumfunc)(int, int, patch_t *, byte *);
@@ -201,15 +214,21 @@ void HU_Init(void)
 
         M_snprintf(buffer, sizeof(buffer), "STCFN%.3d", j++);
         hu_font[i] = W_CacheLumpName(buffer);
-        caretcolor = FindDominantColor(hu_font[i]);
     }
+
+    caretcolor = FindDominantColor(hu_font['A' - HU_FONTSTART]);
 
     if (W_CheckNumForName("STTMINUS") >= 0)
         if (W_CheckMultipleLumps("STTMINUS") > 1 || W_CheckMultipleLumps("STTNUM0") == 1)
         {
+            patch_t *patch = W_CacheLumpName("STTNUM0");
+
             minuspatch = W_CacheLumpName("STTMINUS");
             minuspatchwidth = SHORT(minuspatch->width);
+            minuspatchy = (SHORT(patch->height) - SHORT(minuspatch->height)) / 2;
         }
+
+    crosshaircolor = tinttab40 + (nearestcolors[WHITE] << 8);
 
     tempscreen = Z_Malloc(SCREENWIDTH * SCREENHEIGHT, PU_STATIC, NULL);
 
@@ -252,7 +271,7 @@ static void HU_Stop(void)
 
 void HU_Start(void)
 {
-    char    *s = strdup(automaptitle);
+    char    *s = M_StringDuplicate(automaptitle);
     int     len = (int)strlen(s);
 
     if (headsupactive)
@@ -261,7 +280,6 @@ void HU_Start(void)
     message_on = false;
     message_dontfuckwithme = false;
     message_nottobefuckedwith = false;
-    message_clearable = false;
     message_external = false;
 
     // create the message widget
@@ -270,7 +288,7 @@ void HU_Start(void)
     // create the map title widget
     HUlib_initTextLine(&w_title, w_title.x, w_title.y, hu_font, HU_FONTSTART);
 
-    while (M_StringWidth(s) > (r_messagescale == r_messagescale_small ? (SCREENWIDTH - 12) : (ORIGINALWIDTH - 6)))
+    while (M_StringWidth(s) > (vid_widescreen ? (SCREENWIDTH - 12) : (ORIGINALWIDTH - 6)))
     {
         if (len >= 2 && s[len - 2] == ' ')
         {
@@ -307,7 +325,7 @@ static void DrawHUDNumber(int *x, int y, int val, byte *translucency, patch_t **
         if (minuspatch)
         {
             val = -val;
-            hudnumfunc(*x, y + 5, minuspatch, translucency);
+            hudnumfunc(*x, y + minuspatchy, minuspatch, translucency);
             *x += minuspatchwidth;
 
             if (val == 1 || (val >= 10 && val <= 19) || (val >= 100 && val <= 199))
@@ -351,7 +369,6 @@ static int HUDNumberWidth(int val, patch_t **numset, int gap)
         if (minuspatch)
         {
             val = -val;
-            oldval = val;
             width = minuspatchwidth;
 
             if (val == 1 || (val >= 10 && val <= 19) || (val >= 100 && val <= 199))
@@ -376,6 +393,19 @@ static int HUDNumberWidth(int val, patch_t **numset, int gap)
     return width;
 }
 
+static void HU_DrawCrosshair(void)
+{
+    byte    *dot = *screens + ((SCREENHEIGHT - SBARHEIGHT - 1) * SCREENWIDTH - 2) / 2;
+
+    *dot = *(*dot + crosshaircolor);
+    dot++;
+    *dot = *(*dot + crosshaircolor);
+    dot += SCREENWIDTH;
+    *dot = *(*dot + crosshaircolor);
+    dot--;
+    *dot = *(*dot + crosshaircolor);
+}
+
 int healthhighlight = 0;
 int ammohighlight = 0;
 int armorhighlight = 0;
@@ -392,14 +422,14 @@ static void HU_DrawHUD(void)
     static dboolean     healthanim;
     byte                *translucency = (health <= 0 || (health <= HUD_HEALTH_MIN && healthanim)
                             || health > HUD_HEALTH_MIN ? tinttab66 : tinttab25);
-    patch_t             *patch = faces[st_faceindex];
+    patch_t             *patch;
     const dboolean      gamepaused = (menuactive || paused || consoleactive);
     const int           currenttime = I_GetTimeMS();
     int                 keypic_x = (armor ? HUD_KEYS_X : SCREENWIDTH - 13);
     static int          keywait;
     static dboolean     showkey;
 
-    if (patch)
+    if ((patch = faces[st_faceindex]))
         hudfunc(HUD_HEALTH_X - SHORT(patch->width) / 2, HUD_HEALTH_Y - SHORT(patch->height) - 3, patch, tinttab66);
 
     if (healthhighlight > currenttime)
@@ -477,7 +507,7 @@ static void HU_DrawHUD(void)
             {
                 keypic_x -= SHORT(patch->width);
                 hudfunc(keypic_x, HUD_KEYS_Y - (SHORT(patch->height) - 16), patch, tinttab66);
-                keypic_x -= 4;
+                keypic_x -= 5;
             }
 
     if (viewplayer->neededcardflash)
@@ -528,14 +558,6 @@ static void HU_DrawHUD(void)
 #define ALTHUD_LEFT_X   21
 #define ALTHUD_RIGHT_X  (SCREENWIDTH - 179)
 #define ALTHUD_Y        (SCREENHEIGHT - SBARHEIGHT - 37)
-
-#define WHITE           4
-#define GRAY            92
-#define DARKGRAY        102
-#define GREEN           114
-#define RED             180
-#define BLUE            198
-#define YELLOW          231
 
 typedef struct
 {
@@ -876,57 +898,71 @@ void HU_DrawDisk(void)
         V_DrawBigPatch(SCREENWIDTH - HU_MSGX * SCREENSCALE - stdiskwidth, HU_MSGY * SCREENSCALE, 0, stdisk);
 }
 
-void HU_InitMessages(void)
+void HU_Drawer(void)
 {
-    int x, y;
+    if (menuactive && !message_menu)
+        return;
 
-    if (sscanf(r_messagepos, "(%10i,%10i)", &x, &y) != 2 || x < 0 || x >= SCREENWIDTH || y < 0 || y >= SCREENHEIGHT - SBARHEIGHT)
+    if (w_message.l->l[0])
     {
-        x = HU_MSGX;
-        y = HU_MSGY;
-        r_messagepos = r_messagepos_default;
-        M_SaveCVARs();
-    }
-
-    if (!vid_widescreen || !r_althud)
-    {
-        if (r_messagescale == r_messagescale_small)
+        if (vanilla)
         {
-            w_message.l->x = BETWEEN(0, x * SCREENSCALE, SCREENWIDTH - M_StringWidth(w_message.l->l));
-            w_message.l->y = BETWEEN(0, y * SCREENSCALE, SCREENHEIGHT - SBARHEIGHT - hu_font[0]->height);
+            w_message.l->x = 0;
+            w_message.l->y = 0;
+
+            HUlib_drawSText(&w_message, message_external);
+        }
+        else if (vid_widescreen)
+        {
+            if (r_althud)
+            {
+                w_message.l->x = BETWEEN(0, HU_MSGX, ORIGINALWIDTH - M_StringWidth(w_message.l->l));
+                w_message.l->y = BETWEEN(0, HU_MSGY, ORIGINALHEIGHT - ORIGINALSBARHEIGHT - hu_font[0]->height);
+
+                HUlib_drawSText(&w_message, message_external);
+            }
+            else
+            {
+                w_message.l->x = BETWEEN(0, HU_MSGX * SCREENSCALE, SCREENWIDTH - M_StringWidth(w_message.l->l)) + 9;
+                w_message.l->y = BETWEEN(0, HU_MSGY * SCREENSCALE, SCREENHEIGHT - SBARHEIGHT - hu_font[0]->height) + 4;
+
+                HUlib_drawSText(&w_message, message_external);
+            }
         }
         else
         {
-            w_message.l->x = BETWEEN(0, x, ORIGINALWIDTH - M_StringWidth(w_message.l->l));
-            w_message.l->y = BETWEEN(0, y, ORIGINALHEIGHT - ORIGINALSBARHEIGHT - hu_font[0]->height);
-        }
+            w_message.l->x = HU_MSGX;
+            w_message.l->y = HU_MSGY;
 
-        if (r_messagescale == r_messagescale_small)
+            HUlib_drawSText(&w_message, message_external);
+        }
+    }
+
+    if (automapactive)
+    {
+        if (vid_widescreen)
         {
             w_title.x = HU_TITLEX * SCREENSCALE;
             w_title.y = SCREENHEIGHT - SBARHEIGHT - hu_font[0]->height - 4;
+
+            if (r_althud)
+                HUlib_drawAltAutomapTextLine(&w_title);
+            else
+                HUlib_drawTextLine(&w_title, false);
         }
         else
         {
             w_title.x = HU_TITLEX;
             w_title.y = ORIGINALHEIGHT - ORIGINALSBARHEIGHT - hu_font[0]->height - 2;
-        }
-    }
-}
 
-void HU_Drawer(void)
-{
-    HUlib_drawSText(&w_message, message_external);
-
-    if (automapactive)
-    {
-        if (vid_widescreen && r_althud)
-            HUlib_drawAltAutomapTextLine(&w_title);
-        else
             HUlib_drawTextLine(&w_title, false);
+        }
     }
     else
     {
+        if (crosshair && usemouselook && !autoaim && viewplayer->psprites[ps_weapon].state->action == A_WeaponReady)
+            HU_DrawCrosshair();
+
         if (vid_widescreen && r_hud)
         {
             if (r_althud)
@@ -956,7 +992,6 @@ void HU_Erase(void)
 
 extern fixed_t  m_x, m_y;
 extern fixed_t  m_h, m_w;
-extern dboolean message_dontpause;
 extern int      direction;
 
 void HU_Ticker(void)
@@ -964,21 +999,11 @@ void HU_Ticker(void)
     const dboolean  idmypos = !!(viewplayer->cheats & CF_MYPOS);
 
     // tick down message counter if message is up
-    if (message_counter
-        && ((!menuactive && !paused && !consoleactive) || inhelpscreens || message_dontpause)
-        && !idbehold
-        && !idmypos
-        && !--message_counter)
+    if (message_counter && (!menuactive || message_menu) && !idbehold && !idmypos && !--message_counter)
     {
         message_on = false;
         message_nottobefuckedwith = false;
-
-        if (message_dontpause)
-        {
-            message_dontpause = false;
-            blurred = false;
-        }
-
+        message_menu = false;
         message_external = false;
     }
 
@@ -1008,14 +1033,15 @@ void HU_Ticker(void)
             int x = (m_x + m_w / 2) >> MAPBITS;
             int y = (m_y + m_h / 2) >> MAPBITS;
 
-            M_snprintf(buffer, sizeof(buffer), s_STSTR_MYPOS, direction, x, y, R_PointInSubsector(x, y)->sector->floorheight >> FRACBITS);
+            M_snprintf(buffer, sizeof(buffer), s_STSTR_MYPOS, direction, x, y,
+                R_PointInSubsector(x, y)->sector->floorheight >> FRACBITS);
         }
         else
         {
             int angle = (int)(viewangle * 90.0 / ANG90);
 
-            M_snprintf(buffer, sizeof(buffer), s_STSTR_MYPOS, (angle == 360 ? 0 : angle), viewx >> FRACBITS, viewy >> FRACBITS,
-                viewplayer->mo->z >> FRACBITS);
+            M_snprintf(buffer, sizeof(buffer), s_STSTR_MYPOS, (angle == 360 ? 0 : angle),
+                viewx >> FRACBITS, viewy >> FRACBITS, viewplayer->mo->z >> FRACBITS);
         }
 
         HUlib_addMessageToSText(&w_message, buffer);
@@ -1031,8 +1057,8 @@ void HU_Ticker(void)
             char    message[133];
             int     maxwidth = ORIGINALWIDTH - 6;
 
-            if ((vid_widescreen && r_althud) || r_messagescale == r_messagescale_small)
-                maxwidth *= 2;
+            if (vid_widescreen)
+                maxwidth *= SCREENSCALE;
 
             M_StringCopy(message, viewplayer->message, sizeof(message));
 
@@ -1070,7 +1096,7 @@ void HU_Ticker(void)
 void HU_SetPlayerMessage(char *message, dboolean counter, dboolean external)
 {
     if (!counter)
-        viewplayer->message = strdup(message);
+        viewplayer->message = M_StringDuplicate(message);
     else
     {
         static int  messagecount = 1;
@@ -1085,7 +1111,7 @@ void HU_SetPlayerMessage(char *message, dboolean counter, dboolean external)
             M_StringCopy(viewplayer->prevmessage, message, sizeof(viewplayer->prevmessage));
         }
 
-        viewplayer->message = strdup(buffer);
+        viewplayer->message = M_StringDuplicate(buffer);
     }
 
     message_external = (external && mapwindow);
@@ -1119,7 +1145,7 @@ void HU_PlayerMessage(char *message, dboolean counter, dboolean external)
 
 void HU_ClearMessages(void)
 {
-    if ((idbehold || (viewplayer->cheats & CF_MYPOS)) && !message_clearable)
+    if (idbehold || (viewplayer->cheats & CF_MYPOS))
         return;
 
     viewplayer->message = NULL;
@@ -1127,7 +1153,5 @@ void HU_ClearMessages(void)
     message_on = false;
     message_nottobefuckedwith = false;
     message_dontfuckwithme = false;
-    message_dontpause = false;
-    message_clearable = false;
     message_external = false;
 }

@@ -6,13 +6,13 @@
 
 ========================================================================
 
-  Copyright © 1993-2012 id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2018 Brad Harding.
+  Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
+  Copyright © 2013-2019 by Brad Harding.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
 
-  This file is part of DOOM Retro.
+  This file is a part of DOOM Retro.
 
   DOOM Retro is free software: you can redistribute it and/or modify it
   under the terms of the GNU General Public License as published by the
@@ -28,7 +28,7 @@
   along with DOOM Retro. If not, see <https://www.gnu.org/licenses/>.
 
   DOOM is a registered trademark of id Software LLC, a ZeniMax Media
-  company, in the US and/or other countries and is used without
+  company, in the US and/or other countries, and is used without
   permission. All other trademarks are the property of their respective
   holders. DOOM Retro is in no way affiliated with nor endorsed by
   id Software.
@@ -184,6 +184,10 @@ int P_BoxOnLineSide(fixed_t *tmbox, line_t *ld);
 void P_MakeDivline(line_t *li, divline_t *dl);
 fixed_t P_InterceptVector(divline_t *v2, divline_t *v1);
 
+// MAES: support 512x512 blockmaps.
+int P_GetSafeBlockX(int coord);
+int P_GetSafeBlockY(int coord);
+
 extern fixed_t  opentop;
 extern fixed_t  openbottom;
 extern fixed_t  openrange;
@@ -226,6 +230,7 @@ extern dboolean infight;
 dboolean P_CheckPosition(mobj_t *thing, fixed_t x, fixed_t y);
 mobj_t *P_CheckOnmobj(mobj_t *thing);
 void P_FakeZMovement(mobj_t *mo);
+dboolean P_IsInLiquid(mobj_t *thing);
 dboolean P_TryMove(mobj_t *thing, fixed_t x, fixed_t y, dboolean dropoff);
 dboolean P_CheckLineSide(mobj_t *actor, fixed_t x, fixed_t y);
 dboolean P_TeleportMove(mobj_t *thing, fixed_t x, fixed_t y, fixed_t z, dboolean boss);
@@ -262,12 +267,17 @@ extern fixed_t      bmaporgx;
 extern fixed_t      bmaporgy;       // origin of block map
 extern mobj_t       **blocklinks;   // for thing chains
 
+// MAES: extensions to support 512x512 blockmaps.
+extern int          blockmapxneg;
+extern int          blockmapyneg;
+
 //
 // P_INTER
 //
 #define MAXHEALTH   100
 
 void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, dboolean message, dboolean stat);
+dboolean P_TakeSpecialThing(mobjtype_t type);
 
 void P_DamageMobj(mobj_t *target, mobj_t *inflicter, mobj_t *source, int damage, dboolean adjust);
 

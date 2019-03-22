@@ -6,8 +6,8 @@
 #
 #========================================================================
 #
-#  Copyright © 1993-2012 id Software LLC, a ZeniMax Media company.
-#  Copyright © 2013-2018 Brad Harding.
+#  Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
+#  Copyright © 2013-2019 by Brad Harding.
 #
 #  DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
 #  <https://github.com/bradharding/doomretro/wiki/CREDITS>.
@@ -69,7 +69,7 @@ IF (APPLE)
 ENDIF (APPLE)
 
 IF (UNIX)
-	SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=gnu99")
+	SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -g -std=gnu99")
 ENDIF (UNIX)
 
 TARGET_LINK_LIBRARIES(

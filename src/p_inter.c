@@ -6,13 +6,13 @@
 
 ========================================================================
 
-  Copyright © 1993-2012 id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2018 Brad Harding.
+  Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
+  Copyright © 2013-2019 by Brad Harding.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
 
-  This file is part of DOOM Retro.
+  This file is a part of DOOM Retro.
 
   DOOM Retro is free software: you can redistribute it and/or modify it
   under the terms of the GNU General Public License as published by the
@@ -28,7 +28,7 @@
   along with DOOM Retro. If not, see <https://www.gnu.org/licenses/>.
 
   DOOM is a registered trademark of id Software LLC, a ZeniMax Media
-  company, in the US and/or other countries and is used without
+  company, in the US and/or other countries, and is used without
   permission. All other trademarks are the property of their respective
   holders. DOOM Retro is in no way affiliated with nor endorsed by
   id Software.
@@ -46,8 +46,8 @@
 #include "m_config.h"
 #include "m_misc.h"
 #include "m_random.h"
-#include "p_local.h"
 #include "p_inter.h"
+#include "p_local.h"
 #include "p_tick.h"
 #include "s_sound.h"
 
@@ -70,12 +70,14 @@ int             idfa_armor_class = BLUEARMOR;
 int             idkfa_armor = 200;
 int             idkfa_armor_class = BLUEARMOR;
 int             bfgcells = BFGCELLS;
-dboolean        species_infighting;
+dboolean        species_infighting = false;
 
 // a weapon is found with two clip loads,
 // a big item has five clip loads
 int             maxammo[NUMAMMO] =  { 200, 50, 300, 50 };
 int             clipammo[NUMAMMO] = {  10,  4,  20,  1 };
+
+int             cardsprites[NUMCARDS] = { SPR_BKEY, SPR_YKEY, SPR_RKEY, SPR_BSKU, SPR_YSKU, SPR_RSKU };
 
 dboolean        con_obituaries = con_obituaries_default;
 dboolean        r_mirroredweapons = r_mirroredweapons_default;
@@ -111,6 +113,7 @@ unsigned int    stat_monsterskilled_spectres = 0;
 unsigned int    stat_monsterskilled_spidermasterminds = 0;
 unsigned int    stat_monsterskilled_zombiemen = 0;
 
+extern dboolean healthcvar;
 extern int      idclevtics;
 
 void P_UpdateAmmoStat(ammotype_t ammotype, int num)
@@ -140,6 +143,36 @@ void P_UpdateAmmoStat(ammotype_t ammotype, int num)
         default:
             break;
     }
+}
+
+dboolean P_CheckAmmo(weapontype_t weapon);
+
+//
+// P_TakeAmmo
+//
+static dboolean P_TakeAmmo(ammotype_t ammotype, int num)
+{
+    if (ammotype == am_noammo)
+        return false;
+
+    if (num)
+        num *= clipammo[ammotype];
+    else
+        num = clipammo[ammotype] / 2;
+
+    if (gameskill == sk_baby || gameskill == sk_nightmare)
+        num <<= 1;
+
+    if (viewplayer->ammo[ammotype] < num)
+        return false;
+
+    viewplayer->ammo[ammotype] -= num;
+
+    if (ammotype == weaponinfo[viewplayer->readyweapon].ammotype)
+        ammohighlight = I_GetTimeMS() + HUD_AMMO_HIGHLIGHT_WAIT;
+
+    P_CheckAmmo(viewplayer->readyweapon);
+    return true;
 }
 
 //
@@ -419,10 +452,9 @@ dboolean P_GiveMegaHealth(dboolean stat)
 
             if (stat)
                 P_UpdateHealthStat(MAX(0, mega_health - viewplayer->health));
-        }
 
-        if (viewplayer->health < mega_health)
             result = true;
+        }
 
         viewplayer->health = mega_health;
         viewplayer->mo->health = mega_health;
@@ -470,44 +502,16 @@ void P_InitCards(void)
 
     cardsfound = 0;
 
-    for (int i = 0; i < numsectors; i++)
+    for (thinker_t *th = thinkers[th_mobj].cnext; th != &thinkers[th_mobj]; th = th->cnext)
     {
-        mobj_t  *thing = sectors[i].thinglist;
+        mobj_t  *mo = (mobj_t *)th;
 
-        while (thing)
-        {
-            switch (thing->sprite)
+        for (int i = 0; i < NUMCARDS; i++)
+            if (mo->sprite == cardsprites[i])
             {
-                case SPR_BKEY:
-                    viewplayer->cards[it_bluecard] = CARDNOTFOUNDYET;
-                    break;
-
-                case SPR_RKEY:
-                    viewplayer->cards[it_redcard] = CARDNOTFOUNDYET;
-                    break;
-
-                case SPR_YKEY:
-                    viewplayer->cards[it_yellowcard] = CARDNOTFOUNDYET;
-                    break;
-
-                case SPR_BSKU:
-                    viewplayer->cards[it_blueskull] = CARDNOTFOUNDYET;
-                    break;
-
-                case SPR_RSKU:
-                    viewplayer->cards[it_redskull] = CARDNOTFOUNDYET;
-                    break;
-
-                case SPR_YSKU:
-                    viewplayer->cards[it_yellowskull] = CARDNOTFOUNDYET;
-                    break;
-
-                default:
-                    break;
+                viewplayer->cards[i] = CARDNOTFOUNDYET;
+                break;
             }
-
-            thing = thing->snext;
-        }
     }
 
     for (int i = 0; i < numlines; i++)
@@ -752,19 +756,12 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, dboolean message, dbo
 
         // bonus health
         case SPR_BON1:
-            if (!(viewplayer->cheats & CF_GODMODE))
+            if (viewplayer->health < maxhealth && !(viewplayer->cheats & CF_GODMODE))
             {
-                viewplayer->health++;       // can go over 100%
-
-                if (viewplayer->health > maxhealth)
-                    viewplayer->health = maxhealth;
-                else
-                {
-                    P_UpdateHealthStat(1);
-                    healthhighlight = I_GetTimeMS() + HUD_HEALTH_HIGHLIGHT_WAIT;
-                }
-
+                viewplayer->health++;
                 viewplayer->mo->health = viewplayer->health;
+                P_UpdateHealthStat(1);
+                healthhighlight = I_GetTimeMS() + HUD_HEALTH_HIGHLIGHT_WAIT;
             }
 
             if (message)
@@ -779,10 +776,10 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, dboolean message, dbo
                 viewplayer->armorpoints++;
                 P_UpdateArmorStat(1);
                 armorhighlight = I_GetTimeMS() + HUD_ARMOR_HIGHLIGHT_WAIT;
-            }
 
-            if (!viewplayer->armortype)
-                viewplayer->armortype = GREENARMOR;
+                if (!viewplayer->armortype)
+                    viewplayer->armortype = GREENARMOR;
+            }
 
             if (message)
                 HU_PlayerMessage(s_GOTARMBONUS, true, false);
@@ -827,8 +824,8 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, dboolean message, dbo
 
                 break;
             }
-
-            return;
+            else
+                return;
 
         // yellow keycard
         case SPR_YKEY:
@@ -841,8 +838,8 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, dboolean message, dbo
 
                 break;
             }
-
-            return;
+            else
+                return;
 
         // red keycard
         case SPR_RKEY:
@@ -855,8 +852,8 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, dboolean message, dbo
 
                 break;
             }
-
-            return;
+            else
+                return;
 
         // blue skull key
         case SPR_BSKU:
@@ -869,8 +866,8 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, dboolean message, dbo
 
                 break;
             }
-
-            return;
+            else
+                return;
 
         // yellow skull key
         case SPR_YSKU:
@@ -883,8 +880,8 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, dboolean message, dbo
 
                 break;
             }
-
-            return;
+            else
+                return;
 
         // red skull key
         case SPR_RSKU:
@@ -897,8 +894,8 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, dboolean message, dbo
 
                 break;
             }
-
-            return;
+            else
+                return;
 
         // stimpack
         case SPR_STIM:
@@ -944,18 +941,22 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, dboolean message, dbo
 
         // berserk power-up
         case SPR_PSTR:
+        {
+            dboolean    strength = viewplayer->powers[pw_strength];
+
             if (!P_GivePower(pw_strength))
                 return;
 
             if (message)
                 HU_PlayerMessage(s_GOTBERSERK, true, false);
 
-            if (viewplayer->readyweapon != wp_fist)
+            if (viewplayer->readyweapon != wp_fist && !strength)
                 viewplayer->pendingweapon = wp_fist;
 
             viewplayer->fistorchainsaw = wp_fist;
             sound = sfx_getpow;
             break;
+        }
 
         // partial invisibility power-up
         case SPR_PINS:
@@ -1002,7 +1003,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, dboolean message, dbo
 
         // clip
         case SPR_CLIP:
-            if (!(temp = P_GiveAmmo(am_clip, !(special->flags & MF_DROPPED), stat)))
+            if (!P_GiveAmmo(am_clip, !(special->flags & MF_DROPPED), stat))
                 return;
 
             if (message)
@@ -1216,6 +1217,368 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, dboolean message, dbo
 }
 
 //
+// P_TakeSpecialThing
+//
+dboolean P_TakeSpecialThing(mobjtype_t type)
+{
+    switch (type)
+    {
+        // green armor
+        case MT_MISC0:
+            if (viewplayer->armortype != GREENARMOR)
+                return false;
+
+            if (viewplayer->armorpoints < green_armor_class * 100)
+                return false;
+
+            viewplayer->armorpoints -= green_armor_class * 100;
+            armorhighlight = I_GetTimeMS() + HUD_ARMOR_HIGHLIGHT_WAIT;
+            return true;
+
+        // blue armor
+        case MT_MISC1:
+            if (viewplayer->armortype != BLUEARMOR)
+                return false;
+
+            if (viewplayer->armorpoints < blue_armor_class * 100)
+                return false;
+
+            viewplayer->armorpoints -= blue_armor_class * 100;
+            armorhighlight = I_GetTimeMS() + HUD_ARMOR_HIGHLIGHT_WAIT;
+            return true;
+
+        // bonus health
+        case MT_MISC2:
+            if ((viewplayer->cheats & CF_GODMODE))
+                return false;
+
+            if (viewplayer->powers[pw_invulnerability])
+                return false;
+
+            if ((viewplayer->cheats & CF_BUDDHA) && viewplayer->health == 1)
+                return false;
+
+            if (viewplayer->health <= 0)
+                return false;
+
+            viewplayer->health--;
+            viewplayer->mo->health--;
+            healthhighlight = I_GetTimeMS() + HUD_HEALTH_HIGHLIGHT_WAIT;
+            return true;
+
+        // bonus armor
+        case MT_MISC3:
+            if (!viewplayer->armorpoints)
+                return false;
+
+            viewplayer->armorpoints--;
+            armorhighlight = I_GetTimeMS() + HUD_ARMOR_HIGHLIGHT_WAIT;
+            return true;
+
+        // soulsphere
+        case MT_MISC12:
+            if ((viewplayer->cheats & CF_GODMODE))
+                return false;
+
+            if (viewplayer->powers[pw_invulnerability])
+                return false;
+
+            if ((viewplayer->cheats & CF_BUDDHA) && viewplayer->health <= soul_health)
+                return false;
+
+            if (viewplayer->health < soul_health)
+                return false;
+
+            viewplayer->health -= soul_health;
+            viewplayer->mo->health -= soul_health;
+            healthhighlight = I_GetTimeMS() + HUD_HEALTH_HIGHLIGHT_WAIT;
+            return true;
+
+        // mega health
+        case MT_MEGA:
+            if ((viewplayer->cheats & CF_GODMODE))
+                return false;
+
+            if (viewplayer->powers[pw_invulnerability])
+                return false;
+
+            if ((viewplayer->cheats & CF_BUDDHA) && viewplayer->health <= mega_health)
+                return false;
+
+            if (viewplayer->health < mega_health)
+                return false;
+
+            viewplayer->health -= mega_health;
+            viewplayer->mo->health -= mega_health;
+            healthhighlight = I_GetTimeMS() + HUD_HEALTH_HIGHLIGHT_WAIT;
+            return true;
+
+        // blue keycard
+        case MT_MISC4:
+            if (viewplayer->cards[it_bluecard] <= 0)
+                return false;
+
+            viewplayer->cards[it_bluecard] = 0;
+            cardsfound--;
+            return true;
+
+        // yellow keycard
+        case MT_MISC6:
+            if (viewplayer->cards[it_yellowcard] <= 0)
+                return false;
+
+            viewplayer->cards[it_yellowcard] = 0;
+            cardsfound--;
+            return true;
+
+        // red keycard
+        case MT_MISC5:
+            if (viewplayer->cards[it_redcard] <= 0)
+                return false;
+
+            viewplayer->cards[it_redcard] = 0;
+            cardsfound--;
+            return true;
+
+        // blue skull key
+        case MT_MISC9:
+            if (viewplayer->cards[it_blueskull] <= 0)
+                return false;
+
+            viewplayer->cards[it_blueskull] = 0;
+            cardsfound--;
+            return true;
+
+        // yellow skull key
+        case MT_MISC7:
+            if (viewplayer->cards[it_yellowskull] <= 0)
+                return false;
+
+            viewplayer->cards[it_yellowskull] = 0;
+            cardsfound--;
+            return true;
+
+        // red skull key
+        case MT_MISC8:
+            if (viewplayer->cards[it_redskull] <= 0)
+                return false;
+
+            viewplayer->cards[it_redskull] = 0;
+            cardsfound--;
+            return true;
+
+        // stimpack
+        case MT_MISC10:
+            if ((viewplayer->cheats & CF_GODMODE))
+                return false;
+
+            if (viewplayer->powers[pw_invulnerability])
+                return false;
+
+            if ((viewplayer->cheats & CF_BUDDHA) && viewplayer->health <= 10)
+                return false;
+
+            if (viewplayer->health < 10)
+                return false;
+
+            viewplayer->health -= 10;
+            viewplayer->mo->health -= 10;
+            healthhighlight = I_GetTimeMS() + HUD_HEALTH_HIGHLIGHT_WAIT;
+            return true;
+
+        // medikit
+        case MT_MISC11:
+            if ((viewplayer->cheats & CF_GODMODE))
+                return false;
+
+            if (viewplayer->powers[pw_invulnerability])
+                return false;
+
+            if ((viewplayer->cheats & CF_BUDDHA) && viewplayer->health <= 25)
+                return false;
+
+            if (viewplayer->health < 25)
+                return false;
+
+            viewplayer->health -= 25;
+            viewplayer->mo->health -= 25;
+            healthhighlight = I_GetTimeMS() + HUD_HEALTH_HIGHLIGHT_WAIT;
+            return true;
+
+        // invulnerability power-up
+        case MT_INV:
+            if (!viewplayer->powers[pw_invulnerability])
+                return false;
+
+            viewplayer->powers[pw_invulnerability] = STARTFLASHING;
+            return true;
+
+        // berserk power-up
+        case MT_MISC13:
+            if (!viewplayer->powers[pw_strength])
+                return false;
+
+            viewplayer->powers[pw_strength] = 0;
+
+            if (viewplayer->readyweapon == wp_fist && viewplayer->weaponowned[wp_chainsaw])
+            {
+                viewplayer->pendingweapon = wp_chainsaw;
+                viewplayer->fistorchainsaw = wp_chainsaw;
+            }
+
+            return true;
+
+        // partial invisibility power-up
+        case MT_INS:
+            if (!viewplayer->powers[pw_invisibility])
+                return false;
+
+            viewplayer->powers[pw_invisibility] = STARTFLASHING;
+            return true;
+
+        // radiation shielding suit power-up
+        case MT_MISC14:
+            if (!viewplayer->powers[pw_ironfeet])
+                return false;
+
+            viewplayer->powers[pw_ironfeet] = STARTFLASHING;
+            return true;
+
+        // computer area map power-up
+        case MT_MISC15:
+            if (!viewplayer->powers[pw_allmap])
+                return false;
+
+            viewplayer->powers[pw_allmap] = 0;
+            return true;
+
+        // light amplification visor power-up
+        case MT_MISC16:
+            if (!viewplayer->powers[pw_infrared])
+                return false;
+
+            viewplayer->powers[pw_infrared] = STARTFLASHING;
+            return true;
+
+        // clip
+        case MT_CLIP:
+            return P_TakeAmmo(am_clip, 1);
+
+        // box of bullets
+        case MT_MISC17:
+            return P_TakeAmmo(am_clip, 5);
+
+        // rocket
+        case MT_MISC18:
+            return P_TakeAmmo(am_misl, 1);
+
+        // box of rockets
+        case MT_MISC19:
+            return P_TakeAmmo(am_misl, 5);
+
+        // cell
+        case MT_MISC20:
+            return P_TakeAmmo(am_cell, 1);
+
+        // cell pack
+        case MT_MISC21:
+            return P_TakeAmmo(am_cell, 5);
+
+        // shells
+        case MT_MISC22:
+            return P_TakeAmmo(am_shell, 1);
+
+        // box of shells
+        case MT_MISC23:
+            return P_TakeAmmo(am_shell, 5);
+
+        // backpack
+        case MT_MISC24:
+            if (!viewplayer->backpack)
+                return false;
+
+            for (ammotype_t i = 0; i < NUMAMMO; i++)
+            {
+                viewplayer->maxammo[i] /= 2;
+
+                P_TakeAmmo(i, 1);
+
+                if (viewplayer->ammo[i] > viewplayer->maxammo[i])
+                    viewplayer->ammo[i] = viewplayer->maxammo[i];
+            }
+
+            viewplayer->backpack = false;
+            return true;
+
+        // BFG-9000
+        case MT_MISC25:
+            if (!viewplayer->weaponowned[wp_bfg])
+                return false;
+
+            viewplayer->weaponowned[wp_bfg] = oldweaponsowned[wp_bfg] = false;
+            P_CheckAmmo(viewplayer->readyweapon);
+            return true;
+
+        // chaingun
+        case MT_CHAINGUN:
+            if (!viewplayer->weaponowned[wp_chaingun])
+                return false;
+
+            viewplayer->weaponowned[wp_chaingun] = oldweaponsowned[wp_chaingun] = false;
+            P_CheckAmmo(viewplayer->readyweapon);
+            return true;
+
+        // chainsaw
+        case MT_MISC26:
+            if (!viewplayer->weaponowned[wp_chainsaw])
+                return false;
+
+            viewplayer->weaponowned[wp_chainsaw] = oldweaponsowned[wp_chainsaw] = false;
+            P_CheckAmmo(viewplayer->readyweapon);
+            return true;
+
+        // rocket launcher
+        case MT_MISC27:
+            if (!viewplayer->weaponowned[wp_missile])
+                return false;
+
+            viewplayer->weaponowned[wp_missile] = oldweaponsowned[wp_missile] = false;
+            P_CheckAmmo(viewplayer->readyweapon);
+            return true;
+
+        // plasma rifle
+        case MT_MISC28:
+            if (!viewplayer->weaponowned[wp_plasma])
+                return false;
+
+            viewplayer->weaponowned[wp_plasma] = oldweaponsowned[wp_plasma] = false;
+            P_CheckAmmo(viewplayer->readyweapon);
+            return true;
+
+        // shotgun
+        case MT_SHOTGUN:
+            if (!viewplayer->weaponowned[wp_shotgun])
+                return false;
+
+            viewplayer->weaponowned[wp_shotgun] = oldweaponsowned[wp_shotgun] = false;
+            P_CheckAmmo(viewplayer->readyweapon);
+            return true;
+
+        // super shotgun
+        case MT_SUPERSHOTGUN:
+            if (!viewplayer->weaponowned[wp_supershotgun])
+                return false;
+
+            viewplayer->weaponowned[wp_supershotgun] = oldweaponsowned[wp_supershotgun] = false;
+            P_CheckAmmo(viewplayer->readyweapon);
+            return true;
+
+        default:
+            return false;
+    }
+}
+
+//
 // P_UpdateKillStat
 //
 void P_UpdateKillStat(mobjtype_t type, int value)
@@ -1386,7 +1749,7 @@ void P_KillMobj(mobj_t *target, mobj_t *inflicter, mobj_t *source)
 
     if (con_obituaries && !hacx && !(target->flags2 & MF2_MASSACRE))
     {
-        char        *name = (*info->name1 ? info->name1 : "monster");
+        char    *name = (*info->name1 ? info->name1 : "monster");
 
         if (source)
         {
@@ -1414,7 +1777,6 @@ void P_KillMobj(mobj_t *target, mobj_t *inflicter, mobj_t *source)
                         (type == MT_BARREL ? "exploded" : (gibbed ? "gibbed" : "killed")), (isvowel(name[0]) ? "an" : "a"), name,
                         (defaultplayername ? "your" : "their"), weaponinfo[readyweapon].description,
                         (readyweapon == wp_fist && source->player->powers[pw_strength] ? " while you went berserk" : ""));
-
             }
             else
             {
@@ -1434,7 +1796,6 @@ void P_KillMobj(mobj_t *target, mobj_t *inflicter, mobj_t *source)
                         C_Obituary("%s %s %s %s %s.", (isvowel(sourcename[0]) ? "An" : "A"), sourcename,
                             (type == MT_BARREL ? "exploded" : (gibbed ? "gibbed" : "killed")),
                             (source->type == target->type ? "another" : (isvowel(name[0]) ? "an" : "a")), name);
-
                 }
             }
         }
@@ -1449,7 +1810,9 @@ void P_KillMobj(mobj_t *target, mobj_t *inflicter, mobj_t *source)
             {
                 if (sector->terraintype != SOLID)
                 {
-                    char    *liquids[] = { "", "nukage", "water", "lava", "blood", "slime" };
+                    char *liquids[] = {
+                        "", "liquid", "nukage", "water", "lava", "blood", "slime", "gray slime", "goop", "icy water", "tar", "sludge"
+                    };
 
                     C_Obituary("%s died in %s.", titlecase(playername), liquids[sector->terraintype]);
                 }
@@ -1460,8 +1823,8 @@ void P_KillMobj(mobj_t *target, mobj_t *inflicter, mobj_t *source)
                     if ((floorpic >= RROCK05 && floorpic <= RROCK08) || (floorpic >= SLIME09 && floorpic <= SLIME12))
                         C_Obituary("%s died on molten rock.", titlecase(playername));
                     else
-                        C_Obituary("%s blew %s up.", titlecase(playername),
-                            (M_StringCompare(playername, playername_default) ? "yourself" : "themselves"));
+                        C_Obituary("%s %s %s%s.", titlecase(playername), (healthcvar ? "killed" : "blew"),
+                            (M_StringCompare(playername, playername_default) ? "yourself" : "themselves"), (healthcvar ? "" : " up"));
                 }
             }
         }
@@ -1598,10 +1961,14 @@ void P_DamageMobj(mobj_t *target, mobj_t *inflicter, mobj_t *source, int damage,
 
             tplayer->armorpoints -= saved;
             damage -= saved;
+
+            if (saved)
+                armorhighlight = I_GetTimeMS() + HUD_ARMOR_HIGHLIGHT_WAIT;
         }
 
         tplayer->health -= damage;
         target->health -= damage;
+        healthhighlight = I_GetTimeMS() + HUD_HEALTH_HIGHLIGHT_WAIT;
 
         if (tplayer->health <= 0 && (tplayer->cheats & CF_BUDDHA))
         {

@@ -6,13 +6,13 @@
 
 ========================================================================
 
-  Copyright © 1993-2012 id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2018 Brad Harding.
+  Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
+  Copyright © 2013-2019 by Brad Harding.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
 
-  This file is part of DOOM Retro.
+  This file is a part of DOOM Retro.
 
   DOOM Retro is free software: you can redistribute it and/or modify it
   under the terms of the GNU General Public License as published by the
@@ -28,7 +28,7 @@
   along with DOOM Retro. If not, see <https://www.gnu.org/licenses/>.
 
   DOOM is a registered trademark of id Software LLC, a ZeniMax Media
-  company, in the US and/or other countries and is used without
+  company, in the US and/or other countries, and is used without
   permission. All other trademarks are the property of their respective
   holders. DOOM Retro is in no way affiliated with nor endorsed by
   id Software.
@@ -51,13 +51,18 @@
 #include <pwd.h>
 #endif
 
+#include <ctype.h>
+#include <math.h>
+#include <stdarg.h>
+#include <string.h>
+
+#include "SDL.h"
+
 #include "doomdef.h"
 #include "i_system.h"
-#include "m_fixed.h"
 #include "m_misc.h"
 #include "version.h"
 #include "w_file.h"
-#include "z_zone.h"
 
 #if defined(__MACOSX__)
 #import <Cocoa/Cocoa.h>
@@ -161,28 +166,29 @@ char *M_GetAppDataFolder(void)
 #ifdef __ANDROID__
     return "./doomretro/";
 #endif
-    char    *executableFolder = M_GetExecutableFolder();
+
+    char    *executablefolder = M_GetExecutableFolder();
 
 #if defined(_WIN32)
-    return executableFolder;
+    return executablefolder;
 #else
     // On Linux and OS X, if ../share/doomretro doesn't exist then we're dealing with
     // a portable installation, and we write doomretro.cfg to the executable directory.
-    char    *resourceFolder = M_StringJoin(executableFolder, DIR_SEPARATOR_S".."
-                DIR_SEPARATOR_S"share"DIR_SEPARATOR_S"doomretro", NULL);
-    DIR     *resourceDir = opendir(resourceFolder);
+    char    *resourcefolder = M_StringJoin(executablefolder, DIR_SEPARATOR_S".."DIR_SEPARATOR_S"share"DIR_SEPARATOR_S PACKAGE, NULL);
+    DIR     *resourcedir = opendir(resourcefolder);
 
-    if (resourceDir)
+    free(resourcefolder);
+
+    if (resourcedir)
     {
-        closedir(resourceDir);
+        closedir(resourcedir);
 
 #if defined(__MACOSX__)
         // On OSX, store generated application files in ~/Library/Application Support/DOOM Retro.
         NSFileManager   *manager = [NSFileManager defaultManager];
         NSURL           *baseAppSupportURL = [manager URLsForDirectory : NSApplicationSupportDirectory
                             inDomains : NSUserDomainMask].firstObject;
-        NSURL           *appSupportURL = [baseAppSupportURL URLByAppendingPathComponent :
-                            @PACKAGE_NAME];
+        NSURL           *appSupportURL = [baseAppSupportURL URLByAppendingPathComponent : @PACKAGE_NAME];
 
         return (char *)appSupportURL.fileSystemRepresentation;
 #else
@@ -192,29 +198,31 @@ char *M_GetAppDataFolder(void)
         if (!(buffer = SDL_getenv("HOME")))
             buffer = getpwuid(getuid())->pw_dir;
 
-        return M_StringJoin(buffer, DIR_SEPARATOR_S".config"DIR_SEPARATOR_S, PACKAGE, NULL);
+        free(executablefolder);
+
+        return M_StringJoin(buffer, DIR_SEPARATOR_S".config"DIR_SEPARATOR_S PACKAGE, NULL);
 #endif
     }
     else
-        return executableFolder;
+        return executablefolder;
 #endif
 }
 
 char *M_GetResourceFolder(void)
 {
-    char    *executableFolder = M_GetExecutableFolder();
+    char    *executablefolder = M_GetExecutableFolder();
 
 #if !defined(_WIN32)
     // On Linux and OS X, first assume that the executable is in .../bin and
     // try to load resources from .../share/doomretro.
-    char    *resourceFolder = M_StringJoin(executableFolder, DIR_SEPARATOR_S".."
-                DIR_SEPARATOR_S"share"DIR_SEPARATOR_S"doomretro", NULL);
-    DIR     *resourceDir = opendir(resourceFolder);
+    char    *resourcefolder = M_StringJoin(executablefolder, DIR_SEPARATOR_S".."DIR_SEPARATOR_S"share"DIR_SEPARATOR_S PACKAGE, NULL);
+    DIR     *resourcedir = opendir(resourcefolder);
 
-    if (resourceDir)
+    if (resourcedir)
     {
-        closedir(resourceDir);
-        return resourceFolder;
+        closedir(resourcedir);
+        free(executablefolder);
+        return resourcefolder;
     }
 
 #if defined(__MACOSX__)
@@ -228,13 +236,13 @@ char *M_GetResourceFolder(void)
     return "./res/";
 #else
     // And on Linux, fall back to the same folder as the executable.
-    return executableFolder;
+    return executablefolder;
 #endif
 #endif
 
 #else
     // On Windows, load resources from the same folder as the executable.
-    return executableFolder;
+    return executablefolder;
 #endif
 }
 
@@ -263,22 +271,62 @@ char *M_GetExecutableFolder(void)
 
     if (len == -1)
     {
-        free(exe);
-        return ".";
+        strcpy(exe, ".");
+        return exe;
     }
     else
     {
         exe[len] = '\0';
         return dirname(exe);
     }
+#elif defined(__FreeBSD__)
+    char    *exe = malloc(MAX_PATH);
+    size_t  len = MAX_PATH;
+    int     mib[] = { CTL_KERN, KERN_PROC, KERN_PROC_PATHNAME, -1 };
+
+    if (!sysctl(mib, 4, exe, &len, NULL, 0))
+    {
+        exe[len] = '\0';
+        return dirname(exe);
+    }
+    else
+    {
+        strcpy(exe, ".");
+        return exe;
+    }
 #elif defined(__MACOSX__)
     char        *exe = malloc(MAX_PATH);
     uint32_t    len = MAX_PATH;
 
-    return (!_NSGetExecutablePath(exe, &len) ? dirname(exe) : ".");
+    if (_NSGetExecutablePath(exe, &len))
+    {
+        strcpy(exe, ".");
+        return exe;
+    }
+
+    return dirname(exe);
 #else
-    return ".";
+    char    *folder = malloc(2);
+
+    strcpy(folder, ".");
+    return folder;
 #endif
+}
+
+char *M_TempFile(char *s)
+{
+    char    *tempdir;
+
+#if defined(_WIN32)
+    tempdir = getenv("TEMP");
+
+    if (!tempdir)
+        tempdir = ".";
+#else
+    tempdir = "/tmp";
+#endif
+
+    return M_StringJoin(tempdir, DIR_SEPARATOR_S, s, NULL);
 }
 
 // Return a newly-malloced string with all the strings given as arguments
@@ -355,8 +403,8 @@ const char *M_StrCaseStr(const char *haystack, const char *needle)
 
 static char *stristr(char *ch1, char *ch2)
 {
-    char    *chN1 = strdup(ch1);
-    char    *chN2 = strdup(ch2);
+    char    *chN1 = M_StringDuplicate(ch1);
+    char    *chN2 = M_StringDuplicate(ch2);
     char    *chRet = NULL;
 
     if (chN1 && chN2)
@@ -402,6 +450,17 @@ char *M_StringReplace(char *haystack, char *needle, char *replacement)
     buffer[p - haystack] = '\0';
     sprintf(buffer + (p - haystack), "%s%s", replacement, p + strlen(needle));
     return buffer;
+}
+
+// Safe version of strdup() that checks the string was successfully allocated.
+char *M_StringDuplicate(const char *orig)
+{
+    char    *result = strdup(orig);
+
+    if (!result)
+        I_Error("Failed to duplicate string (length %llu).", strlen(orig));
+
+    return result;
 }
 
 // Returns true if 'str1' and 'str2' are the same.
@@ -491,7 +550,7 @@ char *M_SubString(const char *str, size_t begin, size_t len)
 char *uppercase(const char *str)
 {
     char    *newstr;
-    char    *p = newstr = strdup(str);
+    char    *p = newstr = M_StringDuplicate(str);
 
     while ((*p = toupper(*p)))
         p++;
@@ -509,7 +568,7 @@ char *lowercase(char *str)
 
 char *titlecase(const char *str)
 {
-    char    *newstr = strdup(str);
+    char    *newstr = M_StringDuplicate(str);
     int     len = (int)strlen(newstr);
 
     if (len > 0)
@@ -526,9 +585,19 @@ char *titlecase(const char *str)
     return newstr;
 }
 
+char *sentencecase(const char *str)
+{
+    char    *newstr = M_StringDuplicate(str);
+
+    if (strlen(newstr) > 0)
+        newstr[0] = toupper(newstr[0]);
+
+    return newstr;
+}
+
 char *formatsize(const char *str)
 {
-    char    *newstr = strdup(str);
+    char    *newstr = M_StringDuplicate(str);
     int     len = (int)strlen(newstr);
 
     if (len > 1)
@@ -573,7 +642,7 @@ char *commify(int64_t value)
         } while (true);
     }
 
-    p = strdup(result);
+    p = M_StringDuplicate(result);
     return p;
 }
 
@@ -709,7 +778,7 @@ char *trimwhitespace(char *input)
 char *removenewlines(const char *str)
 {
     char    *newstr;
-    char    *p = newstr = strdup(str);
+    char    *p = newstr = M_StringDuplicate(str);
 
     while (*p != '\0')
     {
@@ -724,7 +793,7 @@ char *removenewlines(const char *str)
 
 char *makevalidfilename(const char *input)
 {
-    char    *newstr = strdup(input);
+    char    *newstr = M_StringDuplicate(input);
     int     len = (int)strlen(newstr);
 
     for (int i = 0; i < len; i++)
@@ -752,7 +821,7 @@ char *leafname(char *path)
 
 char *removeext(const char *file)
 {
-    char    *newstr = strdup(file);
+    char    *newstr = M_StringDuplicate(file);
     char    *lastdot = strrchr(newstr, '.');
 
     *lastdot = '\0';
@@ -841,4 +910,16 @@ int hextodec(char *hex)
         ret = ((ret << 4) | hextable[*hex++]);
 
     return ret;
+}
+
+void M_StripQuotes(char *string)
+{
+    int len = (int)strlen(string);
+
+    if (len > 2 && ((string[0] == '"' && string[len - 1] == '"') || (string[0] == '\'' && string[len - 1] == '\'')))
+    {
+        len -= 2;
+        memmove(string, string + 1, len);
+        string[len] = '\0';
+    }
 }

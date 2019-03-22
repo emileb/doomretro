@@ -6,13 +6,13 @@
 
 ========================================================================
 
-  Copyright © 1993-2012 id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2018 Brad Harding.
+  Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
+  Copyright © 2013-2019 by Brad Harding.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
 
-  This file is part of DOOM Retro.
+  This file is a part of DOOM Retro.
 
   DOOM Retro is free software: you can redistribute it and/or modify it
   under the terms of the GNU General Public License as published by the
@@ -28,7 +28,7 @@
   along with DOOM Retro. If not, see <https://www.gnu.org/licenses/>.
 
   DOOM is a registered trademark of id Software LLC, a ZeniMax Media
-  company, in the US and/or other countries and is used without
+  company, in the US and/or other countries, and is used without
   permission. All other trademarks are the property of their respective
   holders. DOOM Retro is in no way affiliated with nor endorsed by
   id Software.
@@ -97,7 +97,7 @@ static void HU_drawChar(int x, int y, int ch)
 {
     int w = (int)strlen(smallcharset[ch]) / 10;
 
-    if (r_messagescale == r_messagescale_small)
+    if (vid_widescreen)
     {
         for (int y1 = 0; y1 < 10; y1++)
             for (int x1 = 0; x1 < w; x1++)
@@ -203,7 +203,7 @@ kern_t kern[] =
 {
     { '.', '1',  -1 },
     { '.', '7',  -1 },
-    { '.', '\"', -1 },
+    { '.', '"',  -1 },
     { ',', '1',  -1 },
     { ',', '7',  -1 },
     { ',', 'Y',  -1 },
@@ -213,8 +213,8 @@ kern_t kern[] =
     { 'Y', ',',  -1 },
     { 'D', '\'', -1 },
     { 'F', '.',  -1 },
-    { '3', '\"', -1 },
-    { 'L', '\"', -1 },
+    { '3', '"',  -1 },
+    { 'L', '"',  -1 },
     { 0,   0,     0 }
 };
 
@@ -251,7 +251,7 @@ void HUlib_drawTextLine(hu_textline_t *l, dboolean external)
             // [BH] have matching curly single and double quotes
             if (!i || l->l[i - 1] == ' ')
             {
-                if (c == '\"')
+                if (c == '"')
                     j = 64;
                 else if (c == '\'')
                     j = 65;
@@ -274,10 +274,10 @@ void HUlib_drawTextLine(hu_textline_t *l, dboolean external)
                 // [BH] display lump from PWAD with shadow
                 w = SHORT(l->f[c - l->sc]->width);
 
-                if (r_messagescale == r_messagescale_big)
-                    V_DrawPatchToTempScreen(x, l->y, l->f[c - l->sc]);
-                else
+                if (vid_widescreen)
                     V_DrawBigPatchToTempScreen(x, l->y, l->f[c - l->sc]);
+                else
+                    V_DrawPatchToTempScreen(x, l->y, l->f[c - l->sc]);
             }
             else
             {
@@ -316,7 +316,7 @@ void HUlib_drawTextLine(hu_textline_t *l, dboolean external)
     // [BH] draw underscores for IDBEHOLD cheat message
     if (idbehold && !STCFN034 && s_STSTR_BEHOLD2)
     {
-        int scale = r_messagescale + 1;
+        int scale = (vid_widescreen ? 1 : 2);
 
         for (int y1 = 0; y1 < 4; y1++)
             for (int x1 = 0; x1 < ORIGINALWIDTH; x1++)
@@ -340,7 +340,7 @@ void HUlib_drawTextLine(hu_textline_t *l, dboolean external)
     maxx = l->x + tw + 1;
     maxy = y + 11;
 
-    if (r_messagescale == r_messagescale_big)
+    if (!vid_widescreen)
     {
         maxx *= SCREENSCALE;
         maxy *= SCREENSCALE;
@@ -355,18 +355,13 @@ void HUlib_drawTextLine(hu_textline_t *l, dboolean external)
             byte    *dest2 = &fb2[dot];
 
             if (!*source)
-                *dest1 = tinttab50[*dest2];
+                *dest1 = tinttab50[*dest2 + (nearestblack << 8)];
             else if (*source != 251)
             {
                 byte color = *source;
 
                 if (vid_widescreen && r_hud_translucency && !hacx)
-                {
-                    color = tinttab25[(*dest2 << 8) + color];
-
-                    if (color >= 168 && color <= 175)
-                        color -= 144;
-                }
+                    color = tinttab66[(color << 8) + *dest2];
 
                 *dest1 = color;
             }

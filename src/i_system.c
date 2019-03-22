@@ -6,13 +6,13 @@
 
 ========================================================================
 
-  Copyright © 1993-2012 id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2018 Brad Harding.
+  Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
+  Copyright © 2013-2019 by Brad Harding.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
 
-  This file is part of DOOM Retro.
+  This file is a part of DOOM Retro.
 
   DOOM Retro is free software: you can redistribute it and/or modify it
   under the terms of the GNU General Public License as published by the
@@ -28,7 +28,7 @@
   along with DOOM Retro. If not, see <https://www.gnu.org/licenses/>.
 
   DOOM is a registered trademark of id Software LLC, a ZeniMax Media
-  company, in the US and/or other countries and is used without
+  company, in the US and/or other countries, and is used without
   permission. All other trademarks are the property of their respective
   holders. DOOM Retro is in no way affiliated with nor endorsed by
   id Software.
@@ -46,7 +46,6 @@ void I_ShutdownWindows32(void);
 
 #include "c_console.h"
 #include "d_main.h"
-#include "doomstat.h"
 #include "i_gamepad.h"
 #include "i_timer.h"
 #include "m_config.h"
@@ -195,10 +194,11 @@ void I_PrintWindowsVersion(void)
 
 void I_PrintSystemInfo(void)
 {
-    int cores = SDL_GetCPUCount();
+    int     cores = SDL_GetCPUCount();
+    char    *ram = commify(SDL_GetSystemRAM() / 1000);
 
-    C_Output("There %s %i logical core%s and %sGB of system RAM.",
-        (cores > 1 ? "are" : "is"), cores, (cores > 1 ? "s" : ""), commify(SDL_GetSystemRAM() / 1000));
+    C_Output("There %s %i logical core%s and %sGB of system RAM.", (cores > 1 ? "are" : "is"), cores, (cores > 1 ? "s" : ""), ram);
+    free(ram);
 }
 
 //

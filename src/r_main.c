@@ -6,13 +6,13 @@
 
 ========================================================================
 
-  Copyright © 1993-2012 id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2018 Brad Harding.
+  Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
+  Copyright © 2013-2019 by Brad Harding.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
 
-  This file is part of DOOM Retro.
+  This file is a part of DOOM Retro.
 
   DOOM Retro is free software: you can redistribute it and/or modify it
   under the terms of the GNU General Public License as published by the
@@ -28,7 +28,7 @@
   along with DOOM Retro. If not, see <https://www.gnu.org/licenses/>.
 
   DOOM is a registered trademark of id Software LLC, a ZeniMax Media
-  company, in the US and/or other countries and is used without
+  company, in the US and/or other countries, and is used without
   permission. All other trademarks are the property of their respective
   holders. DOOM Retro is in no way affiliated with nor endorsed by
   id Software.
@@ -166,8 +166,7 @@ int R_PointOnSide(fixed_t x, fixed_t y, const node_t *node)
 
 int R_PointOnSegSide(fixed_t x, fixed_t y, seg_t *line)
 {
-    return ((int)(((int64_t)(line->v2->x - line->v1->x) * (y - line->v1->y)
-        - (int64_t)(line->v2->y - line->v1->y) * (x - line->v1->x)) >> 32) > 0);
+    return ((int)((line->dx * (y - line->v1->y) - line->dy * (x - line->v1->x)) >> 32) > 0);
 }
 
 static int SlopeDiv(unsigned int num, unsigned int den)
@@ -357,12 +356,12 @@ void R_InitLightTables(void)
     //  for each level / distance combination.
     for (int i = 0; i < LIGHTLEVELS; i++)
     {
-        const int   startmap = ((LIGHTLEVELS - LIGHTBRIGHT - i) * 2) * NUMCOLORMAPS / LIGHTLEVELS;
+        const int   start = ((LIGHTLEVELS - LIGHTBRIGHT - i) * 2) * NUMCOLORMAPS / LIGHTLEVELS;
 
         for (int j = 0; j < MAXLIGHTZ; j++)
         {
             const int   scale = FixedDiv(width / 2 * FRACUNIT, (j + 1) << LIGHTZSHIFT) >> LIGHTSCALESHIFT;
-            const int   level = BETWEEN(0, startmap - scale / DISTMAP, NUMCOLORMAPS - 1) * 256;
+            const int   level = BETWEEN(0, start - scale / DISTMAP, NUMCOLORMAPS - 1) * 256;
 
             // killough 3/20/98: Initialize multiple colormaps
             for (int t = 0; t < numcolormaps; t++)
@@ -442,11 +441,11 @@ void R_ExecuteSetViewSize(void)
     //  for each level/scale combination.
     for (int i = 0; i < LIGHTLEVELS; i++)
     {
-        const int   startmap = ((LIGHTLEVELS - LIGHTBRIGHT - i) * 2) * NUMCOLORMAPS / LIGHTLEVELS;
+        const int   start = ((LIGHTLEVELS - LIGHTBRIGHT - i) * 2) * NUMCOLORMAPS / LIGHTLEVELS;
 
         for (int j = 0; j < MAXLIGHTSCALE; j++)
         {
-            const int   level = BETWEEN(0, startmap - j * SCREENWIDTH / (viewwidth * DISTMAP), NUMCOLORMAPS - 1) * 256;
+            const int   level = BETWEEN(0, start - j * SCREENWIDTH / (viewwidth * DISTMAP), NUMCOLORMAPS - 1) * 256;
 
             // killough 3/20/98: initialize multiple colormaps
             for (int t = 0; t < numcolormaps; t++)
@@ -458,11 +457,11 @@ void R_ExecuteSetViewSize(void)
     //  player's weapon, so it stays consistent regardless of view size
     for (int i = 0; i < OLDLIGHTLEVELS; i++)
     {
-        const int   startmap = ((OLDLIGHTLEVELS - LIGHTBRIGHT - i) * 2) * NUMCOLORMAPS / OLDLIGHTLEVELS;
+        const int   start = ((OLDLIGHTLEVELS - LIGHTBRIGHT - i) * 2) * NUMCOLORMAPS / OLDLIGHTLEVELS;
 
         for (int j = 0; j < OLDMAXLIGHTSCALE; j++)
         {
-            const int   level = BETWEEN(0, startmap - j / DISTMAP, NUMCOLORMAPS - 1) * 256;
+            const int   level = BETWEEN(0, start - j / DISTMAP, NUMCOLORMAPS - 1) * 256;
 
             for (int t = 0; t < numcolormaps; t++)
                 c_psprscalelight[t][i][j] = &colormaps[t][level];
@@ -715,22 +714,22 @@ void R_Init(void)
 //
 subsector_t *R_PointInSubsector(fixed_t x, fixed_t y)
 {
-    int nodenum;
-
     // single subsector is a special case
     if (!numnodes)
         return subsectors;
-
-    nodenum = numnodes - 1;
-
-    while (!(nodenum & NF_SUBSECTOR))
+    else
     {
-        node_t  *node = nodes + nodenum;
+        int nodenum = numnodes - 1;
 
-        nodenum = node->children[R_PointOnSide(x, y, node)];
+        while (!(nodenum & NF_SUBSECTOR))
+        {
+            node_t  *node = nodes + nodenum;
+
+            nodenum = node->children[R_PointOnSide(x, y, node)];
+        }
+
+        return (subsectors + (nodenum & ~NF_SUBSECTOR));
     }
-
-    return (subsectors + (nodenum & ~NF_SUBSECTOR));
 }
 
 //
@@ -746,9 +745,6 @@ static void R_SetupFrame(void)
 
     // [AM] Interpolate the player camera if the feature is enabled.
     if (vid_capfps != TICRATE
-        // Don't interpolate on the first tic of a level, otherwise
-        // oldviewz might be garbage.
-        && leveltime > 1
         // Don't interpolate if the player did something
         // that would necessitate turning it off for a tic.
         && mo->interpolate

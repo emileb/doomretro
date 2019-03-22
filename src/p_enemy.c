@@ -6,13 +6,13 @@
 
 ========================================================================
 
-  Copyright © 1993-2012 id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2018 Brad Harding.
+  Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
+  Copyright © 2013-2019 by Brad Harding.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
 
-  This file is part of DOOM Retro.
+  This file is a part of DOOM Retro.
 
   DOOM Retro is free software: you can redistribute it and/or modify it
   under the terms of the GNU General Public License as published by the
@@ -28,7 +28,7 @@
   along with DOOM Retro. If not, see <https://www.gnu.org/licenses/>.
 
   DOOM is a registered trademark of id Software LLC, a ZeniMax Media
-  company, in the US and/or other countries and is used without
+  company, in the US and/or other countries, and is used without
   permission. All other trademarks are the property of their respective
   holders. DOOM Retro is in no way affiliated with nor endorsed by
   id Software.
@@ -42,7 +42,6 @@
 #include "doomstat.h"
 #include "g_game.h"
 #include "i_gamepad.h"
-#include "i_system.h"
 #include "i_timer.h"
 #include "m_bbox.h"
 #include "m_config.h"
@@ -562,10 +561,10 @@ static dboolean PIT_AvoidDropoff(line_t *line)
 //
 static fixed_t P_AvoidDropoff(mobj_t *actor)
 {
-    const int   yh = ((tmbbox[BOXTOP] = actor->y + actor->radius) - bmaporgy) >> MAPBLOCKSHIFT;
-    const int   yl = ((tmbbox[BOXBOTTOM] = actor->y - actor->radius) - bmaporgy) >> MAPBLOCKSHIFT;
-    const int   xh = ((tmbbox[BOXRIGHT] = actor->x + actor->radius) - bmaporgx) >> MAPBLOCKSHIFT;
-    const int   xl = ((tmbbox[BOXLEFT] = actor->x - actor->radius) - bmaporgx) >> MAPBLOCKSHIFT;
+    const int   xh = P_GetSafeBlockX((tmbbox[BOXRIGHT] = actor->x + actor->radius) - bmaporgx);
+    const int   xl = P_GetSafeBlockX((tmbbox[BOXLEFT] = actor->x - actor->radius) - bmaporgx);
+    const int   yh = P_GetSafeBlockY((tmbbox[BOXTOP] = actor->y + actor->radius) - bmaporgy);
+    const int   yl = P_GetSafeBlockY((tmbbox[BOXBOTTOM] = actor->y - actor->radius) - bmaporgy);
 
     floorz = actor->z;                                      // remember floor height
     dropoff_deltax = 0;
@@ -783,9 +782,12 @@ seeyou:
         }
 
         if (actor->type == MT_SPIDER || actor->type == MT_CYBORG)
-            S_StartSound(NULL, sound);          // full volume
+            S_StartSoundOnce(NULL, sound);      // full volume
         else
             S_StartSound(actor, sound);
+
+        // [crispy] make seesounds uninterruptible
+        S_UnlinkSound(actor);
     }
 
     P_SetMobjState(actor, actor->info->seestate);
@@ -1254,10 +1256,10 @@ void A_VileChase(mobj_t *actor, player_t *player, pspdef_t *psp)
         viletryx = actor->x + speed * xspeed[movedir];
         viletryy = actor->y + speed * yspeed[movedir];
 
-        xl = (viletryx - bmaporgx - MAXRADIUS * 2) >> MAPBLOCKSHIFT;
-        xh = (viletryx - bmaporgx + MAXRADIUS * 2) >> MAPBLOCKSHIFT;
-        yl = (viletryy - bmaporgy - MAXRADIUS * 2) >> MAPBLOCKSHIFT;
-        yh = (viletryy - bmaporgy + MAXRADIUS * 2) >> MAPBLOCKSHIFT;
+        xl = P_GetSafeBlockX(viletryx - bmaporgx - MAXRADIUS * 2);
+        xh = P_GetSafeBlockX(viletryx - bmaporgx + MAXRADIUS * 2);
+        yl = P_GetSafeBlockY(viletryy - bmaporgy - MAXRADIUS * 2);
+        yh = P_GetSafeBlockY(viletryy - bmaporgy + MAXRADIUS * 2);
 
         for (int bx = xl; bx <= xh; bx++)
             for (int by = yl; by <= yh; by++)
@@ -1641,7 +1643,7 @@ void A_Scream(mobj_t *actor, player_t *player, pspdef_t *psp)
 
     // Check for bosses.
     if (actor->type == MT_SPIDER || actor->type == MT_CYBORG)
-        S_StartSound(NULL, sound);      // full volume
+        S_StartSoundOnce(NULL, sound);  // full volume
     else
         S_StartSound(actor, sound);
 }
@@ -1777,7 +1779,6 @@ void A_BossDeath(mobj_t *actor, player_t *player, pspdef_t *psp)
 
                     default:
                         return;
-                        break;
                 }
 
                 break;
@@ -1832,7 +1833,6 @@ void A_BossDeath(mobj_t *actor, player_t *player, pspdef_t *psp)
                 junk.tag = 666;
                 EV_DoFloor(&junk, lowerFloorToLowest);
                 return;
-                break;
 
             case 4:
                 switch (gamemap)
@@ -1841,13 +1841,11 @@ void A_BossDeath(mobj_t *actor, player_t *player, pspdef_t *psp)
                         junk.tag = 666;
                         EV_DoDoor(&junk, doorBlazeOpen, VDOORSPEED * 4);
                         return;
-                        break;
 
                     case 8:
                         junk.tag = 666;
                         EV_DoFloor(&junk, lowerFloorToLowest);
                         return;
-                        break;
                 }
         }
     }
@@ -1883,7 +1881,7 @@ void A_BrainAwake(mobj_t *actor, player_t *player, pspdef_t *psp)
 
 void A_BrainPain(mobj_t *actor, player_t *player, pspdef_t *psp)
 {
-    S_StartSound(NULL, sfx_bospn);
+    S_StartSoundOnce(NULL, sfx_bospn);
 }
 
 void A_BrainScream(mobj_t *actor, player_t *player, pspdef_t *psp)
@@ -1973,8 +1971,7 @@ void A_BrainSpit(mobj_t *actor, player_t *player, pspdef_t *psp)
         P_SetTarget(&newmobj->target, target);
 
         // Use the reactiontime to hold the distance (squared) from the target after the next move.
-        newmobj->reactiontime = P_ApproxDistance(target->x - (actor->x + actor->momx),
-            target->y - (actor->y + actor->momy));
+        newmobj->reactiontime = P_ApproxDistance(target->x - (actor->x + actor->momx), target->y - (actor->y + actor->momy));
 
         // killough 8/29/98: add to appropriate thread
         P_UpdateThinker(&newmobj->thinker);
@@ -2047,8 +2044,7 @@ void A_SpawnFly(mobj_t *actor, player_t *player, pspdef_t *psp)
         P_UpdateThinker(&newmobj->thinker);
 
         if (!P_LookForPlayers(newmobj, true) || P_SetMobjState(newmobj, newmobj->info->seestate))
-            // telefrag anything in this spot
-            P_TeleportMove(newmobj, newmobj->x, newmobj->y, newmobj->z, true);
+            P_TeleportMove(newmobj, newmobj->x, newmobj->y, newmobj->z, true);  // telefrag anything in this spot
 
         if (newmobj->flags & MF_COUNTKILL)
         {
@@ -2225,4 +2221,3 @@ void A_LineEffect(mobj_t *actor, player_t *player, pspdef_t *psp)
     actor->state->misc1 = junk.special;
     actor->player = oldplayer;
 }
-

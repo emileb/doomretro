@@ -6,13 +6,13 @@
 
 ========================================================================
 
-  Copyright © 1993-2012 id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2018 Brad Harding.
+  Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
+  Copyright © 2013-2019 by Brad Harding.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
 
-  This file is part of DOOM Retro.
+  This file is a part of DOOM Retro.
 
   DOOM Retro is free software: you can redistribute it and/or modify it
   under the terms of the GNU General Public License as published by the
@@ -28,7 +28,7 @@
   along with DOOM Retro. If not, see <https://www.gnu.org/licenses/>.
 
   DOOM is a registered trademark of id Software LLC, a ZeniMax Media
-  company, in the US and/or other countries and is used without
+  company, in the US and/or other countries, and is used without
   permission. All other trademarks are the property of their respective
   holders. DOOM Retro is in no way affiliated with nor endorsed by
   id Software.
@@ -202,7 +202,8 @@ static ULONG ReadTime(UBYTE **musptrp)
     ULONG   timeval = 0;
     int     byte;
 
-    do  // shift each byte read up in the result until a byte with bit 8 clear
+    // shift each byte read up in the result until a byte with bit 8 clear
+    do
     {
         byte = *(*musptrp)++;
         timeval = (timeval << 7) + (byte & 0x7F);
@@ -413,7 +414,6 @@ dboolean mmus2mid(UBYTE *mus, size_t size, MIDI *mididata)
 
                 TWriteByte(mididata, MIDItrack, (unsigned char)(data & 0x7F));
                 TWriteByte(mididata, MIDItrack, 0);
-
                 break;
 
             case PLAY_NOTE:
@@ -428,7 +428,6 @@ dboolean mmus2mid(UBYTE *mus, size_t size, MIDI *mididata)
                     track[MIDItrack].velocity = (*musptr++) & 0x7F;
 
                 TWriteByte(mididata, MIDItrack, track[MIDItrack].velocity);
-
                 break;
 
             case BEND_NOTE:
@@ -439,7 +438,6 @@ dboolean mmus2mid(UBYTE *mus, size_t size, MIDI *mididata)
 
                 TWriteByte(mididata, MIDItrack, (unsigned char)((data & 1) << 6));
                 TWriteByte(mididata, MIDItrack, (unsigned char)(data >> 1));
-
                 break;
 
             case SYS_EVENT:
@@ -483,7 +481,6 @@ dboolean mmus2mid(UBYTE *mus, size_t size, MIDI *mididata)
                     data = 0x7F;
 
                 TWriteByte(mididata, MIDItrack, (unsigned char)data);
-
                 break;
 
             case UNKNOWN_EVENT1:   // mus events 5 and 7

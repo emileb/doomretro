@@ -6,13 +6,13 @@
 
 ========================================================================
 
-  Copyright © 1993-2012 id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2018 Brad Harding.
+  Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
+  Copyright © 2013-2019 by Brad Harding.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
 
-  This file is part of DOOM Retro.
+  This file is a part of DOOM Retro.
 
   DOOM Retro is free software: you can redistribute it and/or modify it
   under the terms of the GNU General Public License as published by the
@@ -28,7 +28,7 @@
   along with DOOM Retro. If not, see <https://www.gnu.org/licenses/>.
 
   DOOM is a registered trademark of id Software LLC, a ZeniMax Media
-  company, in the US and/or other countries and is used without
+  company, in the US and/or other countries, and is used without
   permission. All other trademarks are the property of their respective
   holders. DOOM Retro is in no way affiliated with nor endorsed by
   id Software.
@@ -69,16 +69,19 @@ dboolean M_StrToInt(const char *str, unsigned int *result);
 const char *M_StrCaseStr(const char *haystack, const char *needle);
 dboolean M_StringCopy(char *dest, const char *src, const size_t dest_size);
 char *M_StringReplace(char *haystack, char *needle, char *replacement);
+char *M_TempFile(char *s);
 char *M_StringJoin(char *s, ...);
 dboolean M_StringStartsWith(const char *s, const char *prefix);
 dboolean M_StringEndsWith(const char *s, const char *suffix);
 int M_vsnprintf(char *buf, int buf_len, const char *s, va_list args);
 int M_snprintf(char *buf, int buf_len, const char *s, ...);
 char *M_SubString(const char *str, size_t begin, size_t len);
+char *M_StringDuplicate(const char *orig);
 dboolean M_StringCompare(const char *str1, const char *str2);
 char *uppercase(const char *str);
 char *lowercase(char *str);
 char *titlecase(const char *str);
+char *sentencecase(const char *str);
 char *formatsize(const char *str);
 char *commify(int64_t value);
 char *uncommify(const char *input);
@@ -96,5 +99,6 @@ dboolean isvowel(const char ch);
 char *striptrailingzero(float value, int precision);
 void strreplace(char *target, char *needle, const char *replacement);
 int hextodec(char *hex);
+void M_StripQuotes(char *string);
 
 #endif

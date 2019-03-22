@@ -6,13 +6,13 @@
 
 ========================================================================
 
-  Copyright © 1993-2012 id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2018 Brad Harding.
+  Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
+  Copyright © 2013-2019 by Brad Harding.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
 
-  This file is part of DOOM Retro.
+  This file is a part of DOOM Retro.
 
   DOOM Retro is free software: you can redistribute it and/or modify it
   under the terms of the GNU General Public License as published by the
@@ -28,7 +28,7 @@
   along with DOOM Retro. If not, see <https://www.gnu.org/licenses/>.
 
   DOOM is a registered trademark of id Software LLC, a ZeniMax Media
-  company, in the US and/or other countries and is used without
+  company, in the US and/or other countries, and is used without
   permission. All other trademarks are the property of their respective
   holders. DOOM Retro is in no way affiliated with nor endorsed by
   id Software.
@@ -62,25 +62,27 @@ void AM_Ticker(void);
 
 // Called by main loop, called instead of view drawer if automap active.
 void AM_Drawer(void);
-void AM_clearFB(void);
+void AM_ClearFB(void);
 
 void AM_Start(const dboolean mainwindow);
-void AM_clearMarks(void);
-void AM_toggleFollowMode(void);
-void AM_toggleGrid(void);
-void AM_addMark(void);
-void AM_toggleRotateMode(void);
-void AM_toggleMaxZoom(void);
-void AM_toggleZoomOut(void);
-void AM_toggleZoomIn(void);
+void AM_ClearMarks(void);
+void AM_ToggleFollowMode(void);
+void AM_ToggleGrid(void);
+void AM_AddMark(void);
+void AM_ToggleRotateMode(void);
+void AM_ToggleMaxZoom(void);
+void AM_ToggleZoomOut(void);
+void AM_ToggleZoomIn(void);
 
 // Called to force the automap to quit if the level is completed while it is up.
 void AM_Stop(void);
 
+void AM_SetAutomapSize(void);
+
 void AM_Init(void);
-void AM_setColors(void);
-void AM_getGridSize(void);
-void AM_addToPath(void);
+void AM_SetColors(void);
+void AM_GetGridSize(void);
+void AM_AddToPath(void);
 
 extern dboolean message_dontfuckwithme;
 

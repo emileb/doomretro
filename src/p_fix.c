@@ -6,13 +6,13 @@
 
 ========================================================================
 
-  Copyright © 1993-2012 id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2018 Brad Harding.
+  Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
+  Copyright © 2013-2019 by Brad Harding.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
 
-  This file is part of DOOM Retro.
+  This file is a part of DOOM Retro.
 
   DOOM Retro is free software: you can redistribute it and/or modify it
   under the terms of the GNU General Public License as published by the
@@ -28,7 +28,7 @@
   along with DOOM Retro. If not, see <https://www.gnu.org/licenses/>.
 
   DOOM is a registered trademark of id Software LLC, a ZeniMax Media
-  company, in the US and/or other countries and is used without
+  company, in the US and/or other countries, and is used without
   permission. All other trademarks are the property of their respective
   holders. DOOM Retro is in no way affiliated with nor endorsed by
   id Software.
@@ -71,7 +71,7 @@ vertexfix_t vertexfix[] =
 
 linefix_t linefix[] =
 {
-   // mission,    episode, map, linedef, side, toptexture, middletexture, bottomtexture,  offset, rowoffset, flags,                     special,                                    tag
+   // mission,    episode, map, linedef, side, toptexture, middletexture, bottomtexture,  offset, rowoffset, flags,                     special,                                        tag
 
     { doom,             1,   1,     159,    1, "",         "",            "",            DEFAULT,   DEFAULT, ML_SECRET,                 DEFAULT,                                    DEFAULT },
     { doom,             1,   1,     471,    1, "",         "",            "",            DEFAULT,   DEFAULT, DEFAULT,                   W1_Floor_LowerToLowestFloor_ChangesTexture, DEFAULT },
@@ -1363,6 +1363,14 @@ linefix_t linefix[] =
     { pack_tnt,         1,  31,    1251,    0, "",         "",            "",            DEFAULT,         4, DEFAULT,                   DEFAULT,                                    DEFAULT },
     { pack_tnt,         1,  31,    1252,    0, "",         "",            "",            DEFAULT,         4, DEFAULT,                   DEFAULT,                                    DEFAULT },
     { pack_tnt,         1,  31,    1403,    1, "",         "BRICK5",      "",            DEFAULT,   DEFAULT, DEFAULT,                   DEFAULT,                                    DEFAULT },
+    { pack_tnt,         1,  31,    1676,    0, "",         "",            "",            DEFAULT,   DEFAULT, ML_DONTPEGBOTTOM,          DEFAULT,                                    DEFAULT },
+    { pack_tnt,         1,  31,    1677,    0, "",         "",            "",            DEFAULT,   DEFAULT, ML_DONTPEGBOTTOM,          DEFAULT,                                    DEFAULT },
+    { pack_tnt,         1,  31,    1678,    0, "",         "",            "",            DEFAULT,   DEFAULT, ML_DONTPEGBOTTOM,          DEFAULT,                                    DEFAULT },
+    { pack_tnt,         1,  31,    1679,    0, "",         "",            "",            DEFAULT,   DEFAULT, ML_DONTPEGBOTTOM,          DEFAULT,                                    DEFAULT },
+    { pack_tnt,         1,  31,    1680,    0, "",         "",            "",            DEFAULT,   DEFAULT, ML_DONTPEGBOTTOM,          DEFAULT,                                    DEFAULT },
+    { pack_tnt,         1,  31,    1681,    0, "",         "",            "",            DEFAULT,   DEFAULT, ML_DONTPEGBOTTOM,          DEFAULT,                                    DEFAULT },
+    { pack_tnt,         1,  31,    1682,    0, "",         "",            "",            DEFAULT,   DEFAULT, ML_DONTPEGBOTTOM,          DEFAULT,                                    DEFAULT },
+    { pack_tnt,         1,  31,    1683,    0, "",         "",            "",            DEFAULT,   DEFAULT, ML_DONTPEGBOTTOM,          DEFAULT,                                    DEFAULT },
     { pack_tnt,         1,  31,    2527,    1, "",         "",            "",            DEFAULT,   DEFAULT, DEFAULT,                   S1_Floor_LowerToLowestFloor,                DEFAULT },
     { pack_tnt,         1,  31,    2528,    1, "",         "",            "",            DEFAULT,   DEFAULT, DEFAULT,                   S1_Floor_LowerToLowestFloor,                DEFAULT },
     { pack_tnt,         1,  31,    2643,    1, "",         "DRFRONT",     "",                 32,   DEFAULT, DEFAULT,                   DEFAULT,                                    DEFAULT },

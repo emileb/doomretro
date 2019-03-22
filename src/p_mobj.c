@@ -6,13 +6,13 @@
 
 ========================================================================
 
-  Copyright © 1993-2012 id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2018 Brad Harding.
+  Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
+  Copyright © 2013-2019 by Brad Harding.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
 
-  This file is part of DOOM Retro.
+  This file is a part of DOOM Retro.
 
   DOOM Retro is free software: you can redistribute it and/or modify it
   under the terms of the GNU General Public License as published by the
@@ -28,7 +28,7 @@
   along with DOOM Retro. If not, see <https://www.gnu.org/licenses/>.
 
   DOOM is a registered trademark of id Software LLC, a ZeniMax Media
-  company, in the US and/or other countries and is used without
+  company, in the US and/or other countries, and is used without
   permission. All other trademarks are the property of their respective
   holders. DOOM Retro is in no way affiliated with nor endorsed by
   id Software.
@@ -40,8 +40,6 @@
 #include "doomstat.h"
 #include "hu_stuff.h"
 #include "i_gamepad.h"
-#include "i_system.h"
-#include "info.h"
 #include "m_config.h"
 #include "m_misc.h"
 #include "m_random.h"
@@ -550,11 +548,11 @@ void P_MobjThinker(mobj_t *mobj)
 
     // [AM] Handle interpolation unless we're an active player.
     if (mobj->interpolate == -1)
-        mobj->interpolate = false;
+        mobj->interpolate = 0;
     else if (!(player && mobj == player->mo))
     {
         // Assume we can interpolate at the beginning of the tic.
-        mobj->interpolate = true;
+        mobj->interpolate = 1;
 
         // Store starting position for mobj interpolation.
         mobj->oldx = mobj->x;
@@ -574,10 +572,6 @@ void P_MobjThinker(mobj_t *mobj)
         if (mobj->thinker.function == P_RemoveThinkerDelayed)
             return;
     }
-
-    // [BH] don't clip sprite if no longer in liquid
-    if (sector->terraintype == SOLID)
-        mobj->flags2 &= ~MF2_FEETARECLIPPED;
 
     // [BH] bob objects in liquid
     if ((flags2 & MF2_FEETARECLIPPED) && !(flags2 & MF2_NOLIQUIDBOB) && mobj->z <= sector->floorheight && !mobj->momz
@@ -690,6 +684,9 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
     mobj->flags2 = info->flags2;
     mobj->health = info->spawnhealth;
 
+    if (z == ONCEILINGZ)
+        mobj->flags2 &= ~MF2_CASTSHADOW;
+
     if (gameskill != sk_nightmare)
         mobj->reactiontime = info->reactiontime;
 
@@ -714,8 +711,7 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
     mobj->frame = st->frame;
     mobj->colfunc = info->colfunc;
     mobj->altcolfunc = info->altcolfunc;
-    mobj->id = (thingid == MusicSource ? thingid - 14100 : thingid);
-    thingid++;
+    mobj->id = -1;
 
     P_SetShadowColumnFunction(mobj);
 
@@ -740,6 +736,8 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 
     // [BH] initialize bobbing things
     mobj->floatbob = prevbob = (x == prevx && y == prevy ? prevbob : M_Random());
+    prevx = x;
+    prevy = y;
 
     mobj->z = (z == ONFLOORZ ? mobj->floorz : (z == ONCEILINGZ ? mobj->ceilingz - mobj->height : z));
 
@@ -751,11 +749,8 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
     mobj->thinker.function = (type == MT_MUSICSOURCE ? MusInfoThinker : P_MobjThinker);
     P_AddThinker(&mobj->thinker);
 
-    if (!(mobj->flags & MF_SPAWNCEILING) && (mobj->flags2 & MF2_FOOTCLIP) && sector->terraintype != SOLID && !sector->heightsec)
+    if (!(mobj->flags & MF_SPAWNCEILING) && (mobj->flags2 & MF2_FOOTCLIP) && !sector->heightsec && P_IsInLiquid(mobj))
         mobj->flags2 |= MF2_FEETARECLIPPED;
-
-    prevx = x;
-    prevy = y;
 
     return mobj;
 }
@@ -909,6 +904,9 @@ static void P_SpawnPlayer(const mapthing_t *mthing)
 
     mobj = P_SpawnMobj(mthing->x << FRACBITS, mthing->y << FRACBITS, ONFLOORZ, MT_PLAYER);
 
+    for (const struct msecnode_s *seclist = mobj->touching_sectorlist; seclist; seclist = seclist->m_tnext)
+        mobj->z = mobj->floorz = MAX(mobj->z, seclist->m_sector->floorheight);
+
     mobj->angle = ((mthing->angle % 45) ? mthing->angle * (ANG45 / 45) : ANG45 * (mthing->angle / 45));
     mobj->player = viewplayer;
     mobj->health = viewplayer->health;
@@ -921,9 +919,13 @@ static void P_SpawnPlayer(const mapthing_t *mthing)
     viewplayer->bonuscount = 0;
     viewplayer->extralight = 0;
     viewplayer->fixedcolormap = 0;
-    viewplayer->viewheight = VIEWHEIGHT;
 
-    viewplayer->viewz = viewplayer->mo->z + viewplayer->viewheight;
+    viewplayer->viewheight = VIEWHEIGHT;
+    viewplayer->viewz = viewplayer->oldviewz = mobj->z + viewplayer->viewheight;
+
+    if ((mobj->flags2 & MF2_FEETARECLIPPED) && r_liquid_clipsprites)
+        viewplayer->viewz -= FOOTCLIPSIZE;
+
     viewplayer->psprites[ps_weapon].sx = 0;
     viewplayer->mo->momx = 0;
     viewplayer->mo->momy = 0;
@@ -931,6 +933,9 @@ static void P_SpawnPlayer(const mapthing_t *mthing)
     viewplayer->momy = 0;
     viewplayer->lookdir = 0;
     viewplayer->recoil = 0;
+    viewplayer->jumptics = 0;
+    viewplayer->bounce = 0;
+    viewplayer->bouncemax = 0;
 
     deathcount = 0;
     deadlookdir = -1;
@@ -997,11 +1002,13 @@ mobj_t *P_SpawnMapThing(mapthing_t *mthing, dboolean nomonsters)
     fixed_t x, y, z;
     short   type = mthing->type;
     int     flags;
+    int     musicid = 0;
 
     // check for players specially
     if (type == Player1Start)
     {
         P_SpawnPlayer(mthing);
+        viewplayer->mo->id = thingid;
         return NULL;
     }
     else if ((type >= Player2Start && type <= Player4Start) || type == PlayerDeathmatchStart)
@@ -1016,6 +1023,12 @@ mobj_t *P_SpawnMapThing(mapthing_t *mthing, dboolean nomonsters)
         bit = 4;
     else
         bit = 1 << (gameskill - 1);
+
+    if (type >= 14100 && type <= 14164)
+    {
+        musicid = type - 14100;
+        type = MusicSource;
+    }
 
     // killough 8/23/98: use table for faster lookup
     i = P_FindDoomedNum(type);
@@ -1032,17 +1045,16 @@ mobj_t *P_SpawnMapThing(mapthing_t *mthing, dboolean nomonsters)
     // check for appropriate skill level
     if (!(mthing->options & (MTF_EASY | MTF_NORMAL | MTF_HARD)) && (!canmodify || !r_fixmaperrors) && type != VisualModeCamera)
     {
-        if (mobjinfo[i].name1[0] != '\0')
+        if (*mobjinfo[i].name1)
             C_Warning("The %s at (%i,%i) didn't spawn because it has no skill flags.", mobjinfo[i].name1, mthing->x, mthing->y);
         else
             C_Warning("Thing %s at (%i,%i) didn't spawn because it has no skill flags.", commify(thingid), mthing->x, mthing->y);
+
+        return NULL;
     }
 
     if (!(mthing->options & bit))
         return NULL;
-
-    if (type >= 14100 && type <= 14164)
-        type = MusicSource;
 
     // find which type to spawn
 
@@ -1069,6 +1081,7 @@ mobj_t *P_SpawnMapThing(mapthing_t *mthing, dboolean nomonsters)
 
     mobj = P_SpawnMobj(x, y, z, (mobjtype_t)i);
     mobj->spawnpoint = *mthing;
+    mobj->musicid = musicid;
 
     if (mthing->options & MTF_AMBUSH)
         mobj->flags |= MF_AMBUSH;
@@ -1147,12 +1160,9 @@ void P_SpawnPuff(fixed_t x, fixed_t y, fixed_t z, angle_t angle)
 
     th->colfunc = info->colfunc;
     th->altcolfunc = info->altcolfunc;
-    th->id = thingid++;
+    th->id = -1;
 
     P_SetThingPosition(th);
-
-    if (th->info->attacksound)
-        S_StartSound(th, th->info->attacksound);
 
     sector = th->subsector->sector;
     th->floorz = sector->interpfloorheight;
@@ -1231,7 +1241,7 @@ void P_SpawnBlood(fixed_t x, fixed_t y, fixed_t z, angle_t angle, int damage, mo
         th->colfunc = info->colfunc;
         th->altcolfunc = info->altcolfunc;
         th->blood = blood;
-        th->id = thingid++;
+        th->id = -1;
 
         P_SetThingPosition(th);
 
@@ -1262,8 +1272,6 @@ void P_SpawnBlood(fixed_t x, fixed_t y, fixed_t z, angle_t angle, int damage, mo
 //
 // P_SpawnBloodSplat
 //
-extern short    firstbloodsplatlump;
-
 void P_SpawnBloodSplat(fixed_t x, fixed_t y, int blood, int maxheight, mobj_t *target)
 {
     if (r_bloodsplats_total >= r_bloodsplats_max)
@@ -1376,12 +1384,14 @@ void P_SpawnPlayerMissile(mobj_t *source, mobjtype_t type)
             slope = P_AimLineAttack(source, (an += 1 << 26), 16 * 64 * FRACUNIT);
 
             if (!linetarget)
+            {
                 slope = P_AimLineAttack(source, (an -= 2 << 26), 16 * 64 * FRACUNIT);
 
-            if (!linetarget)
-            {
-                an = source->angle;
-                slope = (usemouselook ? ((source->player->lookdir / MLOOKUNIT) << FRACBITS) / 173 : 0);
+                if (!linetarget)
+                {
+                    an = source->angle;
+                    slope = (usemouselook ? ((source->player->lookdir / MLOOKUNIT) << FRACBITS) / 173 : 0);
+                }
             }
         }
     }

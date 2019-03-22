@@ -6,13 +6,13 @@
 
 ========================================================================
 
-  Copyright © 1993-2012 id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2018 Brad Harding.
+  Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
+  Copyright © 2013-2019 by Brad Harding.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
 
-  This file is part of DOOM Retro.
+  This file is a part of DOOM Retro.
 
   DOOM Retro is free software: you can redistribute it and/or modify it
   under the terms of the GNU General Public License as published by the
@@ -28,7 +28,7 @@
   along with DOOM Retro. If not, see <https://www.gnu.org/licenses/>.
 
   DOOM is a registered trademark of id Software LLC, a ZeniMax Media
-  company, in the US and/or other countries and is used without
+  company, in the US and/or other countries, and is used without
   permission. All other trademarks are the property of their respective
   holders. DOOM Retro is in no way affiliated with nor endorsed by
   id Software.
@@ -56,11 +56,11 @@
 #include "f_wipe.h"
 #include "g_game.h"
 #include "hu_stuff.h"
-#include "info.h"
 #include "i_gamepad.h"
 #include "i_swap.h"
 #include "i_system.h"
 #include "i_timer.h"
+#include "info.h"
 #include "m_argv.h"
 #include "m_config.h"
 #include "m_menu.h"
@@ -144,6 +144,9 @@ extern HANDLE       CapFPSEvent;
 //
 void D_PostEvent(event_t *ev)
 {
+    if (dowipe)
+        return;
+
     lasteventtype = ev->type;
 
     if (C_Responder(ev))
@@ -239,7 +242,7 @@ void D_Display(void)
         R_RenderPlayerView();
 
         if (am_path && !(viewplayer->cheats & CF_NOCLIP) && !freeze)
-            AM_addToPath();
+            AM_AddToPath();
 
         if (mapwindow || automapactive)
             AM_Drawer();
@@ -251,7 +254,6 @@ void D_Display(void)
         {
             viewactivestate = false;    // view was not active
             R_FillBackScreen();         // draw the pattern into the back screen
-            blurred = false;
         }
 
         // see if the border needs to be updated to the screen
@@ -353,7 +355,6 @@ void D_Display(void)
 
         wipestart = nowtime;
         done = wipe_ScreenWipe(tics);
-        blurred = false;
 
         M_Drawer();
 #ifdef __ANDROID__ // The touch controls change the viewport, call this to fix. This function does not exist in SDL2
@@ -485,8 +486,6 @@ void D_DoAdvanceTitle(void)
     paused = false;
     gameaction = ga_nothing;
     gamestate = GS_TITLESCREEN;
-    blurred = false;
-    noinput = false;
 
     if (!titlesequence)
     {
@@ -523,6 +522,7 @@ void D_DoAdvanceTitle(void)
         {
             I_SetPalette(playpal);
             splashscreen = false;
+            I_Sleep(300);
         }
 
         M_SetWindowCaption();
@@ -564,7 +564,7 @@ void D_StartTitle(int page)
     titlesequence = page;
 
     if (mapwindow)
-        AM_clearFB();
+        AM_ClearFB();
 
     D_AdvanceTitle();
 }
@@ -640,7 +640,7 @@ static char *FindDehPath(char *path, char *ext, char *pattern)
     while ((dit = readdir(dirp)))
         if (!fnmatch(dehpattern, dit->d_name, 0))
         {
-            char    *dehfullpath = M_StringJoin(dehdir, DIR_SEPARATOR_S, dit->d_name, "");
+            char    *dehfullpath = M_StringJoin(dehdir, DIR_SEPARATOR_S, dit->d_name, NULL);
 
             closedir(dirp);
             free(pathcopy);
@@ -699,14 +699,10 @@ static void LoadCfgFile(char *path)
 
 static dboolean D_IsDOOMIWAD(char *filename)
 {
-    dboolean    result;
     const char  *leaf = leafname(filename);
 
-    result = (M_StringCompare(leaf, "DOOM.WAD") || M_StringCompare(leaf, "DOOM1.WAD")
-        || M_StringCompare(leaf, "DOOM2.WAD") || M_StringCompare(leaf, "PLUTONIA.WAD")
-        || M_StringCompare(leaf, "TNT.WAD") || (hacx = M_StringCompare(leaf, "HACX.WAD")));
-
-    return result;
+    return (M_StringCompare(leaf, "DOOM.WAD") || M_StringCompare(leaf, "DOOM1.WAD") || M_StringCompare(leaf, "DOOM2.WAD")
+        || M_StringCompare(leaf, "PLUTONIA.WAD") || M_StringCompare(leaf, "TNT.WAD") || (hacx = M_StringCompare(leaf, "HACX.WAD")));
 }
 
 static dboolean D_IsUnsupportedIWAD(char *filename)
@@ -740,6 +736,7 @@ static dboolean D_IsUnsupportedIWAD(char *filename)
     return false;
 }
 
+#if defined(_WIN32)
 static dboolean D_IsCfgFile(char *filename)
 {
     return (M_StringCompare(filename + strlen(filename) - 4, ".cfg"));
@@ -751,12 +748,18 @@ static dboolean D_IsDehFile(char *filename)
 
     return (M_StringCompare(filename + len - 4, ".deh") || M_StringCompare(filename + len - 4, ".bex"));
 }
+#endif
 
 static void D_CheckSupportedPWAD(char *filename)
 {
     const char  *leaf = leafname(filename);
 
-    if (M_StringCompare(leaf, "NERVE.WAD"))
+    if (M_StringCompare(leaf, "SIGIL.WAD"))
+    {
+        //sigil = true;
+        //episode = 5;
+    }
+    else if (M_StringCompare(leaf, "NERVE.WAD"))
     {
         nerve = true;
         expansion = 2;
@@ -817,10 +820,23 @@ static dboolean D_CheckParms(void)
             if (W_AddFile(myargv[1], false))
             {
                 result = true;
-                iwadfolder = strdup(M_ExtractFolder(myargv[1]));
+                iwadfolder = M_StringDuplicate(M_ExtractFolder(myargv[1]));
 
+                // if DOOM.WAD is selected, load SIGIL.WAD automatically if present
+                if (M_StringCompare(leafname(myargv[1]), "DOOM.WAD"))
+                {
+                    static char fullpath[MAX_PATH];
+
+                    M_snprintf(fullpath, sizeof(fullpath), "%s"DIR_SEPARATOR_S"%s", M_ExtractFolder(myargv[1]), "SIGIL.WAD");
+
+                    if (W_MergeFile(fullpath, true))
+                    {
+                        modifiedgame = true;
+                        //sigil = true;
+                    }
+                }
                 // if DOOM2.WAD is selected, load NERVE.WAD automatically if present
-                if (M_StringCompare(leafname(myargv[1]), "DOOM2.WAD"))
+                else if (M_StringCompare(leafname(myargv[1]), "DOOM2.WAD"))
                 {
                     static char fullpath[MAX_PATH];
 
@@ -851,7 +867,7 @@ static dboolean D_CheckParms(void)
             if (W_AddFile(fullpath, true))
             {
                 result = true;
-                iwadfolder = strdup(M_ExtractFolder(fullpath));
+                iwadfolder = M_StringDuplicate(M_ExtractFolder(fullpath));
                 D_CheckSupportedPWAD(myargv[1]);
 
                 if (W_MergeFile(myargv[1], false))
@@ -1028,10 +1044,11 @@ static int D_OpenWADLauncher(void)
             char    *file = (char *)[url fileSystemRepresentation];
 #endif
 
-            if (!M_StringEndsWith(file, ".wad"))
+            if (!M_StringEndsWith(file, ".wad") && !M_StringEndsWith(file, ".deh") && !M_StringEndsWith(file, ".bex")
+                && !M_StringEndsWith(file, ".cfg"))
                 file = M_StringJoin(file, ".wad", NULL);
 
-            wad = strdup(file);
+            wad = M_StringDuplicate(file);
 
             // check if it's a valid and supported IWAD
             if (D_IsDOOMIWAD(file) || (W_WadType(file) == IWAD && !D_IsUnsupportedIWAD(file)))
@@ -1041,11 +1058,24 @@ static int D_OpenWADLauncher(void)
                 if (W_AddFile(file, false))
                 {
                     iwadfound = 1;
-                    wad = strdup(leafname(file));
-                    iwadfolder = strdup(M_ExtractFolder(file));
+                    wad = M_StringDuplicate(leafname(file));
+                    iwadfolder = M_StringDuplicate(M_ExtractFolder(file));
 
+                    // if DOOM.WAD is selected, load SIGIL.WAD automatically if present
+                    if (M_StringCompare(leafname(file), "DOOM.WAD"))
+                    {
+                        static char fullpath[MAX_PATH];
+
+                        M_snprintf(fullpath, sizeof(fullpath), "%s"DIR_SEPARATOR_S"%s", M_ExtractFolder(file), "SIGIL.WAD");
+
+                        if (W_MergeFile(fullpath, true))
+                        {
+                            modifiedgame = true;
+                            //sigil = true;
+                        }
+                    }
                     // if DOOM2.WAD is selected, load NERVE.WAD automatically if present
-                    if (M_StringCompare(leafname(file), "DOOM2.WAD"))
+                    else if (M_StringCompare(leafname(file), "DOOM2.WAD"))
                     {
                         static char fullpath[MAX_PATH];
 
@@ -1069,7 +1099,7 @@ static int D_OpenWADLauncher(void)
                 if (iwadrequired == none)
                     iwadrequired = doom2;
 
-                wad = strdup(leafname(file));
+                wad = M_StringDuplicate(leafname(file));
 
                 // try the current folder first
                 M_snprintf(fullpath, sizeof(fullpath), "%s"DIR_SEPARATOR_S"%s", M_ExtractFolder(file), iwadsrequired[iwadrequired]);
@@ -1078,7 +1108,7 @@ static int D_OpenWADLauncher(void)
                 if (W_AddFile(fullpath, true))
                 {
                     iwadfound = 1;
-                    iwadfolder = strdup(M_ExtractFolder(fullpath));
+                    iwadfolder = M_StringDuplicate(M_ExtractFolder(fullpath));
                     D_CheckSupportedPWAD(file);
 
                     if (W_MergeFile(file, false))
@@ -1218,8 +1248,8 @@ static int D_OpenWADLauncher(void)
                             iwadfound = 1;
                             sharewareiwad = M_StringCompare(iwadpass1, "DOOM1.WAD");
                             isDOOM2 = M_StringCompare(iwadpass1, "DOOM2.WAD");
-                            wad = strdup(leafname(fullpath));
-                            iwadfolder = strdup(M_ExtractFolder(fullpath));
+                            wad = M_StringDuplicate(leafname(fullpath));
+                            iwadfolder = M_StringDuplicate(M_ExtractFolder(fullpath));
                             break;
                         }
                     }
@@ -1321,8 +1351,8 @@ static int D_OpenWADLauncher(void)
                             iwadfound = 1;
                             sharewareiwad = M_StringCompare(iwadpass2, "DOOM1.WAD");
                             isDOOM2 = M_StringCompare(iwadpass2, "DOOM2.WAD");
-                            wad = strdup(leafname(fullpath));
-                            iwadfolder = strdup(M_ExtractFolder(fullpath));
+                            wad = M_StringDuplicate(leafname(fullpath));
+                            iwadfolder = M_StringDuplicate(M_ExtractFolder(fullpath));
                             break;
                         }
                     }
@@ -1334,7 +1364,6 @@ static int D_OpenWADLauncher(void)
                             break;
                         }
                     }
-
                 }
 
 #if defined(_WIN32)
@@ -1381,12 +1410,13 @@ static int D_OpenWADLauncher(void)
                             if (W_AddFile(fullpath2, true))
                             {
                                 iwadfound = 1;
-                                iwadfolder = strdup(M_ExtractFolder(fullpath2));
+                                iwadfolder = M_StringDuplicate(M_ExtractFolder(fullpath2));
                             }
                             else
                             {
                                 // otherwise try the iwadfolder CVAR
-                                M_snprintf(fullpath2, sizeof(fullpath2), "%s"DIR_SEPARATOR_S"%s", iwadfolder, iwadsrequired[iwadrequired]);
+                                M_snprintf(fullpath2, sizeof(fullpath2), "%s"DIR_SEPARATOR_S"%s", iwadfolder,
+                                    iwadsrequired[iwadrequired]);
                                 D_IdentifyIWADByName(fullpath2);
 
                                 if (W_AddFile(fullpath2, true))
@@ -1458,7 +1488,7 @@ static int D_OpenWADLauncher(void)
 
                             if (W_MergeFile(fullpath, false))
                             {
-                                wad = strdup(leafname(fullpath));
+                                wad = M_StringDuplicate(leafname(fullpath));
                                 modifiedgame = true;
                                 LoadCfgFile(fullpath);
                                 LoadDehFile(fullpath);
@@ -1609,12 +1639,15 @@ static void D_DoomMainSetup(void)
     char        *appdatafolder = M_GetAppDataFolder();
     char        *iwadfile;
     int         startloadgame;
+    char        *resourcefolder = M_GetResourceFolder();
+    char        *time;
 
-    packagewad = M_StringJoin(M_GetResourceFolder(), DIR_SEPARATOR_S, PACKAGE_WAD, NULL);
+    packagewad = M_StringJoin(resourcefolder, DIR_SEPARATOR_S, PACKAGE_WAD, NULL);
+    free(resourcefolder);
 
     M_MakeDirectory(appdatafolder);
-
     packageconfig = M_StringJoin(appdatafolder, DIR_SEPARATOR_S, PACKAGE_CONFIG, NULL);
+    free(appdatafolder);
 
     C_Output("");
     C_PrintCompileDate();
@@ -1704,7 +1737,13 @@ static void D_DoomMainSetup(void)
     else if (stat_runs == 1)
         C_Output("<i><b>"PACKAGE_NAME"</b></i> has now been run twice.");
     else
-        C_Output("<i><b>"PACKAGE_NAME"</b></i> has now been run %s times.", commify(SafeAdd(stat_runs, 1)));
+    {
+        char    *stat_runs_str = commify(SafeAdd(stat_runs, 1));
+
+        C_Output("<i><b>"PACKAGE_NAME"</b></i> has now been run %s times.", stat_runs_str);
+
+        free(stat_runs_str);
+    }
 
     if (!M_FileExists(packagewad))
         I_Error("%s can't be found.", packagewad);
@@ -1727,7 +1766,7 @@ static void D_DoomMainSetup(void)
             {
                 if ((choseniwad = D_OpenWADLauncher()) == -1)
                     I_Quit(false);
-                else if (!choseniwad && !error)
+                else if (!choseniwad && !error && (!*wad || M_StringEndsWith(wad, ".wad")))
                 {
                     static char buffer[256];
 
@@ -1999,7 +2038,6 @@ static void D_DoomMainSetup(void)
         if (alwaysrun)
             C_StrCVAROutput(stringize(alwaysrun), "on");
 
-        noinput = false;
         G_LoadGame(P_SaveGameFile(startloadgame));
     }
 
@@ -2019,14 +2057,16 @@ static void D_DoomMainSetup(void)
                 C_StrCVAROutput(stringize(alwaysrun), "on");
 
             C_Output("Warping to %s...", lumpname);
-            noinput = false;
             G_DeferredInitNew(startskill, startepisode, startmap);
         }
         else
             D_StartTitle(M_CheckParm("-nosplash") || SCREENSCALE == 1);   // start up intro loop
     }
+    
+    time = striptrailingzero((I_GetTimeMS() - startuptimer) / 1000.0f, 1);
+    C_Output("Startup took %s seconds to complete.", time);
 
-    C_Output("Startup took %s seconds to complete.", striptrailingzero((I_GetTimeMS() - startuptimer) / 1000.0f, 1));
+    free(time);
 
     // Ty 04/08/98 - Add 5 lines of misc. data, only if non-blank
     // The expectation is that these will be set in a .bex file

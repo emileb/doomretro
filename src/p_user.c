@@ -6,13 +6,13 @@
 
 ========================================================================
 
-  Copyright © 1993-2012 id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2018 Brad Harding.
+  Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
+  Copyright © 2013-2019 by Brad Harding.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
 
-  This file is part of DOOM Retro.
+  This file is a part of DOOM Retro.
 
   DOOM Retro is free software: you can redistribute it and/or modify it
   under the terms of the GNU General Public License as published by the
@@ -28,7 +28,7 @@
   along with DOOM Retro. If not, see <https://www.gnu.org/licenses/>.
 
   DOOM is a registered trademark of id Software LLC, a ZeniMax Media
-  company, in the US and/or other countries and is used without
+  company, in the US and/or other countries, and is used without
   permission. All other trademarks are the property of their respective
   holders. DOOM Retro is in no way affiliated with nor endorsed by
   id Software.
@@ -40,13 +40,18 @@
 #include "doomstat.h"
 #include "g_game.h"
 #include "i_gamepad.h"
-#include "info.h"
 #include "m_config.h"
-#include "m_random.h"
+#include "m_menu.h"
 #include "p_inter.h"
 #include "p_local.h"
 #include "s_sound.h"
 
+#define AUTOTILTUNIT    20
+#define AUTOTILTMAX     300
+#define MINSTEPSIZE     (8 * FRACUNIT)
+#define MAXSTEPSIZE     (24 * FRACUNIT)
+
+dboolean        autotilt = autotilt_default;
 dboolean        autouse = autouse_default;
 dboolean        infighting = infighting_default;
 int             movebob = movebob_default;
@@ -63,6 +68,7 @@ extern fixed_t  animatedliquiddiff;
 extern dboolean canmouselook;
 extern dboolean skipaction;
 extern dboolean usemouselook;
+extern int      spindirection;
 
 void G_RemoveChoppers(void);
 
@@ -104,6 +110,8 @@ void P_CalcHeight(void)
 {
     mobj_t  *mo = viewplayer->mo;
 
+    viewplayer->viewz = mo->z + viewplayer->viewheight;
+
     if (viewplayer->playerstate == PST_LIVE)
     {
         // Regular movement bobbing
@@ -111,12 +119,10 @@ void P_CalcHeight(void)
         // even if not on ground)
         fixed_t momx = viewplayer->momx;
         fixed_t momy = viewplayer->momy;
-        fixed_t bob;
+        fixed_t bob = (MAXBOB * stillbob / 400) / 2;
 
         if (momx | momy)
-            bob = MAX(MIN((FixedMul(momx, momx) + FixedMul(momy, momy)) >> 2, MAXBOB) * movebob / 100, MAXBOB * stillbob / 400) / 2;
-        else
-            bob = (MAXBOB * stillbob / 400) / 2;
+            bob = MAX(MIN((FixedMul(momx, momx) + FixedMul(momy, momy)) >> 2, MAXBOB) * movebob / 200, bob);
 
         if (viewplayer->bouncemax)
         {
@@ -154,37 +160,23 @@ void P_CalcHeight(void)
                 viewplayer->deltaviewheight = 1;
         }
 
-        viewplayer->viewz = mo->z + viewplayer->viewheight + FixedMul(bob, finesine[(FINEANGLES / 20 * leveltime) & FINEMASK]);
+        viewplayer->viewz += FixedMul(bob, finesine[(FINEANGLES / 20 * leveltime) & FINEMASK]);
     }
-    else
-        viewplayer->viewz = mo->z + viewplayer->viewheight;
 
     if (mo->flags2 & MF2_FEETARECLIPPED)
     {
-        dboolean    liquid = true;
-
-        for (const struct msecnode_s *seclist = mo->touching_sectorlist; seclist; seclist = seclist->m_tnext)
-            if (seclist->m_sector->terraintype == SOLID)
-            {
-                liquid = false;
-                break;
-            }
-
-        if (liquid)
+        if (viewplayer->playerstate == PST_DEAD)
         {
-            if (viewplayer->playerstate == PST_DEAD)
-            {
-                if (r_liquid_bob)
-                    viewplayer->viewz += animatedliquiddiff;
-            }
-            else if (r_liquid_lowerview)
-            {
-                sector_t    *sector = mo->subsector->sector;
+            if (r_liquid_bob)
+                viewplayer->viewz += animatedliquiddiff;
+        }
+        else if (r_liquid_lowerview)
+        {
+            sector_t    *sector = mo->subsector->sector;
 
-                if (!P_IsSelfReferencingSector(sector)
-                    && (!sector->heightsec || mo->z + viewplayer->viewheight - FOOTCLIPSIZE >= sector->heightsec->floorheight))
-                    viewplayer->viewz -= FOOTCLIPSIZE;
-            }
+            if (!P_IsSelfReferencingSector(sector)
+                && (!sector->heightsec || mo->z + viewplayer->viewheight - FOOTCLIPSIZE >= sector->heightsec->floorheight))
+                viewplayer->viewz -= FOOTCLIPSIZE;
         }
     }
 
@@ -192,14 +184,43 @@ void P_CalcHeight(void)
 }
 
 //
+// P_CheckForSteps
+//
+dboolean P_CheckForSteps(int width)
+{
+    sector_t    *sector1 = R_PointInSubsector(viewx + width * viewcos, viewy + width * viewsin)->sector;
+    sector_t    *sector2 = R_PointInSubsector(viewx + width * 2 * viewcos, viewy + width * 2 * viewsin)->sector;
+
+    if (sector1->terraintype == sector2->terraintype)
+    {
+        fixed_t step1 = sector1->floorheight;
+        fixed_t step2 = sector2->floorheight;
+        int     delta1 = step1 - viewplayer->mo->subsector->sector->floorheight;
+        int     delta2 = step2 - step1;
+
+        if (delta1 >= MINSTEPSIZE && delta1 <= MAXSTEPSIZE && delta1 == delta2)
+        {
+            viewplayer->lookdir = MIN(viewplayer->lookdir + AUTOTILTUNIT, AUTOTILTMAX);
+            return true;
+        }
+        else if (delta1 >= -MAXSTEPSIZE && delta1 <= -MINSTEPSIZE && delta1 == delta2)
+        {
+            viewplayer->lookdir = MAX(-AUTOTILTMAX, viewplayer->lookdir - AUTOTILTUNIT);
+            return true;
+        }
+    }
+
+    return false;
+}
+
 // P_MovePlayer
 //
 void P_MovePlayer(void)
 {
     mobj_t      *mo = viewplayer->mo;
     ticcmd_t    *cmd = &viewplayer->cmd;
-    signed char forwardmove = cmd->forwardmove;
-    signed char sidemove = cmd->sidemove;
+    signed char forward = cmd->forwardmove;
+    signed char side = cmd->sidemove;
 
     mo->angle += cmd->angleturn << FRACBITS;
     onground = (mo->z <= mo->floorz || (mo->flags2 & MF2_ONMOBJ));
@@ -210,7 +231,7 @@ void P_MovePlayer(void)
     // anomalies. The thrust applied to bobbing is always the same strength on
     // ice, because the player still "works just as hard" to move, while the
     // thrust applied to the movement varies with 'movefactor'.
-    if ((forwardmove | sidemove) && onground)
+    if ((forward | side) && onground)
     {
         int     friction;
         int     movefactor = P_GetMoveFactor(mo, &friction);
@@ -221,20 +242,36 @@ void P_MovePlayer(void)
         // On ice, make it depend on effort.
         int     bobfactor = (friction < ORIG_FRICTION ? movefactor : ORIG_FRICTION_FACTOR);
 
-        if (forwardmove)
+        if (forward)
         {
-            P_Bob(angle, forwardmove * bobfactor);
-            P_Thrust(angle, forwardmove * movefactor);
+            P_Bob(angle, forward * bobfactor);
+            P_Thrust(angle, forward * movefactor);
         }
 
-        if (sidemove)
+        if (side)
         {
-            P_Bob((angle -= ANG90), sidemove * bobfactor);
-            P_Thrust(angle, sidemove * movefactor);
+            P_Bob((angle -= ANG90), side * bobfactor);
+            P_Thrust(angle, side * movefactor);
         }
     }
 
-    if (canmouselook)
+    if (autotilt && !mouselook)
+    {
+        if (!P_CheckForSteps(32) && !P_CheckForSteps(24))
+        {
+            if (viewplayer->lookdir > 0)
+            {
+                if ((viewplayer->lookdir -= AUTOTILTUNIT) < AUTOTILTUNIT)
+                    viewplayer->lookdir = 0;
+            }
+            else
+            {
+                if ((viewplayer->lookdir += AUTOTILTUNIT) > -AUTOTILTUNIT)
+                    viewplayer->lookdir = 0;
+            }
+        }
+    }
+    else if (canmouselook)
     {
         if (cmd->lookdir)
             viewplayer->lookdir = BETWEEN(-LOOKDIRMAX * MLOOKUNIT, viewplayer->lookdir + cmd->lookdir, LOOKDIRMAX * MLOOKUNIT);
@@ -301,7 +338,8 @@ static void P_DeathThink(void)
                 if (viewheightrange)
                     inc = (int)(inc / viewheightrange + 0.5);
 
-                deadlookdir = DEADLOOKDIR / inc * inc;
+                if (inc)
+                    deadlookdir = DEADLOOKDIR / inc * inc;
             }
 
             if (viewplayer->lookdir > deadlookdir)
@@ -465,9 +503,19 @@ void P_ChangeWeapon(weapontype_t newweapon)
 //
 void P_PlayerThink(void)
 {
-    ticcmd_t    *cmd = &viewplayer->cmd;
+    ticcmd_t    *cmd;
     mobj_t      *mo = viewplayer->mo;
     static int  motionblur;
+
+    if (menuactive)
+    {
+        if (!inhelpscreens)
+            mo->angle += ANG1 / 32 * spindirection;
+
+        return;
+    }
+
+    cmd = &viewplayer->cmd;
 
     if (viewplayer->bonuscount)
         viewplayer->bonuscount--;
@@ -476,7 +524,7 @@ void P_PlayerThink(void)
         return;
 
     // [AM] Assume we can interpolate at the beginning of the tic.
-    mo->interpolate = true;
+    mo->interpolate = 1;
 
     // [AM] Store starting position for player interpolation.
     mo->oldx = mo->x;
@@ -556,7 +604,7 @@ void P_PlayerThink(void)
 
     // [BH] regenerate health up to 100 every 1 second
     if (regenhealth && mo->health < initial_health && !(leveltime % TICRATE) && !viewplayer->damagecount)
-        mo->health = viewplayer->health = MIN(viewplayer->health + 1, initial_health);
+        P_GiveBody(1, false);
 
     // [BH] Check all sectors player is touching are special
     for (const struct msecnode_s *seclist = mo->touching_sectorlist; seclist; seclist = seclist->m_tnext)
@@ -571,14 +619,11 @@ void P_PlayerThink(void)
         mo->momz = JUMPHEIGHT;
         viewplayer->jumptics = 18;
     }
-
-    // Check for weapon change.
-
-    // A special event has no other buttons.
-    if (cmd->buttons & BT_SPECIAL)
+    else if (cmd->buttons & BT_SPECIAL)
+        // A special event has no other buttons.
         cmd->buttons = 0;
-
-    if ((cmd->buttons & BT_CHANGE) && (!automapactive || am_followmode))
+    else if ((cmd->buttons & BT_CHANGE) && (!automapactive || am_followmode))
+        // Check for weapon change.
         P_ChangeWeapon((cmd->buttons & BT_WEAPONMASK) >> BT_WEAPONSHIFT);
 
     // check for use

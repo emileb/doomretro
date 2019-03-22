@@ -6,13 +6,13 @@
 
 ========================================================================
 
-  Copyright © 1993-2012 id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2018 Brad Harding.
+  Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
+  Copyright © 2013-2019 by Brad Harding.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
 
-  This file is part of DOOM Retro.
+  This file is a part of DOOM Retro.
 
   DOOM Retro is free software: you can redistribute it and/or modify it
   under the terms of the GNU General Public License as published by the
@@ -28,7 +28,7 @@
   along with DOOM Retro. If not, see <https://www.gnu.org/licenses/>.
 
   DOOM is a registered trademark of id Software LLC, a ZeniMax Media
-  company, in the US and/or other countries and is used without
+  company, in the US and/or other countries, and is used without
   permission. All other trademarks are the property of their respective
   holders. DOOM Retro is in no way affiliated with nor endorsed by
   id Software.
@@ -44,7 +44,6 @@
 #include "m_config.h"
 #include "m_misc.h"
 #include "p_local.h"
-#include "p_tick.h"
 #include "r_sky.h"
 #include "sc_man.h"
 #include "w_wad.h"
@@ -402,7 +401,7 @@ static void R_InitTextures(void)
     {
         int game = brightmaps[i].game;
 
-        if (brightmaps[i].texture[0] != '\0'
+        if (*brightmaps[i].texture
             && (game == DOOM1AND2 || (gamemission == doom && game == DOOM1ONLY) || (gamemission != doom && game == DOOM2ONLY)))
         {
             int num = R_CheckTextureNumForName(brightmaps[i].texture);
@@ -449,24 +448,39 @@ static void R_InitSpriteLumps(void)
     {
         if (M_StringCompare(sc_String, "FIXSPRITEOFFSETS"))
         {
-            SC_MustGetString();
+            char    *sc_String_free;
 
-            if (M_StringCompare(pwadfile, removeext(sc_String)))
+            SC_MustGetString();
+            sc_String_free = removeext(sc_String);
+
+            if (M_StringCompare(pwadfile, sc_String_free))
                 fixspriteoffsets = true;
+
+            free(sc_String_free);
         }
         else if (M_StringCompare(sc_String, "NOTRANSLUCENCY"))
         {
-            SC_MustGetString();
+            char    *sc_String_free;
 
-            if (M_StringCompare(pwadfile, removeext(sc_String)))
+            SC_MustGetString();
+            sc_String_free = removeext(sc_String);
+
+            if (M_StringCompare(pwadfile, sc_String_free))
                 notranslucency = true;
+
+            free(sc_String_free);
         }
         else if (M_StringCompare(sc_String, "TELEFRAGONMAP30"))
         {
-            SC_MustGetString();
+            char    *sc_String_free;
 
-            if (M_StringCompare(pwadfile, removeext(sc_String)))
+            SC_MustGetString();
+            sc_String_free = removeext(sc_String);
+
+            if (M_StringCompare(pwadfile, sc_String_free))
                 telefragonmap30 = true;
+
+            free(sc_String_free);
         }
     }
 
@@ -520,9 +534,8 @@ static void R_InitSpriteLumps(void)
     // [BH] compatibility fixes
     if (FREEDOOM)
     {
-        states[S_BAR1].tics = 0;
-        mobjinfo[MT_BARREL].spawnstate = S_BAR2;
-        mobjinfo[MT_BARREL].frames = 0;
+        states[S_BAR3].nextstate = S_BAR2;
+        mobjinfo[MT_BARREL].frames = 2;
         mobjinfo[MT_HEAD].blood = MT_BLOOD;
         mobjinfo[MT_BRUISER].blood = MT_BLOOD;
         mobjinfo[MT_KNIGHT].blood = MT_BLOOD;

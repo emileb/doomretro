@@ -6,13 +6,13 @@
 
 ========================================================================
 
-  Copyright © 1993-2012 id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2018 Brad Harding.
+  Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
+  Copyright © 2013-2019 by Brad Harding.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
 
-  This file is part of DOOM Retro.
+  This file is a part of DOOM Retro.
 
   DOOM Retro is free software: you can redistribute it and/or modify it
   under the terms of the GNU General Public License as published by the
@@ -28,13 +28,15 @@
   along with DOOM Retro. If not, see <https://www.gnu.org/licenses/>.
 
   DOOM is a registered trademark of id Software LLC, a ZeniMax Media
-  company, in the US and/or other countries and is used without
+  company, in the US and/or other countries, and is used without
   permission. All other trademarks are the property of their respective
   holders. DOOM Retro is in no way affiliated with nor endorsed by
   id Software.
 
 ========================================================================
 */
+
+#include <string.h>
 
 #include "c_console.h"
 #include "doomstat.h"
@@ -43,7 +45,6 @@
 #include "p_local.h"
 #include "r_sky.h"
 #include "w_wad.h"
-#include "z_zone.h"
 
 #define MAXVISPLANES    384
 
@@ -206,7 +207,7 @@ visplane_t *R_FindPlane(fixed_t height, int picnum, int lightlevel, fixed_t xoff
     check->left = viewwidth;
     check->right = -1;
 
-    if (!(picnum & PL_SKYFLAT) && terraintypes[picnum] != SOLID && r_liquid_current && !xoffs && !yoffs)
+    if (!(picnum & PL_SKYFLAT) && terraintypes[picnum] > SOLID && r_liquid_current && !xoffs && !yoffs)
     {
         check->xoffs = animatedliquidxoffs;
         check->yoffs = animatedliquidyoffs;
@@ -306,10 +307,10 @@ static void R_MakeSpans(visplane_t *pl)
         unsigned short  b2 = pl->bottom[x];
 
         for (; t1 < t2 && t1 <= b1; t1++)
-            R_MapPlane(t1, spanstart[t1], x - 1);
+            R_MapPlane(t1, spanstart[t1], x);
 
         for (; b1 > b2 && b1 >= t1; b1--)
-            R_MapPlane(b1, spanstart[b1], x - 1);
+            R_MapPlane(b1, spanstart[b1], x);
 
         while (t2 < t1 && t2 <= b2)
             spanstart[t2++] = x;
@@ -338,42 +339,37 @@ static void R_MakeSpans(visplane_t *pl)
 //
 static byte *R_DistortedFlat(int flatnum)
 {
-    static int  lastflat = -1;
     static int  swirltic = -1;
+    static int  lastflat = -1;
     static int  offset[4096];
     static byte distortedflat[4096];
     byte        *normalflat;
     int         leveltic = leveltime;
 
     // Already swirled this one?
-    if (leveltic == swirltic && lastflat == flatnum)
+    if (swirltic == leveltic && lastflat == flatnum)
         return distortedflat;
 
+    swirltic = leveltic;
     lastflat = flatnum;
 
-    // built this tic?
-    if (leveltic != swirltic && (!consoleactive || swirltic == -1) && !menuactive && !paused)
-    {
-        leveltic *= SPEED;
+    leveltic *= SPEED;
 
-        for (int x = 0; x < 64; x++)
-            for (int y = 0; y < 64; y++)
-            {
-                int x1, y1;
-                int sinvalue, sinvalue2;
+    for (int x = 0; x < 64; x++)
+        for (int y = 0; y < 64; y++)
+        {
+            int x1, y1;
+            int sinvalue, sinvalue2;
 
-                sinvalue = finesine[(y * SWIRLFACTOR + leveltic * 5 + 900) & 8191];
-                sinvalue2 = finesine[(x * SWIRLFACTOR2 + leveltic * 4 + 300) & 8191];
-                x1 = x + 128 + ((sinvalue * AMP) >> FRACBITS) + ((sinvalue2 * AMP2) >> FRACBITS);
-                sinvalue = finesine[(x * SWIRLFACTOR + leveltic * 3 + 700) & 8191];
-                sinvalue2 = finesine[(y * SWIRLFACTOR2 + leveltic * 4 + 1200) & 8191];
-                y1 = y + 128 + ((sinvalue * AMP) >> FRACBITS) + ((sinvalue2 * AMP2) >> FRACBITS);
+            sinvalue = finesine[(y * SWIRLFACTOR + leveltic * 5 + 900) & 8191];
+            sinvalue2 = finesine[(x * SWIRLFACTOR2 + leveltic * 4 + 300) & 8191];
+            x1 = x + 128 + ((sinvalue * AMP) >> FRACBITS) + ((sinvalue2 * AMP2) >> FRACBITS);
+            sinvalue = finesine[(x * SWIRLFACTOR + leveltic * 3 + 700) & 8191];
+            sinvalue2 = finesine[(y * SWIRLFACTOR2 + leveltic * 4 + 1200) & 8191];
+            y1 = y + 128 + ((sinvalue * AMP) >> FRACBITS) + ((sinvalue2 * AMP2) >> FRACBITS);
 
-                offset[(y << 6) + x] = ((y1 & 63) << 6) + (x1 & 63);
-            }
-
-        swirltic = leveltime;
-    }
+            offset[(y << 6) + x] = ((y1 & 63) << 6) + (x1 & 63);
+        }
 
     normalflat = lumpinfo[firstflat + flatnum]->cache;
 
@@ -470,6 +466,7 @@ void R_DrawPlanes(void)
                 // regular flat
                 ds_source = (terraintypes[picnum] != SOLID && r_liquid_swirl ? R_DistortedFlat(picnum) :
                     lumpinfo[firstflat + flattranslation[picnum]]->cache);
+
                 R_MakeSpans(pl);
             }
         }

@@ -6,13 +6,13 @@
 
 ========================================================================
 
-  Copyright © 1993-2012 id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2018 Brad Harding.
+  Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
+  Copyright © 2013-2019 by Brad Harding.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
 
-  This file is part of DOOM Retro.
+  This file is a part of DOOM Retro.
 
   DOOM Retro is free software: you can redistribute it and/or modify it
   under the terms of the GNU General Public License as published by the
@@ -28,13 +28,15 @@
   along with DOOM Retro. If not, see <https://www.gnu.org/licenses/>.
 
   DOOM is a registered trademark of id Software LLC, a ZeniMax Media
-  company, in the US and/or other countries and is used without
+  company, in the US and/or other countries, and is used without
   permission. All other trademarks are the property of their respective
   holders. DOOM Retro is in no way affiliated with nor endorsed by
   id Software.
 
 ========================================================================
 */
+
+#include <string.h>
 
 #include "c_console.h"
 #include "doomstat.h"
@@ -44,7 +46,6 @@
 #include "p_local.h"
 #include "s_sound.h"
 #include "w_wad.h"
-#include "z_zone.h"
 
 // killough 2/8/98: Remove switch limit
 static int          *switchlist;        // killough
@@ -102,10 +103,10 @@ void P_InitSwitchList(void)
             // Ignore switches referencing unknown texture names, instead of exiting.
             // Warn if either one is missing, but only add if both are valid.
             if ((texture1 = R_CheckTextureNumForName(alphSwitchList[i].name1)) == -1)
-                C_Warning("Switch %i in the <b>SWITCHES</b> lump has an unknown texture of <b>%s</b>.", i, alphSwitchList[i].name1);
+                C_Warning("Switch %i in the <b>SWITCHES</b> lump has an unknown <b>%s</b> texture.", i, alphSwitchList[i].name1);
 
             if ((texture2 = R_CheckTextureNumForName(alphSwitchList[i].name2)) == -1)
-                C_Warning("Switch %i in the <b>SWITCHES</b> lump has an unknown texture of <b>%s</b>.", i, alphSwitchList[i].name2);
+                C_Warning("Switch %i in the <b>SWITCHES</b> lump has an unknown <b>%s</b> texture.", i, alphSwitchList[i].name2);
 
             if (texture1 != -1 && texture2 != -1)
             {
@@ -612,7 +613,7 @@ dboolean P_UseSpecialLine(mobj_t *thing, line_t *line, int side)
             break;
 
         case S1_Ceiling_RaiseToHighestCeiling:
-            if (EV_DoCeiling(line, raiseToHighest) | EV_DoFloor(line, lowerFloorToLowest))
+            if (EV_DoCeiling(line, raiseToHighest) || EV_DoFloor(line, lowerFloorToLowest))
                 P_ChangeSwitchTexture(line, false);
 
             break;
@@ -785,7 +786,7 @@ dboolean P_UseSpecialLine(mobj_t *thing, line_t *line, int side)
             break;
 
         case SR_Ceiling_RaiseToHighestCeiling:
-            if (EV_DoCeiling(line, raiseToHighest) | EV_DoFloor(line, lowerFloorToLowest))
+            if (EV_DoCeiling(line, raiseToHighest) || EV_DoFloor(line, lowerFloorToLowest))
                 P_ChangeSwitchTexture(line, true);
 
             break;

@@ -1,3 +1,84 @@
+### DOOM Retro v2.8.1
+
+* Optimizations have been made to further improve the overall performance and stability of *DOOM Retro*.
+* Minor changes have been made to text that is output to the console.
+* The current map’s title is now displayed again in the automap when the `vid_widescreen` CVAR is `off`.
+* Further improvements have been made to the console’s autocomplete feature.
+* A bug has been fixed whereby loading separate `.deh` or `.bex` files would cause *DOOM Retro* to hang.
+* `STBAR` patches wider than 320 pixels will now be displayed correctly when the `vid_widescreen` CVAR is `off`.
+* Restoring behavior present in *Vanilla DOOM*, exploding barrels will now trigger line specials.
+* Weapons that have been altered using a `DEHACKED` lump to use the `A_FireOldBFG` code pointer will now fire in the right direction based on the values of the `autoaim` and `mouselook` CVARs.
+* The correct amount of ammo is now taken from the player when entering `take backpack` in the console.
+* A crosshair can now be displayed by enabling the new `crosshair` CVAR. It is `on` by default, but also requires the `mouselook` CVAR to be `on` and the `autoaim` CVAR to be `off`.
+* If the `iwadfolder` CVAR is reset using either the `reset` or `resetall` CCMDs, the WAD launcher will try to find a common *DOOM* or *DOOM II* installation again the next time it is opened.
+* The value of the `facebackcolor` CVAR is no longer applied to the background of the player’s face in the widescreen HUD.
+
+---
+
+###### Saturday, February 2, 2019
+
+### DOOM Retro v2.8
+
+* Optimizations have been made to further improve the overall performance and stability of *DOOM Retro*.
+* Noise is now applied to the menu’s background. Also, if the menu is opened while playing a game, the status bar or widescreen HUD as well as all sprites will be hidden, and the player’s view will slowly rotate either left or right.
+* Minor changes have been made to text that is output to the console.
+* By enabling the new `autotilt` CVAR, the player’s view will automatically tilt while they go up or down flights of stairs, inspired by a feature present in [*Quake*](https://doomwiki.org/wiki/Quake). This CVAR is both `off` by default and when vanilla mode is enabled, and will also have no effect if the `mouselook` CVAR is `on`.
+* The `r_hud` CVAR will now be reset correctly when using the `reset` or `resetall` CCMDs while no game is being played.
+* Keycards and skull keys in the widescreen HUD are now spaced slightly further apart.
+* The player’s health, ammo and armor in the widescreen HUD will now flash when they decrease as well as increase.
+* *DOOM Retro* will no longer hang when the player crosses a line with a *BOOM*-compatible special action of 154 (“WR Change Texture and Effect”) or 240 (“WR Change Texture and Effect to Nearest”).
+* Pressing the <kbd>F1</kbd> key to open the help screen will no longer cause a crash in some very rare instances.
+* Minor improvements have been made to the cast sequence at the end of *DOOM II*.
+* The value of the `facebackcolor` CVAR is now also applied to the background of the player’s face in the widescreen HUD.
+* Further improvements have been made to the support of `DEHACKED` lumps:
+  * Things will no longer cast a shadow if they are spawned on the ceiling.
+  * A thing’s name can now be changed as intended.
+  * The finale text screen will be completely skipped if there is no text to display.
+* Further improvements have been made to the support of `MAPINFO` and `RMAPINFO` lumps:
+  * Strings containing escaped double quotes can now be used.
+  * The title and composer of the music playing in the current map can now be displayed by the `mapstats` CCMD by using the new `musictitle` and `musiccomposer` entries.
+* The support for `MUSINFO` lumps has been fixed.
+* Music will now quickly fade out when quitting *DOOM Retro*.
+* MP3 music lumps now play as intended.
+* A crash will no longer occur when trying to display large patches on the intermission screen.
+* A bug has been fixed whereby the `unbind` CCMD would only accept an action as a parameter and not a control.
+* *DOOM Retro* now more intelligently determines if an animated flat depicts liquid. Only the following animated flats are now considered to be liquid:
+  * All animated flats present in the original IWADs (with the exception of `RROCK05` to `RROCK08` and `SLIME09` to `SLIME12`),
+  * All animated flats specified in an `ANIMATED` lump in a PWAD that include keywords such as “WATER”, “BLOOD”, “LAVA”, etc. (or certain abbreviations of those) in their names,
+  * Certain animated flats specified in an `ANIMATED` lump in a PWAD that are part of the [*Community Chest 4*](https://doomwiki.org/wiki/Community_Chest_4) and [*OTEX*](https://doom.ukiro.com/about-otex/) texture packs.
+  * A few animated flats from [a curated list of PWADs](https://github.com/bradharding/doomretro/wiki/RECOMMENDED-WADS).
+  * All animated flats specified using a `LIQUID` entry in a `MAPINFO` lump in a PWAD.
+* The blockmap of every map will now be rebuilt when loaded if `-blockmap` is specified on the command-line.
+* The following changes have been made to the `playerstats` CCMD:
+  * The number of times the player has saved a game is now displayed.
+  * The `Map explored` stat is now completely accurate.
+  * The number of cyberdemons and spider masterminds that the player has killed are no longer shown in *DOOM (Shareware)*.
+* When saving over an existing savegame, that savegame will now be backed up in the savegame folder.
+* A new `take` CCMD has been implemented that can be used to take ammo, armor, health, keys, weapons, or all or certain items from the player. It accepts the same parameters as the `give` CCMD.
+* If the player uses the mouse wheel to select the shotgun or super shotgun in *DOOM II*, the first shotgun to be selected when pressing the <kbd>3</kbd> key will now be set correctly.
+* No sound will be made if the player has their fists selected, has the berserk power-up, has no ammunition for any of their weapons, and tries to change weapons using the mouse wheel.
+* The player’s health in the widescreen HUD will now flash if it regenerates due to use of the `regenhealth` CCMD.
+* Fixing a [bug present in *Vanilla DOOM*](https://doomwiki.org/wiki/Player_face_grins_after_restoring_save_file), the player’s face in the status bar will no longer grin when the first item is picked up after loading a savegame.
+* The player’s face in the status bar will now behave correctly when the player injures themselves by exploding a barrel.
+* The player will no longer automatically switch to their fists upon picking up a berserk power-up if they have already picked one up elsewhere in the current map.
+* There is no longer the possibility of a crash when the player dies and the `mouselook` CVAR is `on` or a control is bound to the `+mouselook` action.
+* The `STTMINUS` patch is now positioned better in the widescreen HUD if it has been changed in a PWAD.
+* The fixes intended for E1M4 and E1M8 in `doom.wad` are no longer inadvertently applied to E1M4B and E1M8B when the `r_fixmaperrors` CVAR is `on`.
+* Minor improvements have been made to the support of [*Chex Quest*](https://doomwiki.org/wiki/Chex_Quest).
+* Voodoo dolls are now specified in the output of the `thinglist` CCMD.
+* The initial sound that a monster makes when it sees the player for the first time will no longer be interrupted by any further sounds that monster makes.
+* A bug has been fixed whereby text copied from outside *DOOM Retro* to the *Windows* clipboard and then pasted into the console using <kbd>CTRL</kbd> + <kbd>V</kbd> would be corrupt.
+* The player’s corpse will now still trigger line specials that exit the map when walked over.
+* The vertical distance something is away from blast damage, as well as when telefragging, is no longer taken into account when the `infiniteheight` CVAR is `on`.
+* The player’s rocket launcher will now be displayed correctly when fired in vanilla mode.
+* Both the `r_messagepos` and `r_messagescale` CVARs have been deprecated. The position and scale of player messages now depend on the value of the `vid_widescreen` CVAR.
+* Barrels will now animate correctly if their sprites have been replaced in a PWAD.
+* The player’s view will now always be at the correct height when they are spawned at the start of a map.
+
+---
+
+###### Sunday, November 18, 2018
+
 ### DOOM Retro v2.7.5
 
 * Optimizations have been made to further improve the overall performance and stability of *DOOM Retro*.

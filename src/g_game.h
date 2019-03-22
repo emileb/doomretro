@@ -6,13 +6,13 @@
 
 ========================================================================
 
-  Copyright © 1993-2012 id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2018 Brad Harding.
+  Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
+  Copyright © 2013-2019 by Brad Harding.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
 
-  This file is part of DOOM Retro.
+  This file is a part of DOOM Retro.
 
   DOOM Retro is free software: you can redistribute it and/or modify it
   under the terms of the GNU General Public License as published by the
@@ -28,7 +28,7 @@
   along with DOOM Retro. If not, see <https://www.gnu.org/licenses/>.
 
   DOOM is a registered trademark of id Software LLC, a ZeniMax Media
-  company, in the US and/or other countries and is used without
+  company, in the US and/or other countries, and is used without
   permission. All other trademarks are the property of their respective
   holders. DOOM Retro is in no way affiliated with nor endorsed by
   id Software.
@@ -99,21 +99,19 @@ extern fixed_t  angleturn[3];
 extern dboolean gamekeydown[NUMKEYS];
 extern dboolean *mousebuttons;
 extern dboolean canmodify;
-extern dboolean message_dontpause;
 extern dboolean gamepadpress;
 extern char     lbmname1[MAX_PATH];
 extern char     lbmpath1[MAX_PATH];
 extern char     lbmpath2[MAX_PATH];
 extern char     mapnum[6];
+extern char     maptitle[256];
 extern char     mapnumandtitle[512];
 extern char     keyactionlist[NUMKEYS][255];
 extern char     mouseactionlist[MAX_MOUSE_BUTTONS + 2][255];
 extern int      mousewait;
-extern int      gamepadwait;
 extern int      keydown;
 extern int      quickSaveSlot;
 extern int      st_facecount;
 extern dboolean oldweaponsowned[NUMWEAPONS];
-extern dboolean blurred;
 
 #endif

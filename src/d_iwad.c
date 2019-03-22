@@ -6,13 +6,13 @@
 
 ========================================================================
 
-  Copyright © 1993-2012 id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2018 Brad Harding.
+  Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
+  Copyright © 2013-2019 by Brad Harding.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
 
-  This file is part of DOOM Retro.
+  This file is a part of DOOM Retro.
 
   DOOM Retro is free software: you can redistribute it and/or modify it
   under the terms of the GNU General Public License as published by the
@@ -28,7 +28,7 @@
   along with DOOM Retro. If not, see <https://www.gnu.org/licenses/>.
 
   DOOM is a registered trademark of id Software LLC, a ZeniMax Media
-  company, in the US and/or other countries and is used without
+  company, in the US and/or other countries, and is used without
   permission. All other trademarks are the property of their respective
   holders. DOOM Retro is in no way affiliated with nor endorsed by
   id Software.
@@ -42,6 +42,7 @@
 
 #include "c_console.h"
 #include "d_deh.h"
+#include "d_iwad.h"
 #include "doomstat.h"
 #include "i_system.h"
 #include "m_argv.h"
@@ -290,18 +291,15 @@ static void CheckDOSDefaults(void)
 
 #endif
 
-static struct
-{
-    char            *name;
-    GameMission_t   mission;
-} iwads[] = {
+iwads_t iwads[] = {
     { "doom2",    doom2      },
     { "nerve",    pack_nerve },
     { "plutonia", pack_plut  },
     { "tnt",      pack_tnt   },
     { "doom",     doom       },
     { "doom1",    doom       },
-    { "hacx",     doom2      }
+    { "hacx",     doom2      },
+    { "",         0          }
 };
 
 // When given an IWAD with the '-iwad' parameter,
@@ -319,7 +317,7 @@ void D_IdentifyIWADByName(char *name)
 
     gamemission = none;
 
-    for (size_t i = 0; i < arrlen(iwads); i++)
+    for (size_t i = 0; iwads[i].name[0]; i++)
     {
         char    *iwad = M_StringJoin(iwads[i].name, ".WAD", NULL);
 
@@ -327,8 +325,11 @@ void D_IdentifyIWADByName(char *name)
         if (M_StringCompare(name, iwad))
         {
             gamemission = iwads[i].mission;
+            free(iwad);
             break;
         }
+
+        free(iwad);
     }
 
     if (M_StringCompare(name, "HACX.WAD"))
@@ -358,8 +359,7 @@ static void AddDoomWADPath(void)
         {
             // Break at the separator and store the right hand side
             // as another iwad dir
-            *p = '\0';
-            p += 1;
+            *p++ = '\0';
 
             AddIWADDir(p);
         }
@@ -422,7 +422,7 @@ char *D_FindWADByName(char *filename)
         // As a special case, if this is in DOOMWADDIR or DOOMWADPATH,
         // the "directory" may actually refer directly to an IWAD file.
         if (M_StringCompare(leafname(iwad_dirs[i]), filename) && M_FileExists(iwad_dirs[i]))
-            return strdup(iwad_dirs[i]);
+            return M_StringDuplicate(iwad_dirs[i]);
 
         // Construct a string for the full path
         path = M_StringJoin(iwad_dirs[i], DIR_SEPARATOR_S, filename, NULL);
@@ -444,7 +444,7 @@ void D_InitIWADFolder(void)
     for (int i = 0; i < num_iwad_dirs; i++)
         if (M_FolderExists(iwad_dirs[i]))
         {
-            iwadfolder = strdup(iwad_dirs[i]);
+            iwadfolder = M_StringDuplicate(iwad_dirs[i]);
             strreplace(iwadfolder, "/", "\\");
             break;
         }
@@ -506,7 +506,7 @@ static char *SaveGameIWADName(void)
     else if (hacx)
         return "hacx";
 
-    for (size_t i = 0; i < arrlen(iwads); i++)
+    for (size_t i = 0; iwads[i].name[0]; i++)
         if (gamemission == iwads[i].mission)
             return iwads[i].name;
 
@@ -533,6 +533,7 @@ void D_SetSaveGameFolder(dboolean output)
     {
         char    *iwad_name = SaveGameIWADName();
         char    *appdatafolder = M_GetAppDataFolder();
+        char    *savegamefolder_free;
 
         if (!iwad_name)
             iwad_name = "unknown";
@@ -540,7 +541,11 @@ void D_SetSaveGameFolder(dboolean output)
         M_MakeDirectory(appdatafolder);
         savegamefolder = M_StringJoin(appdatafolder, DIR_SEPARATOR_S, "savegames", DIR_SEPARATOR_S, NULL);
         M_MakeDirectory(savegamefolder);
+        savegamefolder_free = savegamefolder;
         savegamefolder = M_StringJoin(savegamefolder, (*pwadfile ? pwadfile : iwad_name), DIR_SEPARATOR_S, NULL);
+
+        free(appdatafolder);
+        free(savegamefolder_free);
     }
 
     M_MakeDirectory(savegamefolder);
@@ -663,7 +668,7 @@ void D_SetGameDescription(void)
             C_Output("Playing <i><b>%s: %s</b></i> and <i><b>%s: %s</b></i>.", s_CAPTION_DOOM2, s_CAPTION_HELLONEARTH,
                 s_CAPTION_DOOM2, s_CAPTION_NERVE);
     }
-    else if (modifiedgame)
+    else if (modifiedgame && !chex)
         C_Output("Playing <b>%s</b>.", gamedescription);
     else
     {

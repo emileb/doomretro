@@ -6,13 +6,13 @@
 
 ========================================================================
 
-  Copyright © 1993-2012 id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2018 Brad Harding.
+  Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
+  Copyright © 2013-2019 by Brad Harding.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
 
-  This file is part of DOOM Retro.
+  This file is a part of DOOM Retro.
 
   DOOM Retro is free software: you can redistribute it and/or modify it
   under the terms of the GNU General Public License as published by the
@@ -28,7 +28,7 @@
   along with DOOM Retro. If not, see <https://www.gnu.org/licenses/>.
 
   DOOM is a registered trademark of id Software LLC, a ZeniMax Media
-  company, in the US and/or other countries and is used without
+  company, in the US and/or other countries, and is used without
   permission. All other trademarks are the property of their respective
   holders. DOOM Retro is in no way affiliated with nor endorsed by
   id Software.
@@ -296,8 +296,8 @@ void P_SetThingPosition(mobj_t *thing)
     if (!(thing->flags & MF_NOBLOCKMAP))
     {
         // inert things don't need to be in blockmap
-        int blockx = (thing->x - bmaporgx) >> MAPBLOCKSHIFT;
-        int blocky = (thing->y - bmaporgy) >> MAPBLOCKSHIFT;
+        int blockx = P_GetSafeBlockX(thing->x - bmaporgx);
+        int blocky = P_GetSafeBlockY(thing->y - bmaporgy);
 
         if (blockx >= 0 && blockx < bmapwidth && blocky >= 0 && blocky < bmapheight)
         {
@@ -558,6 +558,8 @@ dboolean P_PathTraverse(fixed_t x1, fixed_t y1, fixed_t x2, fixed_t y2, int flag
 {
     fixed_t xt1, yt1;
     fixed_t xt2, yt2;
+    int64_t _x1, _y1;
+    int64_t _x2, _y2;
     fixed_t xstep, ystep;
     fixed_t partial;
     fixed_t xintercept, yintercept;
@@ -579,14 +581,23 @@ dboolean P_PathTraverse(fixed_t x1, fixed_t y1, fixed_t x2, fixed_t y2, int flag
     dlTrace.dx = x2 - x1;
     dlTrace.dy = y2 - y1;
 
-    xt1 = (x1 -= bmaporgx) >> MAPBLOCKSHIFT;
-    yt1 = (y1 -= bmaporgy) >> MAPBLOCKSHIFT;
+    _x1 = (int64_t)x1 - bmaporgx;
+    _y1 = (int64_t)y1 - bmaporgy;
+    xt1 = (int)(_x1 >> MAPBLOCKSHIFT);
+    yt1 = (int)(_y1 >> MAPBLOCKSHIFT);
 
-    mapx1 = x1 >> MAPBTOFRAC;
-    mapy1 = y1 >> MAPBTOFRAC;
+    mapx1 = (int)(_x1 >> MAPBTOFRAC);
+    mapy1 = (int)(_y1 >> MAPBTOFRAC);
 
-    xt2 = (x2 -= bmaporgx) >> MAPBLOCKSHIFT;
-    yt2 = (y2 -= bmaporgy) >> MAPBLOCKSHIFT;
+    _x2 = (int64_t)x2 - bmaporgx;
+    _y2 = (int64_t)y2 - bmaporgy;
+    xt2 = (int)(_x2 >> MAPBLOCKSHIFT);
+    yt2 = (int)(_y2 >> MAPBLOCKSHIFT);
+
+    x1 -= bmaporgx;
+    y1 -= bmaporgy;
+    x2 -= bmaporgx;
+    y2 -= bmaporgy;
 
     if (xt2 > xt1)
     {
@@ -663,4 +674,30 @@ dboolean P_PathTraverse(fixed_t x1, fixed_t y1, fixed_t x2, fixed_t y2, int flag
 
     // go through the sorted list
     return P_TraverseIntercepts(trav, FRACUNIT);
+}
+
+// MAES: support 512x512 blockmaps.
+int P_GetSafeBlockX(int coord)
+{
+    coord >>= MAPBLOCKSHIFT;
+
+    // If x is LE than those special values, interpret as positive.
+    // Otherwise, leave it as it is.
+    if (coord <= blockmapxneg)
+        return (coord & 0x01FF);    // Broke width boundary
+
+    return coord;
+}
+
+// MAES: support 512x512 blockmaps.
+int P_GetSafeBlockY(int coord)
+{
+    coord >>= MAPBLOCKSHIFT;
+
+    // If y is LE than those special values, interpret as positive.
+    // Otherwise, leave it as it is.
+    if (coord <= blockmapyneg)
+        return (coord & 0x01FF);    // Broke width boundary
+
+    return coord;
 }

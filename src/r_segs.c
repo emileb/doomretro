@@ -6,13 +6,13 @@
 
 ========================================================================
 
-  Copyright © 1993-2012 id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2018 Brad Harding.
+  Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
+  Copyright © 2013-2019 by Brad Harding.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
 
-  This file is part of DOOM Retro.
+  This file is a part of DOOM Retro.
 
   DOOM Retro is free software: you can redistribute it and/or modify it
   under the terms of the GNU General Public License as published by the
@@ -28,7 +28,7 @@
   along with DOOM Retro. If not, see <https://www.gnu.org/licenses/>.
 
   DOOM is a registered trademark of id Software LLC, a ZeniMax Media
-  company, in the US and/or other countries and is used without
+  company, in the US and/or other countries, and is used without
   permission. All other trademarks are the property of their respective
   holders. DOOM Retro is in no way affiliated with nor endorsed by
   id Software.
@@ -175,7 +175,7 @@ static void R_FixWiggle(sector_t *sector)
         if (height != sector->cachedheight)
         {
             int                 scaleindex = 0;
-            const scalevalues_t *svp;
+            const scalevalues_t *scalevalue;
 
             sector->cachedheight = height;
             height >>= 7;
@@ -185,9 +185,9 @@ static void R_FixWiggle(sector_t *sector)
                 scaleindex++;
 
             // fine-tune renderer for this wall
-            svp = &scalevalues[scaleindex];
-            max_rwscale = svp->clamp;
-            heightbits = svp->heightbits;
+            scalevalue = &scalevalues[scaleindex];
+            max_rwscale = scalevalue->clamp;
+            heightbits = scalevalue->heightbits;
             heightunit = 1 << heightbits;
             invhgtbits = FRACBITS - heightbits;
         }
@@ -528,8 +528,8 @@ void R_StoreWallRange(const int start, const int stop)
     int64_t             len;
     int                 worldtop;
     int                 worldbottom;
-    int                 worldhigh;
-    int                 worldlow;
+    int                 worldhigh = 0;
+    int                 worldlow = 0;
     side_t              *sidedef;
     static unsigned int maxdrawsegs;
 
@@ -626,22 +626,21 @@ void R_StoreWallRange(const int start, const int stop)
         ds_p->scale2 = R_ScaleFromGlobalAngle(xtoviewangle[stop]);
         ds_p->scalestep = rw_scalestep = (ds_p->scale2 - rw_scale) / (stop - start);
 
-        if (rw_scale < ds_p->scale2)
-        {
-            ds_p->minscale = rw_scale;
-            ds_p->maxscale = ds_p->scale2;
-        }
-        else
+        if (rw_scale > ds_p->scale2)
         {
             ds_p->minscale = ds_p->scale2;
             ds_p->maxscale = rw_scale;
         }
+        else
+        {
+            ds_p->minscale = rw_scale;
+            ds_p->maxscale = ds_p->scale2;
+        }
     }
     else
     {
-        ds_p->scale2 = rw_scale;
         ds_p->minscale = rw_scale;
-        ds_p->maxscale = rw_scale;
+        ds_p->maxscale = ds_p->scale2;
     }
 
     // calculate texture boundaries and decide if floor/ceiling marks are needed

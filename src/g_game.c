@@ -6,13 +6,13 @@
 
 ========================================================================
 
-  Copyright © 1993-2012 id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2018 Brad Harding.
+  Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
+  Copyright © 2013-2019 by Brad Harding.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
 
-  This file is part of DOOM Retro.
+  This file is a part of DOOM Retro.
 
   DOOM Retro is free software: you can redistribute it and/or modify it
   under the terms of the GNU General Public License as published by the
@@ -28,15 +28,13 @@
   along with DOOM Retro. If not, see <https://www.gnu.org/licenses/>.
 
   DOOM is a registered trademark of id Software LLC, a ZeniMax Media
-  company, in the US and/or other countries and is used without
+  company, in the US and/or other countries, and is used without
   permission. All other trademarks are the property of their respective
   holders. DOOM Retro is in no way affiliated with nor endorsed by
   id Software.
 
 ========================================================================
 */
-
-#include <time.h>
 
 #if defined(_WIN32)
 #include <Windows.h>
@@ -66,7 +64,6 @@
 #include "v_video.h"
 #include "w_wad.h"
 #include "wi_stuff.h"
-#include "z_zone.h"
 
 static void G_DoReborn(void);
 
@@ -166,6 +163,7 @@ static char     savedescription[SAVESTRINGSIZE];
 
 gameaction_t    loadaction = ga_nothing;
 
+unsigned int    stat_gamessaved = 0;
 unsigned int    stat_mapscompleted = 0;
 
 extern dboolean barrelms;
@@ -197,13 +195,18 @@ void G_NextWeapon(void)
     } while (!viewplayer->weaponowned[i] || viewplayer->ammo[weaponinfo[i].ammotype] < weaponinfo[i].minammo);
 
     if (i != readyweapon)
+    {
         viewplayer->pendingweapon = i;
+
+        if (i == wp_fist && viewplayer->powers[pw_strength])
+            S_StartSound(NULL, sfx_getpow);
+
+        if (i == wp_shotgun || i == wp_supershotgun)
+            viewplayer->preferredshotgun = i;
+    }
 
     if ((viewplayer->cheats & CF_CHOPPERS) && i != wp_chainsaw)
         G_RemoveChoppers();
-
-    if (i == wp_fist && viewplayer->powers[pw_strength])
-        S_StartSound(NULL, sfx_getpow);
 }
 
 void G_PrevWeapon(void)
@@ -221,13 +224,18 @@ void G_PrevWeapon(void)
     } while (!viewplayer->weaponowned[i] || viewplayer->ammo[weaponinfo[i].ammotype] < weaponinfo[i].minammo);
 
     if (i != readyweapon)
+    {
         viewplayer->pendingweapon = i;
+
+        if (i == wp_fist && viewplayer->powers[pw_strength])
+            S_StartSound(NULL, sfx_getpow);
+
+        if (i == wp_shotgun || i == wp_supershotgun)
+            viewplayer->preferredshotgun = i;
+    }
 
     if ((viewplayer->cheats & CF_CHOPPERS) && i != wp_chainsaw)
         G_RemoveChoppers();
-
-    if (i == wp_fist && viewplayer->powers[pw_strength])
-        S_StartSound(NULL, sfx_getpow);
 }
 
 //
@@ -426,7 +434,7 @@ void G_BuildTiccmd(ticcmd_t *cmd)
         if (strafe)
             side += mousex * 2;
         else
-            cmd->angleturn -= mousex * 0x8;
+            cmd->angleturn -= mousex * 0x08;
 
         mousex = 0;
     }
@@ -574,7 +582,6 @@ void G_DoLoadLevel(void)
     P_MapName(ep, gamemap);
 
     P_SetupLevel(ep, gamemap);
-    HU_InitMessages();
 
     R_InitSkyMap();
     R_InitColumnFunctions();
@@ -617,12 +624,6 @@ void G_ToggleAlwaysRun(evtype_t type)
 
     C_StrCVAROutput(stringize(alwaysrun), (alwaysrun ? "on" : "off"));
 
-    if (menuactive)
-    {
-        message_dontpause = true;
-        blurred = false;
-    }
-
     M_SaveCVARs();
 }
 
@@ -663,10 +664,7 @@ dboolean G_Responder(event_t *ev)
             mousewait = I_GetTime() + 5;
 
             if (splashscreen)
-            {
-                if (pagetic < 95)
-                    pagetic = MIN(10, pagetic);
-            }
+                pagetic = MIN(10, pagetic);
             else
             {
                 M_StartControlPanel();
@@ -711,7 +709,6 @@ dboolean G_Responder(event_t *ev)
             {
                 keydown = KEY_PAUSE;
                 sendpause = true;
-                blurred = false;
 
                 if (vid_motionblur)
                     I_SetMotionBlur(0);
@@ -760,7 +757,7 @@ dboolean G_Responder(event_t *ev)
             if (!automapactive || am_followmode)
             {
                 mousex = ev->data2 * m_sensitivity / 10;
-                mousey = ev->data3 * m_sensitivity / 10;
+                mousey = -ev->data3 * m_sensitivity / 10;
             }
 
             return true;        // eat events
@@ -1071,12 +1068,6 @@ void G_DoScreenShot(void)
         HU_SetPlayerMessage(buffer, false, false);
         message_dontfuckwithme = true;
 
-        if (menuactive)
-        {
-            message_dontpause = true;
-            blurred = false;
-        }
-
         C_Output("<b>%s</b> saved.", lbmpath1);
 
         if (*lbmpath2)
@@ -1087,7 +1078,7 @@ void G_DoScreenShot(void)
 }
 
 // DOOM Par Times
-int pars[5][10] =
+int pars[6][10] =
 {
     { 0 },
     { 0,  30,  75, 120,  90, 165, 180, 180,  30, 165 },
@@ -1095,7 +1086,8 @@ int pars[5][10] =
     { 0,  90,  45,  90, 150,  90,  90, 165,  30, 135 },
 
     // [BH] Episode 4 Par Times
-    { 0, 165, 255, 135, 150, 180, 390, 135, 360, 180 }
+    { 0, 165, 255, 135, 150, 180, 390, 135, 360, 180 },
+    { 0 }
 };
 
 // DOOM II Par Times
@@ -1165,7 +1157,7 @@ static void G_DoCompleted(void)
     if (automapactive)
         AM_Stop();
     else if (mapwindow)
-        AM_clearFB();
+        AM_ClearFB();
 
     if (chex && gamemap == 5)
     {
@@ -1497,7 +1489,6 @@ static void G_DoSaveGame(void)
 {
     char    *temp_savegame_file = P_TempSaveGameFile();
     char    *savegame_file = (consoleactive ? savename : P_SaveGameFile(savegameslot));
-
     // Open the savegame file for writing. We write to a temporary file
     // and then rename it at the end if it was successfully written.
     // This prevents an existing savegame from being overwritten by
@@ -1511,6 +1502,8 @@ static void G_DoSaveGame(void)
     }
     else
     {
+        char    *backup_savegame_file = M_StringJoin(savegame_file, ".bak", NULL);
+
         P_WriteSaveGameHeader(savedescription);
 
         P_ArchivePlayer();
@@ -1525,8 +1518,9 @@ static void G_DoSaveGame(void)
         fclose(save_stream);
 
         // Now rename the temporary savegame file to the actual savegame
-        // file, overwriting the old savegame if there was one there.
-        remove(savegame_file);
+        // file, backing up the old savegame if there was one there.
+        remove(backup_savegame_file);
+        rename(savegame_file, backup_savegame_file);
         rename(temp_savegame_file, savegame_file);
 
         if (!consolestrings || !M_StringStartsWith(console[consolestrings - 1].string, "save "))
@@ -1541,10 +1535,12 @@ static void G_DoSaveGame(void)
             M_snprintf(buffer, sizeof(buffer), s_GGSAVED, titlecase(savedescription));
             C_Output(buffer);
             HU_SetPlayerMessage(buffer, false, false);
-            blurred = false;
             message_dontfuckwithme = true;
             S_StartSound(NULL, sfx_swtchx);
         }
+
+        stat_gamessaved = SafeAdd(stat_gamessaved, 1);
+        M_SaveCVARs();
 
         // draw the pattern into the back screen
         R_FillBackScreen();
@@ -1660,7 +1656,12 @@ void G_InitNew(skill_t skill, int ep, int map)
 
     if (gamemode == retail)
     {
-        if (ep > 4)
+        if (sigil)
+        {
+            if (ep > 5)
+                ep = 5;
+        }
+        else if (ep > 4)
             ep = 4;
     }
     else if (gamemode == shareware)

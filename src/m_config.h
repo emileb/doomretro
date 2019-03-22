@@ -6,13 +6,13 @@
 
 ========================================================================
 
-  Copyright © 1993-2012 id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2018 Brad Harding.
+  Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
+  Copyright © 2013-2019 by Brad Harding.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
 
-  This file is part of DOOM Retro.
+  This file is a part of DOOM Retro.
 
   DOOM Retro is free software: you can redistribute it and/or modify it
   under the terms of the GNU General Public License as published by the
@@ -28,7 +28,7 @@
   along with DOOM Retro. If not, see <https://www.gnu.org/licenses/>.
 
   DOOM is a registered trademark of id Software LLC, a ZeniMax Media
-  company, in the US and/or other countries and is used without
+  company, in the US and/or other countries, and is used without
   permission. All other trademarks are the property of their respective
   holders. DOOM Retro is in no way affiliated with nor endorsed by
   id Software.
@@ -63,11 +63,13 @@ extern int          am_tswallcolor;
 extern int          am_wallcolor;
 extern dboolean     autoaim;
 extern dboolean     autoload;
+extern dboolean     autotilt;
 extern dboolean     autouse;
 extern dboolean     centerweapon;
 extern int          con_backcolor;
 extern dboolean     con_obituaries;
 extern dboolean     con_timestamps;
+extern dboolean     crosshair;
 extern int          episode;
 extern int          expansion;
 extern int          facebackcolor;
@@ -124,8 +126,6 @@ extern dboolean     r_liquid_current;
 extern dboolean     r_liquid_lowerview;
 extern dboolean     r_liquid_swirl;
 extern char         *r_lowpixelsize;
-extern char         *r_messagepos;
-extern int          r_messagescale;
 extern dboolean     r_mirroredweapons;
 extern dboolean     r_playersprites;
 extern dboolean     r_rockettrails;
@@ -151,6 +151,7 @@ extern unsigned int stat_damageinflicted;
 extern unsigned int stat_damagereceived;
 extern unsigned int stat_deaths;
 extern unsigned int stat_distancetraveled;
+extern unsigned int stat_gamessaved;
 extern unsigned int stat_itemspickedup;
 extern unsigned int stat_itemspickedup_ammo_bullets;
 extern unsigned int stat_itemspickedup_ammo_cells;
@@ -216,12 +217,6 @@ enum
     r_blood_none,
     r_blood_red,
     r_blood_all
-};
-
-enum
-{
-    r_messagescale_small,
-    r_messagescale_big
 };
 
 enum
@@ -326,6 +321,8 @@ enum
 
 #define autoload_default                        true
 
+#define autotilt_default                        false
+
 #define autouse_default                         false
 
 #define centerweapon_default                    true
@@ -338,6 +335,8 @@ enum
 
 #define con_timestamps_default                  true
 
+#define crosshair_default                       true
+
 #define episode_min                             1
 #define episode_default                         1
 #define episode_max                             5
@@ -347,7 +346,8 @@ enum
 #define expansion_max                           2
 
 #define facebackcolor_min                       0
-#define facebackcolor_default                   5
+#define facebackcolor_none                      5
+#define facebackcolor_default                   facebackcolor_none
 #define facebackcolor_max                       255
 
 #define gp_analog_default                       true
@@ -496,10 +496,6 @@ enum
 
 #define r_lowpixelsize_default                  "2x2"
 
-#define r_messagepos_default                    "(3,2)"
-
-#define r_messagescale_default                  r_messagescale_big
-
 #define r_mirroredweapons_default               false
 
 #define r_playersprites_default                 true
@@ -569,7 +565,7 @@ enum
 
 #define version_default                         PACKAGE_VERSIONSTRING
 
-#define vid_capfps_min                          1
+#define vid_capfps_min                          0
 #define vid_capfps_default                      200
 #define vid_capfps_max                          1000
 

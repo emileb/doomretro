@@ -6,13 +6,13 @@
 
 ========================================================================
 
-  Copyright © 1993-2012 id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2018 Brad Harding.
+  Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
+  Copyright © 2013-2019 by Brad Harding.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
 
-  This file is part of DOOM Retro.
+  This file is a part of DOOM Retro.
 
   DOOM Retro is free software: you can redistribute it and/or modify it
   under the terms of the GNU General Public License as published by the
@@ -28,7 +28,7 @@
   along with DOOM Retro. If not, see <https://www.gnu.org/licenses/>.
 
   DOOM is a registered trademark of id Software LLC, a ZeniMax Media
-  company, in the US and/or other countries and is used without
+  company, in the US and/or other countries, and is used without
   permission. All other trademarks are the property of their respective
   holders. DOOM Retro is in no way affiliated with nor endorsed by
   id Software.
@@ -47,9 +47,7 @@
 #include "i_gamepad.h"
 #include "m_argv.h"
 #include "m_config.h"
-#include "m_fixed.h"
 #include "m_misc.h"
-#include "p_local.h"
 #include "version.h"
 
 static dboolean cvarsloaded;
@@ -98,11 +96,13 @@ static default_t cvars[] =
     CONFIG_VARIABLE_INT          (am_wallcolor,                                      NOVALUEALIAS      ),
     CONFIG_VARIABLE_INT          (autoaim,                                           BOOLVALUEALIAS    ),
     CONFIG_VARIABLE_INT          (autoload,                                          BOOLVALUEALIAS    ),
+    CONFIG_VARIABLE_INT          (autotilt,                                          BOOLVALUEALIAS    ),
     CONFIG_VARIABLE_INT          (autouse,                                           BOOLVALUEALIAS    ),
     CONFIG_VARIABLE_INT          (centerweapon,                                      BOOLVALUEALIAS    ),
     CONFIG_VARIABLE_INT          (con_backcolor,                                     NOVALUEALIAS      ),
     CONFIG_VARIABLE_INT          (con_obituaries,                                    BOOLVALUEALIAS    ),
     CONFIG_VARIABLE_INT          (con_timestamps,                                    BOOLVALUEALIAS    ),
+    CONFIG_VARIABLE_INT          (crosshair,                                         BOOLVALUEALIAS    ),
     CONFIG_VARIABLE_INT          (episode,                                           NOVALUEALIAS      ),
     CONFIG_VARIABLE_INT          (expansion,                                         NOVALUEALIAS      ),
     CONFIG_VARIABLE_INT          (facebackcolor,                                     FACEBACKVALUEALIAS),
@@ -158,8 +158,6 @@ static default_t cvars[] =
     CONFIG_VARIABLE_INT          (r_liquid_lowerview,                                BOOLVALUEALIAS    ),
     CONFIG_VARIABLE_INT          (r_liquid_swirl,                                    BOOLVALUEALIAS    ),
     CONFIG_VARIABLE_OTHER        (r_lowpixelsize,                                    NOVALUEALIAS      ),
-    CONFIG_VARIABLE_OTHER        (r_messagepos,                                      NOVALUEALIAS      ),
-    CONFIG_VARIABLE_INT          (r_messagescale,                                    SCALEVALUEALIAS   ),
     CONFIG_VARIABLE_INT          (r_mirroredweapons,                                 BOOLVALUEALIAS    ),
     CONFIG_VARIABLE_INT          (r_playersprites,                                   BOOLVALUEALIAS    ),
     CONFIG_VARIABLE_INT          (r_rockettrails,                                    BOOLVALUEALIAS    ),
@@ -214,6 +212,7 @@ static default_t cvars[] =
     CONFIG_VARIABLE_INT_UNSIGNED (stat_damagereceived,                               NOVALUEALIAS      ),
     CONFIG_VARIABLE_INT_UNSIGNED (stat_deaths,                                       NOVALUEALIAS      ),
     CONFIG_VARIABLE_INT_UNSIGNED (stat_distancetraveled,                             NOVALUEALIAS      ),
+    CONFIG_VARIABLE_INT_UNSIGNED (stat_gamessaved,                                   NOVALUEALIAS      ),
     CONFIG_VARIABLE_INT_UNSIGNED (stat_itemspickedup,                                NOVALUEALIAS      ),
     CONFIG_VARIABLE_INT_UNSIGNED (stat_itemspickedup_ammo_bullets,                   NOVALUEALIAS      ),
     CONFIG_VARIABLE_INT_UNSIGNED (stat_itemspickedup_ammo_cells,                     NOVALUEALIAS      ),
@@ -258,8 +257,7 @@ valuealias_t valuealiases[] =
     { "red",       1, BLOODVALUEALIAS     }, { "all",     2, BLOODVALUEALIAS     },
     { "imperial",  0, UNITSVALUEALIAS     }, { "metric",  1, UNITSVALUEALIAS     },
     { "off",       0, CAPVALUEALIAS       }, { "none",   -1, SKYVALUEALIAS       },
-    { "off",      -1, SKYVALUEALIAS       }, { "small",   0, SCALEVALUEALIAS     },
-    { "big",       1, SCALEVALUEALIAS     }, { "none",    5, FACEBACKVALUEALIAS  },
+    { "off",      -1, SKYVALUEALIAS       }, { "none",    5, FACEBACKVALUEALIAS  },
     { "off",       5, FACEBACKVALUEALIAS  }, { "none",    0, ARMORTYPEVALUEALIAS },
     { "green",     1, ARMORTYPEVALUEALIAS }, { "blue",    2, ARMORTYPEVALUEALIAS },
     { "",          0, NOVALUEALIAS        }
@@ -337,13 +335,24 @@ void M_SaveCVARs(void)
                     }
 
                 if (!flag)
-                    fputs(commify(v), file);
+                {
+                    char    *v_str = commify(v);
+
+                    fputs(v_str, file);
+
+                    free(v_str);
+                }
 
                 break;
             }
 
             case DEFAULT_INT_UNSIGNED:
-                fputs(commify(*(unsigned int *)cvars[i].location), file);
+            {
+                char    *cvars_location_free = commify(*(unsigned int *)cvars[i].location);
+
+                fputs(cvars_location_free, file);
+                free(cvars_location_free);
+            }
                 break;
 
             case DEFAULT_INT_PERCENT:
@@ -360,7 +369,12 @@ void M_SaveCVARs(void)
                     }
 
                 if (!flag)
-                    fprintf(file, "%s%%", commify(v));
+                {
+                    char    *v_str = commify(v);
+
+                    fprintf(file, "%s%%", v_str);
+                    free(v_str);
+                }
 
                 break;
             }
@@ -409,7 +423,12 @@ void M_SaveCVARs(void)
                     }
 
                 if (!flag)
-                    fprintf(file, "%s%%", striptrailingzero(v, 1));
+                {
+                    char    *v_str = striptrailingzero(v, 1);
+
+                    fprintf(file, "%s%%", v_str);
+                    free(v_str);
+                }
 
                 break;
             }
@@ -567,6 +586,9 @@ static void M_CheckCVARs(void)
     if (autoload != false && autoload != true)
         autoload = autoload_default;
 
+    if (autotilt != false && autotilt != true)
+        autotilt = autotilt_default;
+
     if (autouse != false && autouse != true)
         autouse = autouse_default;
 
@@ -582,9 +604,12 @@ static void M_CheckCVARs(void)
     if (con_timestamps != false && con_timestamps != true)
         con_timestamps = con_timestamps_default;
 
-    episode = BETWEEN(episode_min, episode, episode_max);
+    if (crosshair != false && crosshair != true)
+        crosshair = crosshair_default;
 
-    expansion = BETWEEN(expansion_min, expansion, expansion_max);
+    episode = BETWEEN(episode_min, episode, episode_max - (gamemode == retail && !sigil));
+
+    expansion = BETWEEN(expansion_min, expansion, expansion_max - (gamemode == commercial && !nerve));
 
     if (facebackcolor < facebackcolor_min || facebackcolor > facebackcolor_max)
         facebackcolor = facebackcolor_default;
@@ -622,6 +647,9 @@ static void M_CheckCVARs(void)
     if (infiniteheight != false && infiniteheight != true)
         infiniteheight = infiniteheight_default;
 
+    if (!*iwadfolder || M_StringCompare(iwadfolder, iwadfolder_default) || !M_FolderExists(iwadfolder))
+        D_InitIWADFolder();
+
     if (m_acceleration != false && m_acceleration != true)
         m_acceleration = m_acceleration_default;
 
@@ -645,7 +673,7 @@ static void M_CheckCVARs(void)
     movebob = BETWEEN(movebob_min, movebob, movebob_max);
 
     if (!*playername)
-        playername = strdup(playername_default);
+        playername = M_StringDuplicate(playername_default);
 
     if (r_althud != false && r_althud != true)
         r_althud = r_althud_default;
@@ -730,9 +758,6 @@ static void M_CheckCVARs(void)
     if (r_liquid_swirl != false && r_liquid_swirl != true)
         r_liquid_swirl = r_liquid_swirl_default;
 
-    if (r_messagescale != r_messagescale_small && r_messagescale != r_messagescale_big)
-        r_messagescale = r_mirroredweapons_default;
-
     if (r_mirroredweapons != false && r_mirroredweapons != true)
         r_mirroredweapons = r_mirroredweapons_default;
 
@@ -797,7 +822,7 @@ static void M_CheckCVARs(void)
 
     version = version_default;
 
-    vid_capfps = (vid_capfps < vid_capfps_min ? 0 : BETWEEN(vid_capfps_min, vid_capfps, vid_capfps_max));
+    vid_capfps = BETWEEN(vid_capfps_min, vid_capfps, vid_capfps_max);
 
     vid_display = MAX(vid_display_min, vid_display);
 
@@ -868,7 +893,6 @@ void M_LoadCVARs(char *filename)
     if (!file)
     {
         M_CheckCVARs();
-        D_InitIWADFolder();
         M_SaveCVARs();
         C_Output("Created <b>%s</b>.", filename);
         cvarsloaded = true;
@@ -932,12 +956,15 @@ void M_LoadCVARs(char *filename)
         }
 
         // Strip off trailing non-printable characters (\r characters from DOS text files)
-        while (value[0] != '\0' && !isprint((unsigned char)value[strlen(value) - 1]))
+        while (*value && !isprint((unsigned char)value[strlen(value) - 1]))
             value[strlen(value) - 1] = '\0';
 
         if (togglingvanilla)
         {
-            C_ValidateInput(M_StringJoin(cvar, " ", uncommify(value), NULL));
+            char    *value_free = uncommify(value);
+
+            C_ValidateInput(M_StringJoin(cvar, " ", value_free, NULL));
+            free(value_free);
             continue;
         }
 
@@ -958,48 +985,73 @@ void M_LoadCVARs(char *filename)
             switch (cvars[i].type)
             {
                 case DEFAULT_STRING:
-                    s = strdup(value + 1);
+                    s = M_StringDuplicate(value + 1);
                     s[strlen(s) - 1] = '\0';
                     *(char **)cvars[i].location = s;
                     break;
 
                 case DEFAULT_INT:
-                    M_StringCopy(value, uncommify(value), sizeof(value));
+                {
+                    char    *value_free = uncommify(value);
+
+                    M_StringCopy(value, value_free, sizeof(value));
                     *(int *)cvars[i].location = ParseIntParameter(value, cvars[i].valuealiastype);
+                    free(value_free);
                     break;
+                }
 
                 case DEFAULT_INT_UNSIGNED:
-                    M_StringCopy(value, uncommify(value), sizeof(value));
+                {
+                    char    *value_free = uncommify(value);
+
+                    M_StringCopy(value, value_free, sizeof(value));
                     sscanf(value, "%10u", (unsigned int *)cvars[i].location);
+                    free(value_free);
                     break;
+                }
 
                 case DEFAULT_INT_PERCENT:
-                    M_StringCopy(value, uncommify(value), sizeof(value));
-                    s = strdup(value);
+                {
+                    char    *value_free = uncommify(value);
 
-                    if (s[0] != '\0' && s[strlen(s) - 1] == '%')
+                    M_StringCopy(value, value_free, sizeof(value));
+                    s = M_StringDuplicate(value);
+
+                    if (*s && s[strlen(s) - 1] == '%')
                         s[strlen(s) - 1] = '\0';
 
                     *(int *)cvars[i].location = ParseIntParameter(s, cvars[i].valuealiastype);
+                    free(value_free);
                     break;
+                }
 
                 case DEFAULT_FLOAT:
-                    M_StringCopy(value, uncommify(value), sizeof(value));
+                {
+                    char    *value_free = uncommify(value);
+
+                    M_StringCopy(value, value_free, sizeof(value));
                     *(float *)cvars[i].location = ParseFloatParameter(value, cvars[i].valuealiastype);
+                    free(value_free);
                     break;
+                }
 
                 case DEFAULT_FLOAT_PERCENT:
-                    M_StringCopy(value, uncommify(value), sizeof(value));
-                    s = strdup(value);
+                {
+                    char    *value_free = uncommify(value);
 
-                    if (s[0] != '\0' && s[strlen(s) - 1] == '%')
+                    M_StringCopy(value, value_free, sizeof(value));
+                    s = M_StringDuplicate(value);
+
+                    if (*s && s[strlen(s) - 1] == '%')
                         s[strlen(s) - 1] = '\0';
 
                     *(float *)cvars[i].location = ParseFloatParameter(s, cvars[i].valuealiastype);
+                    free(value_free);
                     break;
+                }
 
                 case DEFAULT_OTHER:
-                    *(char **)cvars[i].location = strdup(value);
+                    *(char **)cvars[i].location = M_StringDuplicate(value);
                     break;
             }
 
@@ -1012,9 +1064,17 @@ void M_LoadCVARs(char *filename)
 
     if (!togglingvanilla)
     {
-        C_Output("Loaded %s CVARs and %s player stats from <b>%s</b>.", commify(cvarcount), commify(statcount), filename);
-        C_Output("Bound %s keyboard, mouse and gamepad controls.", commify(bindcount));
+        char    *cvarcount_str = commify(cvarcount);
+        char    *statcount_str = commify(statcount);
+        char    *bindcount_str = commify(bindcount);
+
+        C_Output("Loaded %s CVARs and %s player stats from <b>%s</b>.", cvarcount_str, statcount_str, filename);
+        C_Output("Bound %s actions to the keyboard, mouse and gamepad.", bindcount_str);
         M_CheckCVARs();
         cvarsloaded = true;
+
+        free(cvarcount_str);
+        free(statcount_str);
+        free(bindcount_str);
     }
 }

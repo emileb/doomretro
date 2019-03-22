@@ -6,13 +6,13 @@
 
 ========================================================================
 
-  Copyright © 1993-2012 id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2018 Brad Harding.
+  Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
+  Copyright © 2013-2019 by Brad Harding.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
 
-  This file is part of DOOM Retro.
+  This file is a part of DOOM Retro.
 
   DOOM Retro is free software: you can redistribute it and/or modify it
   under the terms of the GNU General Public License as published by the
@@ -28,7 +28,7 @@
   along with DOOM Retro. If not, see <https://www.gnu.org/licenses/>.
 
   DOOM is a registered trademark of id Software LLC, a ZeniMax Media
-  company, in the US and/or other countries and is used without
+  company, in the US and/or other countries, and is used without
   permission. All other trademarks are the property of their respective
   holders. DOOM Retro is in no way affiliated with nor endorsed by
   id Software.
@@ -36,14 +36,14 @@
 ========================================================================
 */
 
-#include "d_event.h"
 #include "doomstat.h"
+#include "hu_stuff.h"
 #include "i_gamepad.h"
 #include "i_system.h"
+#include "i_timer.h"
 #include "m_config.h"
 #include "m_menu.h"
 #include "m_random.h"
-#include "p_inter.h"
 #include "p_local.h"
 #include "p_tick.h"
 #include "s_sound.h"
@@ -155,7 +155,7 @@ dboolean P_CheckAmmo(weapontype_t weapon)
         return true;
 
     // Return if current ammunition sufficient.
-    if (viewplayer->ammo[ammotype] >= weaponinfo[weapon].minammo)
+    if (viewplayer->ammo[ammotype] >= weaponinfo[weapon].minammo && viewplayer->weaponowned[weapon])
         return true;
 
     // Out of ammo, pick a weapon to change to.
@@ -191,7 +191,10 @@ static void P_SubtractAmmo(int amount)
     ammotype_t  ammotype = weaponinfo[viewplayer->readyweapon].ammotype;
 
     if (ammotype != am_noammo)
+    {
         viewplayer->ammo[ammotype] = MAX(0, viewplayer->ammo[ammotype] - amount);
+        ammohighlight = I_GetTimeMS() + HUD_AMMO_HIGHLIGHT_WAIT;
+    }
 }
 
 //
@@ -218,7 +221,6 @@ void P_FireWeapon(void)
             I_GamepadVibration(weaponinfo[readyweapon].strength * gp_vibrate_weapons / 100);
             weaponvibrationtics = weaponinfo[readyweapon].tics;
         }
-
     }
 
     if (centerweapon)
@@ -494,26 +496,38 @@ void A_FireOldBFG(mobj_t *actor, player_t *player, pspdef_t *psp)
         angle_t an = actor->angle;
         angle_t an1 = ((M_Random() & 127) - 64) * (ANG90 / 768) + an;
         angle_t an2 = ((M_Random() & 127) - 64) * (ANG90 / 640) + ANG90;
-        fixed_t slope = P_AimLineAttack(actor, an, 16 * 64 * FRACUNIT);
+        fixed_t slope;
 
-        if (!linetarget)
+        if (usemouselook && !autoaim)
+            slope = ((viewplayer->lookdir / MLOOKUNIT) << FRACBITS) / 173;
+        else
         {
-            slope = P_AimLineAttack(actor, (an += 1 << 26), 16 * 64 * FRACUNIT);
+            slope = P_AimLineAttack(actor, an, 16 * 64 * FRACUNIT);
 
             if (!linetarget)
             {
-                slope = P_AimLineAttack(actor, (an -= 2 << 26), 16 * 64 * FRACUNIT);
+                slope = P_AimLineAttack(actor, (an += 1 << 26), 16 * 64 * FRACUNIT);
 
                 if (!linetarget)
                 {
-                    slope = 0;
-                    an = actor->angle;
+                    slope = P_AimLineAttack(actor, (an -= 2 << 26), 16 * 64 * FRACUNIT);
+
+                    if (!linetarget)
+                    {
+                        slope = (usemouselook ? ((viewplayer->lookdir / MLOOKUNIT) << FRACBITS) / 173 : 0);
+                        an = actor->angle;
+                    }
                 }
             }
         }
 
         an1 += an - actor->angle;
-        an2 += tantoangle[slope >> DBITS];
+
+        // [crispy] consider negative slope
+        if (slope < 0)
+            an2 -= tantoangle[-slope >> DBITS];
+        else
+            an2 += tantoangle[slope >> DBITS];
 
         th = P_SpawnMobj(actor->x, actor->y, actor->z + 62 * FRACUNIT - player->psprites[ps_weapon].sy, type);
         P_SetTarget(&th->target, actor);
@@ -521,6 +535,10 @@ void A_FireOldBFG(mobj_t *actor, player_t *player, pspdef_t *psp)
         th->momx = finecosine[an1 >> ANGLETOFINESHIFT] * 25;
         th->momy = finesine[an1 >> ANGLETOFINESHIFT] * 25;
         th->momz = finetangent[an2 >> ANGLETOFINESHIFT] * 25;
+
+        // [crispy] suppress interpolation of player missiles for the first tic
+        th->interpolate = -1;
+
         P_CheckMissileSpawn(th);
     } while (type != MT_PLASMA2 && (type = MT_PLASMA2));    // killough: obfuscated!
 

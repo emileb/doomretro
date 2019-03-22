@@ -6,13 +6,13 @@
 
 ========================================================================
 
-  Copyright © 1993-2012 id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2018 Brad Harding.
+  Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
+  Copyright © 2013-2019 by Brad Harding.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
 
-  This file is part of DOOM Retro.
+  This file is a part of DOOM Retro.
 
   DOOM Retro is free software: you can redistribute it and/or modify it
   under the terms of the GNU General Public License as published by the
@@ -28,7 +28,7 @@
   along with DOOM Retro. If not, see <https://www.gnu.org/licenses/>.
 
   DOOM is a registered trademark of id Software LLC, a ZeniMax Media
-  company, in the US and/or other countries and is used without
+  company, in the US and/or other countries, and is used without
   permission. All other trademarks are the property of their respective
   holders. DOOM Retro is in no way affiliated with nor endorsed by
   id Software.
@@ -68,7 +68,6 @@
 
 #include "c_console.h"
 #include "i_swap.h"
-#include "i_system.h"
 #include "m_misc.h"
 #include "r_main.h"
 #include "w_wad.h"
@@ -188,10 +187,8 @@ static void createPatch(int id)
 
     if (!CheckIfPatch(patchNum) && patchNum < numlumps)
     {
-        char    *name = lumpinfo[patchNum]->name;
-
-        if (!M_StringCompare(name, "HI_START") && !M_StringCompare(name, "HI_END"))
-            C_Warning("The patch <b>%s</b> is of an unknown format.", name);
+        if (lumpinfo[patchNum]->size > 0)
+            C_Warning("The <b>%s</b> patch is in an unknown format.", lumpinfo[patchNum]->name);
 
         return;
     }

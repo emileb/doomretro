@@ -6,13 +6,13 @@
 
 ========================================================================
 
-  Copyright © 1993-2012 id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2018 Brad Harding.
+  Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
+  Copyright © 2013-2019 by Brad Harding.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
 
-  This file is part of DOOM Retro.
+  This file is a part of DOOM Retro.
 
   DOOM Retro is free software: you can redistribute it and/or modify it
   under the terms of the GNU General Public License as published by the
@@ -28,7 +28,7 @@
   along with DOOM Retro. If not, see <https://www.gnu.org/licenses/>.
 
   DOOM is a registered trademark of id Software LLC, a ZeniMax Media
-  company, in the US and/or other countries and is used without
+  company, in the US and/or other countries, and is used without
   permission. All other trademarks are the property of their respective
   holders. DOOM Retro is in no way affiliated with nor endorsed by
   id Software.
@@ -70,7 +70,7 @@
 
 #define NORM_SEP        128
 
-#define TIDNUM(x)       (int)(x->id & 0xFFFF)   // thing identifier
+#define TIDNUM(x)       (int)(x->musicid & 0xFFFF)  // thing identifier
 
 typedef struct
 {
@@ -176,7 +176,7 @@ void S_Init(void)
 
     if (!nosfx)
     {
-#if defined(WIN32)
+#if defined(_WIN32)
         char    *audiobuffer = SDL_getenv("SDL_AUDIODRIVER");
 
         if (audiobuffer)
@@ -345,7 +345,7 @@ void S_Start(void)
 // original implementation idea: https://www.doomworld.com/vb/post/1585325
 void S_UnlinkSound(mobj_t *origin)
 {
-    if (nosfx)
+    if (nosfx || !origin)
         return;
 
     for (int cnum = 0; cnum < s_channels; cnum++)
@@ -484,12 +484,13 @@ static void S_StartSoundAtVolume(mobj_t *origin, int sfx_id, int pitch)
             return;
 
     // kill old sound
-    for (cnum = 0; cnum < s_channels; cnum++)
-        if (channels[cnum].sfxinfo && channels[cnum].sfxinfo->singularity == sfx->singularity && channels[cnum].origin == origin)
-        {
-            S_StopChannel(cnum);
-            break;
-        }
+    if (origin || gamestate != GS_LEVEL)
+        for (cnum = 0; cnum < s_channels; cnum++)
+            if (channels[cnum].sfxinfo && channels[cnum].sfxinfo->singularity == sfx->singularity && channels[cnum].origin == origin)
+            {
+                S_StopChannel(cnum);
+                break;
+            }
 
     // try to find a channel
     if ((cnum = S_GetChannel(origin, sfx)) < 0)
@@ -509,6 +510,19 @@ void S_StartSound(mobj_t *mobj, int sfx_id)
 void S_StartSectorSound(degenmobj_t *degenmobj, int sfx_id)
 {
     S_StartSoundAtVolume((mobj_t *)degenmobj, sfx_id, NORM_PITCH);
+}
+
+void S_StartSoundOnce(void *origin, int sfx_id)
+{
+    for (int cnum = 0; cnum < s_channels; cnum++)
+        if (channels[cnum].sfxinfo && channels[cnum].sfxinfo->singularity == S_sfx[sfx_id].singularity
+            && channels[cnum].origin == origin)
+        {
+            S_StopChannel(cnum);
+            break;
+        }
+
+    S_StartSound(origin, sfx_id);
 }
 
 //
@@ -640,8 +654,16 @@ void S_ChangeMusic(int music_id, dboolean looping, dboolean cheating, dboolean m
         if (!serverMidiPlaying)
 #endif
         {
-            C_Warning("The <b>%s</b> music lump can't be played.", uppercase(namebuf));
-            return;
+            char    *filename = M_TempFile(M_StringJoin(namebuf, ".MP3", NULL));
+
+            if (M_WriteFile(filename, music->data, W_LumpLength(music->lumpnum)))
+                handle = Mix_LoadMUS(filename);
+
+            if (!handle)
+            {
+                C_Warning("The <b>%s</b> music lump can't be played.", uppercase(namebuf));
+                return;
+            }
         }
 
     music->handle = handle;
@@ -650,6 +672,13 @@ void S_ChangeMusic(int music_id, dboolean looping, dboolean cheating, dboolean m
     I_PlaySong(handle, looping);
 
     mus_playing = music;
+
+    // [crispy] musinfo.items[0] is reserved for the map's default music
+    if (!musinfo.items[0])
+    {
+        musinfo.items[0] = music->lumpnum;
+        S_music[mus_musinfo].lumpnum = -1;
+    }
 }
 
 void S_StopMusic(void)
@@ -677,7 +706,7 @@ void S_ChangeMusInfoMusic(int lumpnum, int looping)
     if (mus_playing && mus_playing->lumpnum == lumpnum)
         return;
 
-    music = &S_music[NUMMUSIC];
+    music = &S_music[mus_musinfo];
 
     if (music->lumpnum == lumpnum)
         return;
@@ -740,7 +769,10 @@ void S_ParseMusInfo(char *mapid)
                         int lumpnum = W_CheckNumForName(sc_String);
 
                         if (lumpnum >= 0)
+                        {
                             musinfo.items[num] = lumpnum;
+                            W_CacheLumpNum(lumpnum);
+                        }
                     }
             }
 

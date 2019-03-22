@@ -6,13 +6,13 @@
 
 ========================================================================
 
-  Copyright © 1993-2012 id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2018 Brad Harding.
+  Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
+  Copyright © 2013-2019 by Brad Harding.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
 
-  This file is part of DOOM Retro.
+  This file is a part of DOOM Retro.
 
   DOOM Retro is free software: you can redistribute it and/or modify it
   under the terms of the GNU General Public License as published by the
@@ -28,7 +28,7 @@
   along with DOOM Retro. If not, see <https://www.gnu.org/licenses/>.
 
   DOOM is a registered trademark of id Software LLC, a ZeniMax Media
-  company, in the US and/or other countries and is used without
+  company, in the US and/or other countries, and is used without
   permission. All other trademarks are the property of their respective
   holders. DOOM Retro is in no way affiliated with nor endorsed by
   id Software.
@@ -39,8 +39,6 @@
 #if defined(_WIN32)
 #include <Windows.h>
 #endif
-
-#include <ctype.h>
 
 #include "c_console.h"
 #include "doomstat.h"
@@ -58,16 +56,16 @@
 typedef struct
 {
     // Should be "IWAD" or "PWAD".
-    char            identification[4];
-    int             numlumps;
-    int             infotableofs;
+    char    identification[4];
+    int     numlumps;
+    int     infotableofs;
 } PACKEDATTR wadinfo_t;
 
 typedef struct
 {
-    int             filepos;
-    int             size;
-    char            name[8];
+    int     filepos;
+    int     size;
+    char    name[8];
 } PACKEDATTR filelump_t;
 
 #if defined(_MSC_VER) || defined(__GNUC__)
@@ -75,10 +73,10 @@ typedef struct
 #endif
 
 // Location of each lump on disk.
-lumpinfo_t          **lumpinfo;
-int                 numlumps;
+lumpinfo_t  **lumpinfo;
+int         numlumps;
 
-extern char         *packagewad;
+extern char *packagewad;
 
 static dboolean IsFreedoom(const char *iwadname)
 {
@@ -96,8 +94,6 @@ static dboolean IsFreedoom(const char *iwadname)
     {
         fseek(fp, LONG(header.infotableofs), SEEK_SET);
 
-        // Determine game mode from levels present
-        // Must be a full set for whichever mode is present
         for (header.numlumps = LONG(header.numlumps); header.numlumps && fread(&lump, sizeof(lump), 1, fp); header.numlumps--)
             if (n[0] == 'F' && n[1] == 'R' && n[2] == 'E' && n[3] == 'E' && n[4] == 'D' && n[5] == 'O' && n[6] == 'O' && n[7] == 'M')
             {
@@ -139,7 +135,7 @@ char *GetCorrectCase(char *path)
 //  found (PWAD, if all required lumps are present).
 // Files with a .wad extension are wadlink files
 //  with multiple lumps.
-wadfile_t *W_AddFile(char *filename, dboolean automatic)
+dboolean W_AddFile(char *filename, dboolean automatic)
 {
     static dboolean packagewadadded;
     wadinfo_t       header;
@@ -148,12 +144,13 @@ wadfile_t *W_AddFile(char *filename, dboolean automatic)
     filelump_t      *fileinfo;
     filelump_t      *filerover;
     lumpinfo_t      *filelumps;
+    char            *lumps_str;
 
     // open the file and add to directory
     wadfile_t       *wadfile = W_OpenFile(filename);
 
     if (!wadfile)
-        return NULL;
+        return false;
 
     M_StringCopy(wadfile->path, GetCorrectCase(filename), sizeof(wadfile->path));
 
@@ -199,10 +196,12 @@ wadfile_t *W_AddFile(char *filename, dboolean automatic)
         filerover++;
     }
 
-    free(fileinfo);
-
-    C_Output("%s %s lump%s from %s <b>%s</b>.", (automatic ? "Automatically added" : "Added"), commify(numlumps - startlump),
+    lumps_str = commify(numlumps - startlump);
+    C_Output("%s %s lump%s from %s <b>%s</b>.", (automatic ? "Automatically added" : "Added"), lumps_str,
         (numlumps - startlump == 1 ? "" : "s"), (wadfile->type == IWAD ? "IWAD" : "PWAD"), wadfile->path);
+
+    free(fileinfo);
+    free(lumps_str);
 
     if (!packagewadadded)
     {
@@ -212,7 +211,7 @@ wadfile_t *W_AddFile(char *filename, dboolean automatic)
             I_Error("%s is invalid.", packagewad);
     }
 
-    return wadfile;
+    return true;
 }
 
 // Hash function used for lump names.
@@ -251,8 +250,6 @@ dboolean HasDehackedLump(const char *pwadname)
     {
         fseek(fp, LONG(header.infotableofs), SEEK_SET);
 
-        // Determine game mode from levels present
-        // Must be a full set for whichever mode is present
         for (header.numlumps = LONG(header.numlumps); header.numlumps && fread(&lump, sizeof(lump), 1, fp); header.numlumps--)
             if (n[0] == 'D' && n[1] == 'E' && n[2] == 'H' && n[3] == 'A' && n[4] == 'C' && n[5] == 'K' && n[6] == 'E' && n[7] == 'D')
             {

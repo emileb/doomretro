@@ -6,13 +6,13 @@
 
 ========================================================================
 
-  Copyright © 1993-2012 id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2018 Brad Harding.
+  Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
+  Copyright © 2013-2019 by Brad Harding.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
 
-  This file is part of DOOM Retro.
+  This file is a part of DOOM Retro.
 
   DOOM Retro is free software: you can redistribute it and/or modify it
   under the terms of the GNU General Public License as published by the
@@ -28,7 +28,7 @@
   along with DOOM Retro. If not, see <https://www.gnu.org/licenses/>.
 
   DOOM is a registered trademark of id Software LLC, a ZeniMax Media
-  company, in the US and/or other countries and is used without
+  company, in the US and/or other countries, and is used without
   permission. All other trademarks are the property of their respective
   holders. DOOM Retro is in no way affiliated with nor endorsed by
   id Software.
@@ -43,6 +43,7 @@
 #include "dstrings.h"
 #include "g_game.h"
 #include "hu_stuff.h"
+#include "i_colors.h"
 #include "i_swap.h"
 #include "m_cheat.h"
 #include "m_config.h"
@@ -56,7 +57,6 @@
 #include "st_stuff.h"
 #include "v_video.h"
 #include "w_wad.h"
-#include "z_zone.h"
 
 //
 // STATUS BAR DATA
@@ -390,7 +390,7 @@ static void ST_refreshBackground(void)
     {
         if (STBAR >= 3 || r_detail == r_detail_low || SCREENSCALE == 1)
         {
-            V_DrawPatch(ST_X, ORIGINALHEIGHT - ORIGINALSBARHEIGHT, 0, sbar);
+            V_DrawSTBARPatch(ST_X, ORIGINALHEIGHT - ORIGINALSBARHEIGHT, sbar);
             V_DrawPatch(ST_ARMSBGX + hacx * 4, ORIGINALHEIGHT - ORIGINALSBARHEIGHT, 0, armsbg);
         }
         else
@@ -538,8 +538,8 @@ dboolean ST_Responder(event_t *ev)
                 dboolean    keysgiven = false;
                 dboolean    weaponsgiven = false;
 
-                    S_StartSound(NULL, sfx_getpow);
-                    C_CCMDOutput(cheat_ammo.sequence);
+                S_StartSound(NULL, sfx_getpow);
+                C_CCMDOutput(cheat_ammo.sequence);
 
                 // [BH] note if doesn't have full armor before giving it
                 if (viewplayer->armorpoints < idkfa_armor || viewplayer->armortype < idkfa_armor_class)
@@ -641,7 +641,6 @@ dboolean ST_Responder(event_t *ev)
                 // [BH] can only enter cheat while player is alive
                 && viewplayer->health > 0)
             {
-
                 S_StartSound(NULL, sfx_getpow);
                 C_CCMDOutput(gamemode == commercial ? cheat_commercial_noclip.sequence : cheat_noclip.sequence);
 
@@ -777,8 +776,8 @@ dboolean ST_Responder(event_t *ev)
                     cheat_noclip.chars_read = 0;
                     cheat_commercial_noclip.chars_read = 0;
 
-                    for (int i = 0; i < 7; i++)
-                        cheat_powerup[i].chars_read = 0;
+                    for (int j = 0; j < 7; j++)
+                        cheat_powerup[j].chars_read = 0;
 
                     cheat_choppers.chars_read = 0;
                     cheat_clev.chars_read = 0;
@@ -795,7 +794,6 @@ dboolean ST_Responder(event_t *ev)
                     C_HideConsole();
 
                     return true;
-
                 }
             }
 
@@ -827,16 +825,12 @@ dboolean ST_Responder(event_t *ev)
                     viewplayer->chainsawbeforechoppers = viewplayer->weaponowned[wp_chainsaw];
 
                     // [BH] note weapon before switching to chainsaw
-                    viewplayer->weaponbeforechoppers = viewplayer->readyweapon;
-
-                    if (viewplayer->weaponbeforechoppers != wp_chainsaw)
+                    if ((viewplayer->weaponbeforechoppers = viewplayer->readyweapon) != wp_chainsaw)
                     {
                         viewplayer->weaponowned[wp_chainsaw] = true;
                         oldweaponsowned[wp_chainsaw] = true;
                         viewplayer->pendingweapon = wp_chainsaw;
                     }
-
-                    viewplayer->weaponowned[wp_chainsaw] = true;
 
                     // [BH] fixed bug where invulnerability was never given, and now
                     //  needs to be toggled off with cheat or switch from chainsaw
@@ -883,10 +877,7 @@ dboolean ST_Responder(event_t *ev)
                     viewplayer->cheated++;
                 }
                 else
-                {
-                    message_clearable = true;
                     HU_ClearMessages();
-                }
             }
 
             else if (cht_CheckCheat(&cheat_buddha, ev->data2) && gameskill != sk_nightmare && viewplayer->health > 0)
@@ -936,11 +927,8 @@ dboolean ST_Responder(event_t *ev)
                     viewplayer->cheated++;
                 }
             }
-        }
 
-        // 'clev' change-level cheat
-        if (!menuactive && !paused)
-        {
+            // 'clev' change-level cheat
             if (!consolecheat[0] && cht_CheckCheat(&cheat_clev, ev->data2))
                 idclev = true;
 
@@ -964,10 +952,10 @@ dboolean ST_Responder(event_t *ev)
                     epsd = buf[0] - '0';
                     map = buf[1] - '0';
                     M_snprintf(lump, sizeof(lump), "E%cM%c", buf[0], buf[1]);
-                }
 
-                if (chex)
-                    epsd = 1;
+                    if (chex && epsd != 1)
+                        return false;
+                }
 
                 // Catch invalid maps.
                 // [BH] simplified by checking if lump for map exists in WAD
@@ -1034,14 +1022,14 @@ dboolean ST_Responder(event_t *ev)
 
 static int ST_calcPainOffset(void)
 {
-    int         health = MIN(viewplayer->health, 100);
+    int         newhealth = MIN(viewplayer->health, 100);
     static int  lastcalc;
-    static int  oldhealth = -1;
+    static int  health = -1;
 
-    if (health != oldhealth)
+    if (newhealth != health)
     {
-        lastcalc = ST_FACESTRIDE * (((100 - health) * ST_NUMPAINFACES) / 101);
-        oldhealth = health;
+        lastcalc = ST_FACESTRIDE * (((100 - newhealth) * ST_NUMPAINFACES) / 101);
+        health = newhealth;
     }
 
     return lastcalc;
@@ -1102,7 +1090,7 @@ static void ST_updateFaceWidget(void)
 
     if (priority < 8)
     {
-        if (viewplayer->damagecount && viewplayer->attacker)
+        if (viewplayer->damagecount && viewplayer->attacker && viewplayer->attacker != viewplayer->mo)
         {
             // [BH] fix ouch-face when damage > 20
             if (st_oldhealth - viewplayer->health > ST_MUCHPAIN)
@@ -1322,8 +1310,8 @@ static void ST_drawWidgets(dboolean refresh)
         STlib_updateArmsIcon(&w_arms[5], refresh, 5);
     }
 
-    if (facebackcolor != facebackcolor_default)
-        V_FillRect(0, ST_FACEBACKX, ST_FACEBACKY, ST_FACEBACKWIDTH, ST_FACEBACKHEIGHT, facebackcolor, false);
+    if (facebackcolor != facebackcolor_none)
+        V_FillRect(0, ST_FACEBACKX, ST_FACEBACKY, ST_FACEBACKWIDTH, ST_FACEBACKHEIGHT, nearestcolors[facebackcolor], false);
 
     STlib_updateMultIcon(&w_faces, refresh);
 
@@ -1353,7 +1341,7 @@ void ST_Drawer(dboolean fullscreen, dboolean refresh)
     // Do red-/gold-shifts from damage/items
     ST_doPaletteStuff();
 
-    if (vid_widescreen || inhelpscreens)
+    if (vid_widescreen || menuactive || inhelpscreens)
         return;
 
     st_statusbaron = (!fullscreen || automapactive);
@@ -1384,7 +1372,7 @@ static void ST_loadUnloadGraphics(load_callback_t callback)
     }
 
     callback("STTPRCNT", &tallpercent);
-    emptytallpercent = V_EmptyPatch(tallpercent);
+    emptytallpercent = V_IsEmptyPatch(tallpercent);
     tallpercentwidth = (emptytallpercent ? 0 : SHORT(tallpercent->width));
 
     // key cards

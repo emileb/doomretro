@@ -6,13 +6,13 @@
 
 ========================================================================
 
-  Copyright © 1993-2012 id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2018 Brad Harding.
+  Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
+  Copyright © 2013-2019 by Brad Harding.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
 
-  This file is part of DOOM Retro.
+  This file is a part of DOOM Retro.
 
   DOOM Retro is free software: you can redistribute it and/or modify it
   under the terms of the GNU General Public License as published by the
@@ -28,7 +28,7 @@
   along with DOOM Retro. If not, see <https://www.gnu.org/licenses/>.
 
   DOOM is a registered trademark of id Software LLC, a ZeniMax Media
-  company, in the US and/or other countries and is used without
+  company, in the US and/or other countries, and is used without
   permission. All other trademarks are the property of their respective
   holders. DOOM Retro is in no way affiliated with nor endorsed by
   id Software.
@@ -75,7 +75,6 @@ typedef enum
     inputstring,
     outputstring,
     dividerstring,
-    titlestring,
     warningstring,
     playermessagestring,
     obituarystring,
@@ -133,7 +132,6 @@ typedef struct
 
 extern autocomplete_t   autocompletelist[];
 
-void C_Print(const stringtype_t type, const char *string, ...);
 void C_Input(const char *string, ...);
 void C_IntCVAROutput(char *cvar, int value);
 void C_PctCVAROutput(char *cvar, int value);
@@ -156,7 +154,6 @@ dboolean C_ValidateInput(const char *input);
 dboolean C_Responder(event_t *ev);
 void C_PrintCompileDate(void);
 void C_PrintSDLVersions(void);
-void C_StripQuotes(char *string);
 void C_UpdateFPS(void);
 char *C_GetTimeStamp(unsigned int tics);
 

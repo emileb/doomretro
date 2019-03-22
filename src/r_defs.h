@@ -6,13 +6,13 @@
 
 ========================================================================
 
-  Copyright © 1993-2012 id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2018 Brad Harding.
+  Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
+  Copyright © 2013-2019 by Brad Harding.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
 
-  This file is part of DOOM Retro.
+  This file is a part of DOOM Retro.
 
   DOOM Retro is free software: you can redistribute it and/or modify it
   under the terms of the GNU General Public License as published by the
@@ -28,7 +28,7 @@
   along with DOOM Retro. If not, see <https://www.gnu.org/licenses/>.
 
   DOOM is a registered trademark of id Software LLC, a ZeniMax Media
-  company, in the US and/or other countries and is used without
+  company, in the US and/or other countries, and is used without
   permission. All other trademarks are the property of their respective
   holders. DOOM Retro is in no way affiliated with nor endorsed by
   id Software.
@@ -81,11 +81,17 @@ typedef struct
 typedef enum
 {
     SOLID,
+    LIQUID,
     NUKAGE,
     WATER,
     LAVA,
     BLOOD,
-    SLIME
+    SLIME,
+    GRAYSLIME,
+    GOOP,
+    ICYWATER,
+    TAR,
+    SLUDGE
 } terraintype_t;
 
 //
@@ -594,9 +600,7 @@ enum
     LightBlinks_2HzSynchronized                         = 13,
     Door_OpenClose_OpensAfter5Min                       = 14,
     DamageNegative10Or20PercentHealth                   = 16,
-    LightFlickers_Randomly                              = 17,
-
-    UNKNOWNSECTORSPECIAL
+    LightFlickers_Randomly                              = 17
 };
 
 enum
@@ -1003,8 +1007,6 @@ typedef struct
     // leave pads for [minx-1]/[maxx+1]
     unsigned short      pad1;
 
-    // Here lies the rub for all
-    //  dynamic resize/change of resolution.
     unsigned short      top[SCREENWIDTH];
 
     unsigned short      pad2;

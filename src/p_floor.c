@@ -6,13 +6,13 @@
 
 ========================================================================
 
-  Copyright © 1993-2012 id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2018 Brad Harding.
+  Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
+  Copyright © 2013-2019 by Brad Harding.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
 
-  This file is part of DOOM Retro.
+  This file is a part of DOOM Retro.
 
   DOOM Retro is free software: you can redistribute it and/or modify it
   under the terms of the GNU General Public License as published by the
@@ -28,7 +28,7 @@
   along with DOOM Retro. If not, see <https://www.gnu.org/licenses/>.
 
   DOOM is a registered trademark of id Software LLC, a ZeniMax Media
-  company, in the US and/or other countries and is used without
+  company, in the US and/or other countries, and is used without
   permission. All other trademarks are the property of their respective
   holders. DOOM Retro is in no way affiliated with nor endorsed by
   id Software.
@@ -37,6 +37,7 @@
 */
 
 #include "doomstat.h"
+#include "m_config.h"
 #include "p_fix.h"
 #include "p_local.h"
 #include "p_tick.h"
@@ -52,8 +53,8 @@ extern dboolean canmodify;
 //
 // Move a plane (floor or ceiling) and check for crushing
 //
-result_e T_MovePlane(sector_t *sector, fixed_t speed, fixed_t dest, dboolean crush, int floorOrCeiling,
-    int direction, dboolean elevator)
+result_e T_MovePlane(sector_t *sector, fixed_t speed, fixed_t dest, dboolean crush,
+    int floorOrCeiling, int direction, dboolean elevator)
 {
     fixed_t lastpos;
     fixed_t destheight;
@@ -228,7 +229,7 @@ void T_MoveFloor(floormove_t *floor)
 
                 case genFloorChg:
                     sec->floorpic = floor->texture;
-                    P_ChangeSector(sec, false);
+                    P_CheckTerrainType(sec);
                     break;
 
                 default:
@@ -247,7 +248,7 @@ void T_MoveFloor(floormove_t *floor)
 
                 case genFloorChg:
                     sec->floorpic = floor->texture;
-                    P_ChangeSector(sec, false);
+                    P_CheckTerrainType(sec);
                     break;
 
                 default:
@@ -477,6 +478,7 @@ dboolean EV_DoFloor(line_t *line, floor_e floortype)
                 else
                     sec->floorpic = line->frontsector->floorpic;
 
+                P_CheckTerrainType(sec);
                 sec->special = line->frontsector->special;
                 break;
 
@@ -551,6 +553,45 @@ dboolean EV_DoFloor(line_t *line, floor_e floortype)
     return rtn;
 }
 
+void P_CheckTerrainType(sector_t *sector)
+{
+    terraintype_t   oldterraintype = sector->terraintype;
+
+    if ((sector->terraintype = terraintypes[sector->floorpic]) != oldterraintype)
+    {
+        dboolean    isliquid = (sector->terraintype != SOLID);
+
+        if (isliquid)
+        {
+            bloodsplat_t    *splat = sector->splatlist;
+
+            while (splat)
+            {
+                bloodsplat_t    *next = splat->snext;
+
+                P_UnsetBloodSplatPosition(splat);
+                r_bloodsplats_total--;
+                splat = next;
+            }
+        }
+        else
+        {
+            sector->floor_xoffs = 0;
+            sector->floor_yoffs = 0;
+        }
+
+        for (msecnode_t *node = sector->touching_thinglist; node; node = node->m_snext)
+        {
+            mobj_t  *thing = node->m_thing;
+
+            if (isliquid && !(thing->flags & MF_SPAWNCEILING) && (thing->flags2 & MF2_FOOTCLIP))
+                thing->flags2 |= MF2_FEETARECLIPPED;
+            else
+                thing->flags2 &= ~MF2_FEETARECLIPPED;
+        }
+    }
+}
+
 //
 // EV_DoChange()
 //
@@ -580,7 +621,7 @@ dboolean EV_DoChange(line_t *line, change_e changetype)
         {
             case trigChangeOnly:
                 sec->floorpic = line->frontsector->floorpic;
-                P_ChangeSector(sec, false);
+                P_CheckTerrainType(sec);
                 sec->special = line->frontsector->special;
                 break;
 
@@ -588,7 +629,7 @@ dboolean EV_DoChange(line_t *line, change_e changetype)
                 if ((secm = P_FindModelFloorSector(sec->floorheight, secnum)))  // if no model, no change
                 {
                     sec->floorpic = secm->floorpic;
-                    P_ChangeSector(sec, false);
+                    P_CheckTerrainType(sec);
                     sec->special = secm->special;
                 }
 

@@ -6,13 +6,13 @@
 
 ========================================================================
 
-  Copyright © 1993-2012 id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2018 Brad Harding.
+  Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
+  Copyright © 2013-2019 by Brad Harding.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
 
-  This file is part of DOOM Retro.
+  This file is a part of DOOM Retro.
 
   DOOM Retro is free software: you can redistribute it and/or modify it
   under the terms of the GNU General Public License as published by the
@@ -28,7 +28,7 @@
   along with DOOM Retro. If not, see <https://www.gnu.org/licenses/>.
 
   DOOM is a registered trademark of id Software LLC, a ZeniMax Media
-  company, in the US and/or other countries and is used without
+  company, in the US and/or other countries, and is used without
   permission. All other trademarks are the property of their respective
   holders. DOOM Retro is in no way affiliated with nor endorsed by
   id Software.
@@ -201,6 +201,7 @@ dboolean EV_DoPlat(line_t *line, plattype_e type, int amount)
             case raiseToNearestAndChange:
                 plat->speed = PLATSPEED / 2;
                 sec->floorpic = sides[line->sidenum[0]].sector->floorpic;
+                P_CheckTerrainType(sec);
                 plat->high = P_FindNextHighestFloor(sec, sec->floorheight);
                 plat->status = up;
                 sec->special = 0;
@@ -210,6 +211,7 @@ dboolean EV_DoPlat(line_t *line, plattype_e type, int amount)
             case raiseAndChange:
                 plat->speed = PLATSPEED / 2;
                 sec->floorpic = sides[line->sidenum[0]].sector->floorpic;
+                P_CheckTerrainType(sec);
                 plat->high = sec->floorheight + amount * FRACUNIT;
                 plat->status = up;
                 S_StartSectorSound(&sec->soundorg, sfx_stnmov);

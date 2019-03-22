@@ -6,13 +6,13 @@
 
 ========================================================================
 
-  Copyright © 1993-2012 id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2018 Brad Harding.
+  Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
+  Copyright © 2013-2019 by Brad Harding.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
 
-  This file is part of DOOM Retro.
+  This file is a part of DOOM Retro.
 
   DOOM Retro is free software: you can redistribute it and/or modify it
   under the terms of the GNU General Public License as published by the
@@ -28,7 +28,7 @@
   along with DOOM Retro. If not, see <https://www.gnu.org/licenses/>.
 
   DOOM is a registered trademark of id Software LLC, a ZeniMax Media
-  company, in the US and/or other countries and is used without
+  company, in the US and/or other countries, and is used without
   permission. All other trademarks are the property of their respective
   holders. DOOM Retro is in no way affiliated with nor endorsed by
   id Software.
@@ -38,10 +38,7 @@
 
 #include <ctype.h>
 
-#if defined(_WIN32)
-#include <Windows.h>
-#endif
-
+#include "am_map.h"
 #include "c_console.h"
 #include "d_deh.h"
 #include "d_iwad.h"
@@ -63,7 +60,6 @@
 #include "s_sound.h"
 #include "v_data.h"
 #include "v_video.h"
-#include "version.h"
 #include "w_wad.h"
 #include "z_zone.h"
 
@@ -124,10 +120,11 @@ static dboolean usinggamepad;
 // current menudef
 static menu_t   *currentMenu;
 
-dboolean        blurred;
+static angle_t  playerangle;
+int             spindirection;
 
 extern patch_t  *hu_font[HU_FONTSIZE];
-extern dboolean message_dontfuckwithme;
+extern dboolean message_menu;
 
 extern int      st_palette;
 
@@ -462,30 +459,44 @@ menu_t SaveDef =
     load1
 };
 
-static int height;
+static int blurheight;
 
-static void DoBlurScreen(byte *tempscreen, byte *blurscreen, int x1, int y1, int x2, int y2, int i)
+static void BlurScreen(byte *screen, byte *blurscreen)
 {
-    memcpy(tempscreen, blurscreen, SCREENWIDTH * SCREENHEIGHT);
-
-    for (int y = y1; y < y2; y += SCREENWIDTH)
-        for (int x = y + x1; x < y + x2; x++)
-            blurscreen[x] = tinttab50[tempscreen[x] + (tempscreen[x + i] << 8)];
-}
-
-static void BlurScreen(byte *screen, byte *tempscreen, byte *blurscreen)
-{
-    for (int i = 0; i < height; i++)
+    for (int i = 0; i < blurheight; i++)
         blurscreen[i] = grays[screen[i]];
 
-    DoBlurScreen(tempscreen, blurscreen, 0, 0, SCREENWIDTH - 1, height, 1);
-    DoBlurScreen(tempscreen, blurscreen, 1, 0, SCREENWIDTH, height, -1);
-    DoBlurScreen(tempscreen, blurscreen, 0, 0, SCREENWIDTH - 1, height - SCREENWIDTH, SCREENWIDTH + 1);
-    DoBlurScreen(tempscreen, blurscreen, 1, SCREENWIDTH, SCREENWIDTH, height, -(SCREENWIDTH + 1));
-    DoBlurScreen(tempscreen, blurscreen, 0, 0, SCREENWIDTH, height - SCREENWIDTH, SCREENWIDTH);
-    DoBlurScreen(tempscreen, blurscreen, 0, SCREENWIDTH, SCREENWIDTH, height, -SCREENWIDTH);
-    DoBlurScreen(tempscreen, blurscreen, 1, 0, SCREENWIDTH, height - SCREENWIDTH, SCREENWIDTH - 1);
-    DoBlurScreen(tempscreen, blurscreen, 0, SCREENWIDTH, SCREENWIDTH - 1, height, -(SCREENWIDTH - 1));
+    for (int y = 0; y <= blurheight - SCREENWIDTH; y += SCREENWIDTH)
+        for (int x = y; x <= y + SCREENWIDTH - 2; x++)
+            blurscreen[x] = tinttab50[blurscreen[x] + (blurscreen[x + 1] << 8)];
+
+    for (int y = 0; y <= blurheight - SCREENWIDTH; y += SCREENWIDTH)
+        for (int x = y + SCREENWIDTH - 2; x >= y; x--)
+            blurscreen[x] = tinttab50[blurscreen[x] + (blurscreen[x - 1] << 8)];
+
+    for (int y = 0; y <= blurheight - SCREENWIDTH * 2; y += SCREENWIDTH)
+        for (int x = y; x <= y + SCREENWIDTH - 2; x++)
+            blurscreen[x] = tinttab50[blurscreen[x] + (blurscreen[x + SCREENWIDTH + 1] << 8)];
+
+    for (int y = blurheight - SCREENWIDTH; y >= SCREENWIDTH; y -= SCREENWIDTH)
+        for (int x = y + SCREENWIDTH - 1; x >= y + 1; x--)
+            blurscreen[x] = tinttab50[blurscreen[x] + (blurscreen[x - SCREENWIDTH - 1] << 8)];
+
+    for (int y = 0; y <= blurheight - SCREENWIDTH * 2; y += SCREENWIDTH)
+        for (int x = y; x <= y + SCREENWIDTH - 1; x++)
+            blurscreen[x] = tinttab50[blurscreen[x] + (blurscreen[x + SCREENWIDTH] << 8)];
+
+    for (int y = blurheight - SCREENWIDTH; y >= SCREENWIDTH; y -= SCREENWIDTH)
+        for (int x = y; x <= y + SCREENWIDTH - 1; x++)
+            blurscreen[x] = tinttab50[blurscreen[x] + (blurscreen[x - SCREENWIDTH] << 8)];
+
+    for (int y = 0; y <= blurheight - SCREENWIDTH * 2; y += SCREENWIDTH)
+        for (int x = y + SCREENWIDTH - 1; x >= y + 1; x--)
+            blurscreen[x] = tinttab50[blurscreen[x] + (blurscreen[x + SCREENWIDTH - 1] << 8)];
+
+    for (int y = blurheight - SCREENWIDTH; y >= SCREENWIDTH; y -= SCREENWIDTH)
+        for (int x = y; x <= y + SCREENWIDTH - 2; x++)
+            blurscreen[x] = tinttab50[blurscreen[x] + (blurscreen[x - SCREENWIDTH + 1] << 8)];
 }
 
 //
@@ -496,48 +507,57 @@ void M_DarkBackground(void)
 {
     static byte blurscreen1[SCREENWIDTH * SCREENHEIGHT];
     static byte blurscreen2[(SCREENHEIGHT - SBARHEIGHT) * SCREENWIDTH];
+    static int  prevtic;
 
-    height = (SCREENHEIGHT - (vid_widescreen && gamestate == GS_LEVEL) * SBARHEIGHT) * SCREENWIDTH;
+    blurheight = (SCREENHEIGHT - (vid_widescreen && gamestate == GS_LEVEL) * SBARHEIGHT) * SCREENWIDTH;
 
-    if (!blurred)
+    if (gametime != prevtic)
     {
-        byte    tempscreen[SCREENWIDTH * SCREENHEIGHT];
+        for (int i = 0; i < blurheight; i += SCREENWIDTH)
+        {
+            screens[0][i] = nearestblack;
+            screens[0][i + 1] = nearestblack;
+            screens[0][i + SCREENWIDTH - 2] = nearestblack;
+            screens[0][i + SCREENWIDTH - 1] = nearestblack;
+        }
 
-        BlurScreen(screens[0], tempscreen, blurscreen1);
+        for (int i = 0; i < blurheight; i++)
+            screens[0][i] = colormaps[0][((M_Random() & 7) << 8) + screens[0][i]];
 
-        for (int i = 0; i < height; i++)
-            blurscreen1[i] = tinttab50[blurscreen1[i]];
+        BlurScreen(screens[0], blurscreen1);
+
+        for (int i = 0; i < blurheight; i++)
+            blurscreen1[i] = tinttab33[blurscreen1[i]];
 
         if (mapwindow)
         {
-            BlurScreen(mapscreen, tempscreen, blurscreen2);
+            for (int i = 0; i < (SCREENHEIGHT - SBARHEIGHT) * SCREENWIDTH; i += SCREENWIDTH)
+            {
+                mapscreen[i] = nearestblack;
+                mapscreen[i + 1] = nearestblack;
+                mapscreen[i + SCREENWIDTH - 2] = nearestblack;
+                mapscreen[i + SCREENWIDTH - 1] = nearestblack;
+            }
 
             for (int i = 0; i < (SCREENHEIGHT - SBARHEIGHT) * SCREENWIDTH; i++)
-                blurscreen2[i] = tinttab50[blurscreen2[i]];
+                mapscreen[i] = colormaps[0][((M_Random() & 7) << 8) + mapscreen[i]];
+
+            BlurScreen(mapscreen, blurscreen2);
+
+            for (int i = 0; i < (SCREENHEIGHT - SBARHEIGHT) * SCREENWIDTH; i++)
+                blurscreen2[i] = tinttab33[blurscreen2[i]];
         }
 
-        blurred = true;
+        prevtic = gametime;
     }
 
-    memcpy(screens[0], blurscreen1, height);
+    memcpy(screens[0], blurscreen1, blurheight);
 
     if (mapwindow)
         memcpy(mapscreen, blurscreen2, (SCREENHEIGHT - SBARHEIGHT) * SCREENWIDTH);
 
-    if (r_detail == r_detail_low && viewactive)
+    if (r_detail == r_detail_low)
         V_LowGraphicDetail();
-
-    for (int i = 0; i < height; i += SCREENWIDTH)
-    {
-        screens[0][i] = tinttab50[screens[0][i]];
-        screens[0][i + SCREENWIDTH - 1] = tinttab50[screens[0][i + SCREENWIDTH - 1]];
-    }
-
-    for (int i = 1; i < SCREENWIDTH - 1; i++)
-    {
-        screens[0][i] = tinttab50[screens[0][i]];
-        screens[0][i + height - SCREENWIDTH] = tinttab50[screens[0][i + height - SCREENWIDTH]];
-    }
 }
 
 static byte blues[] =
@@ -771,11 +791,7 @@ static void M_DrawPatchWithShadow(int x, int y, patch_t *patch)
     short   height = SHORT(patch->height);
 
     if (width >= ORIGINALWIDTH || height >= ORIGINALHEIGHT)
-    {
-        patch->leftoffset = 0;
-        patch->topoffset = 0;
         V_DrawPagePatch(patch);
-    }
     else
         V_DrawPatchWithShadow(x, y, patch, false);
 }
@@ -790,11 +806,7 @@ static void M_DrawCenteredPatchWithShadow(int y, patch_t *patch)
     short   height = SHORT(patch->height);
 
     if (width >= ORIGINALWIDTH || height >= ORIGINALHEIGHT)
-    {
-        patch->leftoffset = 0;
-        patch->topoffset = 0;
         V_DrawPagePatch(patch);
-    }
     else
         V_DrawPatchWithShadow((ORIGINALWIDTH - width) / 2 + SHORT(patch->leftoffset), y, patch, false);
 }
@@ -1091,7 +1103,7 @@ static void M_DrawSave(void)
             {
                 int x = LoadDef.x - 2 + M_StringWidth(left);
                 int y = LoadDef.y + saveSlot * LINEHEIGHT + OFFSET - 1;
-                int h = y + SHORT(hu_font['A' - HU_FONTSTART]->height) + 2;
+                int h = y + 9;
 
                 while (y < h)
                     V_DrawPixel(x, y++, caretcolor, false);
@@ -1235,9 +1247,8 @@ void M_UpdateSaveGameName(int i)
 
     if (match)
     {
-        int len = (int)strlen(maptitle);
-
         M_StringCopy(savegamestrings[i], maptitle, SAVESTRINGSIZE);
+        len = (int)strlen(savegamestrings[i]);
 
         while (M_StringWidth(savegamestrings[i]) > SAVESTRINGPIXELWIDTH)
         {
@@ -1364,7 +1375,6 @@ static void M_DeleteSavegameResponse(int key)
         M_snprintf(buffer, sizeof(buffer), s_GGDELETED, titlecase(savegamestrings[itemOn]));
         C_Output(buffer);
         HU_SetPlayerMessage(buffer, false, false);
-        blurred = false;
         message_dontfuckwithme = true;
         M_ReadSaveStrings();
 
@@ -1777,26 +1787,22 @@ static void M_Options(int choice)
 //
 // Toggle messages on/off
 //
-dboolean    message_dontpause;
-
 static void M_ChangeMessages(int choice)
 {
-    blurred = false;
     messages = !messages;
-
-    if (menuactive)
-        message_dontpause = true;
 
     if (messages)
     {
         C_StrCVAROutput(stringize(messages), "on");
         C_Output(s_MSGON);
+        message_menu = true;
         HU_SetPlayerMessage(s_MSGON, false, false);
     }
     else
     {
         C_StrCVAROutput(stringize(messages), "off");
         C_Output(s_MSGOFF);
+        message_menu = true;
         HU_SetPlayerMessage(s_MSGOFF, false, false);
     }
 
@@ -2052,7 +2058,6 @@ static void M_ChangeSensitivity(int choice)
 
 static void M_ChangeDetail(int choice)
 {
-    blurred = false;
     r_detail = !r_detail;
     C_StrCVAROutput(stringize(r_detail), (r_detail == r_detail_low ? "low" : "high"));
 
@@ -2092,6 +2097,10 @@ static void M_SizeDisplay(int choice)
                 else if (vid_widescreen)
                 {
                     I_ToggleWidescreen(false);
+
+                    if (menuactive && !automapactive)
+                        R_SetViewSize(8);
+
                     C_StrCVAROutput(stringize(vid_widescreen), "off");
                 }
                 else
@@ -2102,7 +2111,8 @@ static void M_SizeDisplay(int choice)
             }
             else if (r_screensize > r_screensize_min)
             {
-                R_SetViewSize(--r_screensize);
+                r_screensize--;
+                R_SetViewSize(menuactive && gamestate == GS_LEVEL && !automapactive ? 8 : r_screensize);
                 C_IntCVAROutput(stringize(r_screensize), r_screensize);
                 S_StartSound(NULL, sfx_stnmov);
                 M_SaveCVARs();
@@ -2133,7 +2143,12 @@ static void M_SizeDisplay(int choice)
                     I_ToggleWidescreen(true);
 
                     if (vid_widescreen)
+                    {
+                        if (menuactive && !automapactive)
+                            R_SetViewSize(7);
+
                         C_StrCVAROutput(stringize(vid_widescreen), "on");
+                    }
                     else
                     {
                         R_SetViewSize(++r_screensize);
@@ -2146,7 +2161,8 @@ static void M_SizeDisplay(int choice)
             }
             else
             {
-                R_SetViewSize(++r_screensize);
+                r_screensize++;
+                R_SetViewSize(menuactive && gamestate == GS_LEVEL && !automapactive ? 8 : r_screensize);
                 C_IntCVAROutput(stringize(r_screensize), r_screensize);
                 S_StartSound(NULL, sfx_stnmov);
                 M_SaveCVARs();
@@ -2155,7 +2171,6 @@ static void M_SizeDisplay(int choice)
             break;
     }
 
-    blurred = false;
     skippsprinterp = true;
 }
 
@@ -2196,7 +2211,6 @@ void M_StartMessage(char *string, void *routine, dboolean input)
     messageString = string;
     messageRoutine = (void (*)(int))routine;
     messageNeedsInput = input;
-    blurred = false;
     menuactive = true;
 
     I_SetPalette(W_CacheLumpName("PLAYPAL"));
@@ -2254,7 +2268,8 @@ void M_DrawSmallChar(int x, int y, int i, dboolean shadow)
 
     for (int y1 = 0; y1 < 10; y1++)
         for (int x1 = 0; x1 < w; x1++)
-            V_DrawPixel(x + x1, y + y1, (int)smallcharset[i][y1 * w + x1], shadow);
+            if (x + x1 < ORIGINALWIDTH && y + y1 < ORIGINALHEIGHT)
+                V_DrawPixel(x + x1, y + y1, (int)smallcharset[i][y1 * w + x1], shadow);
 }
 
 //
@@ -2309,7 +2324,7 @@ static void M_WriteText(int x, int y, char *string, dboolean shadow)
         {
             if (prev == ' ')
             {
-                if (letter == '\"')
+                if (letter == '"')
                     c = 64;
                 else if (letter == '\'')
                     c = 65;
@@ -2407,7 +2422,6 @@ void M_ChangeGamma(dboolean shift)
         HU_SetPlayerMessage(buf, false, false);
     }
 
-    message_dontpause = true;
     message_dontfuckwithme = true;
     I_SetPalette((byte *)W_CacheLumpName("PLAYPAL") + st_palette * 768);
     M_SaveCVARs();
@@ -3428,7 +3442,6 @@ void M_StartControlPanel(void)
     menuactive = true;
     currentMenu = &MainDef;
     itemOn = currentMenu->lastOn;
-    blurred = false;
 
     S_StopSounds();
 
@@ -3445,6 +3458,18 @@ void M_StartControlPanel(void)
 
     if (vid_motionblur)
         I_SetMotionBlur(0);
+
+    if (gamestate == GS_LEVEL)
+    {
+        playerangle = viewplayer->mo->angle;
+        spindirection = ((M_Random() & 1) ? -1 : 1);
+
+        if (!vid_widescreen && !automapactive && !inhelpscreens)
+            R_SetViewSize(8);
+    }
+
+    if (automapactive)
+        AM_SetAutomapSize();
 }
 
 //
@@ -3567,13 +3592,8 @@ void M_Drawer(void)
             if (currentMenu == &OptionsDef && !itemOn && gamestate != GS_LEVEL)
                 itemOn++;
 
-            if (currentMenu == &MainDef)
-            {
-                patch_t *patch = W_CacheLumpName("M_DOOM");
-
-                if (SHORT(patch->height) >= ORIGINALHEIGHT)
-                    yy -= OFFSET;
-            }
+            if (currentMenu == &MainDef && SHORT(((patch_t *)W_CacheLumpName("M_DOOM"))->height) >= ORIGINALHEIGHT)
+                yy -= OFFSET;
 
             if (M_SKULL1)
                 M_DrawPatchWithShadow(x - 30, yy, patch);
@@ -3613,6 +3633,9 @@ void M_Drawer(void)
 //
 void M_ClearMenus(void)
 {
+    if (!menuactive)
+        return;
+
     menuactive = false;
 
     if (gp_vibrate_barrels || gp_vibrate_damage || gp_vibrate_weapons)
@@ -3622,7 +3645,17 @@ void M_ClearMenus(void)
     }
 
     if (gamestate == GS_LEVEL)
+    {
         I_SetPalette((byte *)W_CacheLumpName("PLAYPAL") + st_palette * 768);
+
+        viewplayer->mo->angle = playerangle;
+
+        if (!vid_widescreen && !automapactive && !inhelpscreens)
+            R_SetViewSize(r_screensize);
+
+        if (automapactive)
+            AM_SetAutomapSize();
+    }
 }
 
 //
@@ -3686,6 +3719,8 @@ void M_Init(void)
         NewDef.prevMenu = (nerve ? &ExpDef : &MainDef);
     else if (gamemode == registered || W_CheckNumForName("E4M1") < 0)
         EpiDef.numitems--;
+    else if (gamemode == retail && sigil)
+        EpiDef.numitems++;
 
 #if !defined(_WIN32)
     s_DOSY = s_OTHERY;

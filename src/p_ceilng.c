@@ -6,13 +6,13 @@
 
 ========================================================================
 
-  Copyright © 1993-2012 id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2018 Brad Harding.
+  Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
+  Copyright © 2013-2019 by Brad Harding.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
 
-  This file is part of DOOM Retro.
+  This file is a part of DOOM Retro.
 
   DOOM Retro is free software: you can redistribute it and/or modify it
   under the terms of the GNU General Public License as published by the
@@ -28,7 +28,7 @@
   along with DOOM Retro. If not, see <https://www.gnu.org/licenses/>.
 
   DOOM is a registered trademark of id Software LLC, a ZeniMax Media
-  company, in the US and/or other countries and is used without
+  company, in the US and/or other countries, and is used without
   permission. All other trademarks are the property of their respective
   holders. DOOM Retro is in no way affiliated with nor endorsed by
   id Software.
@@ -52,7 +52,7 @@ static void T_GradualLightingToCeiling(ceiling_t *ceiling)
     sector_t    *sector = ceiling->sector;
     fixed_t     level = ceiling->topheight - sector->floorheight;
 
-    if (level && !P_SectorHasLightSpecial(sector))
+    if (level > 0 && !P_SectorHasLightSpecial(sector) && sector->ceilingpic != skyflatnum)
         EV_LightByAdjacentSectors(sector, FixedDiv(sector->ceilingheight - sector->floorheight, level));
 }
 
@@ -122,6 +122,7 @@ void T_MoveCeiling(ceiling_t *ceiling)
                         break;
                 }
             }
+
             break;
 
         case -1:
