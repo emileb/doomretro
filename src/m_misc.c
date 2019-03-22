@@ -164,7 +164,9 @@ char *M_ExtractFolder(char *path)
 char *M_GetAppDataFolder(void)
 {
 #ifdef __ANDROID__
-    return "./doomretro/";
+    char    *path = malloc(MAX_PATH);
+    return strcpy(path,"./doomretro/"); // CWD
+    return path;
 #endif
 
     char    *executablefolder = M_GetExecutableFolder();
@@ -233,7 +235,9 @@ char *M_GetResourceFolder(void)
     return (char *)resourceURL.fileSystemRepresentation;
 #else
 #ifdef __ANDROID__
-    return "./res/";
+    char    *path = malloc(MAX_PATH);
+    return strcpy(path,"./res/");
+    return path;
 #else
     // And on Linux, fall back to the same folder as the executable.
     return executablefolder;
@@ -264,7 +268,9 @@ char *M_GetExecutableFolder(void)
 
     return folder;
 #elif defined(__ANDROID__)
-    return "."; // CWD
+    char    *exe = malloc(MAX_PATH);
+    strcpy(exe,"."); // CWD
+    return exe;
 #elif defined(__linux__)
     char    *exe = malloc(MAX_PATH);
     ssize_t len = readlink("/proc/self/exe", exe, MAX_PATH - 1);
