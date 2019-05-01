@@ -26,8 +26,8 @@ LOCAL_SRC_FILES := $(ANDROID_FILES) $(FILE_LIST:$(LOCAL_PATH)%=%)
 
 LOCAL_LDLIBS += -llog -lz -lGLESv1_CM
 
-LOCAL_SHARED_LIBRARIES := touchcontrols SDL2 SDL2_mixer SDL2_image logwritter
-LOCAL_STATIC_LIBRARIES += license_static
+LOCAL_SHARED_LIBRARIES := touchcontrols SDL2 SDL2_mixer SDL2_image logwritter core_shared
+LOCAL_STATIC_LIBRARIES +=
 
 include $(BUILD_SHARED_LIBRARY)
 
