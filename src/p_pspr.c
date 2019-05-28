@@ -484,13 +484,11 @@ void A_FireBFG(mobj_t *actor, player_t *player, pspdef_t *psp)
 //
 void A_FireOldBFG(mobj_t *actor, player_t *player, pspdef_t *psp)
 {
-    mobjtype_t  type = MT_PLASMA1;
-
     P_SubtractAmmo(1);
 
     player->extralight = 2;
 
-    do
+    for (mobjtype_t type = MT_PLASMA1; type != MT_PLASMA2; type = MT_PLASMA2)
     {
         mobj_t  *th;
         angle_t an = actor->angle;
@@ -499,7 +497,7 @@ void A_FireOldBFG(mobj_t *actor, player_t *player, pspdef_t *psp)
         fixed_t slope;
 
         if (usemouselook && !autoaim)
-            slope = ((viewplayer->lookdir / MLOOKUNIT) << FRACBITS) / 173;
+            slope = PLAYERSLOPE(player);
         else
         {
             slope = P_AimLineAttack(actor, an, 16 * 64 * FRACUNIT);
@@ -514,7 +512,7 @@ void A_FireOldBFG(mobj_t *actor, player_t *player, pspdef_t *psp)
 
                     if (!linetarget)
                     {
-                        slope = (usemouselook ? ((viewplayer->lookdir / MLOOKUNIT) << FRACBITS) / 173 : 0);
+                        slope = (usemouselook ? PLAYERSLOPE(player) : 0);
                         an = actor->angle;
                     }
                 }
@@ -540,7 +538,7 @@ void A_FireOldBFG(mobj_t *actor, player_t *player, pspdef_t *psp)
         th->interpolate = -1;
 
         P_CheckMissileSpawn(th);
-    } while (type != MT_PLASMA2 && (type = MT_PLASMA2));    // killough: obfuscated!
+    }
 
     A_Recoil(wp_plasma);
 }
@@ -570,7 +568,7 @@ static fixed_t  bulletslope;
 static void P_BulletSlope(mobj_t *actor)
 {
     if (usemouselook && !autoaim)
-        bulletslope = ((viewplayer->lookdir / MLOOKUNIT) << FRACBITS) / 173;
+        bulletslope = PLAYERSLOPE(viewplayer);
     else
     {
         angle_t an = actor->angle;
@@ -587,7 +585,7 @@ static void P_BulletSlope(mobj_t *actor)
                 bulletslope = P_AimLineAttack(actor, (an -= 2 << 26), 16 * 64 * FRACUNIT);
 
                 if (!linetarget && usemouselook)
-                    bulletslope = ((viewplayer->lookdir / MLOOKUNIT) << FRACBITS) / 173;
+                    bulletslope = PLAYERSLOPE(viewplayer);
             }
         }
     }
@@ -689,8 +687,8 @@ void A_FireShotgun2(mobj_t *actor, player_t *player, pspdef_t *psp)
     successfulshot = false;
 
     for (int i = 0; i < 20; i++)
-        P_LineAttack(actor, actor->angle + (M_SubRandom() << ANGLETOFINESHIFT), MISSILERANGE, bulletslope + (M_SubRandom() << 5),
-            5 * (M_Random() % 3 + 1));
+        P_LineAttack(actor, actor->angle + (M_SubRandom() << ANGLETOFINESHIFT), MISSILERANGE,
+            bulletslope + (M_SubRandom() << 5), 5 * (M_Random() % 3 + 1));
 
     A_Recoil(wp_supershotgun);
 

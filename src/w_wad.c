@@ -107,6 +107,45 @@ static dboolean IsFreedoom(const char *iwadname)
     return result;
 }
 
+dboolean IsBFGEdition(const char *iwadname)
+{
+    FILE        *fp = fopen(iwadname, "rb");
+    filelump_t  lump;
+    wadinfo_t   header;
+    const char  *n = lump.name;
+    int         result1 = false;
+    int         result2 = false;
+
+    if (!fp)
+        return false;
+
+    // read IWAD header
+    if (fread(&header, 1, sizeof(header), fp) == sizeof(header))
+    {
+        fseek(fp, LONG(header.infotableofs), SEEK_SET);
+
+        for (header.numlumps = LONG(header.numlumps); header.numlumps && fread(&lump, sizeof(lump), 1, fp); header.numlumps--)
+            if (n[0] == 'D' && n[1] == 'M' && n[2] == 'E' && n[3] == 'N' && n[4] == 'U' && n[5] == 'P' && n[6] == 'I' && n[7] == 'C')
+            {
+                result1 = true;
+
+                if (result2)
+                    break;
+            }
+            else if (n[0] == 'M' && n[1] == '_' && n[2] == 'A' && n[3] == 'C' && n[4] == 'P' && n[5] == 'T')
+            {
+                result2 = true;
+
+                if (result1)
+                    break;
+            }
+    }
+
+    fclose(fp);
+
+    return (result1 && result2);
+}
+
 char *GetCorrectCase(char *path)
 {
 #if defined(_WIN32)
@@ -166,6 +205,9 @@ dboolean W_AddFile(char *filename, dboolean automatic)
 
     wadfile->type = (!strncmp(header.identification, "IWAD", 4) || M_StringCompare(leafname(filename), "DOOM2.WAD") ? IWAD : PWAD);
 
+    if (wadfile->type == IWAD)
+        bfgedition = IsBFGEdition(filename);
+
     header.numlumps = LONG(header.numlumps);
     header.infotableofs = LONG(header.infotableofs);
     length = header.numlumps * sizeof(filelump_t);
@@ -196,7 +238,7 @@ dboolean W_AddFile(char *filename, dboolean automatic)
         filerover++;
     }
 
-    lumps_str = commify(numlumps - startlump);
+    lumps_str = commify((int64_t)numlumps - startlump);
     C_Output("%s %s lump%s from %s <b>%s</b>.", (automatic ? "Automatically added" : "Added"), lumps_str,
         (numlumps - startlump == 1 ? "" : "s"), (wadfile->type == IWAD ? "IWAD" : "PWAD"), wadfile->path);
 
@@ -263,16 +305,6 @@ dboolean HasDehackedLump(const char *pwadname)
     return result;
 }
 
-char *iwadsrequired[] =
-{
-    "doom.wad",
-    "doom2.wad",
-    "tnt.wad",
-    "plutonia.wad",
-    "nerve.wad",
-    "doom2.wad"
-};
-
 GameMission_t IWADRequiredByPWAD(char *pwadname)
 {
     char            *leaf = leafname(pwadname);
@@ -292,9 +324,9 @@ GameMission_t IWADRequiredByPWAD(char *pwadname)
     fseek(fp, LONG(header.infotableofs), SEEK_SET);
 
     for (header.numlumps = LONG(header.numlumps); header.numlumps && fread(&lump, sizeof(lump), 1, fp); header.numlumps--)
-        if (n[0] == 'E' && isdigit(n[1]) && n[2] == 'M' && isdigit(n[3]) && n[4] == '\0')
+        if (n[0] == 'E' && isdigit((int)n[1]) && n[2] == 'M' && isdigit((int)n[3]) && n[4] == '\0')
             result = doom;
-        else if (n[0] == 'M' && n[1] == 'A' && n[2] == 'P' && isdigit(n[3]) && isdigit(n[4]) && n[5] == '\0')
+        else if (n[0] == 'M' && n[1] == 'A' && n[2] == 'P' && isdigit((int)n[3]) && isdigit((int)n[4]) && n[5] == '\0')
             result = doom2;
 
     fclose(fp);

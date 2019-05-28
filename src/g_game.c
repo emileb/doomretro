@@ -139,7 +139,7 @@ static dboolean mousearray[MAX_MOUSE_BUTTONS + 1];
 dboolean        *mousebuttons = &mousearray[1]; // allow [-1]
 char            mouseactionlist[MAX_MOUSE_BUTTONS + 2][255];
 
-dboolean        skipaction;
+dboolean        skipaction = false;
 
 static int      mousex;
 static int      mousey;
@@ -165,8 +165,13 @@ gameaction_t    loadaction = ga_nothing;
 
 unsigned int    stat_gamessaved = 0;
 unsigned int    stat_mapscompleted = 0;
+unsigned int    stat_skilllevel_imtooyoungtodie = 0;
+unsigned int    stat_skilllevel_heynottoorough = 0;
+unsigned int    stat_skilllevel_hurtmeplenty = 0;
+unsigned int    stat_skilllevel_ultraviolence = 0;
+unsigned int    stat_skilllevel_nightmare = 0;
 
-extern dboolean barrelms;
+extern int      barrelms;
 extern int      st_palette;
 extern int      pagetic;
 extern int      timer;
@@ -535,6 +540,9 @@ void G_DoLoadLevel(void)
     if (viewplayer->playerstate == PST_DEAD)
         viewplayer->playerstate = PST_REBORN;
 
+    if (viewplayer->playerstate == PST_REBORN && (M_StringCompare(mapnum, "E1M4B") || M_StringCompare(mapnum, "E1M8B")))
+        M_StringCopy(speciallumpname, mapnum, sizeof(speciallumpname));
+
     viewplayer->damageinflicted = 0;
     viewplayer->damagereceived = 0;
     viewplayer->cheated = 0;
@@ -649,7 +657,7 @@ dboolean G_Responder(event_t *ev)
                 && ev->data1 != KEY_CAPSLOCK
                 && ev->data1 != KEY_NUMLOCK
                 && ev->data1 != KEY_PRINTSCREEN
-                && (ev->data1 < KEY_F1 || ev->data1 > KEY_F12)
+                && (ev->data1 < KEY_F1 || ev->data1 > KEY_F11)
                 && !((ev->data1 == KEY_ENTER || ev->data1 == KEY_TAB) && altdown))
                 || (ev->type == ev_mouse && mousewait < I_GetTime() && ev->data1)
                 || (ev->type == ev_gamepad
@@ -924,7 +932,7 @@ void G_Ticker(void)
                     S_PauseSound();
                     S_StartSound(NULL, sfx_swtchn);
                     viewplayer->fixedcolormap = 0;
-                    I_SetPalette(W_CacheLumpName("PLAYPAL"));
+                    I_SetPalette(PLAYPAL);
                     I_UpdateBlitFunc(false);
                     I_StopGamepadVibration();
                 }
@@ -932,7 +940,7 @@ void G_Ticker(void)
                 {
                     S_ResumeSound();
                     S_StartSound(NULL, sfx_swtchx);
-                    I_SetPalette((byte *)W_CacheLumpName("PLAYPAL") + st_palette * 768);
+                    I_SetPalette(&PLAYPAL[st_palette * 768]);
                 }
 
                 break;
@@ -997,6 +1005,7 @@ static void G_PlayerFinishLevel(void)
     viewplayer->fixedcolormap = 0;      // cancel ir goggles
     viewplayer->damagecount = 0;        // no palette changes
     viewplayer->bonuscount = 0;
+    st_palette = 0;                     // [JN] Also no inner palette changes
 
     // [BH] switch to chainsaw if player has it and ends map with fists selected
     if (viewplayer->readyweapon == wp_fist && viewplayer->weaponowned[wp_chainsaw])
@@ -1078,15 +1087,16 @@ void G_DoScreenShot(void)
 }
 
 // DOOM Par Times
-int pars[6][10] =
+int pars[7][10] =
 {
     { 0 },
     { 0,  30,  75, 120,  90, 165, 180, 180,  30, 165 },
     { 0,  90,  90,  90, 120,  90, 360, 240,  30, 170 },
     { 0,  90,  45,  90, 150,  90,  90, 165,  30, 135 },
 
-    // [BH] Episode 4 Par Times
+    // [BH] Episode 4 and 5 Par Times
     { 0, 165, 255, 135, 150, 180, 390, 135, 360, 180 },
+    { 0 },
     { 0 }
 };
 
@@ -1323,6 +1333,7 @@ static void G_DoCompleted(void)
     automapactive = false;
 
     stat_mapscompleted = SafeAdd(stat_mapscompleted, 1);
+    M_SaveCVARs();
 
     C_CCMDOutput("exitmap");
 
@@ -1390,7 +1401,7 @@ void G_DoLoadGame(void)
 {
     int savedleveltime;
 
-    I_SetPalette(W_CacheLumpName("PLAYPAL"));
+    I_SetPalette(PLAYPAL);
 
     loadaction = gameaction;
     gameaction = ga_nothing;
@@ -1562,6 +1573,19 @@ void G_DeferredInitNew(skill_t skill, int ep, int map)
     gameaction = ga_newgame;
     startingnewgame = true;
     infight = false;
+
+    if (skill == sk_baby)
+        stat_skilllevel_imtooyoungtodie = SafeAdd(stat_skilllevel_imtooyoungtodie, 1);
+    else if (skill == sk_easy)
+        stat_skilllevel_heynottoorough = SafeAdd(stat_skilllevel_heynottoorough, 1);
+    else if (skill == sk_medium)
+        stat_skilllevel_hurtmeplenty = SafeAdd(stat_skilllevel_hurtmeplenty, 1);
+    else if (skill == sk_hard)
+        stat_skilllevel_ultraviolence = SafeAdd(stat_skilllevel_ultraviolence, 1);
+    else
+        stat_skilllevel_nightmare = SafeAdd(stat_skilllevel_nightmare, 1);
+
+    M_SaveCVARs();
 }
 
 //
@@ -1586,7 +1610,7 @@ void G_DeferredLoadLevel(skill_t skill, int ep, int map)
 
 static void G_DoNewGame(void)
 {
-    I_SetPalette(W_CacheLumpName("PLAYPAL"));
+    I_SetPalette(PLAYPAL);
 
     if (vid_widescreen)
         I_ToggleWidescreen(true);

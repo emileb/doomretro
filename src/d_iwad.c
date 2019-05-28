@@ -188,9 +188,9 @@ static const char *steam_install_subdirs[] =
 static char *GetRegistryString(registryvalue_t *reg_val)
 {
     HKEY    key;
-    DWORD   len;
+    DWORD   len = 0;
     DWORD   valtype;
-    char    *result = NULL;
+    char    *result = "";
 
     // Open the key (directory where the value is stored)
     if (RegOpenKeyEx(reg_val->root, reg_val->path, 0, KEY_READ, &key) != ERROR_SUCCESS)
@@ -576,7 +576,6 @@ void D_IdentifyVersion(void)
     if (gamemission == none)
     {
         for (int i = 0; i < numlumps; i++)
-        {
             if (!strncasecmp(lumpinfo[i]->name, "MAP01", 8))
             {
                 gamemission = doom2;
@@ -587,7 +586,6 @@ void D_IdentifyVersion(void)
                 gamemission = doom;
                 break;
             }
-        }
 
         if (gamemission == none)
             // Still no idea. I don't think this is going to work.
@@ -668,7 +666,7 @@ void D_SetGameDescription(void)
             C_Output("Playing <i><b>%s: %s</b></i> and <i><b>%s: %s</b></i>.", s_CAPTION_DOOM2, s_CAPTION_HELLONEARTH,
                 s_CAPTION_DOOM2, s_CAPTION_NERVE);
     }
-    else if (modifiedgame && !chex)
+    else if (modifiedgame && !sigil && !chex)
         C_Output("Playing <b>%s</b>.", gamedescription);
     else
     {

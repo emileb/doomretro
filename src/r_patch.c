@@ -123,7 +123,7 @@ static dboolean getIsSolidAtSpot(const column_t *column, int spot)
         if (spot >= column->topdelta && spot <= column->topdelta + column->length)
             return true;
 
-        column = (const column_t*)((const byte*)column + 3 + column->length + 1);
+        column = (const column_t *)((const byte *)column + 3 + column->length + 1);
     }
 
     return false;
@@ -237,7 +237,7 @@ static void createPatch(int id)
     // sanity check that we've got all the memory allocated we need
     assert((((byte *)patch->posts + numPostsTotal * sizeof(rpost_t)) - (byte *)patch->data) == dataSize);
 
-    memset(patch->pixels, 0xFF, patch->width * patch->height);
+    memset(patch->pixels, 0xFF, (size_t)patch->width * patch->height);
 
     // fill in the pixels, posts, and columns
     numPostsUsedSoFar = 0;
@@ -249,7 +249,7 @@ static void createPatch(int id)
         oldColumn = (const column_t *)((const byte *)oldPatch + LONG(oldPatch->columnofs[x]));
 
         // setup the column's data
-        patch->columns[x].pixels = patch->pixels + x * patch->height;
+        patch->columns[x].pixels = &patch->pixels[x * patch->height];
         patch->columns[x].numposts = numPostsInColumn[x];
         patch->columns[x].posts = patch->posts + numPostsUsedSoFar;
 
@@ -437,14 +437,14 @@ static void createTextureCompositePatch(int id)
     // sanity check that we've got all the memory allocated we need
     assert((((byte *)composite_patch->posts + numPostsTotal * sizeof(rpost_t)) - (byte *)composite_patch->data) == dataSize);
 
-    memset(composite_patch->pixels, 0xFF, composite_patch->width * composite_patch->height);
+    memset(composite_patch->pixels, 0xFF, (size_t)composite_patch->width * composite_patch->height);
 
     numPostsUsedSoFar = 0;
 
     for (int x = 0; x < texture->width; x++)
     {
         // setup the column's data
-        composite_patch->columns[x].pixels = composite_patch->pixels + x * composite_patch->height;
+        composite_patch->columns[x].pixels = &composite_patch->pixels[x * composite_patch->height];
         composite_patch->columns[x].numposts = countsInColumn[x].posts;
         composite_patch->columns[x].posts = composite_patch->posts + numPostsUsedSoFar;
         numPostsUsedSoFar += countsInColumn[x].posts;
@@ -481,12 +481,10 @@ static void createTextureCompositePatch(int id)
                     top = oldColumn->topdelta;
 
                 oldColumnPixelData = (const byte *)oldColumn + 3;
-                oy = texpatch->originy;
                 count = oldColumn->length;
 
                 // [BH] use incorrect y-origin for certain textures
-                if (id == BIGDOOR7 || id == FIREBLU1 || id == SKY1)
-                    oy = 0;
+                oy = (id == BIGDOOR7 || id == FIREBLU1 || id == SKY1 ? 0 : texpatch->originy);
 
                 // set up the post's data
                 post->topdelta = top + oy;

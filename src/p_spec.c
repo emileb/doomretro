@@ -127,7 +127,7 @@ extern dboolean     canmodify;
 extern int          numflats;
 extern texture_t    **textures;
 
-struct
+static struct
 {
     char            *startname;
     char            *endname;
@@ -2314,7 +2314,7 @@ void P_UpdateSpecials(void)
             if (anim->istexture)
                 texturetranslation[i] = pic;
             else
-                flattranslation[i] = pic;
+                flattranslation[i] = firstflat + pic;
         }
 
     animatedliquiddiff += animatedliquiddiffs[leveltime & 63];
@@ -2697,7 +2697,7 @@ void T_Scroll(scroll_t *s)
             // killough 4/4/98: Underwater, carry things even w/o gravity
             sec = sectors + s->affectee;
             height = sec->floorheight;
-            waterheight = (sec->heightsec && sec->heightsec->floorheight > height ? sec->heightsec->floorheight : INT_MIN);
+            waterheight = (sec->heightsec && sec->heightsec->floorheight > height ? sec->heightsec->floorheight : FIXED_MIN);
 
             // Move objects only if on floor or underwater,
             // non-floating, and clipped.
@@ -3063,7 +3063,7 @@ static dboolean PIT_PushThing(mobj_t *thing)
             int x = (thing->x - sx) >> FRACBITS;
             int y = (thing->y - sy) >> FRACBITS;
 
-            speed = (fixed_t)(((int64_t)tmpusher->magnitude << 23) / (x * x + y * y + 1));
+            speed = (fixed_t)(((int64_t)tmpusher->magnitude << 23) / ((int64_t)x * x + (int64_t)y * y + 1));
         }
 
         // If speed <= 0, you're outside the effective radius. You also have

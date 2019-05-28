@@ -36,6 +36,7 @@
 ========================================================================
 */
 
+#include "c_console.h"
 #include "doomstat.h"
 #include "m_config.h"
 #include "p_setup.h"
@@ -93,6 +94,10 @@ void R_InitSkyMap(void)
                 case 4:
                     skytexture = R_TextureNumForName("SKY4");
                     break;
+
+                case 5:
+                    skytexture = R_TextureNumForName("SKY5");
+                    break;
             }
         }
     }
@@ -110,11 +115,14 @@ void R_InitSkyMap(void)
         else
             skytexturemid = 0;
 
-        skyiscale = (fixed_t)(((uint64_t)FRACUNIT * SCREENWIDTH * 200) / (viewwidth * SCREENHEIGHT)) * skyheight / SKYSTRETCH_HEIGHT;
+        skyiscale = (fixed_t)(((uint64_t)FRACUNIT * SCREENWIDTH * 200) / ((uint64_t)viewwidth * SCREENHEIGHT)) * skyheight / SKYSTRETCH_HEIGHT;
     }
     else
     {
         skytexturemid = ORIGINALHEIGHT / 2 * FRACUNIT;
-        skyiscale = (fixed_t)(((uint64_t)FRACUNIT * SCREENWIDTH * 200) / (viewwidth * SCREENHEIGHT));
+        skyiscale = (fixed_t)(((uint64_t)FRACUNIT * SCREENWIDTH * 200) / ((uint64_t)viewwidth * SCREENHEIGHT));
     }
+
+    if (consoleactive)
+        forceconsoleblurredraw = true;
 }

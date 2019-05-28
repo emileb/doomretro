@@ -103,6 +103,7 @@ void P_SetPsprite(size_t position, statenum_t stnum);
 // 16 pixels of bob
 #define MAXBOB              0x100000
 #define MLOOKUNIT           8
+#define PLAYERSLOPE(a)      ((((a)->lookdir / MLOOKUNIT) << FRACBITS) / 153)
 
 void P_CalcHeight(void);
 void P_MovePlayer(void);
@@ -113,8 +114,8 @@ void P_ChangeWeapon(weapontype_t newweapon);
 //
 // P_MOBJ
 //
-#define ONFLOORZ            INT_MIN
-#define ONCEILINGZ          INT_MAX
+#define ONFLOORZ            FIXED_MIN
+#define ONCEILINGZ          FIXED_MAX
 
 // Time interval for item respawning.
 #define ITEMQUEUESIZE       512
@@ -193,7 +194,7 @@ extern fixed_t  openbottom;
 extern fixed_t  openrange;
 extern fixed_t  lowfloor;
 
-void P_LineOpening(line_t *linedef);
+void P_LineOpening(line_t *line);
 
 dboolean P_BlockLinesIterator(int x, int y, dboolean func(line_t *));
 dboolean P_BlockThingsIterator(int x, int y, dboolean func(mobj_t *));
@@ -201,7 +202,7 @@ dboolean P_BlockThingsIterator(int x, int y, dboolean func(mobj_t *));
 #define PT_ADDLINES     1
 #define PT_ADDTHINGS    2
 
-extern divline_t    dlTrace;
+extern divline_t    dltrace;
 
 dboolean P_PathTraverse(fixed_t x1, fixed_t y1, fixed_t x2, fixed_t y2, int flags, dboolean (*trav)(intercept_t *));
 
@@ -247,7 +248,7 @@ fixed_t P_AimLineAttack(mobj_t *t1, angle_t angle, fixed_t distance);
 
 void P_LineAttack(mobj_t *t1, angle_t angle, fixed_t distance, fixed_t slope, int damage);
 
-void P_RadiusAttack(mobj_t *spot, mobj_t *source, int damage, dboolean vertical);
+void P_RadiusAttack(mobj_t *spot, mobj_t *source, int damage, dboolean verticality);
 
 int P_GetMoveFactor(const mobj_t *mo, int *frictionp);      // killough 8/28/98
 int P_GetFriction(const mobj_t *mo, int *frictionfactor);   // killough 8/28/98

@@ -57,7 +57,7 @@ void V_FillTransRect(int scrn, int x, int y, int width, int height, int color, d
 
 void V_DrawPatch(int x, int y, int scrn, patch_t *patch);
 void V_DrawSTBARPatch(int x, int y, patch_t *patch);
-void V_DrawBigPatch(int x, int y, int scrn, patch_t *patch);
+void V_DrawBigPatch(int x, int y, patch_t *patch);
 void V_DrawBigTranslucentPatch(int x, int y, patch_t *patch);
 void V_DrawConsoleTextPatch(int x, int y, patch_t *patch, int color, int backgroundcolor, dboolean italics, byte *translucency);
 void V_DrawShadowPatch(int x, int y, patch_t *patch);
@@ -85,8 +85,8 @@ void V_DrawTranslucentRedPatch(int x, int y, patch_t *patch);
 void V_DrawFlippedTranslucentRedPatch(int x, int y, patch_t *patch);
 void V_DrawPatchToTempScreen(int x, int y, patch_t *patch);
 void V_DrawBigPatchToTempScreen(int x, int y, patch_t *patch);
-void V_DrawAltHUDText(int x, int y, patch_t *patch, int color);
-void V_DrawTranslucentAltHUDText(int x, int y, patch_t *patch, int color);
+void V_DrawAltHUDText(int x, int y, byte *screen, patch_t *patch, int color);
+void V_DrawTranslucentAltHUDText(int x, int y, byte *screen, patch_t *patch, int color);
 void V_DrawPagePatch(patch_t *patch);
 
 void V_DrawPixel(int x, int y, byte color, dboolean drawshadow);

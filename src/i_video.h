@@ -57,7 +57,7 @@ dboolean GetCapsLockState(void);
 void I_InitGraphics(void);
 void I_RestartGraphics(void);
 void I_ShutdownGraphics(void);
-void I_CapFPS(int fps);
+void I_CapFPS(int frames);
 
 void GetWindowPosition(void);
 void GetWindowSize(void);
@@ -117,5 +117,7 @@ extern SDL_Renderer *renderer;
 extern SDL_Window   *mapwindow;
 extern SDL_Renderer *maprenderer;
 extern byte         *mapscreen;
+
+extern byte         *PLAYPAL;
 
 #endif

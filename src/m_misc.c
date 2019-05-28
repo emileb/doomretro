@@ -601,22 +601,6 @@ char *sentencecase(const char *str)
     return newstr;
 }
 
-char *formatsize(const char *str)
-{
-    char    *newstr = M_StringDuplicate(str);
-    int     len = (int)strlen(newstr);
-
-    if (len > 1)
-        for (int i = 1; i < len; i++)
-            if (newstr[i] == 'x')
-            {
-                newstr[i] = '\xD7';
-                break;
-            }
-
-    return newstr;
-}
-
 char *commify(int64_t value)
 {
     char    result[64];
@@ -779,22 +763,6 @@ char *trimwhitespace(char *input)
     *(end + 1) = 0;
 
     return input;
-}
-
-char *removenewlines(const char *str)
-{
-    char    *newstr;
-    char    *p = newstr = M_StringDuplicate(str);
-
-    while (*p != '\0')
-    {
-        if (*p == '\n' && *(p - 1) != '-')
-            *p = ' ';
-
-        p++;
-    }
-
-    return newstr;
 }
 
 char *makevalidfilename(const char *input)

@@ -329,7 +329,7 @@ dboolean mmus2mid(UBYTE *mus, size_t size, MIDI *mididata)
     memcpy(&MUSh, mus, sizeof(MUSheader));
 
     // check some things and set length of MUS buffer from internal data
-    if (!(muslen = MUSh.ScoreLength + MUSh.ScoreStart))
+    if (!(muslen = (size_t)MUSh.ScoreLength + MUSh.ScoreStart))
         return false;                       // MUS file empty
 
     if (MUSh.channels > 15)                 // MUSchannels + drum channel > 16
@@ -483,13 +483,11 @@ dboolean mmus2mid(UBYTE *mus, size_t size, MIDI *mididata)
                 TWriteByte(mididata, MIDItrack, (unsigned char)data);
                 break;
 
-            case UNKNOWN_EVENT1:   // mus events 5 and 7
-            case UNKNOWN_EVENT2:   // meaning not known
-                return false;
-
             case SCORE_END:
                 break;
 
+            case UNKNOWN_EVENT1:   // mus events 5 and 7
+            case UNKNOWN_EVENT2:   // meaning not known
             default:
                 return false;
         }
@@ -550,6 +548,17 @@ static void TWriteLength(UBYTE **midiptr, size_t length)
 }
 
 //
+// Frees all midi data allocated
+//
+void FreeMIDIData(MIDI *mididata)
+{
+    for (int i = 0; i < arrlen(mididata->track); i++)
+        free(mididata->track[i].data);
+
+    memset(mididata, 0, sizeof(*mididata));
+}
+
+//
 // MIDIToMidi()
 //
 // This routine converts an Allegro MIDI structure to a midi 1 format file
@@ -558,7 +567,7 @@ static void TWriteLength(UBYTE **midiptr, size_t length)
 // Passed a pointer to an Allegro MIDI structure, a pointer to a pointer to
 // a buffer containing midi data, and a pointer to a length return.
 //
-void MIDIToMidi(MIDI *mididata, UBYTE **mid, int *midlen)
+void MIDIToMidi(const MIDI *mididata, UBYTE **mid, int *midlen)
 {
     int     ntrks = 0;
     UBYTE   *midiptr;

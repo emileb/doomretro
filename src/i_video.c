@@ -46,6 +46,8 @@
 #include <X11/XKBlib.h>
 #endif
 
+#include "SDL_opengl.h"
+
 #include "c_console.h"
 #include "d_main.h"
 #include "doomstat.h"
@@ -68,7 +70,7 @@
 #define MAXUPSCALEWIDTH     (1600 / ORIGINALWIDTH)
 #define MAXUPSCALEHEIGHT    (1200 / ORIGINALHEIGHT)
 
-#define SHAKEANGLE          (M_RandomInt(-1000, 1000) * r_shake_damage / 100000.0)
+#define SHAKEANGLE          ((double)M_RandomInt(-1000, 1000) * r_shake_damage / 100000.0)
 
 #if !defined(SDL_VIDEO_RENDER_D3D11)
 #define SDL_VIDEO_RENDER_D3D11  0
@@ -106,9 +108,9 @@ static SDL_Surface  *surface;
 static SDL_Surface  *buffer;
 static SDL_Palette  *palette;
 static SDL_Color    colors[256];
-static byte         *playpal;
+byte                *PLAYPAL;
 
-byte                *oscreen;
+static byte         *oscreen;
 byte                *mapscreen;
 SDL_Window          *mapwindow;
 SDL_Renderer        *maprenderer;
@@ -195,7 +197,7 @@ extern int          windowborderheight;
 
 evtype_t            lasteventtype;
 
-void ST_doRefresh(void);
+void ST_DoRefresh(void);
 
 dboolean MouseShouldBeGrabbed(void)
 {
@@ -295,12 +297,12 @@ static int TranslateKey2(int key)
 
 dboolean keystate(int key)
 {
-    const Uint8 *keystate = SDL_GetKeyboardState(NULL);
+    const Uint8 *state = SDL_GetKeyboardState(NULL);
 
-    return keystate[TranslateKey2(key)];
+    return state[TranslateKey2(key)];
 }
 
-void I_CapFPS(int fps)
+void I_CapFPS(int frames)
 {
 #if defined(_WIN32)
     static UINT CapFPSTimer;
@@ -311,7 +313,7 @@ void I_CapFPS(int fps)
         CapFPSTimer = 0;
     }
 
-    if (!fps || fps == TICRATE)
+    if (!frames || frames == TICRATE)
     {
         if (CapFPSEvent)
         {
@@ -326,7 +328,7 @@ void I_CapFPS(int fps)
 
         if (CapFPSEvent)
         {
-            CapFPSTimer = timeSetEvent(1000 / fps, 0, (LPTIMECALLBACK)CapFPSEvent, 0, (TIME_PERIODIC | TIME_CALLBACK_EVENT_SET));
+            CapFPSTimer = timeSetEvent(1000 / frames, 0, (LPTIMECALLBACK)CapFPSEvent, 0, (TIME_PERIODIC | TIME_CALLBACK_EVENT_SET));
 
             if (!CapFPSTimer)
             {
@@ -432,7 +434,7 @@ static void I_GetEvent(void)
             case SDL_TEXTINPUT:
                 for (int i = 0, len = (int)strlen(Event->text.text); i < len; i++)
                 {
-                    const char  ch = Event->text.text[i];
+                    const unsigned char ch = Event->text.text[i];
 
                     if (isprint(ch))
                     {
@@ -593,7 +595,8 @@ static void I_GetEvent(void)
                         break;
                 }
 
-                lasteventtype = ev_gamepad;
+                event.type = lasteventtype = ev_gamepad;
+                D_PostEvent(&event);
                 break;
 
             case SDL_CONTROLLERBUTTONDOWN:
@@ -990,7 +993,7 @@ void I_SetPalette(byte *playpal)
             byte    r = gammatable[gammaindex][*playpal++];
             byte    g = gammatable[gammaindex][*playpal++];
             byte    b = gammatable[gammaindex][*playpal++];
-            double  p = sqrt(r * r * 0.299 + g * g * 0.587 + b * b * 0.114);
+            double  p = sqrt((double)r * r * 0.299 + (double)g * g * 0.587 + (double)b * b * 0.114);
 
             colors[i].r = (byte)(p + (r - p) * color);
             colors[i].g = (byte)(p + (g - p) * color);
@@ -1165,8 +1168,8 @@ void GetWindowPosition(void)
 
 void GetWindowSize(void)
 {
-    char    *width = malloc(11);
-    char    *height = malloc(11);
+    char    width[11] = "";
+    char    height[11] = "";
 
     if (sscanf(vid_windowsize, "%10[^x]x%10[^x]", width, height) != 2)
     {
@@ -1204,9 +1207,6 @@ void GetWindowSize(void)
         free(width_str);
         free(height_str);
     }
-
-    free(width);
-    free(height);
 }
 
 static dboolean ValidScreenMode(int width, int height)
@@ -1374,7 +1374,7 @@ static void SetVideoMode(dboolean output)
                 char    *width_str = commify(width);
                 char    *height_str = commify(height);
 
-                C_Output("Staying at the native desktop resolution of %s\xD7%s with a %s aspect ratio.",
+                C_Output("Staying at the native desktop resolution of %sx%s with a %s aspect ratio.",
                     width_str, height_str, getaspectratio(width, height));
 
                 free(width_str);
@@ -1394,7 +1394,7 @@ static void SetVideoMode(dboolean output)
                 char    *width_str = commify(width);
                 char    *height_str = commify(height);
 
-                C_Output("Switched to a resolution of %s\xD7%s with a %s aspect ratio.",
+                C_Output("Switched to a resolution of %sx%s with a %s aspect ratio.",
                     width_str, height_str, getaspectratio(width, height));
 
                 free(width_str);
@@ -1424,7 +1424,7 @@ static void SetVideoMode(dboolean output)
                 char    *width_str = commify(width);
                 char    *height_str = commify(height);
 
-                C_Output("Created a resizable window with dimensions %s\xD7%s centered on the screen.", width_str, height_str);
+                C_Output("Created a resizable window with dimensions %sx%s centered on the screen.", width_str, height_str);
 
                 free(width_str);
                 free(height_str);
@@ -1439,7 +1439,7 @@ static void SetVideoMode(dboolean output)
                 char    *width_str = commify(width);
                 char    *height_str = commify(height);
 
-                C_Output("Created a resizable window with dimensions %s\xD7%s at (%i,%i).", width_str, height_str, windowx, windowy);
+                C_Output("Created a resizable window with dimensions %sx%s at (%i,%i).", width_str, height_str, windowx, windowy);
 
                 free(width_str);
                 free(height_str);
@@ -1464,6 +1464,22 @@ static void SetVideoMode(dboolean output)
 #endif
     SDL_RenderSetLogicalSize(renderer, SCREENWIDTH, SCREENWIDTH * 3 / 4);
 
+
+    if (output)
+    {
+        typedef const GLubyte *(APIENTRY *glStringFn_t)(GLenum);
+
+        glStringFn_t    pglGetString = (glStringFn_t)SDL_GL_GetProcAddress("glGetString");
+
+        if (pglGetString)
+        {
+            const char  *graphicscard = (const char *)pglGetString(GL_RENDERER);
+            const char  *vendor = (const char *)pglGetString(GL_VENDOR);
+
+            if (graphicscard && vendor)
+                C_Output("Using a <i><b>%s</b></i> graphics card by <i><b>%s</b></i>.", graphicscard, vendor);
+        }
+    }
 
 
     if (!SDL_GetRendererInfo(renderer, &rendererinfo))
@@ -1555,14 +1571,14 @@ static void SetVideoMode(dboolean output)
         {
             if (nearestlinear)
             {
-                char    *upscaledwidth_str = commify(upscaledwidth * SCREENWIDTH);
-                char    *upscaledheight_str = commify(upscaledheight * SCREENHEIGHT);
+                char    *upscaledwidth_str = commify((int64_t)upscaledwidth * SCREENWIDTH);
+                char    *upscaledheight_str = commify((int64_t)upscaledheight * SCREENHEIGHT);
                 char    *width_str = commify(height * 4 / 3);
                 char    *height_str = commify(height);
 
-                C_Output("The %i\xD7%i screen is scaled up to %s\xD7%s using nearest-neighbor interpolation.",
+                C_Output("The %ix%i screen is scaled up to %sx%s using nearest-neighbor interpolation.",
                     SCREENWIDTH, SCREENHEIGHT, upscaledwidth_str, upscaledheight_str);
-                C_Output("It is then scaled down to %s\xD7%s using linear filtering.", width_str, height_str);
+                C_Output("It is then scaled down to %sx%s using linear filtering.", width_str, height_str);
 
                 free(upscaledwidth_str);
                 free(upscaledheight_str);
@@ -1574,7 +1590,7 @@ static void SetVideoMode(dboolean output)
                 char    *width_str = commify(height * 4 / 3);
                 char    *height_str = commify(height);
 
-                C_Output("The %i\xD7%i screen is scaled up to %s\xD7%s using linear filtering.",
+                C_Output("The %ix%i screen is scaled up to %sx%s using linear filtering.",
                     SCREENWIDTH, SCREENHEIGHT, width_str, height_str);
 
                 free(width_str);
@@ -1585,7 +1601,7 @@ static void SetVideoMode(dboolean output)
                 char    *width_str = commify(height * 4 / 3);
                 char    *height_str = commify(height);
 
-                C_Output("The %i\xD7%i screen is scaled up to %s\xD7%s using nearest-neighbor interpolation.",
+                C_Output("The %ix%i screen is scaled up to %sx%s using nearest-neighbor interpolation.",
                     SCREENWIDTH, SCREENHEIGHT, width_str, height_str);
 
                 free(width_str);
@@ -1715,7 +1731,7 @@ static void SetVideoMode(dboolean output)
 
     palette = SDL_AllocPalette(256);
     SDL_SetSurfacePalette(surface, palette);
-    I_SetPalette(playpal + st_palette * 768);
+    I_SetPalette(&PLAYPAL[st_palette * 768]);
 
     src_rect.w = SCREENWIDTH;
     src_rect.h = SCREENHEIGHT - SBARHEIGHT * vid_widescreen;
@@ -1745,7 +1761,7 @@ void I_ToggleWidescreen(dboolean toggle)
         vid_widescreen = false;
 
         if (gamestate == GS_LEVEL)
-            ST_doRefresh();
+            ST_DoRefresh();
 
 
 #ifdef __ANDROID__
@@ -1828,7 +1844,7 @@ void I_ToggleFullscreen(void)
 
 void I_SetPillarboxes(void)
 {
-    I_SetPalette(playpal + st_palette * 768);
+    I_SetPalette(&PLAYPAL[st_palette * 768]);
 
     if (!vid_pillarboxes)
         SDL_SetRenderDrawColor(renderer, 0, 0, 0, SDL_ALPHA_OPAQUE);
@@ -1904,11 +1920,15 @@ void I_InitGraphics(void)
     keys['a'] = keys['A'] = false;
     keys['l'] = keys['L'] = false;
 
-    playpal = W_CacheLumpName("PLAYPAL");
-    I_InitTintTables(playpal);
-    FindNearestColors(playpal);
+    PLAYPAL = W_CacheLumpName("PLAYPAL");
+    I_InitTintTables(PLAYPAL);
+    FindNearestColors(PLAYPAL);
 
     I_InitGammaTables();
+
+    // [BH] There's a known bug in SDL 2.0.9 that causes framerate to intermittently drop.
+    //  This is a workaround for this bug, even if no joysticks are in use. Should be fixed in SDL 2.0.10.
+    SDL_Init(SDL_INIT_JOYSTICK);
 
 #if !defined(_WIN32)
     if (*vid_driver)

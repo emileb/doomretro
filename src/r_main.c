@@ -161,12 +161,30 @@ int R_PointOnSide(fixed_t x, fixed_t y, const node_t *node)
     if ((ndy ^ ndx ^ x ^ y) < 0)
         return ((ndy ^ x) < 0); // (left is negative)
 
-    return (FixedMul(y, ndx >> FRACBITS) >= FixedMul(ndy >> FRACBITS, x));
+    return ((int64_t)y * ndx >= (int64_t)ndy * x);
 }
 
 int R_PointOnSegSide(fixed_t x, fixed_t y, seg_t *line)
 {
-    return ((int)((line->dx * (y - line->v1->y) - line->dy * (x - line->v1->x)) >> 32) > 0);
+    fixed_t lx = line->v1->x;
+    fixed_t ly = line->v1->y;
+    int64_t ldx = line->dx;
+    int64_t ldy = line->dy;
+
+    if (!ldx)
+        return (x <= lx ? (ldy > 0) : (ldy < 0));
+
+    if (!ldy)
+        return (y <= ly ? (ldx < 0) : (ldx > 0));
+
+    x -= lx;
+    y -= ly;
+
+    // Try to quickly decide by looking at sign bits.
+    if ((ldy ^ ldx ^ x ^ y) < 0)
+        return ((ldy ^ x) < 0); // (left is negative)
+
+    return (y * ldx >= ldy * x);
 }
 
 static int SlopeDiv(unsigned int num, unsigned int den)
@@ -277,7 +295,7 @@ static void R_InitTables(void)
 {
     // viewangle tangent table
     for (int i = 0; i < FINEANGLES / 2; i++)
-        finetangent[i] = (fixed_t)(FRACUNIT * tan((i - FINEANGLES / 4 + 0.5) * M_PI * 2 / FINEANGLES));
+        finetangent[i] = (fixed_t)(FRACUNIT * tan(((double)i - FINEANGLES / 4 + 0.5) * M_PI * 2 / FINEANGLES));
 
     // finesine table
     for (int i = 0; i < 5 * FINEANGLES / 4; i++)
@@ -391,6 +409,7 @@ void R_SetViewSize(int blocks)
 void R_ExecuteSetViewSize(void)
 {
     fixed_t fovscale;
+    fixed_t num;
 
     setsizeneeded = false;
 
@@ -409,7 +428,7 @@ void R_ExecuteSetViewSize(void)
 
     centerx = viewwidth / 2;
     centerxfrac = centerx << FRACBITS;
-    fovscale = finetangent[FINEANGLES / 4 + (r_fov * FINEANGLES / 360) / 2];
+    fovscale = finetangent[FINEANGLES / 4 + r_fov * FINEANGLES / 360 / 2];
     projection = FixedDiv(centerxfrac, fovscale);
 
     R_InitBuffer(scaledviewwidth, viewheight);
@@ -419,21 +438,17 @@ void R_ExecuteSetViewSize(void)
     pspritescale = FixedDiv(viewwidth, ORIGINALWIDTH);
     pspriteiscale = FixedDiv(FRACUNIT, pspritescale);
 
-    R_InitSkyMap();
-
     // thing clipping
     for (int i = 0; i < viewwidth; i++)
         viewheightarray[i] = viewheight;
 
     // planes
-    for (int i = 0; i < viewheight; i++)
-    {
-        const fixed_t   num = FixedMul(FixedDiv(FRACUNIT, fovscale), viewwidth * (FRACUNIT / 2));
+    num = FixedMul(FixedDiv(FRACUNIT, fovscale), viewwidth * (FRACUNIT / 2));
 
+    for (int i = 0; i < viewheight; i++)
         for (int j = 0; j < LOOKDIRS; j++)
             yslopes[j][i] = FixedDiv(num, ABS(((i - (viewheight / 2 + (j - LOOKDIRMAX) * 2
                 * (r_screensize + 3) / 10)) << FRACBITS) + FRACUNIT / 2));
-    }
 
     yslope = yslopes[LOOKDIRMAX];
 

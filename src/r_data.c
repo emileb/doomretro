@@ -70,8 +70,8 @@ int         firstspritelump;
 int         lastspritelump;
 int         numspritelumps;
 
-dboolean    notranslucency;
-dboolean    telefragonmap30;
+dboolean    notranslucency = false;
+dboolean    telefragonmap30 = false;
 
 int         numtextures;
 texture_t   **textures;
@@ -286,8 +286,17 @@ static void R_InitTextures(void)
 
     for (i = 0; i < nummappatches; i++)
     {
-        strncpy(name, name_p + i * 8, 8);
-        patchlookup[i] = W_CheckNumForName(name);
+        int p1;
+        int p2;
+
+        M_StringCopy(name, &name_p[i * 8], sizeof(name));
+        p1 = p2 = W_CheckNumForName(name);
+
+        // [crispy] prevent flat lumps from being mistaken as patches
+        while (p2 >= firstflat && p2 <= lastflat)
+            p2 = W_RangeCheckNumForName(0, p2 - 1, name);
+
+        patchlookup[i] = (p2 != -1 ? p2 : p1);
     }
 
     W_ReleaseLumpNum(names_lump);                               // cph - release the lump
@@ -337,7 +346,8 @@ static void R_InitTextures(void)
 
         mtexture = (const maptexture_t *)((const byte *)maptex1 + offset);
 
-        texture = textures[i] = Z_Malloc(sizeof(texture_t) + sizeof(texpatch_t) * (SHORT(mtexture->patchcount) - 1), PU_STATIC, 0);
+        texture = textures[i] = Z_Malloc(sizeof(texture_t) + sizeof(texpatch_t) * ((size_t)SHORT(mtexture->patchcount) - 1),
+            PU_STATIC, 0);
 
         texture->width = SHORT(mtexture->width);
         texture->height = SHORT(mtexture->height);
@@ -356,7 +366,7 @@ static void R_InitTextures(void)
             patch->patch = patchlookup[SHORT(mpatch->patch)];
 
             if (patch->patch == -1)
-                C_Warning("Patch %i is missing in the <b>%.8s</b> texture.", SHORT(mpatch->patch), texture->name);
+                C_Warning("Patch %i is missing in the <b>%.8s</b> texture.", SHORT(mpatch->patch), uppercase(texture->name));
         }
 
         for (j = 1; j * 2 <= texture->width; j <<= 1);
@@ -374,7 +384,7 @@ static void R_InitTextures(void)
     // Create translation table for global animation.
     // killough 4/9/98: make column offsets 32-bit;
     // clean up malloc-ing to use sizeof
-    texturetranslation = Z_Malloc((numtextures + 1) * sizeof(*texturetranslation), PU_STATIC, NULL);
+    texturetranslation = Z_Malloc(((size_t)numtextures + 1) * sizeof(*texturetranslation), PU_STATIC, NULL);
 
     for (i = 0; i < numtextures; i++)
         texturetranslation[i] = i;
@@ -390,12 +400,17 @@ static void R_InitTextures(void)
         textures[i]->next = textures[j]->index;                 // Prepend to chain
         textures[j]->index = i;
     }
+}
 
-    // [BH] Initialize brightmaps
+//
+// R_InitBrightmaps
+//
+static void R_InitBrightmaps(void)
+{
+    int i = 0;
+
     brightmap = Z_Calloc(numtextures, 256, PU_STATIC, NULL);
     nobrightmap = Z_Calloc(numtextures, sizeof(*nobrightmap), PU_STATIC, NULL);
-
-    i = 0;
 
     while (brightmaps[i].mask)
     {
@@ -424,10 +439,10 @@ static void R_InitFlats(void)
     numflats = lastflat - firstflat + 1;
 
     // Create translation table for global animation.
-    flattranslation = Z_Malloc((numflats + 1) * sizeof(*flattranslation), PU_STATIC, NULL);
+    flattranslation = Z_Malloc(((size_t)numflats + 1) * sizeof(*flattranslation), PU_STATIC, NULL);
 
     for (int i = 0; i < numflats; i++)
-        flattranslation[i] = i;
+        flattranslation[i] = firstflat + i;
 
     missingflatnum = R_FlatNumForName("-N0_TEX-");
 }
@@ -599,8 +614,12 @@ static void R_InitColormaps(void)
     dc_colormap[1] = colormaps[0] = W_CacheLumpName("COLORMAP");
 
     colormapwad = lumpinfo[W_CheckNumForName("COLORMAP")]->wadfile;
-    C_Output("Using %s colormap%s from the <b>COLORMAP</b> lump in %s <b>%s</b>.", (numcolormaps == 1 ? "the" : commify(numcolormaps)),
-        (numcolormaps == 1 ? "" : "s"), (colormapwad->type == IWAD ? "IWAD" : "PWAD"), colormapwad->path);
+
+    if (numcolormaps == 1)
+        C_Output("Using the <b>COLORMAP</b> lump in %s <b>%s</b>.", (colormapwad->type == IWAD ? "IWAD" : "PWAD"), colormapwad->path);
+    else
+        C_Output("Using %s colormaps from the <b>COLORMAP</b> lump in %s <b>%s</b>.",
+            commify(numcolormaps), (colormapwad->type == IWAD ? "IWAD" : "PWAD"), colormapwad->path);
 
     // [BH] There's a typo in dcolors.c, the source code of the utility id
     // Software used to construct the palettes and colormaps for DOOM (see
@@ -611,7 +630,7 @@ static void R_InitColormaps(void)
     // offending code from dcolor.c, corrected it, put it here, and now colormap
     // 32 is manually calculated rather than grabbing it from the colormap lump.
     // The resulting differences are minor.
-    palsrc = palette = W_CacheLumpName("PLAYPAL");
+    palsrc = palette = PLAYPAL;
 
     for (int i = 0; i < 255; i++)
     {
@@ -644,7 +663,7 @@ int R_ColormapNumForName(char *name)
         if ((i = W_CheckNumForName(name)) != -1)
             i -= firstcolormaplump;
 
-    return i;
+    return (i > numcolormaps ? -1 : i);
 }
 
 //
@@ -655,8 +674,9 @@ int R_ColormapNumForName(char *name)
 //
 void R_InitData(void)
 {
-    R_InitTextures();
     R_InitFlats();
+    R_InitTextures();
+    R_InitBrightmaps();
     R_InitSpriteLumps();
     R_InitColormaps();
 }

@@ -186,7 +186,7 @@ void P_CalcHeight(void)
 //
 // P_CheckForSteps
 //
-dboolean P_CheckForSteps(int width)
+static dboolean P_CheckForSteps(fixed_t width)
 {
     sector_t    *sector1 = R_PointInSubsector(viewx + width * viewcos, viewy + width * viewsin)->sector;
     sector_t    *sector2 = R_PointInSubsector(viewx + width * 2 * viewcos, viewy + width * 2 * viewsin)->sector;
@@ -520,6 +520,8 @@ void P_PlayerThink(void)
     if (viewplayer->bonuscount)
         viewplayer->bonuscount--;
 
+    P_ReduceDamageCount();
+
     if (consoleactive)
         return;
 
@@ -660,8 +662,6 @@ void P_PlayerThink(void)
 
     if (viewplayer->powers[pw_ironfeet] > 0)
         viewplayer->powers[pw_ironfeet]--;
-
-    P_ReduceDamageCount();
 
     // Handling colormaps.
     if (viewplayer->powers[pw_invulnerability] > STARTFLASHING || (viewplayer->powers[pw_invulnerability] & 8))

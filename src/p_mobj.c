@@ -159,14 +159,13 @@ static void P_XYMovement(mobj_t *mo)
     player_t    *player;
     fixed_t     xmove, ymove;
     mobjtype_t  type = mo->type;
-    int         flags = mo->flags;
     int         flags2 = mo->flags2;
     dboolean    corpse;
     int         stepdir = 0;
 
     if (!(mo->momx | mo->momy))
     {
-        if (flags & MF_SKULLFLY)
+        if (mo->flags & MF_SKULLFLY)
         {
             // the skull slammed into something
             mo->flags &= ~MF_SKULLFLY;
@@ -178,7 +177,7 @@ static void P_XYMovement(mobj_t *mo)
     }
 
     player = mo->player;
-    corpse = ((flags & MF_CORPSE) && type != MT_BARREL);
+    corpse = ((mo->flags & MF_CORPSE) && type != MT_BARREL);
 
     // [BH] give smoke trails to rockets
     if (flags2 & MF2_SMOKETRAIL)
@@ -220,7 +219,7 @@ static void P_XYMovement(mobj_t *mo)
             // killough 8/11/98: bouncing off walls
             // killough 10/98:
             // Add ability for objects other than players to bounce on ice
-            if (!(flags & MF_MISSILE) && !player && blockline && mo->z <= mo->floorz && P_GetFriction(mo, NULL) > ORIG_FRICTION)
+            if (!(mo->flags & MF_MISSILE) && !player && blockline && mo->z <= mo->floorz && P_GetFriction(mo, NULL) > ORIG_FRICTION)
             {
                 fixed_t r = ((blockline->dx >> FRACBITS) * mo->momx + (blockline->dy >> FRACBITS) * mo->momy)
                             / ((blockline->dx >> FRACBITS) * (blockline->dx >> FRACBITS)
@@ -234,7 +233,7 @@ static void P_XYMovement(mobj_t *mo)
 
                 // if under gravity, slow down in
                 // direction perpendicular to wall.
-                if (!(flags & MF_NOGRAVITY))
+                if (!(mo->flags & MF_NOGRAVITY))
                 {
                     mo->momx = (mo->momx + x) / 2;
                     mo->momy = (mo->momy + y) / 2;
@@ -246,7 +245,7 @@ static void P_XYMovement(mobj_t *mo)
                 P_SlideMove(mo);
                 break;
             }
-            else if (flags & MF_MISSILE)
+            else if (mo->flags & MF_MISSILE)
             {
                 // explode a missile
                 if (ceilingline && ceilingline->backsector
@@ -275,14 +274,14 @@ static void P_XYMovement(mobj_t *mo)
         }
     } while (xmove || ymove);
 
-    if (flags & (MF_MISSILE | MF_SKULLFLY))
+    if (mo->flags & (MF_MISSILE | MF_SKULLFLY))
         return;         // no friction for missiles or lost souls ever
 
     if (mo->z > mo->floorz && !(flags2 & MF2_ONMOBJ))
         return;         // no friction when airborne
 
     // [BH] spawn random blood splats on floor as corpses slide
-    if (corpse && !(flags & MF_NOBLOOD) && mo->blood && r_corpses_slide && r_corpses_smearblood && (mo->momx || mo->momy)
+    if (corpse && !(mo->flags & MF_NOBLOOD) && mo->blood && r_corpses_slide && r_corpses_smearblood && (mo->momx || mo->momy)
         && mo->bloodsplats && r_bloodsplats_max && !mo->nudge)
     {
         int blood = mobjinfo[mo->blood].blood;
@@ -579,7 +578,7 @@ void P_MobjThinker(mobj_t *mobj)
         mobj->z += animatedliquiddiffs[(mobj->floatbob + leveltime) & 63];
 
     // [BH] otherwise bob certain power-ups
-    else if ((flags2 & MF2_FLOATBOB) && r_floatbob)
+    else if ((flags2 & MF2_FLOATBOB) && !(flags & MF_CORPSE) && r_floatbob)
         mobj->z = BETWEEN(mobj->floorz, mobj->z + floatbobdiffs[(mobj->floatbob + leveltime) & 63], mobj->ceilingz);
 
     else if (mobj->z != mobj->floorz || mobj->momz)
@@ -639,8 +638,7 @@ void P_MobjThinker(mobj_t *mobj)
     if (mobj->tics != -1)
     {
         if (!--mobj->tics)
-            if (!P_SetMobjState(mobj, mobj->state->nextstate))
-                return;
+            P_SetMobjState(mobj, mobj->state->nextstate);
     }
     else
     {
@@ -994,7 +992,7 @@ static void P_SpawnMoreBlood(mobj_t *mobj)
 // The fields of the mapthing should
 //  already be in host byte order.
 //
-mobj_t *P_SpawnMapThing(mapthing_t *mthing, dboolean nomonsters)
+mobj_t *P_SpawnMapThing(mapthing_t *mthing, dboolean spawnmonsters)
 {
     int     i;
     int     bit;
@@ -1061,7 +1059,7 @@ mobj_t *P_SpawnMapThing(mapthing_t *mthing, dboolean nomonsters)
     if (mobjinfo[i].flags & MF_COUNTKILL)
     {
         // don't spawn any monsters if -nomonsters
-        if (nomonsters && i != MT_KEEN)
+        if (!spawnmonsters && i != MT_KEEN)
             return NULL;
 
         totalkills++;
@@ -1071,7 +1069,7 @@ mobj_t *P_SpawnMapThing(mapthing_t *mthing, dboolean nomonsters)
         barrelcount++;
 
     // [BH] don't spawn any monster corpses if -nomonsters
-    if ((mobjinfo[i].flags & MF_CORPSE) && nomonsters && i != MT_MISC62)
+    if ((mobjinfo[i].flags & MF_CORPSE) && !spawnmonsters && i != MT_MISC62)
         return NULL;
 
     // spawn it
@@ -1214,7 +1212,7 @@ void P_SpawnBlood(fixed_t x, fixed_t y, fixed_t z, angle_t angle, int damage, mo
 {
     int         minz = target->z;
     int         maxz = minz + spriteheight[sprites[target->sprite].spriteframes[0].lump[0]];
-    int         type = (r_blood == r_blood_all ? (target->blood ? target->blood : MT_BLOOD) : MT_BLOOD);
+    int         type = (r_blood == r_blood_all && target->blood ? target->blood : MT_BLOOD);
     mobjinfo_t  *info = &mobjinfo[type];
     int         blood = info->blood;
     state_t     *st = &states[info->spawnstate];
@@ -1234,7 +1232,7 @@ void P_SpawnBlood(fixed_t x, fixed_t y, fixed_t z, angle_t angle, int damage, mo
         th->flags2 = (info->flags2 | ((M_Random() & 1) * MF2_MIRRORED));
 
         th->state = st;
-        th->tics = MAX(1, st->tics - (M_Random() & 3));
+        th->tics = MAX(1, st->tics - (M_Random() & 2));
         th->sprite = st->sprite;
         th->frame = st->frame;
 
@@ -1373,7 +1371,7 @@ void P_SpawnPlayerMissile(mobj_t *source, mobjtype_t type)
     int     speed;
 
     if (usemouselook && !autoaim)
-        slope = ((source->player->lookdir / MLOOKUNIT) << FRACBITS) / 173;
+        slope = PLAYERSLOPE(source->player);
     else
     {
         // see which target is to be aimed at
@@ -1390,7 +1388,7 @@ void P_SpawnPlayerMissile(mobj_t *source, mobjtype_t type)
                 if (!linetarget)
                 {
                     an = source->angle;
-                    slope = (usemouselook ? ((source->player->lookdir / MLOOKUNIT) << FRACBITS) / 173 : 0);
+                    slope = (usemouselook ? PLAYERSLOPE(source->player) : 0);
                 }
             }
         }

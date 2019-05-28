@@ -51,15 +51,11 @@ dboolean        musmusictype;
 
 static dboolean music_initialized;
 
-// If this is true, this module initialized SDL sound and has the
-// responsibility to shut it down
-static dboolean sdl_was_initialized;
-
 static int      current_music_volume;
 static int      paused_midi_volume;
 
 #if defined(_WIN32)
-static dboolean haveMidiServer;
+static dboolean midirpc;
 dboolean        serverMidiPlaying;
 #endif
 
@@ -72,12 +68,8 @@ void I_ShutdownMusic(void)
     Mix_FadeOutMusic(500);
     music_initialized = false;
 
-    if (sdl_was_initialized)
-    {
-        Mix_CloseAudio();
-        SDL_QuitSubSystem(SDL_INIT_AUDIO);
-        sdl_was_initialized = false;
-    }
+    Mix_CloseAudio();
+    SDL_QuitSubSystem(SDL_INIT_AUDIO);
 
 #if defined(_WIN32)
     I_MidiRPCClientShutDown();
@@ -112,12 +104,12 @@ dboolean I_InitMusic(void)
 
     SDL_PauseAudio(0);
 
-    sdl_was_initialized = true;
     music_initialized = true;
 
 #if defined(_WIN32)
     // Initialize RPC server
-    haveMidiServer = I_MidiRPCInitServer();
+    if (I_MidiRPCInitServer())
+        midirpc = I_MidiRPCInitClient();
 #endif
 
     return music_initialized;
@@ -278,6 +270,8 @@ void *I_RegisterSong(void *data, int size)
                 // Hurrah! Let's make it a mid and give it to SDL_mixer
                 MIDIToMidi(&mididata, &mid, &midlen);
 
+                FreeMIDIData(&mididata);
+
                 data = mid;
                 size = midlen;
                 midimusictype = true;                           // now it's a MIDI
@@ -285,21 +279,13 @@ void *I_RegisterSong(void *data, int size)
         }
 
 #if defined(_WIN32)
-        // Check for option to invoke RPC server if isMIDI
-        if (midimusictype && haveMidiServer)
-        {
-            static dboolean haveMidiClient;
-
-            if (!haveMidiClient)
-                if (!(haveMidiClient = I_MidiRPCInitClient()))
-                    C_Warning("The RPC client couldn't be initialized.");
-
-            if (haveMidiClient && I_MidiRPCRegisterSong(data, size))
+        // Check for option to invoke RPC server if is MIDI
+        if (midimusictype && midirpc)
+            if (I_MidiRPCRegisterSong(data, size))
             {
                 serverMidiPlaying = true;
                 return NULL;        // server will play this song
             }
-        }
 #endif
 
         if ((rwops = SDL_RWFromMem(data, size)))

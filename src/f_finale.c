@@ -75,12 +75,12 @@ static void F_StartCast(void);
 static void F_CastTicker(void);
 static dboolean F_CastResponder(event_t *ev);
 
-void WI_checkForAccelerate(void);
+void WI_CheckForAccelerate(void);
 void A_RandomJump(mobj_t *actor, player_t *player, pspdef_t *psp);
 
-static int              midstage;               // whether we're in "mid-stage"
+static dboolean         midstage;               // whether we're in "mid-stage"
 
-extern int              acceleratestage;        // accelerate intermission screens
+extern dboolean         acceleratestage;        // accelerate intermission screens
 
 //
 // F_ConsoleFinaleText
@@ -106,8 +106,8 @@ void F_StartFinale(void)
     automapactive = false;
 
     // killough 3/28/98: clear accelerative text flags
-    acceleratestage = 0;
-    midstage = 0;
+    acceleratestage = false;
+    midstage = false;
 
     C_AddConsoleDivider();
 
@@ -142,6 +142,11 @@ void F_StartFinale(void)
                 case 4:
                     finaleflat = bgflatE4;
                     finaletext = s_E4TEXT;
+                    break;
+
+                case 5:
+                    finaleflat = bgflatE5;
+                    finaletext = s_E5TEXT;
                     break;
             }
 
@@ -228,7 +233,7 @@ dboolean F_Responder(event_t *ev)
 
 static fixed_t TextSpeed(void)
 {
-    return (midstage ? NEWTEXTSPEED : (midstage = acceleratestage) ? acceleratestage = 0, NEWTEXTSPEED : TEXTSPEED);
+    return (midstage ? NEWTEXTSPEED : (midstage = acceleratestage) ? acceleratestage = false, NEWTEXTSPEED : TEXTSPEED);
 }
 
 //
@@ -239,7 +244,7 @@ void F_Ticker(void)
     if (menuactive || paused || consoleactive)
         return;
 
-    WI_checkForAccelerate();
+    WI_CheckForAccelerate();
 
     // advance animation
     finalecount++;
@@ -303,7 +308,7 @@ static void F_TextWrite(void)
             for (int i = 0; i < 64; i++)
             {
                 int     j = i * 2;
-                byte    dot = *(src + (((y / 2) & 63) << 6) + i);
+                byte    dot = src[(((y / 2) & 63) << 6) + i];
 
                 if (y * SCREENWIDTH + x + j < SCREENWIDTH * (SCREENHEIGHT - 1))
                     *(dest + j) = dot;
@@ -351,6 +356,9 @@ static void F_TextWrite(void)
             prev = letter;
             continue;
         }
+
+        if (cx > ORIGINALWIDTH - 12)
+            continue;
 
         if (STCFN034)
         {
@@ -873,7 +881,7 @@ static void F_DrawPatchCol(int x, patch_t *patch, int col, fixed_t fracstep)
     {
         int     count = (column->length << FRACBITS) / fracstep;
         fixed_t frac = 0;
-        byte    *dest = desttop + column->topdelta * SCREENWIDTH;
+        byte    *dest = &desttop[column->topdelta * SCREENWIDTH];
         byte    *source = (byte *)column + 3;
 
         while (count--)
@@ -954,6 +962,10 @@ static void F_ArtScreenDrawer(void)
 
             case 4:
                 lumpname = "ENDPIC";
+                break;
+
+            case 5:
+                lumpname = "SIGILEND";
                 break;
 
             default:

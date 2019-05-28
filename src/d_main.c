@@ -89,12 +89,21 @@
 // Location where savegames are stored
 char                *savegamefolder;
 
-// location of IWAD and PWAD files
 char                *pwadfile = "";
 
+static char *iwadsrequired[] =
+{
+    "doom.wad",
+    "doom2.wad",
+    "tnt.wad",
+    "plutonia.wad",
+    "nerve.wad",
+    "doom2.wad"
+};
+
 char                *iwadfolder = iwadfolder_default;
-int                 units = units_default;
 int                 turbo = turbo_default;
+int                 units = units_default;
 #if defined(_WIN32) || defined(__MACOSX__)
 char                *wad = wad_default;
 #endif
@@ -103,14 +112,18 @@ dboolean            wipe = wipe_default;
 char                *packageconfig;
 char                *packagewad;
 
+#if defined(_WIN32)
+char                *previouswad;
+#endif
+
 dboolean            devparm;                // started game with -devparm
+dboolean            fastparm;               // checkparm of -fast
 dboolean            freeze;
 dboolean            nomonsters;             // checkparm of -nomonsters
+dboolean            pistolstart;            // [BH] checkparm of -pistolstart
 dboolean            regenhealth;
 dboolean            respawnitems;
 dboolean            respawnmonsters;        // checkparm of -respawn
-dboolean            pistolstart;            // [BH] checkparm of -pistolstart
-dboolean            fastparm;               // checkparm of -fast
 
 unsigned int        stat_runs;
 
@@ -123,9 +136,8 @@ dboolean            advancetitle;
 dboolean            dowipe;
 static dboolean     forcewipe;
 
-dboolean            splashscreen = false;
+dboolean            splashscreen = true;
 
-static byte         *playpal;
 static int          startuptimer;
 
 dboolean            realframe;
@@ -214,7 +226,7 @@ void D_Display(void)
     if (gamestate != GS_LEVEL)
     {
         if (gamestate != oldgamestate && !splashscreen)
-            I_SetPalette(playpal);
+            I_SetPalette(PLAYPAL);
 
         switch (gamestate)
         {
@@ -400,7 +412,7 @@ static void D_DoomLoop(void)
 //
 //  TITLE LOOP
 //
-int             titlesequence;
+int             titlesequence = 0;
 int             pagetic;
 
 static patch_t  *pagelump;
@@ -440,7 +452,7 @@ void D_PageDrawer(void)
         static int  prevtic;
 
         if (pagetic != prevtic)
-            I_SetSimplePalette(splashpal + (pagetic <= 9 ? (9 - pagetic) * 768 : (pagetic >= 94 ? (pagetic - 94) * 768 : 0)));
+            I_SetSimplePalette(&splashpal[(pagetic < 9 ? (9 - pagetic) * 768 : (pagetic > 94 ? (pagetic - 94) * 768 : 0))]);
 
         prevtic = pagetic;
     }
@@ -458,11 +470,12 @@ void D_FadeScreen(void)
 
     for (int i = 0; i < 11; i++)
     {
-        I_SetPalette(splashpal + i * 768);
+        I_SetPalette(&splashpal[i * 768]);
 #ifdef __ANDROID__ // The touch controls change the viewport, call this to fix. This function does not exist in SDL2
         SDL_ForceupdateViewport(renderer);
 #endif
         blitfunc();
+        I_Sleep(10);
     }
 }
 
@@ -490,9 +503,8 @@ void D_DoAdvanceTitle(void)
     if (!titlesequence)
     {
         pagetic = 3 * TICRATE;
-        splashscreen = true;
         titlesequence = 1;
-        V_DrawBigPatch(0, 0, 0, splashlump);
+        V_DrawBigPatch(0, 0, splashlump);
         return;
     }
 
@@ -520,7 +532,7 @@ void D_DoAdvanceTitle(void)
 
         if (splashscreen)
         {
-            I_SetPalette(playpal);
+            I_SetPalette(PLAYPAL);
             splashscreen = false;
             I_Sleep(300);
         }
@@ -657,34 +669,37 @@ static char *FindDehPath(char *path, char *ext, char *pattern)
 
 static void LoadDehFile(char *path)
 {
-    if (!M_CheckParm("-nodeh") && !HasDehackedLump(path))
+    char    *dehpath = FindDehPath(path, ".bex", ".[Bb][Ee][Xx]");
+
+    if (dehpath)
     {
-        char    *dehpath = FindDehPath(path, ".bex", ".[Bb][Ee][Xx]");
-
-        if (dehpath)
+        if (!DehFileProcessed(dehpath))
         {
-            if (!DehFileProcessed(dehpath))
-            {
-                if (chex)
-                    chexdeh = true;
+            if (chex)
+                chexdeh = true;
 
+            if (HasDehackedLump(path) || M_CheckParm("-nodeh"))
+                C_Warning("<b>%s</b> will be ignored.", dehpath);
+            else
                 ProcessDehFile(dehpath, 0);
 
-                if (dehfilecount < MAXDEHFILES)
-                    M_StringCopy(dehfiles[dehfilecount++], dehpath, MAX_PATH);
-            }
+            if (dehfilecount < MAXDEHFILES)
+                M_StringCopy(dehfiles[dehfilecount++], dehpath, MAX_PATH);
         }
-        else
-        {
-            dehpath = FindDehPath(path, ".deh", ".[Dd][Ee][Hh]");
+    }
+    else
+    {
+        dehpath = FindDehPath(path, ".deh", ".[Dd][Ee][Hh]");
 
-            if (dehpath && !DehFileProcessed(dehpath))
-            {
+        if (dehpath && !DehFileProcessed(dehpath))
+        {
+            if (HasDehackedLump(path) || M_CheckParm("-nodeh"))
+                C_Warning("<b>%s</b> will be ignored.", dehpath);
+            else
                 ProcessDehFile(dehpath, 0);
 
-                if (dehfilecount < MAXDEHFILES)
-                    M_StringCopy(dehfiles[dehfilecount++], dehpath, MAX_PATH);
-            }
+            if (dehfilecount < MAXDEHFILES)
+                M_StringCopy(dehfiles[dehfilecount++], dehpath, MAX_PATH);
         }
     }
 }
@@ -756,8 +771,8 @@ static void D_CheckSupportedPWAD(char *filename)
 
     if (M_StringCompare(leaf, "SIGIL.WAD"))
     {
-        //sigil = true;
-        //episode = 5;
+        sigil = true;
+        episode = 5;
     }
     else if (M_StringCompare(leaf, "NERVE.WAD"))
     {
@@ -832,11 +847,11 @@ static dboolean D_CheckParms(void)
                     if (W_MergeFile(fullpath, true))
                     {
                         modifiedgame = true;
-                        //sigil = true;
+                        sigil = true;
                     }
                 }
                 // if DOOM2.WAD is selected, load NERVE.WAD automatically if present
-                else if (M_StringCompare(leafname(myargv[1]), "DOOM2.WAD"))
+                else if (M_StringCompare(leafname(myargv[1]), "DOOM2.WAD") && bfgedition)
                 {
                     static char fullpath[MAX_PATH];
 
@@ -1023,6 +1038,7 @@ static int D_OpenWADLauncher(void)
         dboolean    onlyoneselected;
 
         iwadfound = 0;
+        previouswad = M_StringDuplicate(wad);
         wad = "";
         startuptimer = I_GetTimeMS();
 
@@ -1071,11 +1087,11 @@ static int D_OpenWADLauncher(void)
                         if (W_MergeFile(fullpath, true))
                         {
                             modifiedgame = true;
-                            //sigil = true;
+                            sigil = true;
                         }
                     }
                     // if DOOM2.WAD is selected, load NERVE.WAD automatically if present
-                    else if (M_StringCompare(leafname(file), "DOOM2.WAD"))
+                    else if (M_StringCompare(leafname(file), "DOOM2.WAD") && bfgedition)
                     {
                         static char fullpath[MAX_PATH];
 
@@ -1251,67 +1267,6 @@ static int D_OpenWADLauncher(void)
                             wad = M_StringDuplicate(leafname(fullpath));
                             iwadfolder = M_StringDuplicate(M_ExtractFolder(fullpath));
                             break;
-                        }
-                    }
-                }
-
-                // if it's NERVE.WAD, try to open DOOM2.WAD with it
-                else if (M_StringCompare(iwadpass1, "NERVE.WAD"))
-                {
-                    static char fullpath2[MAX_PATH];
-
-                    // try the current folder first
-                    M_snprintf(fullpath2, sizeof(fullpath2), "%s"DIR_SEPARATOR_S"DOOM2.WAD", szFile);
-                    D_IdentifyIWADByName(fullpath2);
-
-                    if (W_AddFile(fullpath2, true))
-                    {
-                        iwadfound = 1;
-
-                        if (W_MergeFile(fullpath, false))
-                        {
-                            modifiedgame = true;
-                            nerve = true;
-                            expansion = 2;
-                        }
-
-                        break;
-                    }
-                    else
-                    {
-                        // otherwise try the iwadfolder CVAR
-                        M_snprintf(fullpath2, sizeof(fullpath2), "%s"DIR_SEPARATOR_S"DOOM2.WAD", iwadfolder);
-                        D_IdentifyIWADByName(fullpath2);
-
-                        if (W_AddFile(fullpath2, true))
-                        {
-                            iwadfound = 1;
-
-                            if (W_MergeFile(fullpath, false))
-                            {
-                                modifiedgame = true;
-                                nerve = true;
-                                expansion = 2;
-                            }
-
-                            break;
-                        }
-                        else
-                        {
-                            // still nothing? try some common installation folders
-                            if (W_AddFile(D_FindWADByName("DOOM2.WAD"), true))
-                            {
-                                iwadfound = 1;
-
-                                if (W_MergeFile(fullpath, false))
-                                {
-                                    modifiedgame = true;
-                                    nerve = true;
-                                    expansion = 2;
-                                }
-
-                                break;
-                            }
                         }
                     }
                 }
@@ -1508,7 +1463,7 @@ static int D_OpenWADLauncher(void)
 
                     // try to autoload NERVE.WAD if DOOM2.WAD is the IWAD and none of the PWADs
                     // have maps present
-                    if (isDOOM2 && !mapspresent)
+                    if (isDOOM2 && !mapspresent && bfgedition)
                     {
                         static char fullpath[MAX_PATH];
 
@@ -1616,9 +1571,9 @@ static void D_ProcessDehInWad(void)
 
 static void D_ParseStartupString(const char *string)
 {
-    int len = (int)strlen(string);
+    size_t  len = strlen(string);
 
-    for (int i = 0, start = 0; i < len; i++)
+    for (size_t i = 0, start = 0; i < len; i++)
         if (string[i] == '\n' || i == len - 1)
         {
             C_Output(M_SubString(string, start, i - start));
@@ -1837,8 +1792,6 @@ static void D_DoomMainSetup(void)
     WISCRT2 = (W_CheckMultipleLumps("WISCRT2") > 1);
     DSSECRET = (W_CheckNumForName("DSSECRET") >= 0);
 
-    bfgedition = (DMENUPIC && W_CheckNumForName("M_ACPT") >= 0);
-
     I_InitGamepad();
 
     I_InitGraphics();
@@ -1912,24 +1865,25 @@ static void D_DoomMainSetup(void)
             strreplace(string, ".", "");
             strreplace(string, "!", "");
 
-            C_Output("A <b>-%s</b> parameter was found on the command-line. The skill level is now \"%s\".", myargv[p], string);
+            C_Output("A <b>-%s</b> parameter was found on the command-line. The skill level is now <i><b>%s</b></i>.", myargv[p], string);
         }
     }
 
-    if ((p = M_CheckParmWithArgs("-episode", 1, 1)))
+    if ((p = M_CheckParmWithArgs("-episode", 1, 1)) && gamemode != commercial)
     {
         char **episodes[] =
         {
             &s_M_EPISODE1,
             &s_M_EPISODE2,
             &s_M_EPISODE3,
-            &s_M_EPISODE4
+            &s_M_EPISODE4,
+            &s_M_EPISODE5
         };
 
         int temp = myargv[p + 1][0] - '0';
 
         if ((gamemode == shareware && temp == 1) || (temp >= 1 && ((gamemode == registered && temp <= 3)
-            || (gamemode == retail && temp <= 4))))
+            || (gamemode == retail && temp <= 4) || (sigil && temp <= 5))))
         {
             startepisode = temp;
             episode = temp;
@@ -1942,11 +1896,12 @@ static void D_DoomMainSetup(void)
                 M_snprintf(lumpname, sizeof(lumpname), "E%iM%i", startepisode, startmap);
 
             autostart = true;
-            C_Output("An <b>-episode</b> parameter was found on the command-line. The episode is now \"%s\".", *episodes[episode - 1]);
+            C_Output("An <b>-episode</b> parameter was found on the command-line. The episode is now <i><b>%s</b></i>.",
+                *episodes[episode - 1]);
         }
     }
 
-    if ((p = M_CheckParmWithArgs("-expansion", 1, 1)))
+    if ((p = M_CheckParmWithArgs("-expansion", 1, 1)) && gamemode == commercial)
     {
         char **expansions[] =
         {
@@ -1956,7 +1911,7 @@ static void D_DoomMainSetup(void)
 
         int temp = myargv[p + 1][0] - '0';
 
-        if (gamemode == commercial && temp <= (nerve ? 2 : 1))
+        if (temp <= (nerve ? 2 : 1))
         {
             gamemission = (temp == 1 ? doom2 : pack_nerve);
             expansion = temp;
@@ -1965,7 +1920,7 @@ static void D_DoomMainSetup(void)
             startmap = 1;
             M_snprintf(lumpname, sizeof(lumpname), "MAP%02i", startmap);
             autostart = true;
-            C_Output("An <b>-expansion</b> parameter was found on the command-line. The expansion is now \"%s\".",
+            C_Output("An <b>-expansion</b> parameter was found on the command-line. The expansion is now <i><b>%s</b></i>.",
                 *expansions[expansion - 1]);
         }
     }
@@ -1980,7 +1935,7 @@ static void D_DoomMainSetup(void)
         if (gamemode == commercial)
         {
             if (strlen(myargv[p + 1]) == 5 && toupper(myargv[p + 1][0]) == 'M' && toupper(myargv[p + 1][1]) == 'A'
-                && toupper(myargv[p + 1][2]) == 'P' && isdigit(myargv[p + 1][3]) && isdigit(myargv[p + 1][4]))
+                && toupper(myargv[p + 1][2]) == 'P' && isdigit((int)myargv[p + 1][3]) && isdigit((int)myargv[p + 1][4]))
                 startmap = (myargv[p + 1][3] - '0') * 10 + myargv[p + 1][4] - '0';
             else
                 startmap = atoi(myargv[p + 1]);
@@ -1989,8 +1944,8 @@ static void D_DoomMainSetup(void)
         }
         else
         {
-            if (strlen(myargv[p + 1]) == 4 && toupper(myargv[p + 1][0]) == 'E' && isdigit(myargv[p + 1][1])
-                && toupper(myargv[p + 1][2]) == 'M' && isdigit(myargv[p + 1][3]))
+            if (strlen(myargv[p + 1]) == 4 && toupper(myargv[p + 1][0]) == 'E' && isdigit((int)myargv[p + 1][1])
+                && toupper(myargv[p + 1][2]) == 'M' && isdigit((int)myargv[p + 1][3]))
             {
                 startepisode = myargv[p + 1][1] - '0';
                 startmap = myargv[p + 1][3] - '0';
@@ -2045,7 +2000,6 @@ static void D_DoomMainSetup(void)
     splashpal = W_CacheLumpName("SPLSHPAL");
     titlelump = W_CacheLumpName((TITLEPIC ? "TITLEPIC" : (DMENUPIC ? "DMENUPIC" : "INTERPIC")));
     creditlump = W_CacheLumpName("CREDIT");
-    playpal = W_CacheLumpName("PLAYPAL");
 
     if (gameaction != ga_loadgame)
     {
@@ -2060,9 +2014,19 @@ static void D_DoomMainSetup(void)
             G_DeferredInitNew(startskill, startepisode, startmap);
         }
         else
-            D_StartTitle(M_CheckParm("-nosplash") || SCREENSCALE == 1);   // start up intro loop
+#if SCREENSCALE == 1
+            D_StartTitle(1);
+#else
+            if (M_CheckParm("-nosplash"))
+            {
+                splashscreen = false;
+                D_StartTitle(1);
+            }
+            else
+                D_StartTitle(0);
+#endif
     }
-    
+
     time = striptrailingzero((I_GetTimeMS() - startuptimer) / 1000.0f, 1);
     C_Output("Startup took %s seconds to complete.", time);
 

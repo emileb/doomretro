@@ -457,8 +457,8 @@ char    *s_STSTR_FON = "";
 char    *s_STSTR_FOFF = "";
 char    *s_STSTR_RHON = "";
 char    *s_STSTR_RHOFF = "";
-char    *s_STSTR_VMON = "";
-char    *s_STSTR_VMOFF = "";
+char    *s_STSTR_VON = "";
+char    *s_STSTR_VOFF = "";
 
 char    *s_E1TEXT = E1TEXT;
 char    *s_E2TEXT = E2TEXT;
@@ -583,6 +583,7 @@ char    *bgflatE1 = "FLOOR4_8";
 char    *bgflatE2 = "SFLR6_1";
 char    *bgflatE3 = "MFLR8_4";
 char    *bgflatE4 = "MFLR8_3";
+char    *bgflatE5 = "FLOOR4_8";
 char    *bgflat06 = "SLIME16";
 char    *bgflat11 = "RROCK14";
 char    *bgflat20 = "RROCK07";
@@ -1022,8 +1023,8 @@ deh_strs deh_strlookup[] =
     { &s_STSTR_FOFF,                 "STSTR_FOFF"                 },
     { &s_STSTR_RHON,                 "STSTR_RHON"                 },
     { &s_STSTR_RHOFF,                "STSTR_RHOFF"                },
-    { &s_STSTR_VMON,                 "STSTR_VMON"                 },
-    { &s_STSTR_VMOFF,                "STSTR_VMOFF"                },
+    { &s_STSTR_VON,                  "STSTR_VON"                  },
+    { &s_STSTR_VOFF,                 "STSTR_VOFF"                 },
 
     { &s_E1TEXT,                     "E1TEXT"                     },
     { &s_E2TEXT,                     "E2TEXT"                     },
@@ -1147,6 +1148,7 @@ deh_strs deh_strlookup[] =
     { &bgflatE2,                     "BGFLATE2"                   },
     { &bgflatE3,                     "BGFLATE3"                   },
     { &bgflatE4,                     "BGFLATE4"                   },
+    { &bgflatE5,                     "BGFLATE5"                   },
     { &bgflat06,                     "BGFLAT06"                   },
     { &bgflat11,                     "BGFLAT11"                   },
     { &bgflat15,                     "BGFLAT15"                   },
@@ -1604,6 +1606,7 @@ static const struct deh_mobjflags_s deh_mobjflags[] =
     { "COUNTKILL",    MF_COUNTKILL    },    // count toward the kills total
     { "COUNTITEM",    MF_COUNTITEM    },    // count toward the items total
     { "SKULLFLY",     MF_SKULLFLY     },    // special handling for flying skulls
+    { "NOTDMATCH",    MF_NOTDMATCH    },    // do not spawn in deathmatch
 
     // killough 10/98: TRANSLATION consists of 2 bits, not 1:
     { "TRANSLATION",  0x04000000      },    // for BOOM bug-compatibility
@@ -1652,7 +1655,6 @@ static const struct deh_mobjflags_s deh_mobjflags2[] =
     { "CRUSHABLE",                 MF2_CRUSHABLE                 },
     { "MASSACRE",                  MF2_MASSACRE                  },
     { "DECORATION",                MF2_DECORATION                },
-    { "DONTDRAW",                  MF2_DONTDRAW                  },
     { "MONSTERMISSILE",            MF2_MONSTERMISSILE            }
 };
 
@@ -1991,12 +1993,13 @@ void ProcessDehFile(char *filename, int lumpnum)
     if (filename)
     {
         if (!(infile.f = fopen(filename, "rt")))
-            return;             // should be checked up front anyway
+            return;                         // should be checked up front anyway
 
         infile.lump = NULL;
     }
-    else                        // DEH file comes from lump indicated by second argument
+    else
     {
+        // DEH file comes from lump indicated by second argument
         if (!(infile.size = W_LumpLength(lumpnum)))
             return;
 
@@ -2005,7 +2008,7 @@ void ProcessDehFile(char *filename, int lumpnum)
     }
 
     {
-        static int  i;          // killough 10/98: only run once, by keeping index static
+        static int  i;                      // killough 10/98: only run once, by keeping index static
 
         // remember what they start as for deh xref
         for (; i < EXTRASTATES; i++)
@@ -2029,10 +2032,10 @@ void ProcessDehFile(char *filename, int lumpnum)
     // loop until end of file
     while (dehfgets(inbuffer, sizeof(inbuffer), filein))
     {
-        dboolean        match = false;
-        unsigned int    i;
-        unsigned int    last_i = DEH_BLOCKMAX - 1;
-        long            filepos = 0;
+        dboolean            match = false;
+        unsigned int        i;
+        static unsigned int last_i = DEH_BLOCKMAX - 1;
+        static long         filepos = 0;
 
         lfstrip(inbuffer);
 
@@ -2052,8 +2055,8 @@ void ProcessDehFile(char *filename, int lumpnum)
             // preserve state while including a file
             // killough 10/98: moved to here
 
-            char    *nextfile;
-            dboolean    oldnotext = includenotext;      // killough 10/98
+            char        *nextfile;
+            dboolean    oldnotext = includenotext;              // killough 10/98
 
             // killough 10/98: exclude if inside wads (only to discourage
             // the practice, since the code could otherwise handle it)
@@ -2074,7 +2077,7 @@ void ProcessDehFile(char *filename, int lumpnum)
             if (devparm)
                 C_Output("Branching to include file <b>%s</b>...", nextfile);
 
-            ProcessDehFile(nextfile, 0); // do the included file
+            ProcessDehFile(nextfile, 0);                        // do the included file
 
             includenotext = oldnotext;
 
@@ -2090,10 +2093,10 @@ void ProcessDehFile(char *filename, int lumpnum)
                 if (i < DEH_BLOCKMAX - 1)
                     match = true;
 
-                break;          // we got one, that's enough for this block
+                break;                                          // we got one, that's enough for this block
             }
 
-        if (match)              // inbuffer matches a valid block code name
+        if (match)                                              // inbuffer matches a valid block code name
             last_i = i;
         else if (last_i >= 10 && last_i < DEH_BLOCKMAX - 1)     // restrict to BEX style lumps
         {
@@ -2107,16 +2110,16 @@ void ProcessDehFile(char *filename, int lumpnum)
         if (devparm)
             C_Output("Processing function [%i] for %s", i, deh_blocks[i].key);
 
-        deh_blocks[i].fptr(filein, inbuffer);           // call function
+        deh_blocks[i].fptr(filein, inbuffer);                   // call function
 
-        if (!filein->lump)                              // back up line start
+        if (!filein->lump)                                      // back up line start
             filepos = ftell(filein->f);
     }
 
     if (infile.lump)
-        Z_ChangeTag(infile.lump, PU_CACHE);     // Mark purgeable
+        Z_ChangeTag(infile.lump, PU_CACHE);                     // mark purgeable
     else
-        fclose(infile.f);                       // Close real file
+        fclose(infile.f);                                       // close real file
 
     if (addtocount)
         dehcount++;
@@ -2395,17 +2398,17 @@ static void deh_procThing(DEHFILE *fpin, char *line)
         }
 
         if ((string = M_StringCompare(key, "Name1")))
-            M_StringCopy(mobjinfo[indexnum].name1, lowercase(trimwhitespace(strval)), 100);
+            strncpy(mobjinfo[indexnum].name1, lowercase(trimwhitespace(strval)), 100);
         else if ((string = M_StringCompare(key, "Plural1")))
-            M_StringCopy(mobjinfo[indexnum].plural1, lowercase(trimwhitespace(strval)), 100);
+            strncpy(mobjinfo[indexnum].plural1, lowercase(trimwhitespace(strval)), 100);
         else if ((string = M_StringCompare(key, "Name2")))
-            M_StringCopy(mobjinfo[indexnum].name2, lowercase(trimwhitespace(strval)), 100);
+            strncpy(mobjinfo[indexnum].name2, lowercase(trimwhitespace(strval)), 100);
         else if ((string = M_StringCompare(key, "Plural2")))
-            M_StringCopy(mobjinfo[indexnum].plural2, lowercase(trimwhitespace(strval)), 100);
+            strncpy(mobjinfo[indexnum].plural2, lowercase(trimwhitespace(strval)), 100);
         else if ((string = M_StringCompare(key, "Name3")))
-            M_StringCopy(mobjinfo[indexnum].name3, lowercase(trimwhitespace(strval)), 100);
+            strncpy(mobjinfo[indexnum].name3, lowercase(trimwhitespace(strval)), 100);
         else if ((string = M_StringCompare(key, "Plural3")))
-            M_StringCopy(mobjinfo[indexnum].plural3, lowercase(trimwhitespace(strval)), 100);
+            strncpy(mobjinfo[indexnum].plural3, lowercase(trimwhitespace(strval)), 100);
 
         if (string && devparm)
             C_Output("Assigned %s to %s (%i) at index %i.", lowercase(trimwhitespace(strval)), key, indexnum, ix);
@@ -2840,10 +2843,9 @@ static void deh_procPars(DEHFILE *fpin, char *line) // extension
     // second one makes the par for MAP14 be 230 seconds. The number
     // of parameters on the line determines which group of par values
     // is being changed. Error checking is done based on current fixed
-    // array sizes of[4][10] and [32]
+    // array sizes of [4][10] and [32]
     strncpy(inbuffer, line, DEH_BUFFERMAX);
 
-    // killough 8/98: allow hex numbers in input:
     sscanf(inbuffer, "%31s %10i", key, &indexnum);
 
     if (devparm)
@@ -2862,14 +2864,14 @@ static void deh_procPars(DEHFILE *fpin, char *line) // extension
         if (!*inbuffer)
             break;                              // killough 11/98
 
-        if (sscanf(inbuffer, "par %10i %10i %10i", &episode, &level, &partime) != 3)
+        if (sscanf(inbuffer, "par %10d %10d %10d", &episode, &level, &partime) != 3)
         {
-            if (sscanf(inbuffer, "par %10i %10i", &level, &partime) != 2)
+            if (sscanf(inbuffer, "par %10d %10d", &level, &partime) != 2)
                 C_Warning("Invalid par time setting string \"%s\".", inbuffer);
             else
             {
                 // Ty 07/11/98 - wrong range check, not zero-based
-                if (level < 1 || level > 32)    // base 0 array (but 1-based parm)
+                if (level < 1 || level > 33)    // base 0 array (but 1-based parm)
                     C_Warning("Invalid MAPxy value MAP%i.", level);
                 else
                 {
@@ -2887,9 +2889,7 @@ static void deh_procPars(DEHFILE *fpin, char *line) // extension
             // note that though it's a [4][10] array, the "left" and "top" aren't used,
             // effectively making it a base 1 array.
             // Ty 07/11/98 - level was being checked against max 3 - dumb error
-            // Note that episode 4 does not have par times per original design
-            // in Ultimate DOOM so that is not supported here.
-            if (episode < 1 || episode > 3 || level < 1 || level > 9)
+            if (episode < 1 || episode > 5 || level < 1 || level > 9)
                 C_Warning("Invalid ExMy values E%iM%i.", episode, level);
             else
             {
@@ -3548,7 +3548,7 @@ static dboolean deh_procStringSub(char *key, char *lookfor, char *newstring)
     }
 
     if (!found && !hacx)
-        C_Warning("The <b>%s</b> string can't be found.", (key ? key : lookfor));
+        C_Warning("The <b>\"%s\"</b> string can't be found.", (key ? key : lookfor));
 
     return found;
 }
@@ -3616,7 +3616,7 @@ static void rstrip(char *s)         // strip trailing whitespace
 {
     char    *p = s + strlen(s);     // killough 4/4/98: same here
 
-    while (p > s && isspace(*--p))  // break on first non-whitespace
+    while (p > s && isspace((unsigned char)*--p))  // break on first non-whitespace
         *p = '\0';
 }
 
@@ -3629,7 +3629,7 @@ static void rstrip(char *s)         // strip trailing whitespace
 //
 static char *ptr_lstrip(char *p)    // point past leading whitespace
 {
-    while (isspace(*p))
+    while (isspace((unsigned char)*p))
         p++;
 
     return p;
@@ -3667,7 +3667,7 @@ static int deh_GetData(char *s, char *k, long *l, char **strval)
         buffer[i] = *t;                 // copy it
     }
 
-    if (isspace(buffer[i - 1]))
+    if (isspace((unsigned char)buffer[i - 1]))
         i--;
 
     if (i >= 0)

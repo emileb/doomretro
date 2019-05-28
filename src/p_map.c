@@ -421,6 +421,7 @@ static dboolean PIT_CheckThing(mobj_t *thing)
     int         flags;
     int         tmflags;
     dboolean    corpse;
+    int         type;
 
     // don't clip against self
     if (thing == tmthing)
@@ -429,9 +430,10 @@ static dboolean PIT_CheckThing(mobj_t *thing)
     flags = thing->flags;
     tmflags = tmthing->flags;
     corpse = flags & MF_CORPSE;
+    type = thing->type;
 
     // [BH] apply small amount of momentum to a corpse when a monster walks over it
-    if (corpse && (tmflags & MF_SHOOTABLE) && !thing->nudge && thing->z == tmthing->z && r_corpses_nudge)
+    if (corpse && (tmflags & MF_SHOOTABLE) && type != MT_BARREL && !thing->nudge && thing->z == tmthing->z && r_corpses_nudge)
         if (P_ApproxDistance(thing->x - tmthing->x, thing->y - tmthing->y) < 16 * FRACUNIT)
         {
             const int   r = M_RandomInt(-1, 1);
@@ -506,14 +508,14 @@ static dboolean PIT_CheckThing(mobj_t *thing)
             return true;        // underneath
 
         if (tmthing->target
-            && (tmthing->target->type == thing->type
-                || (tmthing->target->type == MT_KNIGHT && thing->type == MT_BRUISER)
-                || (tmthing->target->type == MT_BRUISER && thing->type == MT_KNIGHT)))
+            && (tmthing->target->type == type
+                || (tmthing->target->type == MT_KNIGHT && type == MT_BRUISER)
+                || (tmthing->target->type == MT_BRUISER && type == MT_KNIGHT)))
         {
             // Don't hit same species as originator.
             if (thing == tmthing->target)
                 return true;
-            else if (thing->type != MT_PLAYER && !infight && !species_infighting)
+            else if (type != MT_PLAYER && !infight && !species_infighting)
                 // Explode, but do no damage.
                 // Let players missile other players.
                 return false;
@@ -580,7 +582,7 @@ static dboolean PIT_CheckThing(mobj_t *thing)
 
     // [BH] don't hit if either thing is a corpse, which may still be solid if
     // they are still going through their death sequence.
-    if (!(thing->flags2 & MF2_RESURRECTING) && (corpse || (tmflags & MF_CORPSE)))
+    if (!(thing->flags2 & MF2_RESURRECTING) && (corpse || (tmflags & MF_CORPSE)) && type != MT_BARREL)
         return true;
 
     // RjY
@@ -1631,7 +1633,7 @@ static dboolean PTR_ShootTraverse(intercept_t *in)
         }
 
         // Spawn bullet puffs.
-        P_SpawnPuff(dlTrace.x + FixedMul(dlTrace.dx, frac), dlTrace.y + FixedMul(dlTrace.dy, frac), z, shootangle);
+        P_SpawnPuff(dltrace.x + FixedMul(dltrace.dx, frac), dltrace.y + FixedMul(dltrace.dy, frac), z, shootangle);
 
         // don't go any farther
         return false;
@@ -1659,8 +1661,8 @@ static dboolean PTR_ShootTraverse(intercept_t *in)
     // position a bit closer
     frac = in->frac - FixedDiv(10 * FRACUNIT, attackrange);
 
-    x = dlTrace.x + FixedMul(dlTrace.dx, frac);
-    y = dlTrace.y + FixedMul(dlTrace.dy, frac);
+    x = dltrace.x + FixedMul(dltrace.dx, frac);
+    y = dltrace.y + FixedMul(dltrace.dy, frac);
     z = shootz + FixedMul(aimslope, FixedMul(frac, attackrange));
 
     // Spawn bullet puffs or blood spots,
@@ -1847,7 +1849,7 @@ void P_UseLines(void)
 static mobj_t   *bombsource;
 static mobj_t   *bombspot;
 static int      bombdamage;
-static dboolean bombvertical;
+static dboolean bombverticality;
 
 //
 // PIT_RadiusAttack
@@ -1871,7 +1873,7 @@ static dboolean PIT_RadiusAttack(mobj_t *thing)
 
     dist = MAX(ABS(thing->x - bombspot->x), ABS(thing->y - bombspot->y)) - thing->radius;
 
-    if (!bombvertical || infiniteheight || type == MT_BOSSBRAIN)
+    if (!bombverticality || infiniteheight || type == MT_BOSSBRAIN)
     {
         // [BH] if killing boss in DOOM II MAP30, use old code that
         //  doesn't use z height in blast radius
@@ -1920,7 +1922,7 @@ static dboolean PIT_RadiusAttack(mobj_t *thing)
 // P_RadiusAttack
 // Source is the creature that caused the explosion at spot.
 //
-void P_RadiusAttack(mobj_t *spot, mobj_t *source, int damage, dboolean vertical)
+void P_RadiusAttack(mobj_t *spot, mobj_t *source, int damage, dboolean verticality)
 {
     fixed_t dist = (damage + MAXRADIUS) << FRACBITS;
     int     xh = P_GetSafeBlockX(spot->x + dist - bmaporgx);
@@ -1931,7 +1933,7 @@ void P_RadiusAttack(mobj_t *spot, mobj_t *source, int damage, dboolean vertical)
     bombspot = spot;
     bombsource = source;
     bombdamage = damage;
-    bombvertical = vertical;
+    bombverticality = verticality;
 
     for (int y = yl; y <= yh; y++)
         for (int x = xl; x <= xh; x++)

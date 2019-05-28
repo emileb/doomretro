@@ -57,6 +57,7 @@
 #include "m_misc.h"
 #include "r_main.h"
 #include "s_sound.h"
+#include "st_stuff.h"
 #include "v_video.h"
 #include "version.h"
 #include "w_wad.h"
@@ -67,8 +68,8 @@
 #define CONSOLETEXTMAXLENGTH    1024
 #define CONSOLELINEHEIGHT       14
 
-#define CONSOLESCROLLBARWIDTH   3
-#define CONSOLESCROLLBARHEIGHT  ((CONSOLELINES - 1) * CONSOLELINEHEIGHT - 1)
+#define CONSOLESCROLLBARWIDTH   4
+#define CONSOLESCROLLBARHEIGHT  (gamestate != GS_TITLESCREEN ? 139 : 366)
 #define CONSOLESCROLLBARX       (CONSOLEWIDTH - CONSOLETEXTX - CONSOLESCROLLBARWIDTH)
 #define CONSOLESCROLLBARY       (CONSOLETEXTY + 1)
 
@@ -93,6 +94,7 @@ static patch_t          *trademark;
 static patch_t          *copyright;
 static patch_t          *regomark;
 static patch_t          *multiply;
+static patch_t          *unknown;
 static patch_t          *warning;
 static patch_t          *brand;
 static patch_t          *divider;
@@ -111,9 +113,9 @@ static short            spacewidth;
 static char             consoleinput[255];
 static int              numautocomplete;
 int                     consolestrings;
-int                     consolestrings_max = 0;
+size_t                  consolestrings_max = 0;
 
-static int              undolevels;
+static size_t           undolevels;
 static undohistory_t    *undohistory;
 
 static patch_t          *caret;
@@ -135,8 +137,6 @@ static int              timestampx;
 static int              zerowidth;
 
 static int              consolebackcolor;
-static int              consolebrandcolor1 = 4;
-static int              consolebrandcolor2 = 180;
 static int              consolecaretcolor = 4;
 static int              consolelowfpscolor = 180;
 static int              consolehighfpscolor = 116;
@@ -149,8 +149,6 @@ static int              consoletimestampcolor = 100;
 static int              consoleoutputcolor = 88;
 static int              consoleboldcolor = 4;
 static int              consoleitalicscolor = 98;
-static int              consoleheadercolor1 = 4;
-static int              consoleheadercolor2 = 180;
 static int              consolewarningcolor = 180;
 static int              consolewarningboldcolor = 176;
 static int              consoledividercolor = 100;
@@ -180,7 +178,7 @@ void C_Input(const char *string, ...)
     M_vsnprintf(buffer, CONSOLETEXTMAXLENGTH - 1, string, argptr);
     va_end(argptr);
 
-    if (consolestrings >= consolestrings_max)
+    if (consolestrings >= (int)consolestrings_max)
         console = I_Realloc(console, (consolestrings_max += 128) * sizeof(*console));
 
     strcpy(console[consolestrings].string, buffer);
@@ -190,18 +188,24 @@ void C_Input(const char *string, ...)
 
 void C_IntCVAROutput(char *cvar, int value)
 {
-    if (consolestrings && M_StringStartsWith(console[consolestrings - 1].string, M_StringJoin(cvar, " ", NULL)))
+    char    *cvar_free = M_StringJoin(cvar, " ", NULL);
+
+    if (consolestrings && M_StringStartsWith(console[consolestrings - 1].string, cvar_free))
         consolestrings--;
 
     C_Input("%s %i", cvar, value);
+    free(cvar_free);
 }
 
 void C_PctCVAROutput(char *cvar, int value)
 {
-    if (consolestrings && M_StringStartsWith(console[consolestrings - 1].string, M_StringJoin(cvar, " ", NULL)))
+    char    *cvar_free = M_StringJoin(cvar, " ", NULL);
+
+    if (consolestrings && M_StringStartsWith(console[consolestrings - 1].string, cvar_free))
         consolestrings--;
 
     C_Input("%s %i%%", cvar, value);
+    free(cvar_free);
 }
 
 void C_StrCVAROutput(char *cvar, char *string)
@@ -212,7 +216,6 @@ void C_StrCVAROutput(char *cvar, char *string)
         consolestrings--;
 
     C_Input("%s %s", cvar, string);
-
     free(cvar_free);
 }
 
@@ -241,8 +244,7 @@ void C_Output(const char *string, ...)
     LOGI("%s",buffer);
     LogWritter_Write(buffer);
 #endif
-
-    if (consolestrings >= consolestrings_max)
+    if (consolestrings >= (int)consolestrings_max)
         console = I_Realloc(console, (consolestrings_max += 128) * sizeof(*console));
 
     strcpy(console[consolestrings].string, buffer);
@@ -260,7 +262,7 @@ void C_TabbedOutput(const int tabs[8], const char *string, ...)
     M_vsnprintf(buffer, CONSOLETEXTMAXLENGTH - 1, string, argptr);
     va_end(argptr);
 
-    if (consolestrings >= consolestrings_max)
+    if (consolestrings >= (int)consolestrings_max)
         console = I_Realloc(console, (consolestrings_max += 128) * sizeof(*console));
 
     strcpy(console[consolestrings].string, buffer);
@@ -279,7 +281,7 @@ void C_Header(const int tabs[8], const char *string, ...)
     M_vsnprintf(buffer, CONSOLETEXTMAXLENGTH - 1, string, argptr);
     va_end(argptr);
 
-    if (consolestrings >= consolestrings_max)
+    if (consolestrings >= (int)consolestrings_max)
         console = I_Realloc(console, (consolestrings_max += 128) * sizeof(*console));
 
     strcpy(console[consolestrings].string, buffer);
@@ -300,7 +302,7 @@ void C_Warning(const char *string, ...)
 
     if (!consolestrings || !M_StringCompare(console[consolestrings - 1].string, buffer))
     {
-        if (consolestrings >= consolestrings_max)
+        if (consolestrings >= (int)consolestrings_max)
             console = I_Realloc(console, (consolestrings_max += 128) * sizeof(*console));
 
         strcpy(console[consolestrings].string, buffer);
@@ -326,7 +328,7 @@ void C_PlayerMessage(const char *string, ...)
     }
     else
     {
-        if (consolestrings >= consolestrings_max)
+        if (consolestrings >= (int)consolestrings_max)
             console = I_Realloc(console, (consolestrings_max += 128) * sizeof(*console));
 
         strcpy(console[consolestrings].string, buffer);
@@ -355,7 +357,7 @@ void C_Obituary(const char *string, ...)
     }
     else
     {
-        if (consolestrings >= consolestrings_max)
+        if (consolestrings >= (int)consolestrings_max)
             console = I_Realloc(console, (consolestrings_max += 128) * sizeof(*console));
 
         strcpy(console[consolestrings].string, buffer);
@@ -381,7 +383,7 @@ void C_AddConsoleDivider(void)
 {
     if (!consolestrings || console[consolestrings - 1].type != dividerstring)
     {
-        if (consolestrings >= consolestrings_max)
+        if (consolestrings >= (int)consolestrings_max)
             console = I_Realloc(console, (consolestrings_max += 128) * sizeof(*console));
 
         console[consolestrings++].type = dividerstring;
@@ -392,33 +394,35 @@ kern_t altkern[] =
 {
     { ' ',  '(',  -1 }, { ' ',  'T',  -1 }, { '"',  '+',  -1 }, { '"',  '.',  -1 }, { '"',  ',',  -1 }, { '"',  'a',  -1 },
     { '"',  'c',  -1 }, { '"',  'd',  -1 }, { '"',  'e',  -1 }, { '"',  'g',  -1 }, { '"',  'j',  -2 }, { '"',  'o',  -1 },
-    { '"',  'q',  -1 }, { '"',  's',  -1 }, { '"',  'J',  -2 }, { '\\', '\\', -2 }, { '\\', 'd',  -1 }, { '\\', 't',  -1 },
-    { '\\', 'T',  -1 }, { '\\', 'V',  -1 }, { '\'', 'a',  -1 }, { '\'', 'a',  -1 }, { '\'', 'c',  -1 }, { '\'', 'd',  -1 },
-    { '\'', 'e',  -1 }, { '\'', 'g',  -1 }, { '\'', 'j',  -2 }, { '\'', 'o',  -1 }, { '\'', 's',  -1 }, { '\'', 'J',  -2 },
-    { '+',  'j',  -1 }, { '.',  '\\', -1 }, { '.',  '4',  -1 }, { '.',  '7',  -1 }, { ',',  '4',  -1 }, { '/',  '/',  -2 },
-    { '/',  'a',  -1 }, { '/',  'd',  -1 }, { '/',  'o',  -1 }, { ':', '\\',  -1 }, { '_',  'f',  -1 }, { '0',  ',',  -1 },
-    { '0',  ';',  -1 }, { '0',  'j',  -2 }, { '1',  '"',  -1 }, { '1',  '\\', -1 }, { '1',  '\'', -1 }, { '1',  'j',  -2 },
-    { '2',  'j',  -2 }, { '3',  ',',  -1 }, { '3',  ';',  -1 }, { '3',  'j',  -2 }, { '4',  'j',  -2 }, { '5',  ',',  -1 },
-    { '5',  ';',  -1 }, { '5',  'j',  -2 }, { '6',  ',',  -1 }, { '6',  'j',  -2 }, { '7',  '.',  -2 }, { '7',  ',',  -2 },
-    { '7',  ';',  -1 }, { '7',  'j',  -2 }, { '8',  ',',  -1 }, { '8',  ';',  -1 }, { '8',  'j',  -2 }, { '9',  ',',  -1 },
-    { '9',  ';',  -1 }, { '9',  'j',  -2 }, { 'F',  '.',  -1 }, { 'F',  ',',  -1 }, { 'F',  ';',  -1 }, { 'L',  '\\', -1 },
-    { 'L',  '"',  -1 }, { 'L',  '\'', -1 }, { 'L',  'Y',  -1 }, { 'P',  '.',  -1 }, { 'P',  ',',  -1 }, { 'P',  ';',  -1 },
-    { 'T',  '.',  -1 }, { 'T',  ',',  -1 }, { 'T',  ';',  -1 }, { 'T',  'a',  -1 }, { 'T',  'e',  -1 }, { 'T',  'o',  -1 },
-    { 'V',  '.',  -1 }, { 'V',  ',',  -1 }, { 'V',  ';',  -1 }, { 'Y',  '.',  -1 }, { 'Y',  ',',  -1 }, { 'Y',  ';',  -1 },
-    { 'a',  '"',  -1 }, { 'a',  '\\', -1 }, { 'a',  '\'', -1 }, { 'a',  'j',  -2 }, { 'b',  ',',  -1 }, { 'b',  ';',  -1 },
-    { 'b',  '"',  -1 }, { 'b',  '\\', -1 }, { 'b',  '\'', -1 }, { 'b',  'j',  -2 }, { 'c',  '\\', -1 }, { 'c',  ',',  -1 },
-    { 'c',  ';',  -1 }, { 'c',  '"',  -1 }, { 'c',  '\'', -1 }, { 'c',  'j',  -2 }, { 'd',  'j',  -2 }, { 'e',  '\\', -1 },
-    { 'e',  ',',  -1 }, { 'e',  ';',  -1 }, { 'e',  '"',  -1 }, { 'e',  '\'', -1 }, { 'e',  '_',  -1 }, { 'e',  'j',  -2 },
-    { 'f',  ' ',  -1 }, { 'f',  ',',  -2 }, { 'f',  ';',  -1 }, { 'f',  '_',  -1 }, { 'f',  'a',  -1 }, { 'f',  'j',  -2 },
-    { 'h',  '\\', -1 }, { 'h',  'j',  -2 }, { 'i',  'j',  -2 }, { 'k',  'j',  -2 }, { 'l',  'j',  -2 }, { 'm',  '"',  -1 },
-    { 'm',  '\\', -1 }, { 'm',  '\'', -1 }, { 'm',  'j',  -2 }, { 'n',  '\\', -1 }, { 'n',  '"',  -1 }, { 'n',  '\'', -1 },
-    { 'n',  'j',  -2 }, { 'o',  '\\', -1 }, { 'o',  ',',  -1 }, { 'o',  ';',  -1 }, { 'o',  '"',  -1 }, { 'o',  '\'', -1 },
-    { 'o',  'j',  -2 }, { 'p',  '\\', -1 }, { 'p',  ',',  -1 }, { 'p',  ';',  -1 }, { 'p',  '"',  -1 }, { 'p',  '\'', -1 },
-    { 'p',  'j',  -2 }, { 'r',  ' ',  -1 }, { 'r',  '\\', -1 }, { 'r',  '.',  -2 }, { 'r',  ',',  -2 }, { 'r',  ';',  -1 },
-    { 'r',  '"',  -1 }, { 'r',  '\'', -1 }, { 'r',  '_',  -1 }, { 'r',  'a',  -1 }, { 'r',  'j',  -2 }, { 's',  '\\', -1 },
-    { 's',  ',',  -1 }, { 's',  ';',  -1 }, { 's',  'j',  -2 }, { 't',  '\\', -1 }, { 't',  'j',  -2 }, { 'u',  'j',  -2 },
-    { 'v',  '\\', -1 }, { 'v',  ',',  -1 }, { 'v',  ';',  -1 }, { 'v',  'j',  -2 }, { 'w',  '\\', -1 }, { 'w',  'j',  -2 },
-    { 'x',  '\\', -1 }, { 'x',  'j',  -2 }, { 'z',  'j',  -2 }, { '\0', '\0',  0 }
+    { '"',  'q',  -1 }, { '"',  's',  -1 }, { '"',  'J',  -2 }, { '\\', '\\', -2 }, { '\\', 't',  -1 }, { '\\', 'T',  -1 },
+    { '\\', 'V',  -1 }, { '\'', 'a',  -1 }, { '\'', 'a',  -1 }, { '\'', 'c',  -1 }, { '\'', 'd',  -1 }, { '\'', 'e',  -1 },
+    { '\'', 'g',  -1 }, { '\'', 'j',  -2 }, { '\'', 'o',  -1 }, { '\'', 's',  -1 }, { '\'', 'J',  -2 }, { '+',  'j',  -2 },
+    { '.',  '\\', -1 }, { '.',  '4',  -1 }, { '.',  '7',  -1 }, { ',',  '4',  -1 }, { ',',  '7',  -1 }, { '/',  '/',  -2 },
+    { '/',  'a',  -1 }, { '/',  'd',  -1 }, { '/',  'o',  -1 }, { ':', '\\',  -1 }, { '_',  'f',  -1 }, { '_',  't',  -1 },
+    { '_',  'v',  -1 }, { '(',  '(',  -1 }, { ')',  '.',  -1 }, { ')',  ')',  -1 }, { '0',  ',',  -1 }, { '0',  ';',  -1 },
+    { '0',  'j',  -2 }, { '1',  '"',  -1 }, { '1',  '\\', -1 }, { '1',  '\'', -1 }, { '1',  'j',  -2 }, { '2',  'j',  -2 },
+    { '3',  ',',  -1 }, { '3',  ';',  -1 }, { '3',  'j',  -2 }, { '4',  'j',  -2 }, { '5',  ',',  -1 }, { '5',  ';',  -1 },
+    { '5',  'j',  -2 }, { '6',  ',',  -1 }, { '6',  'j',  -2 }, { '7',  '.',  -2 }, { '7',  ',',  -2 }, { '7',  ';',  -1 },
+    { '7',  'j',  -2 }, { '8',  ',',  -1 }, { '8',  ';',  -1 }, { '8',  'j',  -2 }, { '9',  ',',  -1 }, { '9',  ';',  -1 },
+    { '9',  'j',  -2 }, { 'F',  '.',  -1 }, { 'F',  ',',  -1 }, { 'F',  ';',  -1 }, { 'L',  '\\', -1 }, { 'L',  '"',  -1 },
+    { 'L',  '\'', -1 }, { 'L',  'Y',  -1 }, { 'P',  '.',  -1 }, { 'P',  ',',  -1 }, { 'P',  ';',  -1 }, { 'P',  '_',  -1 },
+    { 'T',  ' ',  -1 }, { 'T',  '.',  -1 }, { 'T',  ',',  -1 }, { 'T',  ';',  -1 }, { 'T',  'a',  -1 }, { 'T',  'e',  -1 },
+    { 'T',  'o',  -1 }, { 'V',  '.',  -1 }, { 'V',  ',',  -1 }, { 'V',  ';',  -1 }, { 'Y',  '.',  -1 }, { 'Y',  ',',  -1 },
+    { 'Y',  ';',  -1 }, { 'a',  '"',  -1 }, { 'a',  '\\', -1 }, { 'a',  '\'', -1 }, { 'a',  'j',  -2 }, { 'b',  ',',  -1 },
+    { 'b',  ';',  -1 }, { 'b',  '"',  -1 }, { 'b',  '\\', -1 }, { 'b',  '\'', -1 }, { 'b',  'j',  -2 }, { 'c',  '\\', -1 },
+    { 'c',  ',',  -1 }, { 'c',  ';',  -1 }, { 'c',  '"',  -1 }, { 'c',  '\'', -1 }, { 'c',  'j',  -2 }, { 'd',  'j',  -2 },
+    { 'e',  '\\', -1 }, { 'e',  ',',  -1 }, { 'e',  ';',  -1 }, { 'e',  '"',  -1 }, { 'e',  '\'', -1 }, { 'e',  '_',  -1 },
+    { 'e',  'j',  -2 }, { 'f',  ' ',  -1 }, { 'f',  ',',  -2 }, { 'f',  ';',  -1 }, { 'f',  '_',  -1 }, { 'f',  'a',  -1 },
+    { 'f',  'j',  -2 }, { 'h',  '\\', -1 }, { 'h',  'j',  -2 }, { 'i',  'j',  -2 }, { 'k',  'j',  -2 }, { 'l',  'j',  -2 },
+    { 'm',  '"',  -1 }, { 'm',  '\\', -1 }, { 'm',  '\'', -1 }, { 'm',  'j',  -2 }, { 'n',  '\\', -1 }, { 'n',  '"',  -1 },
+    { 'n',  '\'', -1 }, { 'n',  'j',  -2 }, { 'o',  '\\', -1 }, { 'o',  ',',  -1 }, { 'o',  ';',  -1 }, { 'o',  '"',  -1 },
+    { 'o',  '\'', -1 }, { 'o',  'j',  -2 }, { 'p',  '\\', -1 }, { 'p',  ',',  -1 }, { 'p',  ';',  -1 }, { 'p',  '"',  -1 },
+    { 'p',  '\'', -1 }, { 'p',  'j',  -2 }, { 'r',  ' ',  -1 }, { 'r',  '\\', -1 }, { 'r',  ')',  -1 }, { 'r',  '.',  -2 },
+    { 'r',  ',',  -2 }, { 'r',  ';',  -1 }, { 'r',  '"',  -1 }, { 'r',  '\'', -1 }, { 'r',  '_',  -2 }, { 'r',  'a',  -1 },
+    { 'r',  'j',  -2 }, { 's',  '\\', -1 }, { 's',  ',',  -1 }, { 's',  ';',  -1 }, { 's',  'j',  -2 }, { 't',  '\\', -1 },
+    { 't',  'j',  -2 }, { 'u',  'j',  -2 }, { 'v',  '\\', -1 }, { 'v',  ',',  -1 }, { 'v',  ';',  -1 }, { 'v',  'j',  -2 },
+    { 'w',  '\\', -1 }, { 'w',  'j',  -2 }, { 'x',  '\\', -1 }, { 'x',  'j',  -2 }, { 'y',  '\\', -1 }, { 'z',  '\\', -1 },
+    { 'z',  'j',  -2 }, { '\0', '\0',  0 }
 };
 
 static int C_TextWidth(const char *text, const dboolean formatting, const dboolean kerning)
@@ -430,6 +434,7 @@ static int C_TextWidth(const char *text, const dboolean formatting, const dboole
     for (int i = 0; i < len; i++)
     {
         const unsigned char letter = text[i];
+        const unsigned char nextletter = (i < len - 1 ? text[i + 1] : '\0');
         const int           c = letter - CONSOLEFONTSTART;
 
         if (letter == '<' && i < len - 2 && (text[i + 1] == 'b' || text[i + 1] == 'i') && text[i + 2] == '>' && formatting)
@@ -458,16 +463,15 @@ static int C_TextWidth(const char *text, const dboolean formatting, const dboole
         }
         else if (letter == 176)
         {
-            w += SHORT(regomark->width);
+            w += SHORT(degree->width);
             i++;
         }
-        else if (letter == 215)
-        {
+        else if (letter == 215 || (letter == 'x' && isdigit(prevletter) && (nextletter == '\0' || isdigit(nextletter))))
             w += SHORT(multiply->width);
-            i++;
-        }
+        else if (c >= 0 && c < CONSOLEFONTSIZE)
+            w += SHORT(consolefont[c]->width);
         else
-            w += SHORT(c < 0 || c >= CONSOLEFONTSIZE ? 0 : consolefont[c]->width);
+            w += SHORT(unknown->width);
 
         if (kerning)
             for (int j = 0; altkern[j].char1; j++)
@@ -525,8 +529,6 @@ void C_Init(void)
     }
 
     consolebackcolor = nearestcolors[con_backcolor] << 8;
-    consolebrandcolor1 = nearestcolors[consolebrandcolor1];
-    consolebrandcolor2 = nearestcolors[consolebrandcolor2];
     consolecaretcolor = nearestcolors[consolecaretcolor];
     consolelowfpscolor = nearestcolors[consolelowfpscolor];
     consolehighfpscolor = nearestcolors[consolehighfpscolor];
@@ -539,8 +541,6 @@ void C_Init(void)
     consoleoutputcolor = nearestcolors[consoleoutputcolor];
     consoleboldcolor = nearestcolors[consoleboldcolor];
     consoleitalicscolor = nearestcolors[consoleitalicscolor];
-    consoleheadercolor1 = nearestcolors[consoleheadercolor1];
-    consoleheadercolor2 = nearestcolors[consoleheadercolor2];
     consolewarningcolor = nearestcolors[consolewarningcolor];
     consolewarningboldcolor = nearestcolors[consolewarningboldcolor];
     consoledividercolor = nearestcolors[consoledividercolor];
@@ -562,6 +562,7 @@ void C_Init(void)
     regomark = W_CacheLumpName("DRFON174");
     degree = W_CacheLumpName("DRFON176");
     multiply = W_CacheLumpName("DRFON215");
+    unknown = W_CacheLumpName("DRFON000");
 
     caret = W_CacheLumpName("DRCARET");
     divider = W_CacheLumpName("DRDIVIDE");
@@ -591,6 +592,8 @@ void C_ShowConsole(void)
     consoleanim = 0;
     showcaret = true;
     caretwait = 0;
+
+    viewplayer->damagecount = MIN(viewplayer->damagecount, (NUMREDPALS - 1) << 3);
 
     if (gamestate == GS_TITLESCREEN && !devparm)
         S_StartSound(NULL, sfx_swtchn);
@@ -741,6 +744,7 @@ static void C_DrawConsoleText(int x, int y, char *text, const int color1, const 
     for (int i = 0; i < truncate; i++)
     {
         const unsigned char letter = text[i];
+        const unsigned char nextletter = (i < len - 1 ? text[i + 1] : '\0');
 
         if (letter == '<' && i < len - 2 && tolower(text[i + 1]) == 'b' && text[i + 2] == '>' && formatting)
         {
@@ -776,25 +780,26 @@ static void C_DrawConsoleText(int x, int y, char *text, const int color1, const 
                 patch = copyright;
             else if (letter == 174)
                 patch = regomark;
-            else if (letter == 215)
+            else if (letter == 215 || (letter == 'x' && isdigit(prevletter) && (nextletter == '\0' || isdigit(nextletter))))
                 patch = multiply;
             else if (c >= 0 && c < CONSOLEFONTSIZE)
                 patch = consolefont[c];
             else
-                continue;
-
-            if (kerning)
-                for (int j = 0; altkern[j].char1; j++)
-                    if (prevletter == altkern[j].char1 && letter == altkern[j].char2)
-                    {
-                        x += altkern[j].adjust;
-                        break;
-                    }
+                patch = unknown;
 
             if (patch)
             {
+                if (kerning)
+                    for (int j = 0; altkern[j].char1; j++)
+                        if (prevletter == altkern[j].char1 && letter == altkern[j].char2)
+                        {
+                            x += altkern[j].adjust;
+                            break;
+                        }
+
                 V_DrawConsoleTextPatch(x, y, patch, (lastcolor1 = (bold == 1 ? boldcolor : (bold == 2 ? color1 : (italics ?
-                    (color1 == consolewarningcolor ? color1 : consoleitalicscolor) : color1)))), color2, italics, translucency);
+                    (color1 == consolewarningcolor ? color1 : consoleitalicscolor) : color1)))), color2,
+                    (italics && letter != '_' && letter != ','), translucency);
                 x += SHORT(patch->width);
             }
 
@@ -876,7 +881,7 @@ static void C_DrawTimeStamp(int x, int y, unsigned int tics)
 
         V_DrawConsoleTextPatch(x + (buffer[i] == '1' ? (zerowidth - width) / 2 : 0),
             y, patch, consoletimestampcolor, NOBACKGROUNDCOLOR, false, tinttab25);
-        x += (isdigit(buffer[i]) ? zerowidth : width);
+        x += (isdigit((int)buffer[i]) ? zerowidth : width);
     }
 }
 
@@ -1036,9 +1041,6 @@ void C_Drawer(void)
                     V_DrawBigTranslucentPatch(CONSOLETEXTX, y + 4 - (CONSOLEHEIGHT - consoleheight), playerstats);
                 else if (M_StringCompare(console[i].string, THINGLISTTITLE))
                     V_DrawBigTranslucentPatch(CONSOLETEXTX, y + 4 - (CONSOLEHEIGHT - consoleheight), thinglist);
-                else
-                    C_DrawConsoleText(CONSOLETEXTX, y, console[i].string, consoleoutputcolor,
-                        NOBACKGROUNDCOLOR, consoleboldcolor, tinttab66, console[i].tabs, true, true);
             }
             else
                 C_DrawConsoleText(CONSOLETEXTX, y, console[i].string, consolecolors[type], NOBACKGROUNDCOLOR,
@@ -1179,7 +1181,7 @@ dboolean C_ValidateInput(const char *input)
             {
                 const int   length = (int)strlen(input);
 
-                if (isdigit(input[length - 2]) && isdigit(input[length - 1]))
+                if (isdigit((int)input[length - 2]) && isdigit((int)input[length - 1]))
                 {
                     consolecheatparm[0] = input[length - 2];
                     consolecheatparm[1] = input[length - 1];
@@ -1258,6 +1260,7 @@ dboolean C_Responder(event_t *ev)
 {
     static int  autocomplete = -1;
     static int  inputhistory = -1;
+    static int  scrollspeed = TICRATE;
     int         i;
     int         len;
 
@@ -1505,7 +1508,7 @@ dboolean C_Responder(event_t *ev)
 
                         if (autocomplete == -1)
                         {
-                            M_StringCopy(input, M_SubString(consoleinput, i, len - i), sizeof(input));
+                            M_StringCopy(input, M_SubString(consoleinput, i, (size_t)len - i), sizeof(input));
 
                             if (!*input)
                                 break;
@@ -1562,8 +1565,11 @@ dboolean C_Responder(event_t *ev)
                 // scroll output up
                 if (modstate & KMOD_CTRL)
                 {
+                    scrollspeed = MIN(scrollspeed + 4, TICRATE * 8);
+
                     if (consolestrings > CONSOLELINES)
-                        outputhistory = (outputhistory == -1 ? consolestrings - (CONSOLELINES + 1) : MAX(0, outputhistory - 1));
+                        outputhistory = (outputhistory == -1 ? consolestrings - (CONSOLELINES + 1) :
+                            MAX(0, outputhistory - scrollspeed / TICRATE));
                 }
 
                 // previous input
@@ -1592,7 +1598,9 @@ dboolean C_Responder(event_t *ev)
                 // scroll output down
                 if (modstate & KMOD_CTRL)
                 {
-                    if (outputhistory != -1 && ++outputhistory + CONSOLELINES == consolestrings)
+                    scrollspeed = MIN(scrollspeed + 4, TICRATE * 8);
+
+                    if (outputhistory != -1 && (outputhistory += scrollspeed / TICRATE) + CONSOLELINES >= consolestrings)
                         outputhistory = -1;
                 }
 
@@ -1627,14 +1635,19 @@ dboolean C_Responder(event_t *ev)
 
             case KEY_PAGEUP:
                 // scroll output up
+                scrollspeed = MIN(scrollspeed + 4, TICRATE * 8);
+
                 if (consolestrings > CONSOLELINES)
-                    outputhistory = (outputhistory == -1 ? consolestrings - (CONSOLELINES + 1) : MAX(0, outputhistory - 1));
+                    outputhistory = (outputhistory == -1 ? consolestrings - (CONSOLELINES + 1) :
+                        MAX(0, outputhistory - scrollspeed / TICRATE));
 
                 break;
 
             case KEY_PAGEDOWN:
                 // scroll output down
-                if (outputhistory != -1 && ++outputhistory + CONSOLELINES == consolestrings)
+                scrollspeed = MIN(scrollspeed + 4, TICRATE * 8);
+
+                if (outputhistory != -1 && (outputhistory += scrollspeed / TICRATE) + CONSOLELINES >= consolestrings)
                     outputhistory = -1;
 
                 break;
@@ -1670,7 +1683,7 @@ dboolean C_Responder(event_t *ev)
                 // copy selected text to clipboard
                 if (modstate & KMOD_CTRL)
                     if (selectstart < selectend)
-                        SDL_SetClipboardText(M_SubString(consoleinput, selectstart, selectend - selectstart));
+                        SDL_SetClipboardText(M_SubString(consoleinput, selectstart, (size_t)selectend - selectstart));
 
                 break;
 
@@ -1681,7 +1694,7 @@ dboolean C_Responder(event_t *ev)
                     char    buffer[255];
 
                     M_snprintf(buffer, sizeof(buffer), "%s%s%s", M_SubString(consoleinput, 0, selectstart),
-                        SDL_GetClipboardText(), M_SubString(consoleinput, selectend, len - selectend));
+                        SDL_GetClipboardText(), M_SubString(consoleinput, selectend, (size_t)len - selectend));
                     M_StringCopy(buffer, M_StringReplace(buffer, "(null)", ""), sizeof(buffer));
                     M_StringCopy(buffer, M_StringReplace(buffer, "(null)", ""), sizeof(buffer));
 
@@ -1702,7 +1715,7 @@ dboolean C_Responder(event_t *ev)
                     if (selectstart < selectend)
                     {
                         C_AddToUndoHistory();
-                        SDL_SetClipboardText(M_SubString(consoleinput, selectstart, selectend - selectstart));
+                        SDL_SetClipboardText(M_SubString(consoleinput, selectstart, (size_t)selectend - selectstart));
 
                         for (i = selectend; i < len; i++)
                             consoleinput[selectstart + i - selectend] = consoleinput[i];
@@ -1731,7 +1744,10 @@ dboolean C_Responder(event_t *ev)
         }
     }
     else if (ev->type == ev_keyup)
+    {
+        scrollspeed = TICRATE;
         return false;
+    }
     else if (ev->type == ev_text)
     {
         char    ch = (char)ev->data1;
@@ -1739,7 +1755,7 @@ dboolean C_Responder(event_t *ev)
         if (ch >= ' ' && ch <= '}' && ch != '`' && C_TextWidth(consoleinput, false, true)
             + (ch == ' ' ? spacewidth : SHORT(consolefont[ch - CONSOLEFONTSTART]->width))
             - (selectstart < selectend ? C_TextWidth(M_SubString(consoleinput, selectstart,
-            selectend - selectstart), false, true) : 0) <= CONSOLEINPUTPIXELWIDTH)
+            (size_t)selectend - selectstart), false, true) : 0) <= CONSOLEINPUTPIXELWIDTH)
         {
             C_AddToUndoHistory();
 
@@ -1817,13 +1833,14 @@ void C_PrintCompileDate(void)
 
     static char mth[4] = "";
 
-    sscanf(__DATE__, "%3s %2d %4d", mth, &day, &year);
-    sscanf(__TIME__, "%2d:%2d:%*d", &hour, &minute);
+    if (sscanf(__DATE__, "%3s %2d %4d", mth, &day, &year) != 3 || sscanf(__TIME__, "%2d:%2d:%*d", &hour, &minute) != 2)
+        return;
+
     month = (int)(strstr(mths, mth) - mths) / 3 + 1;
 
     C_Output("This %i-bit <i><b>%s</b></i> binary of <i><b>%s</b></i> was built at %i:%02i%s on %s, %s %i, %i.",
-        (int)sizeof(intptr_t) * 8, SDL_GetPlatform(), PACKAGE_NAMEANDVERSIONSTRING, hour - 12 * (hour > 12), minute,
-        (hour < 12 ? "am" : "pm"), dayofweek(day, month, year), months[month], day, year);
+        (int)sizeof(intptr_t) * 8, SDL_GetPlatform(), PACKAGE_NAMEANDVERSIONSTRING, hour - 12 * (hour > 12),
+        minute, (hour < 12 ? "am" : "pm"), dayofweek(day, month, year), months[month], day, year);
 
 #if defined(_MSC_FULL_VER)
     if (_MSC_BUILD)

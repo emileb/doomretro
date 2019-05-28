@@ -69,7 +69,8 @@ extern dboolean     centerweapon;
 extern int          con_backcolor;
 extern dboolean     con_obituaries;
 extern dboolean     con_timestamps;
-extern dboolean     crosshair;
+extern int          crosshair;
+extern int          crosshaircolor;
 extern int          episode;
 extern int          expansion;
 extern int          facebackcolor;
@@ -182,6 +183,11 @@ extern unsigned int stat_runs;
 extern unsigned int stat_secretsrevealed;
 extern unsigned int stat_shotsfired;
 extern unsigned int stat_shotshit;
+extern unsigned int stat_skilllevel_imtooyoungtodie;
+extern unsigned int stat_skilllevel_heynottoorough;
+extern unsigned int stat_skilllevel_hurtmeplenty;
+extern unsigned int stat_skilllevel_ultraviolence;
+extern unsigned int stat_skilllevel_nightmare;
 extern unsigned int stat_time;
 extern int          stillbob;
 extern dboolean     tossdrop;
@@ -211,6 +217,13 @@ extern int          weaponbob;
 extern dboolean     weaponbounce;
 extern dboolean     weaponrecoil;
 extern dboolean     wipe;
+
+enum
+{
+    crosshair_none,
+    crosshair_cross,
+    crosshair_dot
+};
 
 enum
 {
@@ -335,7 +348,13 @@ enum
 
 #define con_timestamps_default                  true
 
-#define crosshair_default                       true
+#define crosshair_min                           crosshair_none
+#define crosshair_default                       crosshair_none
+#define crosshair_max                           crosshair_dot
+
+#define crosshaircolor_min                      0
+#define crosshaircolor_default                  4
+#define crosshaircolor_max                      255
 
 #define episode_min                             1
 #define episode_default                         1
@@ -740,7 +759,8 @@ typedef enum
     SKYVALUEALIAS,
     SCALEVALUEALIAS,
     FACEBACKVALUEALIAS,
-    ARMORTYPEVALUEALIAS
+    ARMORTYPEVALUEALIAS,
+    CROSSHAIRVALUEALIAS
 } valuealias_type_t;
 
 typedef struct

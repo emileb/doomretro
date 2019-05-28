@@ -1162,18 +1162,18 @@ void M_UpdateSaveGameName(int i)
 
     if (M_StringCompare(savegamestrings[i], s_EMPTYSTRING))
         match = true;
-    else if (gamemission == doom && len == 4 && savegamestrings[i][0] == 'E' && isdigit(savegamestrings[i][1])
-        && savegamestrings[i][2] == 'M' && isdigit(savegamestrings[i][3]) && W_CheckNumForName(savegamestrings[i]) >= 0)
+    else if (gamemission == doom && len == 4 && savegamestrings[i][0] == 'E' && isdigit((int)savegamestrings[i][1])
+        && savegamestrings[i][2] == 'M' && isdigit((int)savegamestrings[i][3]) && W_CheckNumForName(savegamestrings[i]) >= 0)
         match = true;
     else if (gamemission != doom && len == 5 && savegamestrings[i][0] == 'M' && savegamestrings[i][1] == 'A'
-        && savegamestrings[i][2] == 'P' && isdigit(savegamestrings[i][3]) && isdigit(savegamestrings[i][4])
+        && savegamestrings[i][2] == 'P' && isdigit((int)savegamestrings[i][3]) && isdigit((int)savegamestrings[i][4])
         && W_CheckNumForName(savegamestrings[i]) >= 0)
         match = true;
 
     if (!match && !M_StringCompare(maptitle, mapnumandtitle))
     {
-        if (len >= 4 && savegamestrings[i][len - 1] == '.' && savegamestrings[i][len - 2] == '.' && savegamestrings[i][len - 3] == '.'
-            && savegamestrings[i][len - 4] != '.')
+        if (len >= 4 && savegamestrings[i][len - 1] == '.' && savegamestrings[i][len - 2] == '.'
+            && savegamestrings[i][len - 3] == '.' && savegamestrings[i][len - 4] != '.')
             match = true;
         else
         {
@@ -2213,7 +2213,7 @@ void M_StartMessage(char *string, void *routine, dboolean input)
     messageNeedsInput = input;
     menuactive = true;
 
-    I_SetPalette(W_CacheLumpName("PLAYPAL"));
+    I_SetPalette(PLAYPAL);
     I_UpdateBlitFunc(false);
 }
 
@@ -2423,7 +2423,7 @@ void M_ChangeGamma(dboolean shift)
     }
 
     message_dontfuckwithme = true;
-    I_SetPalette((byte *)W_CacheLumpName("PLAYPAL") + st_palette * 768);
+    I_SetPalette(&PLAYPAL[st_palette * 768]);
     M_SaveCVARs();
 }
 
@@ -2482,7 +2482,7 @@ dboolean M_Responder(event_t *ev)
             else if (!messageToPrint)
             {
                 // select previous menu item
-                if (gamepadthumbLY < 0 || (gamepadbuttons & GAMEPAD_DPAD_UP))
+                if (gamepadthumbLY < 0 || gamepadthumbRY < 0 || (gamepadbuttons & GAMEPAD_DPAD_UP))
                 {
                     key = KEY_UPARROW;
                     keywait = 0;
@@ -2491,7 +2491,7 @@ dboolean M_Responder(event_t *ev)
                 }
 
                 // select next menu item
-                else if (gamepadthumbLY > 0 || (gamepadbuttons & GAMEPAD_DPAD_DOWN))
+                else if (gamepadthumbLY > 0 || gamepadthumbRY > 0 || (gamepadbuttons & GAMEPAD_DPAD_DOWN))
                 {
                     key = KEY_DOWNARROW;
                     keywait = 0;
@@ -2500,7 +2500,7 @@ dboolean M_Responder(event_t *ev)
                 }
 
                 // decrease slider
-                else if ((gamepadthumbLX < 0 || (gamepadbuttons & GAMEPAD_DPAD_LEFT)) && !saveStringEnter
+                else if ((gamepadthumbLX < 0 || gamepadthumbRX < 0 || (gamepadbuttons & GAMEPAD_DPAD_LEFT)) && !saveStringEnter
                     && !(currentMenu == &OptionsDef && itemOn == 1))
                 {
                     key = KEY_LEFTARROW;
@@ -2509,7 +2509,7 @@ dboolean M_Responder(event_t *ev)
                 }
 
                 // increase slider
-                else if ((gamepadthumbLX > 0 || (gamepadbuttons & GAMEPAD_DPAD_RIGHT)) && !saveStringEnter
+                else if ((gamepadthumbLX > 0 || gamepadthumbRX > 0 || (gamepadbuttons & GAMEPAD_DPAD_RIGHT)) && !saveStringEnter
                     && !(currentMenu == &OptionsDef && itemOn == 1))
                 {
                     key = KEY_RIGHTARROW;
@@ -2742,8 +2742,8 @@ dboolean M_Responder(event_t *ev)
     {
         ch = (key == KEY_ENTER ? 'y' : tolower(ch));
 
-        if (messageNeedsInput && key != keyboardmenu && ch != 'y' && ch != 'n' && !(SDL_GetModState() & (KMOD_ALT | KMOD_CTRL))
-            && key != functionkey)
+        if (messageNeedsInput && key != keyboardmenu && ch != 'y' && ch != 'n'
+            && !(SDL_GetModState() & (KMOD_ALT | KMOD_CTRL)) && key != functionkey)
         {
             functionkey = 0;
             return false;
@@ -3453,7 +3453,7 @@ void M_StartControlPanel(void)
     }
 
     viewplayer->fixedcolormap = 0;
-    I_SetPalette(W_CacheLumpName("PLAYPAL"));
+    I_SetPalette(PLAYPAL);
     I_UpdateBlitFunc(false);
 
     if (vid_motionblur)
@@ -3607,7 +3607,9 @@ void M_Drawer(void)
                     char    *name = currentMenu->menuitems[i].name;
                     char    **text = currentMenu->menuitems[i].text;
 
-                    if (M_StringCompare(name, "M_NMARE"))
+                    if (M_StringCompare(name, "M_EPI5") && sigil)
+                        M_DrawPatchWithShadow(x, y + OFFSET, W_CacheLumpName(name));
+                    else if (M_StringCompare(name, "M_NMARE"))
                     {
                         if (M_NMARE)
                             M_DrawPatchWithShadow(x, y + OFFSET, W_CacheLumpName(name));
@@ -3646,7 +3648,7 @@ void M_ClearMenus(void)
 
     if (gamestate == GS_LEVEL)
     {
-        I_SetPalette((byte *)W_CacheLumpName("PLAYPAL") + st_palette * 768);
+        I_SetPalette(&PLAYPAL[st_palette * 768]);
 
         viewplayer->mo->angle = playerangle;
 

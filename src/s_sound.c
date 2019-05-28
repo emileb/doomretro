@@ -121,6 +121,8 @@ musicinfo_t         *mus_playing;
 dboolean            nosfx;
 dboolean            nomusic;
 
+musinfo_t           musinfo;
+
 #if defined(_WIN32)
 extern dboolean     serverMidiPlaying;
 #endif
@@ -229,6 +231,8 @@ void S_Init(void)
 
         // no sounds are playing, and they are not mus_paused
         mus_paused = false;
+
+        musinfo.mapthing = NULL;
     }
 }
 
@@ -296,24 +300,28 @@ static int S_GetMusicNum(void)
     }
     else
     {
-        int spmus[] =
-        {
-            // Song - Who? - Where?
-            mus_e3m4,   // American     E4M1
-            mus_e3m2,   // Romero       E4M2
-            mus_e3m3,   // Shawn        E4M3
-            mus_e1m5,   // American     E4M4
-            mus_e2m7,   // Tim          E4M5
-            mus_e2m4,   // Romero       E4M6
-            mus_e2m6,   // J.Anderson   E4M7 CHIRON.WAD
-            mus_e2m5,   // Shawn        E4M8
-            mus_e1m9    // Tim          E4M9
-        };
-
         if (gameepisode < 4)
             mnum = mus_e1m1 + (s_randommusic ? M_RandomIntNoRepeat(1, 21, mnum) : (gameepisode - 1) * 9 + gamemap) - 1;
+        else if (gameepisode == 5 && sigil)
+            mnum = mus_e5m1 + (s_randommusic ? M_RandomIntNoRepeat(1, 9, mnum) : gamemap) - 1;
         else
+        {
+            int spmus[] =
+            {
+                // Song - Who? - Where?
+                mus_e3m4,   // American     E4M1
+                mus_e3m2,   // Romero       E4M2
+                mus_e3m3,   // Shawn        E4M3
+                mus_e1m5,   // American     E4M4
+                mus_e2m7,   // Tim          E4M5
+                mus_e2m4,   // Romero       E4M6
+                mus_e2m6,   // J.Anderson   E4M7 CHIRON.WAD
+                mus_e2m5,   // Shawn        E4M8
+                mus_e1m9    // Tim          E4M9
+            };
+
             mnum = spmus[(s_randommusic ? M_RandomIntNoRepeat(1, 28, mnum) : gamemap) - 1];
+        }
     }
 
     return mnum;
@@ -326,10 +334,6 @@ static int S_GetMusicNum(void)
 //
 void S_Start(void)
 {
-    // kill all playing sounds at start of level
-    //  (trust me - a good idea)
-    S_StopSounds();
-
     // start new music for the level
     mus_paused = false;
 
@@ -613,7 +617,7 @@ void S_StartMusic(int music_id)
     S_ChangeMusic(music_id, false, false, false);
 }
 
-void S_ChangeMusic(int music_id, dboolean looping, dboolean cheating, dboolean mapstart)
+void S_ChangeMusic(int music_id, dboolean looping, dboolean allowrestart, dboolean mapstart)
 {
     musicinfo_t *music = &S_music[music_id];
     char        namebuf[9];
@@ -623,7 +627,7 @@ void S_ChangeMusic(int music_id, dboolean looping, dboolean cheating, dboolean m
     // current music which should play
     musinfo.current_item = -1;
 
-    if (nomusic || (mus_playing == music && !cheating))
+    if (nomusic || (mus_playing == music && !allowrestart))
         return;
 
     // shutdown old music
@@ -728,8 +732,6 @@ void S_ChangeMusInfoMusic(int lumpnum, int looping)
 
     musinfo.current_item = lumpnum;
 }
-
-musinfo_t   musinfo;
 
 //
 // S_ParseMusInfo
