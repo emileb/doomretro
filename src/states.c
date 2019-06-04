@@ -1011,10 +1011,10 @@ state_t states[NUMSTATES] =
     // Boss Brain (MT_BOSSBRAIN)
     { SPR_BBRN,    0,                    -1, NULL,                   S_NULL              }, // S_BRAIN
     { SPR_BBRN,    1,                    36, A_BrainPain,            S_BRAIN             }, // S_BRAIN_PAIN
-    { SPR_BBRN,    0,                   100, A_BrainScream,          S_BRAIN_DIE2        }, // S_BRAIN_DIE1
-    { SPR_BBRN,    0,                    10, NULL,                   S_BRAIN_DIE3        }, // S_BRAIN_DIE2
-    { SPR_BBRN,    0,                    10, NULL,                   S_BRAIN_DIE4        }, // S_BRAIN_DIE3
-    { SPR_BBRN,    0,                    -1, A_BrainDie,             S_NULL              }, // S_BRAIN_DIE4
+    { SPR_BBRN,    1,                   100, A_BrainScream,          S_BRAIN_DIE2        }, // S_BRAIN_DIE1
+    { SPR_BBRN,    1,                    10, NULL,                   S_BRAIN_DIE3        }, // S_BRAIN_DIE2
+    { SPR_BBRN,    1,                    10, NULL,                   S_BRAIN_DIE4        }, // S_BRAIN_DIE3
+    { SPR_BBRN,    1,                    -1, A_BrainDie,             S_NULL              }, // S_BRAIN_DIE4
 
     // MT_BOSSSPIT
     { SPR_SSWV,   0,                    10, A_Look,                 S_BRAINEYE          }, // S_BRAINEYE
@@ -1041,12 +1041,12 @@ state_t states[NUMSTATES] =
     { SPR_MISL,   (3 | FF_FULLBRIGHT),   10, A_BrainExplode,         S_NULL              }, // S_BRAINEXPLODE3
 
     // Green Armor (MT_MISC0)
-    { SPR_ARM1,    0,                     6, NULL,                   S_ARM1A             }, // S_ARM1
-    { SPR_ARM1,   (1 | FF_FULLBRIGHT),    6, NULL,                   S_ARM1              }, // S_ARM1A
+    { SPR_ARM1,   (0 | FF_FULLBRIGHT),    6, NULL,                   S_ARM1A             }, // S_ARM1
+    { SPR_ARM1,    1,                     6, NULL,                   S_ARM1              }, // S_ARM1A
 
     // Blue Armor (MT_MISC1)
-    { SPR_ARM2,    0,                     6, NULL,                   S_ARM2A             }, // S_ARM2
-    { SPR_ARM2,   (1 | FF_FULLBRIGHT),    6, NULL,                   S_ARM2              }, // S_ARM2A
+    { SPR_ARM2,   (0 | FF_FULLBRIGHT),    6, NULL,                   S_ARM2A             }, // S_ARM2
+    { SPR_ARM2,    1,                     6, NULL,                   S_ARM2              }, // S_ARM2A
 
     // Barrel (MT_BARREL)
     { SPR_BAR1,    0,                     6, NULL,                   S_BAR3              }, // S_BAR2

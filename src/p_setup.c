@@ -2207,7 +2207,7 @@ void P_SetupLevel(int ep, int map)
         else
             M_snprintf(lumpname, sizeof(lumpname), "E%iM%i", ep, map);
 
-        lumpnum = (nerve && gamemission == doom2 ? W_GetNumForName2(lumpname) : W_GetNumForName(lumpname));
+        lumpnum = (nerve && gamemission == doom2 ? W_GetLastNumForName(lumpname) : W_GetNumForName(lumpname));
     }
 
     if ((!consolestrings
@@ -2574,7 +2574,10 @@ static void InitMapInfo(void)
             mapmax = MAX(map, mapmax);
         }
         else if (SC_Compare("NOJUMP"))
-            nojump = true;
+        {
+            if (!autosigil)
+                nojump = true;
+        }
         else if (SC_Compare("NOMOUSELOOK") || SC_Compare("NOFREELOOK"))
             nomouselook = true;
     }

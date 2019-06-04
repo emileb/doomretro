@@ -3189,7 +3189,7 @@ static void mapstats_cmd_func2(char *cmd, char *parms)
         else
             M_snprintf(lumpname, sizeof(lumpname), "E%iM%i", startepisode, startmap);
 
-        i = (nerve && gamemission == doom2 ? W_GetNumForName2(lumpname) : W_CheckNumForName(lumpname));
+        i = (nerve && gamemission == doom2 ? W_GetLastNumForName(lumpname) : W_CheckNumForName(lumpname));
         C_TabbedOutput(tabs, "%s\t<b>%s</b>", (lumpinfo[i]->wadfile->type == IWAD ? "IWAD" : "PWAD"),
             uppercase(leafname(lumpinfo[i]->wadfile->path)));
 
@@ -3324,17 +3324,23 @@ static void mapstats_cmd_func2(char *cmd, char *parms)
         M_snprintf(lumpname, sizeof(lumpname), "d_%s", mus_playing->name);
         lumps = W_CheckMultipleLumps(lumpname);
 
+        C_TabbedOutput(tabs, "Music lump name\t<b>%s</b>", uppercase(lumpname));
+
         if (*musictitle)
             C_TabbedOutput(tabs, "Music title\t<b><i>%s</i></b>", musictitle);
+        else if (sigil)
+            C_TabbedOutput(tabs, "Music title\t<b><i>%s</i></b>", (buckethead ? mus_playing->title2 : mus_playing->title1));
         else if (((gamemode == commercial || gameepisode > 1) && lumps == 1)
             || (gamemode != commercial && gameepisode == 1 && lumps == 2))
-            C_TabbedOutput(tabs, "Music title\t<b><i>%s</i></b>", mus_playing->title);
+            C_TabbedOutput(tabs, "Music title\t<b><i>%s</i></b>", mus_playing->title1);
 
         if (*musiccomposer)
             C_TabbedOutput(tabs, "Music composer\t<b>%s</b>", musiccomposer);
+        else if (sigil)
+            C_TabbedOutput(tabs, "Music composer\t<b>%s</b>", (buckethead ? "Buckethead" : "James Paddock"));
         else if (((gamemode == commercial || gameepisode > 1) && lumps == 1)
             || (gamemode != commercial && gameepisode == 1 && lumps == 2))
-            C_TabbedOutput(tabs, "Music composer\t<b>Bobby Prince</b>");
+            C_TabbedOutput(tabs, "Music composer\t<b>%s</b>", "Bobby Prince");
 
         if (musmusictype)
             C_TabbedOutput(tabs, "Music format\t<b>MUS converted to MIDI</b>");

@@ -1808,6 +1808,18 @@ static void D_DoomMainSetup(void)
     if (nerve && expansion == 2)
         gamemission = pack_nerve;
 
+    if (gamemode == retail && !sigil && episode == 5)
+    {
+        episode = 4;
+        M_SaveCVARs();
+    }
+
+    if (gamemode == commercial && !nerve && expansion == 2)
+    {
+        expansion = 1;
+        M_SaveCVARs();
+    }
+
     D_SetSaveGameFolder(true);
 
     // Check for -file in shareware
@@ -1988,6 +2000,8 @@ static void D_DoomMainSetup(void)
 
     if ((startloadgame = ((p = M_CheckParmWithArgs("-loadgame", 1, 1)) ? atoi(myargv[p + 1]) : -1)) >= 0 && startloadgame <= 5)
     {
+        menuactive = false;
+        splashscreen = false;
         I_InitKeyboard();
 
         if (alwaysrun)
@@ -1998,13 +2012,24 @@ static void D_DoomMainSetup(void)
 
     splashlump = W_CacheLumpName("SPLASH");
     splashpal = W_CacheLumpName("SPLSHPAL");
-    titlelump = W_CacheLumpName((TITLEPIC ? "TITLEPIC" : (DMENUPIC ? "DMENUPIC" : "INTERPIC")));
-    creditlump = W_CacheLumpName("CREDIT");
+
+    if (autosigil)
+    {
+        titlelump = W_CacheLastLumpName((TITLEPIC ? "TITLEPIC" : (DMENUPIC ? "DMENUPIC" : "INTERPIC")));
+        creditlump = W_CacheLastLumpName("CREDIT");
+    }
+    else
+    {
+        titlelump = W_CacheLumpName((TITLEPIC ? "TITLEPIC" : (DMENUPIC ? "DMENUPIC" : "INTERPIC")));
+        creditlump = W_CacheLumpName("CREDIT");
+    }
 
     if (gameaction != ga_loadgame)
     {
         if (autostart)
         {
+            menuactive = false;
+            splashscreen = false;
             I_InitKeyboard();
 
             if (alwaysrun)
@@ -2019,6 +2044,7 @@ static void D_DoomMainSetup(void)
 #else
             if (M_CheckParm("-nosplash"))
             {
+                menuactive = false;
                 splashscreen = false;
                 D_StartTitle(1);
             }

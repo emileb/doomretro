@@ -1,3 +1,32 @@
+### DOOM Retro v2.9.3
+
+* The following changes have been made to the support for John Romero’s megawad [*SIGIL*](http://SI6IL.com/):
+  * The `SKY5_ZD` lump is now used instead of the `SKY5` lump to render the sky.
+  * The `+jump` action is no longer disabled if `SIGIL.wad` is loaded automatically.
+  * A bug has been fixed whereby the `SIGILINT` lump was being displayed in the intermission’s background for episodes 1 to 4.
+
+---
+
+###### Friday, May 31, 2019
+
+### DOOM Retro v2.9.2
+
+* Optimizations have been made to further improve the overall performance and stability of *DOOM Retro*.
+* The following changes have been made to the support for John Romero’s megawad [*SIGIL*](http://SI6IL.com/):
+  * If `SIGIL.wad` is loaded automatically, it’s `TITLEPIC`, `CREDIT` and `HELP1` lumps won’t be displayed, and it’s `D_INTRO` music lump won’t be played.
+  * The `mapstats` CCMD will now correctly identify the title and composer of the music of the current map (either [James Paddock](https://doomwiki.org/wiki/James_Paddock_(Jimmy)), or [Buckethead](https://en.wikipedia.org/wiki/Buckethead) if `SIGIL_SHREDS.wad` is loaded).
+  * *E5M8: Halls of Perdition* will no longer end abruptly when killing a certain number of monsters.
+  * The player will now be warped to the correct map once finishing *E5M9: Realm of Iblis*.
+* Minor changes have been made to text that is output to the console.
+* The player will no longer be injured when standing close to but above a damaging sector in some instances.
+* The crosshair displayed when enabling the `crosshair` CVAR is now hidden sooner when the player runs out of ammo.
+* A bug has been fixed whereby if the `-warp` command-line parameter was used, the player couldn’t access either the menu or the console.
+* The `mapstats` CCMD will now show the lump name of the current map’s music.
+
+---
+
+###### Sunday, May 26, 2019
+
 ### DOOM Retro v2.9.1
 
 * Optimizations have been made to further improve the overall performance and stability of *DOOM Retro*.
@@ -247,7 +276,7 @@
 * Pressing <kbd>ALT</kbd> + <kbd>F4</kbd> will now instantly quit *DOOM Retro* as originally intended.
 * A bug has been fixed whereby the `+zoomin` and `+zoomout` actions couldn’t be rebound from their default <kbd>+</kbd> and <kbd>&ndash;</kbd> keys using the `bind` CCMD.
 * Mouse acceleration can now be disabled using the new `m_acceleration` CVAR. It is `on` by default and `off` when vanilla mode is enabled.
-* Movement of a gamepad's thumbsticks can now be either analog or digital using the new `gp_analog` CVAR. It is `on` by default and `off` when vanilla mode is enabled.
+* Movement of a gamepad’s thumbsticks can now be either analog or digital using the new `gp_analog` CVAR. It is `on` by default and `off` when vanilla mode is enabled.
 * The number of thumbsticks used on a gamepad can now be set using the new `gp_thumbsticks` CVAR. If set to `2` (the default), the left thumbstick is used to strafe left/right and move forward/back, and the right thumbstick is used to turn left/right (and look up/down if the `mouselook` CVAR is `on`). If set to `1` (which it is when vanilla mode is enabled), one thumbstick is used to turn left/right and move forward/back.
 * A bug has been fixed whereby monsters could be spawned at an incorrect height in some rare instances.
 * Some translucency effects have been improved.
