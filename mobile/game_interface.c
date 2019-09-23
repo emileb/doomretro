@@ -389,16 +389,27 @@ void Mobile_AM_controls(double *zoom, fixed_t *pan_x, fixed_t *pan_y )
 //Called from the game
 void G_AndroidBuildTiccmd(ticcmd_t *cmd)
 {
-	cmd->forwardmove  += forwardmove_android * FORWARDMOVE1;
-	cmd->sidemove  += sidemove_android   *  SIDEMOVE1;
+    int blockGamepad( void );
+    int blockMove = blockGamepad() & ANALOGUE_AXIS_FWD;
+    int blockLook = blockGamepad() & ANALOGUE_AXIS_PITCH;
 
-    cmd->angleturn += look_yaw_mouse * 80000;
-    look_yaw_mouse = 0;
-    cmd->angleturn += look_yaw_joy * 1000;
 
-    cmd->lookdir += look_pitch_mouse * 7000;
-    look_pitch_mouse = 0;
-    cmd->lookdir += look_pitch_joy * -200;
+    if( !blockMove )
+    {
+	    cmd->forwardmove  += forwardmove_android * FORWARDMOVE1;
+	    cmd->sidemove  += sidemove_android   *  SIDEMOVE1;
+    }
+
+    if( !blockLook )
+    {
+        cmd->angleturn += look_yaw_mouse * 80000;
+        look_yaw_mouse = 0;
+        cmd->angleturn += look_yaw_joy * 1000;
+
+        cmd->lookdir += look_pitch_mouse * 7000;
+        look_pitch_mouse = 0;
+        cmd->lookdir += look_pitch_joy * -200;
+    }
 
 	if (newweapon != -1)
 	{
