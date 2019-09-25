@@ -62,7 +62,6 @@
 // This is supposedly ignored for commercial
 //  release (aka DOOM II), which had 34 maps
 //  in one episode. So there.
-#define NUMEPISODES 4
 #define NUMMAPS     9
 
 // GLOBAL LOCATIONS
@@ -119,7 +118,7 @@ typedef struct
     int         ctr;
 } anim_t;
 
-static point_t lnodes[NUMEPISODES][NUMMAPS] =
+static point_t lnodes[][NUMMAPS] =
 {
     // Episode 0 World Map
     {
@@ -205,14 +204,14 @@ static anim_t epsd2animinfo[] =
     ANIM(ANIM_ALWAYS, TICRATE / 4, 3,  40,   0, 0)
 };
 
-static int NUMANIMS[NUMEPISODES] =
+static int NUMANIMS[] =
 {
     arrlen(epsd0animinfo),
     arrlen(epsd1animinfo),
     arrlen(epsd2animinfo)
 };
 
-static anim_t *anims[NUMEPISODES] =
+static anim_t *anims[] =
 {
     epsd0animinfo,
     epsd1animinfo,
@@ -256,7 +255,7 @@ static int              cnt_pause;
 static int              NUMCMAPS;
 
 //
-//      GRAPHICS
+// GRAPHICS
 //
 
 // You Are Here graphic
@@ -316,8 +315,8 @@ static void WI_DrawWILVchar(int x, int y, int i)
             V_DrawPixel(x + x1, y + y1, (int)wilv[i][y1 * w + x1], true);
 }
 
-static char *mapname;
-static char *nextmapname;
+static char mapname[128];
+static char nextmapname[128];
 
 static const int chartoi[130] =
 {
@@ -969,7 +968,7 @@ static void WI_DrawStats(void)
 
 void WI_CheckForAccelerate(void)
 {
-    const Uint8 *keystate = SDL_GetKeyboardState(NULL);
+    const uint8_t   *keystate = SDL_GetKeyboardState(NULL);
 
     if ((viewplayer->cmd.buttons & BT_ATTACK) || keystate[SDL_SCANCODE_RETURN] || keystate[SDL_SCANCODE_KP_ENTER])
     {
@@ -1028,7 +1027,6 @@ typedef void (*load_callback_t)(char *lumpname, patch_t **variable);
 static void WI_LoadUnloadData(load_callback_t callback)
 {
     char    name[9];
-    anim_t  *a;
 
     if (gamemode == commercial)
     {
@@ -1056,10 +1054,9 @@ static void WI_LoadUnloadData(load_callback_t callback)
         callback("WISPLAT", &splat[0]);
 
         if (wbs->epsd < 3)
-        {
             for (int j = 0; j < NUMANIMS[wbs->epsd]; j++)
             {
-                a = &anims[wbs->epsd][j];
+                anim_t  *a = &anims[wbs->epsd][j];
 
                 for (int i = 0; i < a->nanims; i++)
                 {
@@ -1075,7 +1072,6 @@ static void WI_LoadUnloadData(load_callback_t callback)
                         a->p[i] = anims[1][4].p[i];
                 }
             }
-        }
     }
 
     // More hacks on minus sign.
@@ -1143,10 +1139,7 @@ static void WI_LoadData(void)
 
     // Background image
     if (gamemode == commercial || (gamemode == retail && wbs->epsd == 3))
-    {
         M_StringCopy(bg_lumpname, (DMENUPIC && W_CheckMultipleLumps("INTERPIC") == 1 ? "DMENUPIC" : "INTERPIC"), sizeof(bg_lumpname));
-        bg_lumpname[8] = '\0';
-    }
     else if (sigil && wbs->epsd == 4)
         M_StringCopy(bg_lumpname, "SIGILINT", sizeof(bg_lumpname));
     else
@@ -1184,8 +1177,6 @@ void WI_Drawer(void)
     }
 }
 
-void P_MapName(int ep, int map);
-
 static void WI_InitVariables(wbstartstruct_t *wbstartstruct)
 {
     wbs = wbstartstruct;
@@ -1206,11 +1197,9 @@ static void WI_InitVariables(wbstartstruct_t *wbstartstruct)
     if (gamemode != retail && wbs->epsd > 2)
         wbs->epsd -= 3;
 
-    mapname = Z_Malloc(128, PU_STATIC, NULL);
-    strcpy(mapname, maptitle);
-    nextmapname = Z_Malloc(128, PU_STATIC, NULL);
+    M_StringCopy(mapname, maptitle, 128);
     P_MapName(wbs->epsd + 1, wbs->next + 1);
-    strcpy(nextmapname, maptitle);
+    M_StringCopy(nextmapname, maptitle, 128);
 }
 
 void WI_Start(wbstartstruct_t *wbstartstruct)

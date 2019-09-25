@@ -39,35 +39,51 @@
 #if !defined(__C_CONSOLE_H__)
 #define __C_CONSOLE_H__
 
+#include "doomdef.h"
 #include "doomtype.h"
 #include "d_event.h"
 
-#define CONSOLEFONTSTART    ' '
-#define CONSOLEFONTEND      '~'
-#define CONSOLEFONTSIZE     (CONSOLEFONTEND - CONSOLEFONTSTART + 1)
+#define CONSOLEFONTSTART        ' '
+#define CONSOLEFONTEND          '~'
+#define CONSOLEFONTSIZE         (CONSOLEFONTEND - CONSOLEFONTSTART + 1)
 
-#define NOBOLDCOLOR         -1
-#define NOBACKGROUNDCOLOR   -1
+#define NOBOLDCOLOR             -1
+#define NOBACKGROUNDCOLOR       -1
 
-#define CONSOLEWIDTH        SCREENWIDTH
-#define CONSOLEHEIGHT       (gamestate != GS_TITLESCREEN ? (SCREENHEIGHT - SBARHEIGHT) / 2 : SCREENHEIGHT - 5)
+#define CONSOLEWIDTH            SCREENWIDTH
+#define CONSOLEHEIGHT           (gamestate != GS_TITLESCREEN ? (SCREENHEIGHT - SBARHEIGHT) / 2 : SCREENHEIGHT - 5)
 
-#define CONSOLETOP          0
+#define CONSOLELINES            (gamestate != GS_TITLESCREEN ? 11 : 27)
+#define CONSOLETEXTX            10
+#define CONSOLETEXTY            8
+#define CONSOLETEXTMAXLENGTH    1024
+#define CONSOLELINEHEIGHT       14
 
-#define DIVIDERSTRING       "==================================================================================================="
+#define CONSOLESCROLLBARWIDTH   4
+#define CONSOLESCROLLBARHEIGHT  (gamestate != GS_TITLESCREEN ? 136 : 363)
+#define CONSOLESCROLLBARX       (CONSOLEWIDTH - CONSOLETEXTX - CONSOLESCROLLBARWIDTH)
+#define CONSOLESCROLLBARY       (CONSOLETEXTY + 1)
 
-#define EMPTYVALUE          "\"\""
+#define CONSOLETEXTPIXELWIDTH   (CONSOLEWIDTH - CONSOLETEXTX * 2 - (scrollbardrawn ? CONSOLESCROLLBARWIDTH + CONSOLETEXTX : 0))
 
-#define stringize(x)        #x
+#define CONSOLEINPUTPIXELWIDTH  (CONSOLEWIDTH - CONSOLETEXTX - brandwidth - 2)
+
+#define CONSOLETOP              0
+
+#define DIVIDERSTRING           "==================================================================================================="
+
+#define EMPTYVALUE              "\"\""
+
+#define stringize(x)            #x
 
 #if defined(_WIN32)
-#define SDL_FILENAME        "SDL2.dll"
-#define SDL_MIXER_FILENAME  "SDL2_mixer.dll"
-#define SDL_IMAGE_FILENAME  "SDL2_image.dll"
+#define SDL_FILENAME            "SDL2.dll"
+#define SDL_MIXER_FILENAME      "SDL2_mixer.dll"
+#define SDL_IMAGE_FILENAME      "SDL2_image.dll"
 #else
-#define SDL_FILENAME        "SDL2"
-#define SDL_MIXER_FILENAME  "SDL2_mixer"
-#define SDL_IMAGE_FILENAME  "SDL2_image"
+#define SDL_FILENAME            "SDL2"
+#define SDL_MIXER_FILENAME      "SDL2_mixer"
+#define SDL_IMAGE_FILENAME      "SDL2_image"
 #endif
 
 typedef enum
@@ -82,11 +98,23 @@ typedef enum
     STRINGTYPES
 } stringtype_t;
 
+typedef enum
+{
+    bindlistheader,
+    cmdlistheader,
+    cvarlistheader,
+    maplistheader,
+    mapstatsheader,
+    playerstatsheader,
+    thinglistheader
+} headertype_t;
+
 typedef struct
 {
     char                string[1024];
     unsigned int        count;
-    stringtype_t        type;
+    stringtype_t        stringtype;
+    headertype_t        headertype;
     int                 tabs[8];
     unsigned int        tics;
 } console_t;
@@ -105,6 +133,8 @@ extern char             consolecheatparm[3];
 extern char             consolecmdparm[255];
 
 extern dboolean         forceconsoleblurredraw;
+
+extern dboolean         scrollbardrawn;
 
 typedef struct
 {
@@ -139,11 +169,12 @@ void C_StrCVAROutput(char *cvar, char *string);
 void C_CCMDOutput(const char *ccmd);
 void C_Output(const char *string, ...);
 void C_TabbedOutput(const int tabs[8], const char *string, ...);
-void C_Header(const int tabs[8], const char *string, ...);
+void C_Header(const headertype_t headertype);
 void C_Warning(const char *string, ...);
 void C_PlayerMessage(const char *string, ...);
 void C_Obituary(const char *string, ...);
 void C_AddConsoleDivider(void);
+int C_TextWidth(const char *text, const dboolean formatting, const dboolean kerning);
 void C_Init(void);
 void C_ShowConsole(void);
 void C_HideConsole(void);

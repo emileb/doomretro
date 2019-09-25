@@ -5,7 +5,7 @@ include $(CLEAR_VARS)
 
 LOCAL_MODULE    := doomretro
 
-LOCAL_CFLAGS :=  -DRETRO_DOOM -DENGINE_NAME=\"doomretro\" -Wall -Wdeclaration-after-statement  -D_GNU_SOURCE=1 -D_REENTRANT -fsigned-char
+LOCAL_CFLAGS := -DRETRO_DOOM -DENGINE_NAME=\"doomretro\" -Wall -Wdeclaration-after-statement  -D_GNU_SOURCE=1 -D_REENTRANT -fsigned-char
 
 
 LOCAL_C_INCLUDES :=     $(SDL_INCLUDE_PATHS)  \

@@ -190,12 +190,12 @@ HANDLE              CapFPSEvent;
 static dboolean     capslock;
 dboolean            alwaysrun = alwaysrun_default;
 
+evtype_t            lasteventtype = ev_none;
+
 extern dboolean     setsizeneeded;
 extern int          st_palette;
 extern int          windowborderwidth;
 extern int          windowborderheight;
-
-evtype_t            lasteventtype;
 
 void ST_DoRefresh(void);
 
@@ -297,7 +297,7 @@ static int TranslateKey2(int key)
 
 dboolean keystate(int key)
 {
-    const Uint8 *state = SDL_GetKeyboardState(NULL);
+    const uint8_t   *state = SDL_GetKeyboardState(NULL);
 
     return state[TranslateKey2(key)];
 }
@@ -552,6 +552,8 @@ static void I_GetEvent(void)
                         else
                             gamepadthumbLX = clamp(Event->caxis.value, gamepadleftdeadzone);
 
+                        event.type = lasteventtype = ev_gamepad;
+                        D_PostEvent(&event);
                         break;
 
                     case SDL_CONTROLLER_AXIS_LEFTY:
@@ -560,6 +562,8 @@ static void I_GetEvent(void)
                         else
                             gamepadthumbLY = clamp(Event->caxis.value, gamepadleftdeadzone);
 
+                        event.type = lasteventtype = ev_gamepad;
+                        D_PostEvent(&event);
                         break;
 
                     case SDL_CONTROLLER_AXIS_RIGHTX:
@@ -568,6 +572,8 @@ static void I_GetEvent(void)
                         else
                             gamepadthumbRX = clamp(Event->caxis.value, gamepadrightdeadzone);
 
+                        event.type = lasteventtype = ev_gamepad;
+                        D_PostEvent(&event);
                         break;
 
                     case SDL_CONTROLLER_AXIS_RIGHTY:
@@ -576,6 +582,8 @@ static void I_GetEvent(void)
                         else
                             gamepadthumbRY = clamp(Event->caxis.value, gamepadrightdeadzone);
 
+                        event.type = lasteventtype = ev_gamepad;
+                        D_PostEvent(&event);
                         break;
 
                     case SDL_CONTROLLER_AXIS_TRIGGERLEFT:
@@ -584,6 +592,8 @@ static void I_GetEvent(void)
                         else
                             gamepadbuttons &= ~GAMEPAD_LEFT_TRIGGER;
 
+                        event.type = lasteventtype = ev_gamepad;
+                        D_PostEvent(&event);
                         break;
 
                     case SDL_CONTROLLER_AXIS_TRIGGERRIGHT:
@@ -592,11 +602,11 @@ static void I_GetEvent(void)
                         else
                             gamepadbuttons &= ~GAMEPAD_RIGHT_TRIGGER;
 
+                        event.type = lasteventtype = ev_gamepad;
+                        D_PostEvent(&event);
                         break;
                 }
 
-                event.type = lasteventtype = ev_gamepad;
-                D_PostEvent(&event);
                 break;
 
             case SDL_CONTROLLERBUTTONDOWN:
@@ -1007,6 +1017,15 @@ void I_SetPalette(byte *playpal)
         SDL_SetRenderDrawColor(renderer, colors[0].r, colors[0].g, colors[0].b, SDL_ALPHA_OPAQUE);
 }
 
+void I_SetExternalAutomapPalette(void)
+{
+    if (mappalette)
+    {
+        SDL_SetPaletteColors(mappalette, colors, 0, 256);
+        mapblitfunc();
+    }
+}
+
 void I_SetSimplePalette(byte *playpal)
 {
     for (int i = 0; i < 256; i++)
@@ -1019,14 +1038,49 @@ void I_SetSimplePalette(byte *playpal)
     SDL_SetPaletteColors(palette, colors, 0, 256);
 }
 
+void I_SetPaletteWithBrightness(byte *playpal, double brightness)
+{
+    if (r_color == r_color_max)
+    {
+        for (int i = 0; i < 256; i++)
+        {
+            colors[i].r = (byte)(gammatable[gammaindex][*playpal++] * brightness);
+            colors[i].g = (byte)(gammatable[gammaindex][*playpal++] * brightness);
+            colors[i].b = (byte)(gammatable[gammaindex][*playpal++] * brightness);
+        }
+    }
+    else
+    {
+        double  color = r_color / 100.0;
+
+        for (int i = 0; i < 256; i++)
+        {
+            double  r = gammatable[gammaindex][*playpal++] * brightness;
+            double  g = gammatable[gammaindex][*playpal++] * brightness;
+            double  b = gammatable[gammaindex][*playpal++] * brightness;
+            double  p = sqrt(r * r * 0.299 + g * g * 0.587 + b * b * 0.114);
+
+            colors[i].r = (byte)(p + (r - p) * color);
+            colors[i].g = (byte)(p + (g - p) * color);
+            colors[i].b = (byte)(p + (b - p) * color);
+        }
+    }
+
+    SDL_SetPaletteColors(palette, colors, 0, 256);
+
+    if (vid_pillarboxes)
+        SDL_SetRenderDrawColor(renderer, colors[0].r, colors[0].g, colors[0].b, SDL_ALPHA_OPAQUE);
+}
+
 static void I_RestoreFocus(void)
 {
 #if defined(_WIN32)
     SDL_SysWMinfo   info;
 
     SDL_VERSION(&info.version);
-    SDL_GetWindowWMInfo(window, &info);
-    SetFocus(info.info.win.window);
+
+    if (SDL_GetWindowWMInfo(window, &info))
+        SetFocus(info.info.win.window);
 #endif
 }
 
@@ -1038,12 +1092,11 @@ static void GetDisplays(void)
         SDL_GetDisplayBounds(i, &displays[i]);
 }
 
-void I_CreateExternalAutomap(dboolean output)
+void I_CreateExternalAutomap(int outputlevel)
 {
-    Uint32      rmask, gmask, bmask, amask;
+    uint32_t    rmask, gmask, bmask, amask;
     int         bpp;
-    int         flags = SDL_RENDERER_TARGETTEXTURE;
-    static int  am_displayindex;
+    int         am_displayindex = !displayindex;
 
     mapscreen = *screens;
     mapblitfunc = nullfunc;
@@ -1055,28 +1108,24 @@ void I_CreateExternalAutomap(dboolean output)
 
     if (numdisplays == 1)
     {
-        if (output)
-            C_Warning("Only one display was found. An external automap couldn't be created.");
+        if (outputlevel >= 1)
+            C_Warning("An external automap couldn't be created. Only one display was found.");
 
         return;
     }
 
-    am_displayindex = !displayindex;
-
     SDL_SetHintWithPriority(SDL_HINT_VIDEO_MINIMIZE_ON_FOCUS_LOSS, "0", SDL_HINT_OVERRIDE);
 
     mapwindow = SDL_CreateWindow("Automap", SDL_WINDOWPOS_UNDEFINED_DISPLAY(am_displayindex),
-        SDL_WINDOWPOS_UNDEFINED_DISPLAY(am_displayindex), 0, 0, SDL_WINDOW_FULLSCREEN_DESKTOP);
-
-    if (vid_vsync)
-        flags |= SDL_RENDERER_PRESENTVSYNC;
+        SDL_WINDOWPOS_UNDEFINED_DISPLAY(am_displayindex), 0, 0, SDL_WINDOW_FULLSCREEN);
 
 
-    maprenderer = SDL_CreateRenderer(mapwindow, -1, flags);
+    maprenderer = SDL_CreateRenderer(mapwindow, -1, SDL_RENDERER_TARGETTEXTURE);
 #ifdef __ANDROID__
     if( M_CheckParm("-android_aspect") )
 #endif
-    SDL_RenderSetLogicalSize(maprenderer, SCREENWIDTH, SCREENHEIGHT);
+    SDL_RenderSetLogicalSize(maprenderer, SCREENWIDTH, SCREENWIDTH * 10 / 16);
+
     mapsurface = SDL_CreateRGBSurface(0, SCREENWIDTH, SCREENHEIGHT, 8, 0, 0, 0, 0);
 
 
@@ -1117,7 +1166,7 @@ void I_CreateExternalAutomap(dboolean output)
 
     I_RestoreFocus();
 
-    if (output)
+    if (outputlevel == 2)
     {
         const char  *displayname = SDL_GetDisplayName(am_displayindex);
 
@@ -1301,7 +1350,7 @@ static void SetVideoMode(dboolean output)
     int                 rendererflags = SDL_RENDERER_TARGETTEXTURE;
     int                 windowflags = SDL_WINDOW_RESIZABLE;
     int                 width, height;
-    Uint32              rmask, gmask, bmask, amask;
+    uint32_t            rmask, gmask, bmask, amask;
     int                 bpp;
     SDL_RendererInfo    rendererinfo;
     const char          *displayname = SDL_GetDisplayName((displayindex = vid_display - 1));
@@ -1494,20 +1543,20 @@ static void SetVideoMode(dboolean output)
 
             if (major * 10 + minor < 21)
             {
-                C_Warning("<i>"PACKAGE_NAME"</i> requires at least <i>OpenGL 2.1</i>.");
+                C_Warning("<i>"PACKAGE_NAME"</i> requires at least <i>OpenGL v2.1</i>.");
 
                 vid_scaleapi = vid_scaleapi_direct3d;
                 M_SaveCVARs();
                 SDL_SetHintWithPriority(SDL_HINT_RENDER_DRIVER, vid_scaleapi, SDL_HINT_OVERRIDE);
 
                 if (output)
-                    C_Output("The screen is now rendered using hardware acceleration with the "
-                        "<i><b>Direct3D %s</b></i> API instead.", (SDL_VIDEO_RENDER_D3D11 ? "11.0" : "9.0"));
+                    C_Output("The screen is now rendered using hardware acceleration with %s of the "
+                        "<i><b>Direct3D</b></i> API instead.", (SDL_VIDEO_RENDER_D3D11 ? "v11.0" : "v9.0"));
             }
             else
             {
                 if (output)
-                    C_Output("The screen is rendered using hardware acceleration with the <i><b>OpenGL %i.%i</b></i> API.",
+                    C_Output("The screen is rendered using hardware acceleration with v%i.%i of the <i><b>OpenGL</b></i> API.",
                         major, minor);
 
                 if (!M_StringCompare(vid_scaleapi, vid_scaleapi_opengl))
@@ -1528,7 +1577,7 @@ static void SetVideoMode(dboolean output)
             if (output)
                 C_Output("The screen is rendered using hardware acceleration with the <i><b>OpenGL ES 2</b></i> API.");
         }
-#elif defined(__MACOSX__)
+#elif defined(__APPLE__)
         else if (M_StringCompare(rendererinfo.name, vid_scaleapi_metal))
         {
             if (output)
@@ -1538,8 +1587,8 @@ static void SetVideoMode(dboolean output)
         else if (M_StringCompare(rendererinfo.name, vid_scaleapi_direct3d))
         {
             if (output)
-                C_Output("The screen is rendered using hardware acceleration with the <i><b>Direct3D %s</b></i> API.",
-                    (SDL_VIDEO_RENDER_D3D11 ? "11.0" : "9.0"));
+                C_Output("The screen is rendered using hardware acceleration with %s of the <i><b>Direct3D</b></i> API.",
+                    (SDL_VIDEO_RENDER_D3D11 ? "v11.0" : "v9.0"));
 
             if (!M_StringCompare(vid_scaleapi, vid_scaleapi_direct3d))
             {
@@ -1679,8 +1728,8 @@ static void SetVideoMode(dboolean output)
             C_Output("Gamma correction is off.");
         else
         {
-            static char text[128];
-            int         len;
+            char    text[128];
+            int     len;
 
             M_snprintf(text, sizeof(text), "The gamma correction level is %.2f.", r_gamma);
             len = (int)strlen(text);
@@ -1795,7 +1844,7 @@ void I_RestartGraphics(void)
     if (vid_widescreen)
         I_ToggleWidescreen(true);
 
-    I_CreateExternalAutomap(false);
+    I_CreateExternalAutomap(0);
 
 #if defined(_WIN32)
     I_InitWindows32();
@@ -1926,10 +1975,6 @@ void I_InitGraphics(void)
 
     I_InitGammaTables();
 
-    // [BH] There's a known bug in SDL 2.0.9 that causes framerate to intermittently drop.
-    //  This is a workaround for this bug, even if no joysticks are in use. Should be fixed in SDL 2.0.10.
-    SDL_Init(SDL_INIT_JOYSTICK);
-
 #if !defined(_WIN32)
     if (*vid_driver)
         SDL_setenv("SDL_VIDEODRIVER", vid_driver, true);
@@ -1948,7 +1993,7 @@ void I_InitGraphics(void)
         SetShowCursor(false);
 
     mapscreen = oscreen = malloc(SCREENWIDTH * SCREENHEIGHT);
-    I_CreateExternalAutomap(true);
+    I_CreateExternalAutomap(2);
 
 #if defined(_WIN32)
     I_InitWindows32();

@@ -36,18 +36,20 @@
 ========================================================================
 */
 
+#include <stdlib.h>
+
 #include "i_colors.h"
 #include "i_swap.h"
 #include "w_wad.h"
 #include "z_zone.h"
 
-#define ADDITIVE    -1
+#define ADDITIVE   -1
 
 #define R           1
 #define W           2
 #define G           4
 #define B           8
-#define X           16
+#define X          16
 
 static byte general[256] =
 {
@@ -69,6 +71,7 @@ static byte general[256] =
     B,   B,   B,   B,   B,   B,   B,   B,   R,   R,   0,   0,   0,   0,   0,   0  // 240 to 255
 };
 
+#define ALTHUD     -1
 #define ALL         0
 #define REDS        R
 #define WHITES      W
@@ -84,6 +87,10 @@ byte    *tinttab50;
 byte    *tinttab60;
 byte    *tinttab66;
 byte    *tinttab75;
+
+byte    *alttinttab20;
+byte    *alttinttab40;
+byte    *alttinttab60;
 
 byte    *tranmap;
 
@@ -104,36 +111,32 @@ byte    nearestblack;
 
 int FindNearestColor(byte *palette, int red, int green, int blue)
 {
-    int best_difference = INT_MAX;
-    int best_color = 0;
+    int bestdiff = INT_MAX;
+    int bestcolor = 0;
 
     for (int i = 0; i < 256; i++)
     {
-        int r1 = red;
-        int g1 = green;
-        int b1 = blue;
-        int r2 = *palette++;
-        int g2 = *palette++;
-        int b2 = *palette++;
+        int red2 = *palette++;
+        int green2 = *palette++;
+        int blue2 = *palette++;
 
-        // From http://www.compuphase.com/cmetric.htm
-        int rmean = (r1 + r2) / 2;
-        int r = r1 - r2;
-        int g = g1 - g2;
-        int b = b1 - b2;
-        int difference = (((512 + rmean) * r * r) >> 8) + 4 * g * g + (((767 - rmean) * b * b) >> 8);
+        // From <https://www.compuphase.com/cmetric.htm>
+        int rmean = (red + red2) / 2;
+        int r = red - red2;
+        int g = green - green2;
+        int b = blue - blue2;
+        int diff = (((512 + rmean) * r * r) >> 8) + 4 * g * g + (((767 - rmean) * b * b) >> 8);
 
-        if (!difference)
+        if (!diff)
             return i;
-
-        if (difference < best_difference)
+        else if (diff < bestdiff)
         {
-            best_color = i;
-            best_difference = difference;
+            bestcolor = i;
+            bestdiff = diff;
         }
     }
 
-    return best_color;
+    return bestcolor;
 }
 
 void FindNearestColors(byte *palette)
@@ -202,40 +205,36 @@ int FindDominantColor(patch_t *patch)
 
 static byte *GenerateTintTable(byte *palette, int percent, byte filter[256], int colors)
 {
-    byte    *result = Z_Malloc(256 * 256, PU_STATIC, NULL);
+    byte    *result = malloc(256 * 256);
 
     for (int foreground = 0; foreground < 256; foreground++)
     {
-        if ((filter[foreground] & colors) || colors == ALL)
+        if ((filter[foreground] & colors) || colors == ALL || colors == ALTHUD)
         {
             for (int background = 0; background < 256; background++)
             {
                 byte    *color1 = &palette[background * 3];
                 byte    *color2 = &palette[foreground * 3];
-                int     r;
-                int     g;
-                int     b;
+                int     r, g, b;
 
                 if (percent == ADDITIVE)
                 {
-                    if ((filter[background] & BLUES) && !(filter[foreground] & WHITES))
-                    {
-                        r = ((int)color1[0] * 25 + (int)color2[0] * 75) / 100;
-                        g = ((int)color1[1] * 25 + (int)color2[1] * 75) / 100;
-                        b = ((int)color1[2] * 25 + (int)color2[2] * 75) / 100;
-                    }
-                    else
-                    {
-                        r = MIN(color1[0] + color2[0], 255);
-                        g = MIN(color1[1] + color2[1], 255);
-                        b = MIN(color1[2] + color2[2], 255);
-                    }
+                    r = MIN(color1[0] + color2[0], 255);
+                    g = MIN(color1[1] + color2[1], 255);
+                    b = MIN(color1[2] + color2[2], 255);
                 }
                 else
                 {
-                    r = ((int)color1[0] * percent + (int)color2[0] * (100 - percent)) / 100;
-                    g = ((int)color1[1] * percent + (int)color2[1] * (100 - percent)) / 100;
+                    // [crispy] blended color - emphasize blues
+                    // Color matching in RGB space doesn't work very well with the blues
+                    // in DOOM's palette. Rather than do any color conversions, just
+                    // emphasize the blues when building the translucency table.
+                    int btmp = (colors == ALTHUD && color1[2] * 1.666 >= color1[0] + color1[1] ? 50 : 0);
+
+                    r = ((int)color1[0] * percent + (int)color2[0] * (100 - percent)) / (100 + btmp);
+                    g = ((int)color1[1] * percent + (int)color2[1] * (100 - percent)) / (100 + btmp);
                     b = ((int)color1[2] * percent + (int)color2[2] * (100 - percent)) / 100;
+
                 }
 
                 result[(background << 8) + foreground] = FindNearestColor(palette, r, g, b);
@@ -261,6 +260,10 @@ void I_InitTintTables(byte *palette)
     tinttab60 = GenerateTintTable(palette, 60, general, ALL);
     tinttab66 = GenerateTintTable(palette, 66, general, ALL);
     tinttab75 = GenerateTintTable(palette, 75, general, ALL);
+
+    alttinttab20 = GenerateTintTable(palette, 20, general, ALTHUD);
+    alttinttab40 = GenerateTintTable(palette, 40, general, ALTHUD);
+    alttinttab60 = GenerateTintTable(palette, 60, general, ALTHUD);
 
     tranmap = (lump != -1 ? W_CacheLumpNum(lump) : tinttab50);
 

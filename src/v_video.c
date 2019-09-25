@@ -69,6 +69,7 @@ char            *r_lowpixelsize = r_lowpixelsize_default;
 
 static char     screenshotfolder[MAX_PATH];
 
+extern patch_t  *brand;
 extern dboolean vanilla;
 
 //
@@ -88,8 +89,22 @@ void V_FillRect(int scrn, int x, int y, int width, int height, int color, dboole
 void V_FillTransRect(int scrn, int x, int y, int width, int height, int color, dboolean right)
 {
     byte        *dest = &screens[scrn][y * SCREENWIDTH + x];
+    const byte  *tint60 = &alttinttab60[(color <<= 8)];
+
+    for (int xx = 0; xx < width; xx++)
+    {
+        byte    *dot = dest + xx;
+
+        for (int yy = 0; yy < height; yy++, dot += SCREENWIDTH)
+            *dot = *(tint60 + *dot);
+    }
+}
+
+void V_FillSoftTransRect(int scrn, int x, int y, int width, int height, int color, dboolean right)
+{
+    byte        *dest = &screens[scrn][y * SCREENWIDTH + x];
     byte        *dot;
-    const byte  *tint60 = &tinttab60[(color <<= 8)];
+    const byte  *tint60 = &alttinttab60[(color <<= 8)];
 
     for (int xx = 0; xx < width; xx++)
     {
@@ -101,8 +116,8 @@ void V_FillTransRect(int scrn, int x, int y, int width, int height, int color, d
 
     if (height > 2)
     {
-        const byte  *tint20 = tinttab20 + color;
-        const byte  *tint40 = tinttab40 + color;
+        const byte  *tint20 = alttinttab20 + color;
+        const byte  *tint40 = alttinttab40 + color;
 
         dot = dest - 1 - SCREENWIDTH * 2;
         *dot = *(tint20 + *dot);
@@ -518,7 +533,12 @@ void V_DrawBigTranslucentPatch(int x, int y, patch_t *patch)
                 int height = topdelta + length - count;
 
                 if (y + height > CONSOLETOP && *source)
-                    *dest = tinttab50[(nearestcolors[*source] << 8) + *dest];
+                {
+                    if (patch == brand && (*source == 4 || *source == 82))
+                        *dest = nearestcolors[*source];
+                    else
+                        *dest = tinttab50[(nearestcolors[*source] << 8) + *dest];
+                }
 
                 source++;
                 dest += SCREENWIDTH;
@@ -550,7 +570,7 @@ dboolean V_IsEmptyPatch(patch_t *patch)
     return true;
 }
 
-extern byte *tempscreen;
+extern byte tempscreen[SCREENWIDTH * SCREENHEIGHT];
 
 void V_DrawPatchToTempScreen(int x, int y, patch_t *patch)
 {
@@ -919,7 +939,7 @@ void V_DrawTranslucentAltHUDPatch(int x, int y, patch_t *patch, int from, int to
                 byte    dot = *source++;
 
                 if (dot)
-                    *dest = tinttab60[(dot == from ? to : (nearestcolors[dot] << 8)) + *dest];
+                    *dest = alttinttab60[(dot == from ? to : (nearestcolors[dot] << 8)) + *dest];
 
                 dest += SCREENWIDTH;
             }
@@ -1492,7 +1512,10 @@ void V_Init(void)
         char    *appdatafolder = M_GetAppDataFolder();
 
         M_snprintf(screenshotfolder, sizeof(screenshotfolder), "%s"DIR_SEPARATOR_S"screenshots", appdatafolder);
+
+#if !defined(__APPLE__)
         free(appdatafolder);
+#endif
     }
 }
 
@@ -1594,8 +1617,8 @@ dboolean V_ScreenShot(void)
     {
         do
         {
-            M_snprintf(lbmpath2, sizeof(lbmpath2), "%s"DIR_SEPARATOR_S"%s (%s).png", screenshotfolder, makevalidfilename(mapname),
-                commify(count++));
+            M_snprintf(lbmpath2, sizeof(lbmpath2), "%s"DIR_SEPARATOR_S"%s (%s).png",
+                screenshotfolder, makevalidfilename(mapname), commify(count++));
         } while (M_FileExists(lbmpath2));
 
         V_SavePNG(maprenderer, lbmpath2);

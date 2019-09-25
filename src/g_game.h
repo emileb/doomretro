@@ -87,11 +87,14 @@ void G_ScreenShot(void);
 void G_DoScreenShot(void);
 void I_ToggleWidescreen(dboolean toggle);
 
+void G_SetFastParms(int fast_pending);
 void G_SetMovementSpeed(int scale);
 void G_ToggleAlwaysRun(evtype_t type);
 
 void G_NextWeapon(void);
 void G_PrevWeapon(void);
+
+void G_LoadedGameMessage(void);
 
 extern fixed_t  forwardmove[2];
 extern fixed_t  sidemove[2];

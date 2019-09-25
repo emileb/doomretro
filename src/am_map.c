@@ -47,6 +47,7 @@
 #include "i_timer.h"
 #include "m_bbox.h"
 #include "m_config.h"
+#include "m_menu.h"
 #include "m_misc.h"
 #include "p_local.h"
 #include "st_stuff.h"
@@ -81,8 +82,6 @@ int am_wallcolor = am_wallcolor_default;
 #define TELEPORTERPRIORITY      3
 #define TSWALLPRIORITY          2
 #define GRIDPRIORITY            1
-
-static byte *priorities;
 
 static byte playercolor;
 static byte thingcolor;
@@ -218,6 +217,8 @@ int                 direction;
 
 static am_frame_t   am_frame;
 
+static dboolean     isteleportline[NUMLINESPECIALS];
+
 static void AM_Rotate(fixed_t *x, fixed_t *y, angle_t angle);
 static void (*putbigdot)(unsigned int, unsigned int, byte *);
 static void PUTDOT(unsigned int x, unsigned int y, byte *color);
@@ -332,17 +333,18 @@ static void AM_ChangeWindowLoc(void)
 
 void AM_SetColors(void)
 {
-    byte    *priority = Z_Calloc(1, 256, PU_STATIC, NULL);
+    byte        priority[256] = { 0 };
+    static byte priorities[256 * 256];
 
-    priority[am_wallcolor] = WALLPRIORITY;
-    priority[am_allmapwallcolor] = ALLMAPWALLPRIORITY;
-    priority[am_cdwallcolor] = CDWALLPRIORITY;
-    priority[am_allmapcdwallcolor] = ALLMAPCDWALLPRIORITY;
-    priority[am_fdwallcolor] = FDWALLPRIORITY;
-    priority[am_allmapfdwallcolor] = ALLMAPFDWALLPRIORITY;
-    priority[am_teleportercolor] = TELEPORTERPRIORITY;
-    priority[am_tswallcolor] = TSWALLPRIORITY;
-    priority[am_gridcolor] = GRIDPRIORITY;
+    priority[nearestcolors[am_wallcolor]] = WALLPRIORITY;
+    priority[nearestcolors[am_allmapwallcolor]] = ALLMAPWALLPRIORITY;
+    priority[nearestcolors[am_cdwallcolor]] = CDWALLPRIORITY;
+    priority[nearestcolors[am_allmapcdwallcolor]] = ALLMAPCDWALLPRIORITY;
+    priority[nearestcolors[am_fdwallcolor]] = FDWALLPRIORITY;
+    priority[nearestcolors[am_allmapfdwallcolor]] = ALLMAPFDWALLPRIORITY;
+    priority[nearestcolors[am_teleportercolor]] = TELEPORTERPRIORITY;
+    priority[nearestcolors[am_tswallcolor]] = TSWALLPRIORITY;
+    priority[nearestcolors[am_gridcolor]] = GRIDPRIORITY;
 
     playercolor = nearestcolors[am_playercolor];
     thingcolor = nearestcolors[am_thingcolor];
@@ -363,7 +365,7 @@ void AM_SetColors(void)
     allmapfdwallcolor = &priorities[nearestcolors[am_allmapfdwallcolor] << 8];
     teleportercolor = &priorities[nearestcolors[am_teleportercolor] << 8];
     tswallcolor = &priorities[nearestcolors[am_tswallcolor] << 8];
-    gridcolor = &priorities[nearestcolors[am_gridcolor] << 8];
+    gridcolor = &priorities[nearestcolors[am_gridcolor ]<< 8];
 }
 
 void AM_GetGridSize(void)
@@ -381,18 +383,25 @@ void AM_GetGridSize(void)
         gridwidth = 128 << MAPBITS;
         gridheight = 128 << MAPBITS;
         am_gridsize = am_gridsize_default;
-
         M_SaveCVARs();
     }
 }
 
 void AM_Init(void)
 {
-    priorities = Z_Malloc(256 * 256, PU_STATIC, NULL);
-
     AM_SetColors();
-
     AM_GetGridSize();
+
+    isteleportline[W1_Teleport] = true;
+    isteleportline[W1_ExitLevel] = true;
+    isteleportline[WR_Teleport] = true;
+    isteleportline[W1_ExitLevel_GoesToSecretLevel] = true;
+    isteleportline[W1_Teleport_AlsoMonsters_Silent_SameAngle] = true;
+    isteleportline[WR_Teleport_AlsoMonsters_Silent_SameAngle] = true;
+    isteleportline[W1_TeleportToLineWithSameTag_Silent_SameAngle] = true;
+    isteleportline[WR_TeleportToLineWithSameTag_Silent_SameAngle] = true;
+    isteleportline[W1_TeleportToLineWithSameTag_Silent_ReversedAngle] = true;
+    isteleportline[WR_TeleportToLineWithSameTag_Silent_ReversedAngle] = true;
 }
 
 void AM_SetAutomapSize(void)
@@ -592,7 +601,7 @@ void AM_AddMark(void)
 {
     const int   x = am_frame.center.x;
     const int   y = am_frame.center.y;
-    static char message[32];
+    char        message[32];
 
     for (int i = 0; i < markpointnum; i++)
         if (markpoints[i].x == x && markpoints[i].y == y)
@@ -628,7 +637,7 @@ void AM_ClearMarks(void)
         }
         else if (markpress == 1)
         {
-            static char message[32];
+            char    message[32];
 
             // clear one mark
             M_snprintf(message, sizeof(message), s_AMSTR_MARKCLEARED, markpointnum--);
@@ -645,13 +654,15 @@ void AM_AddToPath(void)
     const int   y = viewplayer->mo->y >> FRACTOMAPBITS;
 
     if (pathpointnum)
+    {
         if (ABS(pathpoints[pathpointnum - 1].x - x) < FRACUNIT && ABS(pathpoints[pathpointnum - 1].y - y) < FRACUNIT)
             return;
 
-    if (pathpointnum >= pathpointnum_max)
-    {
-        pathpointnum_max = (pathpointnum_max ? pathpointnum_max << 1 : 16);
-        pathpoints = I_Realloc(pathpoints, pathpointnum_max * sizeof(*pathpoints));
+        if (pathpointnum >= pathpointnum_max)
+        {
+            pathpointnum_max = (pathpointnum_max ? pathpointnum_max << 1 : 1024);
+            pathpoints = I_Realloc(pathpoints, pathpointnum_max * sizeof(*pathpoints));
+        }
     }
 
     pathpoints[pathpointnum].x = x;
@@ -1342,8 +1353,6 @@ static __inline void PUTDOT2(unsigned int x, unsigned int y, byte *color)
         *(mapscreen + y + x) = *color;
 }
 
-static void (*putbigdot)(unsigned int, unsigned int, byte *);
-
 static __inline void PUTBIGDOT(unsigned int x, unsigned int y, byte *color)
 {
     if (x < mapwidth)
@@ -1528,12 +1537,7 @@ static void AM_DrawGrid(void)
     // Draw vertical gridlines
     for (fixed_t x = start; x < end; x += gridwidth)
     {
-        mline_t ml;
-
-        ml.a.x = x;
-        ml.b.x = x;
-        ml.a.y = starty;
-        ml.b.y = starty + minlen;
+        mline_t ml = { { x, starty }, { x, starty + minlen } };
 
         if (am_rotatemode)
         {
@@ -1555,12 +1559,7 @@ static void AM_DrawGrid(void)
     // Draw horizontal gridlines
     for (fixed_t y = start; y < end; y += gridheight)
     {
-        mline_t ml;
-
-        ml.a.x = startx;
-        ml.b.x = startx + minlen;
-        ml.a.y = y;
-        ml.b.y = y;
+        mline_t ml = { { startx, y }, { startx + minlen, y } };
 
         if (am_rotatemode)
         {
@@ -1616,17 +1615,8 @@ static void AM_DrawWalls(void)
                     AM_RotatePoint(&mline.b);
                 }
 
-                if ((special
-                    && (special == W1_Teleport
-                        || special == W1_ExitLevel
-                        || special == WR_Teleport
-                        || special == W1_ExitLevel_GoesToSecretLevel
-                        || special == W1_Teleport_AlsoMonsters_Silent_SameAngle
-                        || special == WR_Teleport_AlsoMonsters_Silent_SameAngle
-                        || special == W1_TeleportToLineWithSameTag_Silent_SameAngle
-                        || special == WR_TeleportToLineWithSameTag_Silent_SameAngle
-                        || special == W1_TeleportToLineWithSameTag_Silent_ReversedAngle
-                        || special == WR_TeleportToLineWithSameTag_Silent_ReversedAngle))
+                if (special
+                    && isteleportline[special]
                     && ((flags & ML_TELEPORTTRIGGERED) || cheating || (back && isteleport[back->floorpic])))
                 {
                     if (cheating || (mapped && !secret && back && back->ceilingheight != back->floorheight))
@@ -1863,7 +1853,7 @@ static void AM_DrawThings(void)
                     fx = CXMTOF(point.x);
                     fy = CYMTOF(point.y);
 
-                    if (fx >= -w && fx <= (int)mapwidth + w && fy >= -w && fy <= (int)mapwidth + w)
+                    if (fx >= -w && fx <= (int)mapwidth + w && fy >= -w && fy <= (int)mapheight + w)
                         AM_DrawLineCharacter(thingtriangle, THINGTRIANGLELINES, w, angle, thingcolor, point.x, point.y);
                 }
 
@@ -2101,11 +2091,11 @@ void AM_Drawer(void)
     AM_ClearFB();
     AM_DrawWalls();
 
-    if (menuactive)
-        return;
-
     if (am_grid)
         AM_DrawGrid();
+
+    if (menuactive && !inhelpscreens)
+        return;
 
     if (am_path)
         AM_DrawPath();

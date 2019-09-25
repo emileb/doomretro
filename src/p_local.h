@@ -140,6 +140,7 @@ void P_RemoveMobj(mobj_t *mobj);
 dboolean P_SetMobjState(mobj_t *mobj, statenum_t state);
 void P_MobjThinker(mobj_t *mobj);
 
+mobj_t *P_SpawnMapThing(mapthing_t *mthing, dboolean spawnmonsters);
 void P_SpawnPuff(fixed_t x, fixed_t y, fixed_t z, angle_t angle);
 void P_SpawnSmokeTrail(fixed_t x, fixed_t y, fixed_t z, angle_t angle);
 void P_SpawnBlood(fixed_t x, fixed_t y, fixed_t z, angle_t angle, int damage, mobj_t *target);
@@ -217,6 +218,7 @@ void P_SetBloodSplatPosition(bloodsplat_t *splat);
 
 // If "floatok" true, move would be ok
 // if within "tmfloorz - tmceilingz".
+extern fixed_t  attackrange;
 extern dboolean floatok;
 extern dboolean felldown;       // killough 11/98: indicates object pushed off ledge
 extern fixed_t  tmfloorz;
@@ -232,7 +234,7 @@ dboolean P_CheckPosition(mobj_t *thing, fixed_t x, fixed_t y);
 mobj_t *P_CheckOnmobj(mobj_t *thing);
 void P_FakeZMovement(mobj_t *mo);
 dboolean P_IsInLiquid(mobj_t *thing);
-dboolean P_TryMove(mobj_t *thing, fixed_t x, fixed_t y, dboolean dropoff);
+dboolean P_TryMove(mobj_t *thing, fixed_t x, fixed_t y, int dropoff);
 dboolean P_CheckLineSide(mobj_t *actor, fixed_t x, fixed_t y);
 dboolean P_TeleportMove(mobj_t *thing, fixed_t x, fixed_t y, fixed_t z, dboolean boss);
 void P_SlideMove(mobj_t *mo);
@@ -244,7 +246,7 @@ void P_FreeSecNodeList(void);
 
 extern mobj_t   *linetarget;    // who got hit (or NULL)
 
-fixed_t P_AimLineAttack(mobj_t *t1, angle_t angle, fixed_t distance);
+fixed_t P_AimLineAttack(mobj_t *t1, angle_t angle, fixed_t distance, int mask);
 
 void P_LineAttack(mobj_t *t1, angle_t angle, fixed_t distance, fixed_t slope, int damage);
 

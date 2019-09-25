@@ -78,7 +78,7 @@ static char *dehfgets(char *buf, int n, DEHFILE *fp)
         return fgets(buf, n, fp->f);
     }
 
-    if (!n || !*fp->inp || fp->size <= 0)       // If no more characters
+    if (!n || fp->size <= 0 || !*fp->inp)       // If no more characters
         return NULL;
 
     if (n == 1)
@@ -102,7 +102,7 @@ static char *dehfgets(char *buf, int n, DEHFILE *fp)
 
 static int dehfeof(DEHFILE *fp)
 {
-    return (!fp->lump ? feof(fp->f) : !*fp->inp || fp->size <= 0);
+    return (!fp->lump ? feof(fp->f) : fp->size <= 0 || !*fp->inp);
 }
 
 static int dehfgetc(DEHFILE *fp)
@@ -145,8 +145,6 @@ char    *s_NETEND = NETEND;
 char    *s_ENDGAME = ENDGAME;
 char    *s_DOSY = DOSY;
 char    *s_DOSA = "";
-char    *s_OTHERY = "";
-char    *s_OTHERA = "";
 char    *s_DETAILHI = DETAILHI;
 char    *s_DETAILLO = DETAILLO;
 char    *s_GAMMALVL0 = GAMMALVL0;
@@ -714,8 +712,6 @@ deh_strs deh_strlookup[] =
     { &s_ENDGAME,                    "ENDGAME"                    },
     { &s_DOSY,                       "DOSY"                       },
     { &s_DOSA,                       "DOSA"                       },
-    { &s_OTHERY,                     "OTHERY"                     },
-    { &s_OTHERA,                     "OTHERA"                     },
     { &s_DETAILHI,                   "DETAILHI"                   },
     { &s_DETAILLO,                   "DETAILLO"                   },
     { &s_GAMMALVL0,                  "GAMMALVL0"                  },
@@ -1655,7 +1651,8 @@ static const struct deh_mobjflags_s deh_mobjflags2[] =
     { "CRUSHABLE",                 MF2_CRUSHABLE                 },
     { "MASSACRE",                  MF2_MASSACRE                  },
     { "DECORATION",                MF2_DECORATION                },
-    { "MONSTERMISSILE",            MF2_MONSTERMISSILE            }
+    { "MONSTERMISSILE",            MF2_MONSTERMISSILE            },
+    { "BOSS",                      MF2_BOSS                      }
 };
 
 // STATE - Dehacked block name = "Frame" and "Pointer"
@@ -2129,7 +2126,7 @@ void ProcessDehFile(char *filename, int lumpnum)
         char    *linecount_str = commify(linecount);
         char    *lumpname = uppercase(lumpinfo[lumpnum]->name);
 
-        C_Output("Parsed %s line%s in the <b>%s</b> lump in %s <b>%s</b>.",
+        C_Output("Parsed %s line%s from the <b>%s</b> lump in %s <b>%s</b>.",
             linecount_str, (linecount > 1 ? "s" : ""), lumpname, (W_WadType(filename) == IWAD ? "IWAD" : "PWAD"), filename);
 
         free(linecount_str);
@@ -2140,7 +2137,7 @@ void ProcessDehFile(char *filename, int lumpnum)
         char    *linecount_str = commify(linecount);
         char    *filename_free = uppercase(filename);
 
-        C_Output("Parsed %s line%s in the <i><b>DeHackEd</b></i>%s file <b>%s</b>.", linecount_str, (linecount > 1 ? "s" : ""),
+        C_Output("Parsed %s line%s from the <i><b>DeHackEd</b></i>%s file <b>%s</b>.", linecount_str, (linecount > 1 ? "s" : ""),
             (M_StringEndsWith(filename_free, "BEX") ? " with <i><b>BOOM</b></i> extensions" : ""), GetCorrectCase(filename));
 
         free(linecount_str);
@@ -2161,6 +2158,8 @@ static void deh_procBexCodePointers(DEHFILE *fpin, char *line)
     char    inbuffer[DEH_BUFFERMAX] = "";
     int     indexnum;
     char    mnemonic[DEH_MAXKEYLEN] = "";   // to hold the codepointer mnemonic
+
+    boomcompatible = true;
 
     // Ty 05/16/98 - initialize it to something, dummy!
     strncpy(inbuffer, line, DEH_BUFFERMAX);
@@ -2207,6 +2206,15 @@ static void deh_procBexCodePointers(DEHFILE *fpin, char *line)
 
                 if (devparm)
                     C_Output(" - applied %s from codeptr[%i] to states[%i]", deh_bexptrs[i].lookup, i, indexnum);
+
+                if (M_StringCompare(key, "A_Spawn")
+                    || M_StringCompare(key, "A_Turn")
+                    || M_StringCompare(key, "A_Face")
+                    || M_StringCompare(key, "A_Scratch")
+                    || M_StringCompare(key, "A_PlaySound")
+                    || M_StringCompare(key, "A_RandomJump")
+                    || M_StringCompare(key, "A_LineEffect"))
+                    mbfcompatible = true;
 
                 found = true;
             }
@@ -2814,7 +2822,7 @@ static void deh_procSprite(DEHFILE *fpin, char *line) // Not supported
     }
 }
 
-extern int pars[5][10];
+extern int pars[6][10];
 extern int cpars[33];
 
 // ====================================================================
@@ -2833,6 +2841,8 @@ static void deh_procPars(DEHFILE *fpin, char *line) // extension
     int     level;
     int     partime;
     int     oldpar;
+
+    boomcompatible = true;
 
     // new item, par times
     // usage: After [PARS] Par 0 section identifier, use one or more of these
@@ -2886,7 +2896,7 @@ static void deh_procPars(DEHFILE *fpin, char *line) // extension
         }
         else
         {
-            // note that though it's a [4][10] array, the "left" and "top" aren't used,
+            // note that though it's a [6][10] array, the "left" and "top" aren't used,
             // effectively making it a base 1 array.
             // Ty 07/11/98 - level was being checked against max 3 - dumb error
             if (episode < 1 || episode > 5 || level < 1 || level > 9)
@@ -3321,7 +3331,7 @@ static void deh_procText(DEHFILE *fpin, char *line)
     {
         usedlen = (fromlen < tolen ? fromlen : tolen);
 
-        if (fromlen != tolen && !hacx)
+        if (fromlen != tolen && devparm)
             C_Warning("Mismatched lengths from %i to %i. Using %i.", fromlen, tolen, usedlen);
 
         // Try sound effects entries - see sounds.c
@@ -3341,6 +3351,7 @@ static void deh_procText(DEHFILE *fpin, char *line)
                 break;          // only one matches, quit early
             }
         }
+
         if (!found)             // not yet
         {
             // Try music name entries - see sounds.c
@@ -3407,6 +3418,8 @@ static void deh_procStrings(DEHFILE *fpin, char *line)
     static int  maxstrlen = 128;        // maximum string length, bumped 128 at a time as needed
                                         // holds the final result of the string after concatenation
     static char *holdstring;
+
+    boomcompatible = true;
 
     if (devparm)
         C_Output("Processing extended string substitution");

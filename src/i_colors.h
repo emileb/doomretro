@@ -51,6 +51,10 @@ extern byte *tinttab60;
 extern byte *tinttab66;
 extern byte *tinttab75;
 
+extern byte *alttinttab20;
+extern byte *alttinttab40;
+extern byte *alttinttab60;
+
 extern byte *tranmap;
 extern byte *tinttabadditive;
 extern byte *tinttabred;

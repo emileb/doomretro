@@ -401,16 +401,16 @@ void M_SaveCVARs(void)
 
                 if (!flag)
                 {
-                    static char buf[128];
+                    static char buffer[128];
                     int         len;
 
-                    M_snprintf(buf, sizeof(buf), "%.2f", v);
-                    len = (int)strlen(buf);
+                    M_snprintf(buffer, sizeof(buffer), "%.2f", v);
+                    len = (int)strlen(buffer);
 
-                    if (len >= 2 && buf[len - 1] == '0' && buf[len - 2] == '0')
-                        buf[len - 1] = '\0';
+                    if (len >= 2 && buffer[len - 1] == '0' && buffer[len - 2] == '0')
+                        buffer[len - 1] = '\0';
 
-                    fputs(buf, file);
+                    fputs(buffer, file);
                 }
 
                 break;
@@ -845,7 +845,7 @@ static void M_CheckCVARs(void)
         vid_pillarboxes = vid_pillarboxes_default;
 
     if (!M_StringCompare(vid_scaleapi, vid_scaleapi_direct3d)
-#if defined(__MACOSX__)
+#if defined(__APPLE__)
         && !M_StringCompare(vid_scaleapi, vid_scaleapi_metal)
 #endif
         && !M_StringCompare(vid_scaleapi, vid_scaleapi_opengl)

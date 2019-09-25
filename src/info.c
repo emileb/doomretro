@@ -73,7 +73,7 @@ mobjinfo_t mobjinfo[] =
         /* mass                 */ 100,
         /* damage               */ 0,
         /* activesound          */ sfx_None,
-        /* flags                */ (MF_SOLID | MF_SHOOTABLE | MF_DROPOFF | MF_PICKUP),
+        /* flags                */ (MF_SOLID | MF_SHOOTABLE | MF_DROPOFF | MF_PICKUP | MF_FRIEND),
         /* flags2               */ (MF2_CASTSHADOW | MF2_PASSMOBJ | MF2_CRUSHABLE | MF2_NOLIQUIDBOB | MF2_FOOTCLIP),
         /* raisestate           */ S_NULL,
         /* frames               */ 0,
@@ -753,7 +753,7 @@ mobjinfo_t mobjinfo[] =
         /* blood                */ 0,
         /* shadowoffset         */ 0,
         /* name1                */ "baron of hell/hell knight projectile",
-        /* plural1              */ "",
+        /* plural1              */ "baron of hell/hell knight projectiles",
         /* name2                */ "baron ball",
         /* plural2              */ "baron balls",
         /* name3                */ "",
@@ -4123,7 +4123,7 @@ mobjinfo_t mobjinfo[] =
     // Stalagmite (MT_MISC47)
     {
         /* doomednum            */ Stalagmite,
-        /* spawnstate           */ S_STALAGTITE,
+        /* spawnstate           */ S_STALAGMITE,
         /* spawnhealth          */ 1000,
         /* gibhealth            */ 0,
         /* seestate             */ S_NULL,
@@ -5917,13 +5917,13 @@ mobjinfo_t mobjinfo[] =
         /* frames               */ 0,
         /* fullbright           */ false,
         /* blood                */ MT_BLOOD,
-        /* shadowoffset         */ 0,
-        /* name1                */ "MBF helper dog",
-        /* plural1              */ "MBF helper dogs",
-        /* name2                */ "dog",
-        /* plural2              */ "dogs",
-        /* name3                */ "",
-        /* plural3              */ ""
+        /* shadowoffset         */ 4 * FRACUNIT,
+        /* name1                */ "dog",
+        /* plural1              */ "dogs",
+        /* name2                */ "helper dog",
+        /* plural2              */ "helper dogs",
+        /* name3                */ "MBF helper dog",
+        /* plural3              */ "MBF helper dogs"
     },
 
     // MT_PLASMA1

@@ -56,6 +56,11 @@
 #include "w_wad.h"
 #include "z_zone.h"
 
+dboolean islightspecial[] = {
+    false, true,  true,  true, false, false, false, false, true,
+    false, false, false, true, true,  false, false, false, true
+};
+
 //
 // Animating textures and planes
 // There is another anim_t used in wi_stuff, unrelated.
@@ -261,8 +266,8 @@ void P_InitPicAnims(void)
                     SetTerrainType(lastanim, NUKAGE);
                     isliquid = true;
                 }
-                else if (M_StrCaseStr(animdefs[i].startname, "WATER") || M_StrCaseStr(animdefs[i].startname, "WTR")
-                    || M_StrCaseStr(animdefs[i].startname, "WAVE"))
+                else if (M_StrCaseStr(animdefs[i].startname, "WAT") || M_StrCaseStr(animdefs[i].startname, "WTR")
+                    || M_StrCaseStr(animdefs[i].startname, "WAV"))
                 {
                     SetTerrainType(lastanim, WATER);
                     isliquid = true;
@@ -272,12 +277,12 @@ void P_InitPicAnims(void)
                     SetTerrainType(lastanim, LAVA);
                     isliquid = true;
                 }
-                else if (M_StrCaseStr(animdefs[i].startname, "BLOOD"))
+                else if (M_StrCaseStr(animdefs[i].startname, "BLO"))
                 {
                     SetTerrainType(lastanim, BLOOD);
                     isliquid = true;
                 }
-                else if ((M_StrCaseStr(animdefs[i].startname, "SLIM") && (basepic < SLIME09 || basepic > SLIME12))
+                else if ((M_StrCaseStr(animdefs[i].startname, "SLI") && (basepic < SLIME09 || basepic > SLIME12))
                     || M_StrCaseStr(animdefs[i].startname, "SLM"))
                 {
                     SetTerrainType(lastanim, SLIME);
@@ -405,6 +410,8 @@ void P_SetLifts(void)
     for (int i = 0; i < numsectors; i++)
     {
         line_t  line;
+
+        memset(&line, 0, sizeof(line));
 
         // Check to see if it's in a sector which can be activated as a lift.
         if ((line.tag = sectors[i].tag))
@@ -1145,17 +1152,6 @@ dboolean P_SectorActive(special_e t, sector_t *sec)
 }
 
 //
-// P_SectorHasLightSpecial()
-//
-// [BH] Returns true if sector has a light special
-dboolean P_SectorHasLightSpecial(sector_t *sec)
-{
-    short   special = sec->special;
-
-    return (special && special != Secret && special != Door_CloseStay_After30sec && special != Door_OpenClose_OpensAfter5Min);
-}
-
-//
 // P_CheckTag()
 //
 // Passed a line, returns true if the tag is non-zero or the line special
@@ -1222,6 +1218,8 @@ dboolean P_CheckTag(line_t *line)
         case WR_Teleport_AlsoMonsters_Silent_SameAngle:
         case S1_Teleport_AlsoMonsters_Silent_SameAngle:
         case SR_Teleport_AlsoMonsters_Silent_SameAngle:
+        case Scroll_ScrollWallUsingSidedefOffsets:
+        case Translucent_MiddleTexture:
             return true;        // zero tag allowed
     }
 

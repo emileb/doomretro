@@ -295,10 +295,13 @@ void G_BuildTiccmd(ticcmd_t *cmd)
     {
         if (usemouselook && gp_thumbsticks == 2)
         {
-            if (gp_invertyaxis)
-                gamepadthumbRY = -gamepadthumbRY;
+            if (!automapactive)
+            {
+                cmd->lookdir = (int)(48 * (gamepadthumbRY < 0 ? gamepadthumbRYup : gamepadthumbRYdown) * gamepadsensitivity);
 
-            cmd->lookdir = (int)(48 * (gamepadthumbRY < 0 ? gamepadthumbRYup : gamepadthumbRYdown) * gamepadsensitivity);
+                if (!gp_invertyaxis)
+                    cmd->lookdir = -cmd->lookdir;
+            }
         }
         else if (gp_thumbsticks == 1)
         {
@@ -478,6 +481,9 @@ void G_BuildTiccmd(ticcmd_t *cmd)
         sendsave = false;
         cmd->buttons = (BT_SPECIAL | BTS_SAVEGAME | (savegameslot << BTS_SAVESHIFT));
     }
+
+    if (cmd->angleturn && !menuactive)
+        spindirection = SIGN(cmd->angleturn);
 }
 
 static void G_SetInitialWeapon(void)
@@ -540,7 +546,8 @@ void G_DoLoadLevel(void)
     if (viewplayer->playerstate == PST_DEAD)
         viewplayer->playerstate = PST_REBORN;
 
-    if (viewplayer->playerstate == PST_REBORN && (M_StringCompare(mapnum, "E1M4B") || M_StringCompare(mapnum, "E1M8B")))
+    if (viewplayer->playerstate == PST_REBORN && !startingnewgame
+        && (M_StringCompare(mapnum, "E1M4B") || M_StringCompare(mapnum, "E1M8B")))
         M_StringCopy(speciallumpname, mapnum, sizeof(speciallumpname));
 
     viewplayer->damageinflicted = 0;
@@ -550,6 +557,7 @@ void G_DoLoadLevel(void)
     viewplayer->shotsfired = 0;
     viewplayer->deaths = 0;
     viewplayer->distancetraveled = 0;
+    viewplayer->gamessaved = 0;
     viewplayer->itemspickedup_ammo_bullets = 0;
     viewplayer->itemspickedup_ammo_cells = 0;
     viewplayer->itemspickedup_ammo_rockets = 0;
@@ -606,6 +614,10 @@ void G_DoLoadLevel(void)
     sendsave = false;
     paused = false;
     memset(mousearray, 0, sizeof(mousearray));
+
+    // [BH] clear these as well, since data from prev map can be copied over in G_BuildTiccmd()
+    for (int i = 0; i < BACKUPTICS; i++)
+        memset(&localcmds[i], 0, sizeof(ticcmd_t));
 
     M_SetWindowCaption();
 
@@ -908,6 +920,7 @@ void G_Ticker(void)
                     D_Display();
                 }
 
+                idbehold = false;
                 G_DoScreenShot();
                 gameaction = ga_nothing;
                 break;
@@ -994,7 +1007,7 @@ void G_Ticker(void)
 
 //
 // G_PlayerFinishLevel
-// Can when a player completes a level.
+// Called when a player completes a level.
 //
 static void G_PlayerFinishLevel(void)
 {
@@ -1071,7 +1084,7 @@ void G_DoScreenShot(void)
     {
         static char buffer[512];
 
-        S_StartSound(NULL, sfx_swtchx);
+        S_StartSound(NULL, sfx_scrsht);
 
         M_snprintf(buffer, sizeof(buffer), s_GSCREENSHOT, lbmname1);
         HU_SetPlayerMessage(buffer, false, false);
@@ -1087,7 +1100,7 @@ void G_DoScreenShot(void)
 }
 
 // DOOM Par Times
-int pars[7][10] =
+int pars[6][10] =
 {
     { 0 },
     { 0,  30,  75, 120,  90, 165, 180, 180,  30, 165 },
@@ -1096,8 +1109,7 @@ int pars[7][10] =
 
     // [BH] Episode 4 and 5 Par Times
     { 0, 165, 255, 135, 150, 180, 390, 135, 360, 180 },
-    { 0 },
-    { 0 }
+    { 0,  90, 150, 360, 420, 780, 420, 780, 300, 660 }
 };
 
 // DOOM II Par Times
@@ -1399,8 +1411,6 @@ void G_LoadGame(char *name)
 
 extern dboolean setsizeneeded;
 
-void R_ExecuteSetViewSize(void);
-
 void G_DoLoadGame(void)
 {
     int savedleveltime;
@@ -1504,11 +1514,11 @@ static void G_DoSaveGame(void)
 {
     char    *temp_savegame_file = P_TempSaveGameFile();
     char    *savegame_file = (consoleactive ? savename : P_SaveGameFile(savegameslot));
+
     // Open the savegame file for writing. We write to a temporary file
     // and then rename it at the end if it was successfully written.
     // This prevents an existing savegame from being overwritten by
     // a corrupted one, or if a savegame buffer overrun occurs.
-
     if (!(save_stream = fopen(temp_savegame_file, "wb")))
     {
         menuactive = false;
@@ -1554,6 +1564,7 @@ static void G_DoSaveGame(void)
             S_StartSound(NULL, sfx_swtchx);
         }
 
+        viewplayer->gamessaved++;
         stat_gamessaved = SafeAdd(stat_gamessaved, 1);
         M_SaveCVARs();
 
@@ -1625,35 +1636,34 @@ static void G_DoNewGame(void)
     infight = false;
 }
 
-void G_SetFastMonsters(dboolean toggle)
+// killough 4/10/98: New function to fix bug which caused Doom
+// lockups when idclev was used in conjunction with -fast.
+void G_SetFastParms(int fast_pending)
 {
-    if (toggle)
+    static int  fast = 0;                   // remembers fast state
+
+    if (fast != fast_pending)               // only change if necessary
     {
-        for (int i = S_SARG_RUN1; i <= S_SARG_PAIN2; i++)
-            if (states[i].tics != 1)
-                states[i].tics >>= 1;
+        if ((fast = fast_pending))
+        {
+            for (int i = S_SARG_RUN1; i <= S_SARG_PAIN2; i++)
+                if (states[i].tics != 1)    // killough 4/10/98
+                    states[i].tics >>= 1;   // don't change 1->0 since it causes cycles
 
-        mobjinfo[MT_BRUISERSHOT].speed = 20 * FRACUNIT;
-        mobjinfo[MT_HEADSHOT].speed = 20 * FRACUNIT;
-        mobjinfo[MT_TROOPSHOT].speed = 20 * FRACUNIT;
+            mobjinfo[MT_BRUISERSHOT].speed = 20 * FRACUNIT;
+            mobjinfo[MT_HEADSHOT].speed = 20 * FRACUNIT;
+            mobjinfo[MT_TROOPSHOT].speed = 20 * FRACUNIT;
+        }
+        else
+        {
+            for (int i = S_SARG_RUN1; i <= S_SARG_PAIN2; i++)
+                states[i].tics <<= 1;
+
+            mobjinfo[MT_BRUISERSHOT].speed = 15 * FRACUNIT;
+            mobjinfo[MT_HEADSHOT].speed = 10 * FRACUNIT;
+            mobjinfo[MT_TROOPSHOT].speed = 10 * FRACUNIT;
+        }
     }
-    else
-    {
-        for (int i = S_SARG_RUN1; i <= S_SARG_PAIN2; i++)
-            states[i].tics <<= 1;
-
-        mobjinfo[MT_BRUISERSHOT].speed = 15 * FRACUNIT;
-        mobjinfo[MT_HEADSHOT].speed = 10 * FRACUNIT;
-        mobjinfo[MT_TROOPSHOT].speed = 10 * FRACUNIT;
-    }
-}
-
-static void G_SetFastParms(int fast_pending)
-{
-    static int  fast;
-
-    if (fast != fast_pending)
-        G_SetFastMonsters((fast = fast_pending));
 }
 
 void G_SetMovementSpeed(int scale)
@@ -1716,7 +1726,8 @@ void G_InitNew(skill_t skill, int ep, int map)
 
     if (consolestrings == 1
         || (!M_StringStartsWith(console[consolestrings - 2].string, "map ")
-            && !M_StringStartsWith(console[consolestrings - 1].string, "load ")))
+            && !M_StringStartsWith(console[consolestrings - 1].string, "load ")
+            && !M_StringStartsWith(console[consolestrings - 1].string, "Warping ")))
         C_CCMDOutput("newgame");
 
     G_DoLoadLevel();

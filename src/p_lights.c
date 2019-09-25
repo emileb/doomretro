@@ -51,13 +51,21 @@
 //
 void T_FireFlicker(fireflicker_t *flick)
 {
+    int amount;
+
     if (freeze)
         return;
 
     if (--flick->count)
         return;
 
-    flick->sector->lightlevel = MAX(flick->minlight, flick->maxlight - (M_Random() & 3) * 16);
+    amount = (M_Random() & 3) * 16;
+
+    if (flick->sector->lightlevel - amount < flick->minlight)
+        flick->sector->lightlevel = flick->minlight;
+    else
+        flick->sector->lightlevel = flick->maxlight - amount;
+
     flick->count = 4;
 }
 
@@ -66,7 +74,7 @@ void T_FireFlicker(fireflicker_t *flick)
 //
 void P_SpawnFireFlicker(sector_t *sector)
 {
-    fireflicker_t   *flick = Z_Calloc(1, sizeof(*flick), PU_LEVSPEC, NULL);
+    fireflicker_t   *flick = Z_Malloc(sizeof(*flick), PU_LEVSPEC, NULL);
 
     flick->thinker.function = T_FireFlicker;
     P_AddThinker(&flick->thinker);
@@ -109,7 +117,7 @@ void T_LightFlash(lightflash_t *flash)
 //
 void P_SpawnLightFlash(sector_t *sector)
 {
-    lightflash_t    *flash = Z_Calloc(1, sizeof(*flash), PU_LEVSPEC, NULL);
+    lightflash_t    *flash = Z_Malloc(sizeof(*flash), PU_LEVSPEC, NULL);
 
     flash->thinker.function = T_LightFlash;
     P_AddThinker(&flash->thinker);
@@ -151,15 +159,15 @@ void T_StrobeFlash(strobe_t *flash)
 // After the map has been loaded, scan each sector
 // for specials that spawn thinkers
 //
-void P_SpawnStrobeFlash(sector_t *sector, int fastOrSlow, dboolean inSync)
+void P_SpawnStrobeFlash(sector_t *sector, int fastorslow, dboolean insync)
 {
-    strobe_t    *flash = Z_Calloc(1, sizeof(*flash), PU_LEVSPEC, NULL);
+    strobe_t    *flash = Z_Malloc(sizeof(*flash), PU_LEVSPEC, NULL);
 
     flash->thinker.function = T_StrobeFlash;
     P_AddThinker(&flash->thinker);
 
     flash->sector = sector;
-    flash->darktime = fastOrSlow;
+    flash->darktime = fastorslow;
     flash->brighttime = STROBEBRIGHT;
     flash->maxlight = sector->lightlevel;
     flash->minlight = P_FindMinSurroundingLight(sector, sector->lightlevel);
@@ -167,7 +175,7 @@ void P_SpawnStrobeFlash(sector_t *sector, int fastOrSlow, dboolean inSync)
     if (flash->minlight == flash->maxlight)
         flash->minlight = 0;
 
-    flash->count = (inSync ? 1 : (M_Random() & 7) + 1);
+    flash->count = (insync ? 1 : (M_Random() & 7) + 1);
 }
 
 //
@@ -248,39 +256,35 @@ dboolean EV_LightTurnOn(line_t *line, int bright)
 //
 // Spawn glowing light
 //
-void T_Glow(glow_t *g)
+void T_Glow(glow_t *glow)
 {
-    switch (g->direction)
+    if (glow->direction == -1)
     {
-        case -1:
-            // DOWN
-            g->sector->lightlevel -= GLOWSPEED;
+        // DOWN
+        glow->sector->lightlevel -= GLOWSPEED;
 
-            if (g->sector->lightlevel <= g->minlight)
-            {
-                g->sector->lightlevel += GLOWSPEED;
-                g->direction = 1;
-            }
+        if (glow->sector->lightlevel <= glow->minlight)
+        {
+            glow->sector->lightlevel += GLOWSPEED;
+            glow->direction = 1;
+        }
+    }
+    else
+    {
+        // UP
+        glow->sector->lightlevel += GLOWSPEED;
 
-            break;
-
-        case 1:
-            // UP
-            g->sector->lightlevel += GLOWSPEED;
-
-            if (g->sector->lightlevel >= g->maxlight)
-            {
-                g->sector->lightlevel -= GLOWSPEED;
-                g->direction = -1;
-            }
-
-            break;
+        if (glow->sector->lightlevel >= glow->maxlight)
+        {
+            glow->sector->lightlevel -= GLOWSPEED;
+            glow->direction = -1;
+        }
     }
 }
 
 void P_SpawnGlowingLight(sector_t *sector)
 {
-    glow_t  *glow = Z_Calloc(1, sizeof(*glow), PU_LEVSPEC, NULL);
+    glow_t  *glow = Z_Malloc(sizeof(*glow), PU_LEVSPEC, NULL);
 
     glow->thinker.function = T_Glow;
     P_AddThinker(&glow->thinker);

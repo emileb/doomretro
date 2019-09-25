@@ -72,7 +72,7 @@ extern dboolean usemouselook;
 //
 void A_Recoil(weapontype_t weapon)
 {
-    if (weaponrecoil && canmouselook)
+    if (weaponrecoil)
         viewplayer->recoil = weaponinfo[weapon].recoil;
 }
 
@@ -391,11 +391,15 @@ void A_GunFlash(mobj_t *actor, player_t *player, pspdef_t *psp)
 void A_Punch(mobj_t *actor, player_t *player, pspdef_t *psp)
 {
     angle_t angle = actor->angle + (M_SubRandom() << 18);
-    int     slope = P_AimLineAttack(actor, angle, MELEERANGE);
+    int     slope;
     int     damage = (M_Random() % 10 + 1) << 1;
 
     if (player->powers[pw_strength])
         damage *= 10;
+
+    // killough 8/2/98: make autoaiming prefer enemies
+    if ((slope = P_AimLineAttack(actor, angle, MELEERANGE, MF_FRIEND), !linetarget))
+        slope = P_AimLineAttack(actor, angle, MELEERANGE, 0);
 
     hitwall = false;
     P_LineAttack(actor, angle, MELEERANGE, slope, damage);
@@ -417,9 +421,13 @@ void A_Punch(mobj_t *actor, player_t *player, pspdef_t *psp)
 void A_Saw(mobj_t *actor, player_t *player, pspdef_t *psp)
 {
     angle_t angle = actor->angle + (M_SubRandom() << 18);
-    int     slope = P_AimLineAttack(actor, angle, MELEERANGE + 1);
+    int     slope;
 
     // use MELEERANGE + 1 so the puff doesn't skip the flash
+    // killough 8/2/98: make autoaiming prefer enemies
+    if ((slope = P_AimLineAttack(actor, angle, MELEERANGE + 1, MF_FRIEND), !linetarget))
+        slope = P_AimLineAttack(actor, angle, MELEERANGE + 1, 0);
+
     P_LineAttack(actor, angle, MELEERANGE + 1, slope, 2 * (M_Random() % 10 + 1));
 
     A_Recoil(wp_chainsaw);
@@ -439,7 +447,7 @@ void A_Saw(mobj_t *actor, player_t *player, pspdef_t *psp)
 
     if (angle - actor->angle > ANG180)
     {
-        if (angle - actor->angle < (angle_t)(-ANG90 / 20))
+        if ((int)(angle - actor->angle) < -ANG90 / 20)
             actor->angle = angle + ANG90 / 21;
         else
             actor->angle -= ANG90 / 20;
@@ -500,23 +508,29 @@ void A_FireOldBFG(mobj_t *actor, player_t *player, pspdef_t *psp)
             slope = PLAYERSLOPE(player);
         else
         {
-            slope = P_AimLineAttack(actor, an, 16 * 64 * FRACUNIT);
+            // killough 8/2/98: make autoaiming prefer enemies
+            int mask = MF_FRIEND;
 
-            if (!linetarget)
+            do
             {
-                slope = P_AimLineAttack(actor, (an += 1 << 26), 16 * 64 * FRACUNIT);
+                slope = P_AimLineAttack(actor, an, 16 * 64 * FRACUNIT, mask);
 
                 if (!linetarget)
                 {
-                    slope = P_AimLineAttack(actor, (an -= 2 << 26), 16 * 64 * FRACUNIT);
+                    slope = P_AimLineAttack(actor, (an += 1 << 26), 16 * 64 * FRACUNIT, mask);
 
                     if (!linetarget)
                     {
-                        slope = (usemouselook ? PLAYERSLOPE(player) : 0);
-                        an = actor->angle;
+                        slope = P_AimLineAttack(actor, (an -= 2 << 26), 16 * 64 * FRACUNIT, mask);
+
+                        if (!linetarget)
+                        {
+                            slope = (usemouselook ? PLAYERSLOPE(player) : 0);
+                            an = actor->angle;
+                        }
                     }
                 }
-            }
+            } while (mask && (mask = 0, !linetarget));  // killough 8/2/98
         }
 
         an1 += an - actor->angle;
@@ -571,23 +585,29 @@ static void P_BulletSlope(mobj_t *actor)
         bulletslope = PLAYERSLOPE(viewplayer);
     else
     {
-        angle_t an = actor->angle;
+        // killough 8/2/98: make autoaiming prefer enemies
+        int mask = MF_FRIEND;
 
-        // see which target is to be aimed at
-        bulletslope = P_AimLineAttack(actor, an, 16 * 64 * FRACUNIT);
-
-        if (!linetarget)
+        do
         {
-            bulletslope = P_AimLineAttack(actor, (an += 1 << 26), 16 * 64 * FRACUNIT);
+            angle_t an = actor->angle;
+
+            // see which target is to be aimed at
+            bulletslope = P_AimLineAttack(actor, an, 16 * 64 * FRACUNIT, mask);
 
             if (!linetarget)
             {
-                bulletslope = P_AimLineAttack(actor, (an -= 2 << 26), 16 * 64 * FRACUNIT);
+                bulletslope = P_AimLineAttack(actor, (an += 1 << 26), 16 * 64 * FRACUNIT, mask);
 
-                if (!linetarget && usemouselook)
-                    bulletslope = PLAYERSLOPE(viewplayer);
+                if (!linetarget)
+                {
+                    bulletslope = P_AimLineAttack(actor, (an -= 2 << 26), 16 * 64 * FRACUNIT, mask);
+
+                    if (!linetarget && usemouselook)
+                        bulletslope = PLAYERSLOPE(viewplayer);
+                }
             }
-        }
+        } while (mask && (mask = 0, !linetarget));  // killough 8/2/98
     }
 }
 
@@ -777,15 +797,17 @@ void A_BFGSpray(mobj_t *actor, player_t *player, pspdef_t *psp)
 {
     mobj_t  *mo = actor->target;
 
-    if (mo->player)
-        P_NoiseAlert(mo->player->mo);
+    P_NoiseAlert(actor);
 
     // offset angles from its attack angle
     for (int i = 0; i < 40; i++)
     {
-        int damage = 0;
+        int     damage = 0;
+        angle_t an = mo->angle - ANG90 / 2 + ANG90 / 40 * i;
 
-        P_AimLineAttack(mo, actor->angle - ANG90 / 2 + ANG90 / 40 * i, 16 * 64 * FRACUNIT);
+        // killough 8/2/98: make autoaiming prefer enemies
+        if (P_AimLineAttack(mo, an, 16 * 64 * FRACUNIT, MF_FRIEND), !linetarget)
+            P_AimLineAttack(mo, an, 16 * 64 * FRACUNIT, 0);
 
         if (!linetarget)
             continue;
@@ -831,7 +853,9 @@ void P_SetupPsprites(void)
 {
     // remove all psprites
     viewplayer->psprites[ps_weapon].state = NULL;
+    viewplayer->psprites[ps_weapon].tics = -1;
     viewplayer->psprites[ps_flash].state = NULL;
+    viewplayer->psprites[ps_flash].tics = -1;
 
     // spawn the gun
     viewplayer->pendingweapon = viewplayer->readyweapon;
@@ -881,7 +905,7 @@ void P_MovePsprites(void)
     }
 
     // [BH] shake the BFG before firing when weapon recoil enabled
-    if (viewplayer->readyweapon == wp_bfg && weaponrecoil && canmouselook)
+    if (viewplayer->readyweapon == wp_bfg && weaponrecoil)
     {
         if (weapon->state == &states[S_BFG1])
         {

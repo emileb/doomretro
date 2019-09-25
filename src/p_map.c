@@ -366,8 +366,9 @@ static dboolean PIT_CheckLine(line_t *ld)
         if (ld->flags & ML_BLOCKING)                    // explicitly blocking everything
             return (tmunstuck && !untouched(ld));       // killough 8/1/98: allow escape
 
+        // killough 8/9/98: monster-blockers don't affect friends
         // [BH] monster-blockers don't affect corpses
-        if (!tmthing->player && !(tmthing->flags & MF_CORPSE) && (ld->flags & ML_BLOCKMONSTERS))
+        if (!tmthing->player && !(tmthing->flags & MF_CORPSE) && !(tmthing->flags & MF_FRIEND) && (ld->flags & ML_BLOCKMONSTERS))
             return false;                               // block monsters only
     }
 
@@ -922,7 +923,7 @@ dboolean P_IsInLiquid(mobj_t *thing)
 // Attempt to move to a new position,
 // crossing special lines unless MF_TELEPORT is set.
 //
-dboolean P_TryMove(mobj_t *thing, fixed_t x, fixed_t y, dboolean dropoff)
+dboolean P_TryMove(mobj_t *thing, fixed_t x, fixed_t y, int dropoff)
 {
     fixed_t oldx, oldy;
     int     flags;
@@ -948,7 +949,9 @@ dboolean P_TryMove(mobj_t *thing, fixed_t x, fixed_t y, dboolean dropoff)
 
         if (!(flags & (MF_DROPOFF | MF_FLOAT)))
         {
-            if (!dropoff)
+            if (!dropoff
+                // large jump down (e.g. dogs)
+                || (dropoff == 2 && (tmfloorz - tmdropoffz > 128 * FRACUNIT || !thing->target || thing->target->z > tmdropoffz)))
             {
                 if (thing->floorz - tmfloorz > 24 * FRACUNIT || thing->dropoffz - tmdropoffz > 24 * FRACUNIT)
                     return false;
@@ -1393,8 +1396,8 @@ void P_SlideMove(mobj_t *mo)
         stairstep:
             // killough 3/15/98: Allow objects to drop off ledges
             // phares 5/4/98: kill momentum if you can't move at all
-            if (!P_TryMove(mo, mo->x, mo->y + mo->momy, true))
-                P_TryMove(mo, mo->x + mo->momx, mo->y, true);
+            if (!P_TryMove(mo, mo->x, mo->y + mo->momy, 1))
+                P_TryMove(mo, mo->x + mo->momx, mo->y, 1);
 
             break;
         }
@@ -1406,7 +1409,7 @@ void P_SlideMove(mobj_t *mo)
             fixed_t newy = FixedMul(mo->momy, bestslidefrac);
 
             // killough 3/15/98: Allow objects to drop off ledges
-            if (!P_TryMove(mo, mo->x + newx, mo->y + newy, true))
+            if (!P_TryMove(mo, mo->x + newx, mo->y + newy, 1))
                 goto stairstep;
         }
 
@@ -1436,7 +1439,7 @@ void P_SlideMove(mobj_t *mo)
             if (ABS(mo->player->momy) > ABS(tmymove))
                 mo->player->momy = tmymove;
         }
-    } while (!P_TryMove(mo, mo->x + tmxmove, mo->y + tmymove, true));
+    } while (!P_TryMove(mo, mo->x + tmxmove, mo->y + tmymove, 1));
 }
 
 //
@@ -1444,6 +1447,9 @@ void P_SlideMove(mobj_t *mo)
 //
 mobj_t          *linetarget;    // who got hit (or NULL)
 static mobj_t   *shootthing;
+
+// killough 8/2/98: for more intelligent autoaiming
+static int      aim_flags_mask;
 
 // height if not aiming up or down
 static fixed_t  shootz;
@@ -1517,6 +1523,11 @@ static dboolean PTR_AimTraverse(intercept_t *in)
     if (!(th->flags & MF_SHOOTABLE))
         return true;                    // corpse or something
 
+    // killough 7/19/98, 8/2/98:
+    // friends don't aim at friends (except players), at least not first
+    if ((th->flags & shootthing->flags & aim_flags_mask) && !th->player)
+        return true;
+
     // check angles to see if the thing can be aimed at
     dist = FixedMul(attackrange, in->frac);
     thingtopslope = FixedDiv(th->z + th->height - shootz, dist);
@@ -1556,9 +1567,9 @@ static dboolean PTR_ShootTraverse(intercept_t *in)
 
     if (in->isaline)
     {
-        line_t  *li = in->d.line;
-        int     side;
-        fixed_t distz;
+        line_t          *li = in->d.line;
+        unsigned short  side;
+        fixed_t         distz;
 
         if (li->special)
             P_ShootSpecialLine(shootthing, li);
@@ -1697,7 +1708,7 @@ static dboolean PTR_ShootTraverse(intercept_t *in)
 //
 // P_AimLineAttack
 //
-fixed_t P_AimLineAttack(mobj_t *t1, angle_t angle, fixed_t distance)
+fixed_t P_AimLineAttack(mobj_t *t1, angle_t angle, fixed_t distance, int mask)
 {
     fixed_t x2, y2;
 
@@ -1717,6 +1728,9 @@ fixed_t P_AimLineAttack(mobj_t *t1, angle_t angle, fixed_t distance)
 
     attackrange = distance;
     linetarget = NULL;
+
+    // killough 8/2/98: prevent friends from aiming at friends
+    aim_flags_mask = mask;
 
     P_PathTraverse(t1->x, t1->y, x2, y2, (PT_ADDLINES | PT_ADDTHINGS), PTR_AimTraverse);
 
@@ -1744,7 +1758,8 @@ void P_LineAttack(mobj_t *t1, angle_t angle, fixed_t distance, fixed_t slope, in
     shootz = t1->z + (t1->height >> 1) + 8 * FRACUNIT;
 
     if (t1->flags2 & MF2_FEETARECLIPPED)
-        shootz -= FOOTCLIPSIZE;
+        if ((t1->player && r_liquid_lowerview) || (!t1->player && r_liquid_clipsprites))
+            shootz -= FOOTCLIPSIZE;
 
     attackrange = distance;
     aimslope = slope;
@@ -1977,6 +1992,8 @@ static void PIT_ChangeSector(mobj_t *thing)
 
         if (!(flags & MF_NOBLOOD) && thing->blood)
         {
+            int type = thing->type;
+
             if (!(flags & MF_FUZZ))
             {
                 int radius = ((spritewidth[sprites[thing->sprite].spriteframes[0].lump[0]] >> FRACBITS) >> 1) + 12;
@@ -2000,7 +2017,7 @@ static void PIT_ChangeSector(mobj_t *thing)
 
             thing->flags &= ~MF_SOLID;
 
-            if (r_corpses_mirrored && (M_Random() & 1))
+            if (r_corpses_mirrored && type != MT_CHAINGUY && type != MT_CYBORG && (type != MT_PAIN || !D4V) && (M_Random() & 1))
                 thing->flags2 |= MF2_MIRRORED;
 
             thing->height = 0;

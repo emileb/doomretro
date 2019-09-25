@@ -1094,7 +1094,7 @@ void R_DrawPausedFuzzColumns(void)
 //  identical sprites, kinda brightened up.
 //
 byte    *dc_translation;
-byte    *translationtables;
+byte    translationtables[256 * 3];
 
 void R_DrawTranslatedColumn(void)
 {
@@ -1122,8 +1122,6 @@ void R_DrawTranslatedColumn(void)
 //
 void R_InitTranslationTables(void)
 {
-    translationtables = Z_Malloc(256 * 3, PU_STATIC, NULL);
-
     // translate just the 16 green colors
     for (int i = 0; i < 256; i++)
         if (i >= 0x70 && i <= 0x7F)
@@ -1250,19 +1248,8 @@ void R_FillBackScreen(void)
 
     for (int y = 0; y < SCREENHEIGHT - SBARHEIGHT; y += 2)
         for (int x = 0; x < SCREENWIDTH / 32; x += 2, dest += 128)
-            for (int i = 0; i < 64; i++)
-            {
-                int     j = i * 2;
-                byte    dot = src[(((y / 2) & 63) << 6) + i];
-
-                if (y * SCREENWIDTH + x + j < SCREENWIDTH * (SCREENHEIGHT - 1))
-                    *(dest + j) = dot;
-
-                j++;
-
-                if (y * SCREENWIDTH + x + j < SCREENWIDTH * (SCREENHEIGHT - 1))
-                    *(dest + j) = dot;
-            }
+            for (int i = 0; i < 128; i += 2)
+                dest[i] = dest[i + 1] = src[(((y / 2) & 63) << 6) + i / 2];
 
     x1 = viewwindowx / 2;
     y1 = viewwindowy / 2;

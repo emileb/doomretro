@@ -65,11 +65,13 @@ void GetScreenResolution(void);
 
 // Takes full 8 bit values.
 void I_SetPalette(byte *playpal);
+void I_SetExternalAutomapPalette(void);
 void I_SetSimplePalette(byte *playpal);
+void I_SetPaletteWithBrightness(byte *playpal, double brightness);
 
 void I_UpdateBlitFunc(dboolean shake);
 void I_Blit_Automap(void);
-void I_CreateExternalAutomap(dboolean output);
+void I_CreateExternalAutomap(int outputlevel);
 void I_DestroyExternalAutomap(void);
 
 void I_ToggleFullscreen(void);

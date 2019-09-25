@@ -1072,6 +1072,10 @@ linefix_t linefix[] =
     { pack_nerve,       1,   7,    2550,    1, "",         "MIDGRATE",    "",            DEFAULT,      -256, DEFAULT,                   DEFAULT,                                    DEFAULT },
     { pack_nerve,       1,   7,    2552,    1, "",         "MIDGRATE",    "",            DEFAULT,      -256, DEFAULT,                   DEFAULT,                                    DEFAULT },
 
+    { pack_nerve,       1,   9,    1327,    1, "",         "",            "",            DEFAULT,   DEFAULT, DEFAULT,                   0,                                                0 },
+    { pack_nerve,       1,   9,    1337,    1, "",         "",            "",            DEFAULT,   DEFAULT, DEFAULT,                   0,                                                0 },
+    { pack_nerve,       1,   9,    1339,    1, "",         "",            "",            DEFAULT,   DEFAULT, DEFAULT,                   0,                                                0 },
+
    // mission,    episode, map, linedef, side, toptexture, middletexture, bottomtexture,  offset, rowoffset, flags,                     special,                                        tag
 
     { pack_plut,        1,   1,    1110,    0, "",         "",            "",                  0,         0, DEFAULT,                   DEFAULT,                                    DEFAULT },
@@ -1576,10 +1580,10 @@ thingfix_t thingfix[] =
     { pack_plut,        1,  12,   225, Nothing,                   1600,   -3104,  REMOVE,  REMOVE, DEFAULT, DEFAULT                            },
     { pack_plut,        1,  12,   226, Nothing,                    992,   -3360,  REMOVE,  REMOVE, DEFAULT, DEFAULT                            },
 
-    { pack_plut,        1,  30,   206, MegaSphere,                -480,    1920,    -480,    1920, DEFAULT, MTF_NETGAME                        },
-    { pack_plut,        1,  30,   251, Berserk,                  -2272,    2368,   -2272,    2368, DEFAULT, MTF_NETGAME                        },
-    { pack_plut,        1,  30,   252, Berserk,                  -1632,    2464,   -1632,    2464, DEFAULT, MTF_NETGAME                        },
-    { pack_plut,        1,  30,   254, Berserk,                  -1248,    3104,   -1248,    3104, DEFAULT, MTF_NETGAME                        },
+    { pack_plut,        1,  30,   206, MegaSphere,                -480,    1920,    -480,    1920, DEFAULT, MTF_NOTSINGLE                      },
+    { pack_plut,        1,  30,   251, Berserk,                  -2272,    2368,   -2272,    2368, DEFAULT, MTF_NOTSINGLE                      },
+    { pack_plut,        1,  30,   252, Berserk,                  -1632,    2464,   -1632,    2464, DEFAULT, MTF_NOTSINGLE                      },
+    { pack_plut,        1,  30,   254, Berserk,                  -1248,    3104,   -1248,    3104, DEFAULT, MTF_NOTSINGLE                      },
 
     { pack_tnt,         1,   3,     7, TeleportDestination,       -416,     416,    -416,     416,     135, DEFAULT                            },
     { pack_tnt,         1,   3,    34, TeleportDestination,        960,    1472,     960,    1472,     135, DEFAULT                            },

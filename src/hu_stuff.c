@@ -48,6 +48,7 @@
 #include "i_swap.h"
 #include "i_timer.h"
 #include "m_argv.h"
+#include "m_cheat.h"
 #include "m_config.h"
 #include "m_menu.h"
 #include "m_misc.h"
@@ -65,7 +66,7 @@
 #define DARKGRAY        102
 #define GREEN           114
 #define RED             180
-#define BLUE            198
+#define BLUE            200
 #define YELLOW          231
 
 #define STSTR_BEHOLD2   "inVuln, bSrk, Inviso, Rad, Allmap or Lite-amp?"
@@ -87,7 +88,7 @@ static int              message_counter;
 
 static dboolean         headsupactive;
 
-byte                    *tempscreen;
+byte                    tempscreen[SCREENWIDTH * SCREENHEIGHT];
 
 static patch_t          *minuspatch;
 static short            minuspatchwidth;
@@ -130,6 +131,7 @@ static void (*hudnumfunc)(int, int, patch_t *, byte *);
 static void (*althudfunc)(int, int, patch_t *, int, int);
 void (*althudtextfunc)(int, int, byte *, patch_t *, int);
 static void (*fillrectfunc)(int, int, int, int, int, int, dboolean);
+static void (*fillrectfunc2)(int, int, int, int, int, int, dboolean);
 
 static struct
 {
@@ -189,7 +191,8 @@ void HU_SetTranslucency(void)
         hudnumfunc = V_DrawTranslucentHUDNumberPatch;
         althudfunc = V_DrawTranslucentAltHUDPatch;
         althudtextfunc =  V_DrawTranslucentAltHUDText;
-        fillrectfunc = V_FillTransRect;
+        fillrectfunc = V_FillSoftTransRect;
+        fillrectfunc2 = V_FillTransRect;
         coloroffset = 0;
     }
     else
@@ -199,6 +202,7 @@ void HU_SetTranslucency(void)
         althudfunc = V_DrawAltHUDPatch;
         althudtextfunc = V_DrawAltHUDText;
         fillrectfunc = V_FillRect;
+        fillrectfunc2 = V_FillRect;
         coloroffset = 4;
     }
 }
@@ -227,8 +231,6 @@ void HU_Init(void)
             minuspatchwidth = SHORT(minuspatch->width);
             minuspatchy = (SHORT(patch->height) - SHORT(minuspatch->height)) / 2;
         }
-
-    tempscreen = Z_Malloc(SCREENWIDTH * SCREENHEIGHT, PU_STATIC, NULL);
 
     if ((lump = W_CheckNumForName("ARM1A0")) >= 0)
         greenarmorpatch = W_CacheLumpNum(lump);
@@ -355,7 +357,7 @@ static void DrawHUDNumber(int *x, int y, int val, byte *translucency, void (*dra
     *x += SHORT(patch->width);
 }
 
-static int HUDNumberWidth(int val, patch_t **numset)
+static int HUDNumberWidth(int val)
 {
     int oldval = val;
     int width = 0;
@@ -377,19 +379,20 @@ static int HUDNumberWidth(int val, patch_t **numset)
     }
 
     if (val > 99)
-        width += SHORT(numset[val / 100]->width);
+        width += SHORT(tallnum[val / 100]->width);
 
     val %= 100;
 
     if (val > 9 || oldval > 99)
-        width += SHORT(numset[val / 10]->width);
+        width += SHORT(tallnum[val / 10]->width);
 
-    return (width + SHORT(numset[val % 10]->width));
+    return (width + SHORT(tallnum[val % 10]->width));
 }
 
 static void HU_DrawCrosshair(void)
 {
-    byte    *color = (viewplayer->attackdown ? &tinttab50[nearestcolors[crosshaircolor] << 8] : &tinttab40[nearestcolors[crosshaircolor] << 8]);
+    byte    *color = (viewplayer->attackdown ? &tinttab50[nearestcolors[crosshaircolor] << 8] :
+                         &tinttab40[nearestcolors[crosshaircolor] << 8]);
 
     if (crosshair == crosshair_cross)
     {
@@ -429,30 +432,36 @@ static void HU_DrawCrosshair(void)
 
 static void HU_DrawSolidCrosshair(void)
 {
+    int color = nearestcolors[crosshaircolor];
+
     if (crosshair == crosshair_cross)
     {
         byte    *dot = *screens + (SCREENHEIGHT - SBARHEIGHT - 3) * SCREENWIDTH / 2 - 1;
 
-        *dot = crosshaircolor;
+        *dot = color;
         dot += SCREENWIDTH;
-        *dot = crosshaircolor;
+        *dot = color;
         dot += SCREENWIDTH - 2;
-        *dot = crosshaircolor;
-        dot++;
-        *dot = crosshaircolor;
-        dot++;
-        *dot = crosshaircolor;
-        dot++;
-        *dot = crosshaircolor;
-        dot++;
-        *dot = crosshaircolor;
+        *dot++ = color;
+        *dot++ = color;
+        *dot++ = color;
+        *dot++ = color;
+        *dot = color;
         dot += SCREENWIDTH - 2;
-        *dot = crosshaircolor;
+        *dot = color;
         dot += SCREENWIDTH;
-        *dot = crosshaircolor;
+        *dot = color;
     }
     else
-        screens[0][(SCREENHEIGHT - SBARHEIGHT - 1) * SCREENWIDTH / 2 - 1] = crosshaircolor;
+    {
+        byte    *dot = *screens + (SCREENHEIGHT - SBARHEIGHT - 1) * SCREENWIDTH / 2 - 1;
+
+        *dot++ = color;
+        *dot = color;
+        dot += SCREENWIDTH;
+        *dot-- = color;
+        *dot = color;
+    }
 }
 
 int healthhighlight = 0;
@@ -463,7 +472,7 @@ static void HU_DrawHUD(void)
 {
     const int           health = MAX(health_min, viewplayer->health);
     const int           armor = viewplayer->armorpoints;
-    int                 health_x = HUD_HEALTH_X - (HUDNumberWidth(health, tallnum) + tallpercentwidth) / 2;
+    int                 health_x = HUDNumberWidth(health);
     static dboolean     healthanim;
     byte                *translucency = (health <= 0 || (health <= HUD_HEALTH_MIN && healthanim)
                             || health > HUD_HEALTH_MIN ? tinttab66 : tinttab25);
@@ -473,6 +482,8 @@ static void HU_DrawHUD(void)
     int                 keypic_x = (armor ? HUD_KEYS_X : SCREENWIDTH - 13);
     static int          keywait;
     static dboolean     showkey;
+
+    health_x = HUD_HEALTH_X - (health_x + (health_x & 1) + tallpercentwidth) / 2;
 
     if ((patch = faces[st_faceindex]))
         hudfunc(HUD_HEALTH_X - SHORT(patch->width) / 2, HUD_HEALTH_Y - SHORT(patch->height) - 3, patch, tinttab66);
@@ -519,13 +530,14 @@ static void HU_DrawHUD(void)
 
         if (ammotype != am_noammo && (ammo = viewplayer->ammo[ammotype]))
         {
-            int             ammo_x = HUD_AMMO_X - HUDNumberWidth(ammo, tallnum) / 2;
+            int             ammo_x = HUDNumberWidth(ammo);
             static dboolean ammoanim;
 
+            ammo_x = HUD_AMMO_X - (ammo_x + (ammo_x & 1)) / 2;
             translucency = (ammoanim || ammo > HUD_AMMO_MIN ? tinttab66 : tinttab25);
 
             if ((patch = ammopic[ammotype].patch))
-                hudfunc(HUD_AMMO_X - SHORT(patch->width) / 2, HUD_AMMO_Y - SHORT(patch->height) - 3, patch, tinttab66);
+                hudfunc(HUD_AMMO_X - SHORT(patch->width) / 2 - 1, HUD_AMMO_Y - SHORT(patch->height) - 3, patch, tinttab66);
 
             DrawHUDNumber(&ammo_x, HUD_AMMO_Y, ammo, translucency,
                 (ammohighlight > currenttime ? V_DrawHighlightedHUDNumberPatch : hudnumfunc));
@@ -583,7 +595,9 @@ static void HU_DrawHUD(void)
 
     if (armor)
     {
-        int armor_x = HUD_ARMOR_X - (HUDNumberWidth(armor, tallnum) + tallpercentwidth) / 2;
+        int armor_x = HUDNumberWidth(armor);
+
+        armor_x = HUD_ARMOR_X - (armor_x + (armor_x & 1) + tallpercentwidth) / 2;
 
         if ((patch = (viewplayer->armortype == GREENARMOR ? greenarmorpatch : bluearmorpatch)))
             hudfunc(HUD_ARMOR_X - SHORT(patch->width) / 2, HUD_ARMOR_Y - SHORT(patch->height) - 3, patch, tinttab66);
@@ -834,7 +848,7 @@ static void HU_DrawAltHUD(void)
         if ((armor *= 200 / max_armor) > 100)
         {
             fillrectfunc(0, ALTHUD_LEFT_X + 25, ALTHUD_Y + 2, 100 + 1, 4, barcolor1, true);
-            fillrectfunc(0, ALTHUD_LEFT_X + 25, ALTHUD_Y + 2, armor - 100 + (armor == 200), 4, barcolor2, (armor == 200));
+            fillrectfunc2(0, ALTHUD_LEFT_X + 25, ALTHUD_Y + 2, armor - 100 + (armor == 200), 4, barcolor2, false);
         }
         else
             fillrectfunc(0, ALTHUD_LEFT_X + 25, ALTHUD_Y + 2, armor + (armor == 100), 4, barcolor1, true);
@@ -878,7 +892,7 @@ static void HU_DrawAltHUD(void)
 
     if (viewplayer->neededcardflash)
     {
-        if (!(menuactive || paused || consoleactive))
+        if (!(menuactive || paused || consoleactive || freeze))
         {
             int currenttime = I_GetTimeMS();
 
@@ -937,8 +951,8 @@ static void HU_DrawAltHUD(void)
 
     if (powerupbar > STARTFLASHING || (powerupbar & 8))
     {
-        fillrectfunc(0, ALTHUD_RIGHT_X, ALTHUD_Y + 26, 101, 2, darkgray, false);
-        fillrectfunc(0, ALTHUD_RIGHT_X, ALTHUD_Y + 26, powerupbar * 101 / max, 2, gray, false);
+        fillrectfunc2(0, ALTHUD_RIGHT_X, ALTHUD_Y + 26, 101, 2, darkgray, false);
+        fillrectfunc2(0, ALTHUD_RIGHT_X, ALTHUD_Y + 26, powerupbar * 101 / max, 2, gray, false);
     }
 }
 
@@ -1013,7 +1027,7 @@ void HU_Drawer(void)
     }
     else
     {
-        if (crosshair != crosshair_none && usemouselook)
+        if (crosshair != crosshair_none)
         {
             ammotype_t  ammotype = weaponinfo[viewplayer->readyweapon].ammotype;
             actionf_t   action = viewplayer->psprites[ps_weapon].state->action;
@@ -1063,7 +1077,7 @@ void HU_Ticker(void)
     const dboolean  idmypos = !!(viewplayer->cheats & CF_MYPOS);
 
     // tick down message counter if message is up
-    if (message_counter && (!menuactive || message_menu) && !idbehold && !idmypos && !--message_counter)
+    if (message_counter && (!menuactive || message_menu) && !idmypos && !--message_counter)
     {
         message_on = false;
         message_nottobefuckedwith = false;
@@ -1071,18 +1085,7 @@ void HU_Ticker(void)
         message_external = false;
     }
 
-    if (idbehold)
-    {
-        // [BH] display message for IDBEHOLDx cheat
-        if (!message_counter)
-            message_counter = HU_MSGTIMEOUT;
-        else if (message_counter > 132)
-            message_counter--;
-
-        HUlib_AddMessageToSText(&w_message, s_STSTR_BEHOLD);
-        message_on = true;
-    }
-    else if (idmypos)
+    if (idmypos)
     {
         // [BH] display and constantly update message for IDMYPOS cheat
         char    buffer[80];
@@ -1115,7 +1118,7 @@ void HU_Ticker(void)
     // display message if necessary
     if (viewplayer->message && (!message_nottobefuckedwith || message_dontfuckwithme))
     {
-        if ((messages || message_dontfuckwithme) && !idbehold && !idmypos)
+        if ((messages || message_dontfuckwithme) && !idmypos)
         {
             int     len = (int)strlen(viewplayer->message);
             char    message[133];
@@ -1148,7 +1151,7 @@ void HU_Ticker(void)
 
             HUlib_AddMessageToSText(&w_message, message);
             message_on = true;
-            message_counter = HU_MSGTIMEOUT;
+            message_counter = (idbehold ? CHEATTIMEOUT : HU_MSGTIMEOUT);
             message_nottobefuckedwith = message_dontfuckwithme;
             message_dontfuckwithme = false;
         }
@@ -1212,7 +1215,7 @@ void HU_PlayerMessage(char *message, dboolean counter, dboolean external)
 
 void HU_ClearMessages(void)
 {
-    if (idbehold || (viewplayer->cheats & CF_MYPOS))
+    if (viewplayer->cheats & CF_MYPOS)
         return;
 
     viewplayer->message = NULL;

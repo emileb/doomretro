@@ -62,21 +62,6 @@
 #include "version.h"
 #include "w_wad.h"
 
-#define CONSOLELINES            (gamestate != GS_TITLESCREEN ? 11 : 27)
-#define CONSOLETEXTX            10
-#define CONSOLETEXTY            8
-#define CONSOLETEXTMAXLENGTH    1024
-#define CONSOLELINEHEIGHT       14
-
-#define CONSOLESCROLLBARWIDTH   4
-#define CONSOLESCROLLBARHEIGHT  (gamestate != GS_TITLESCREEN ? 139 : 366)
-#define CONSOLESCROLLBARX       (CONSOLEWIDTH - CONSOLETEXTX - CONSOLESCROLLBARWIDTH)
-#define CONSOLESCROLLBARY       (CONSOLETEXTY + 1)
-
-#define CONSOLETEXTPIXELWIDTH   (CONSOLEWIDTH - CONSOLETEXTX * 2 - (scrollbardrawn ? CONSOLESCROLLBARWIDTH + CONSOLETEXTX : 0))
-
-#define CONSOLEINPUTPIXELWIDTH  (CONSOLEWIDTH - CONSOLETEXTX - brandwidth - 2)
-
 console_t               *console;
 
 dboolean                consoleactive;
@@ -88,15 +73,16 @@ dboolean                forceconsoleblurredraw;
 
 patch_t                 *consolefont[CONSOLEFONTSIZE];
 patch_t                 *degree;
+patch_t                 *unknownchar;
+patch_t                 *altunderscores;
+patch_t                 *brand;
 
 static patch_t          *dot;
 static patch_t          *trademark;
 static patch_t          *copyright;
 static patch_t          *regomark;
 static patch_t          *multiply;
-static patch_t          *unknown;
 static patch_t          *warning;
-static patch_t          *brand;
 static patch_t          *divider;
 static patch_t          *bindlist;
 static patch_t          *cmdlist;
@@ -136,7 +122,6 @@ dboolean                con_timestamps = con_timestamps_default;
 static int              timestampx;
 static int              zerowidth;
 
-static int              consolebackcolor;
 static int              consolecaretcolor = 4;
 static int              consolelowfpscolor = 180;
 static int              consolehighfpscolor = 116;
@@ -158,7 +143,7 @@ static int              consolescrollbarfacecolor = 94;
 
 static int              consolecolors[STRINGTYPES];
 
-static dboolean         scrollbardrawn;
+dboolean                scrollbardrawn;
 
 extern int              fps;
 extern int              refreshrate;
@@ -181,8 +166,8 @@ void C_Input(const char *string, ...)
     if (consolestrings >= (int)consolestrings_max)
         console = I_Realloc(console, (consolestrings_max += 128) * sizeof(*console));
 
-    strcpy(console[consolestrings].string, buffer);
-    console[consolestrings++].type = inputstring;
+    M_StringCopy(console[consolestrings].string, buffer, 1024);
+    console[consolestrings++].stringtype = inputstring;
     outputhistory = -1;
 }
 
@@ -247,9 +232,8 @@ void C_Output(const char *string, ...)
     if (consolestrings >= (int)consolestrings_max)
         console = I_Realloc(console, (consolestrings_max += 128) * sizeof(*console));
 
-    strcpy(console[consolestrings].string, buffer);
-    console[consolestrings++].type = outputstring;
-
+    M_StringCopy(console[consolestrings].string, buffer, 1024);
+    console[consolestrings++].stringtype = outputstring;
     outputhistory = -1;
 }
 
@@ -265,28 +249,20 @@ void C_TabbedOutput(const int tabs[8], const char *string, ...)
     if (consolestrings >= (int)consolestrings_max)
         console = I_Realloc(console, (consolestrings_max += 128) * sizeof(*console));
 
-    strcpy(console[consolestrings].string, buffer);
-    console[consolestrings].type = outputstring;
+    M_StringCopy(console[consolestrings].string, buffer, 1024);
+    console[consolestrings].stringtype = outputstring;
     memcpy(console[consolestrings].tabs, tabs, sizeof(console[consolestrings].tabs));
     consolestrings++;
     outputhistory = -1;
 }
 
-void C_Header(const int tabs[8], const char *string, ...)
+void C_Header(const headertype_t headertype)
 {
-    va_list argptr;
-    char    buffer[CONSOLETEXTMAXLENGTH];
-
-    va_start(argptr, string);
-    M_vsnprintf(buffer, CONSOLETEXTMAXLENGTH - 1, string, argptr);
-    va_end(argptr);
-
     if (consolestrings >= (int)consolestrings_max)
         console = I_Realloc(console, (consolestrings_max += 128) * sizeof(*console));
 
-    strcpy(console[consolestrings].string, buffer);
-    console[consolestrings].type = headerstring;
-    memcpy(console[consolestrings].tabs, tabs, sizeof(console[consolestrings].tabs));
+    console[consolestrings].stringtype = headerstring;
+    console[consolestrings].headertype = headertype;
     consolestrings++;
     outputhistory = -1;
 }
@@ -305,8 +281,8 @@ void C_Warning(const char *string, ...)
         if (consolestrings >= (int)consolestrings_max)
             console = I_Realloc(console, (consolestrings_max += 128) * sizeof(*console));
 
-        strcpy(console[consolestrings].string, buffer);
-        console[consolestrings++].type = warningstring;
+        M_StringCopy(console[consolestrings].string, buffer, 1024);
+        console[consolestrings++].stringtype = warningstring;
         outputhistory = -1;
     }
 }
@@ -321,7 +297,7 @@ void C_PlayerMessage(const char *string, ...)
     M_vsnprintf(buffer, CONSOLETEXTMAXLENGTH - 1, string, argptr);
     va_end(argptr);
 
-    if (i >= 0 && console[i].type == playermessagestring && M_StringCompare(console[i].string, buffer))
+    if (i >= 0 && console[i].stringtype == playermessagestring && M_StringCompare(console[i].string, buffer))
     {
         console[i].tics = gametime;
         console[i].count++;
@@ -331,8 +307,8 @@ void C_PlayerMessage(const char *string, ...)
         if (consolestrings >= (int)consolestrings_max)
             console = I_Realloc(console, (consolestrings_max += 128) * sizeof(*console));
 
-        strcpy(console[consolestrings].string, buffer);
-        console[consolestrings].type = playermessagestring;
+        M_StringCopy(console[consolestrings].string, buffer, 1024);
+        console[consolestrings].stringtype = playermessagestring;
         console[consolestrings].tics = gametime;
         console[consolestrings++].count = 1;
     }
@@ -350,7 +326,7 @@ void C_Obituary(const char *string, ...)
     M_vsnprintf(buffer, CONSOLETEXTMAXLENGTH - 1, string, argptr);
     va_end(argptr);
 
-    if (i >= 0 && console[i].type == obituarystring && M_StringCompare(console[i].string, buffer))
+    if (i >= 0 && console[i].stringtype == obituarystring && M_StringCompare(console[i].string, buffer))
     {
         console[i].tics = gametime;
         console[i].count++;
@@ -360,8 +336,8 @@ void C_Obituary(const char *string, ...)
         if (consolestrings >= (int)consolestrings_max)
             console = I_Realloc(console, (consolestrings_max += 128) * sizeof(*console));
 
-        strcpy(console[consolestrings].string, buffer);
-        console[consolestrings].type = obituarystring;
+        M_StringCopy(console[consolestrings].string, buffer, 1024);
+        console[consolestrings].stringtype = obituarystring;
         console[consolestrings].tics = gametime;
         console[consolestrings++].count = 1;
     }
@@ -381,51 +357,51 @@ static void C_AddToUndoHistory(void)
 
 void C_AddConsoleDivider(void)
 {
-    if (!consolestrings || console[consolestrings - 1].type != dividerstring)
+    if (!consolestrings || console[consolestrings - 1].stringtype != dividerstring)
     {
         if (consolestrings >= (int)consolestrings_max)
             console = I_Realloc(console, (consolestrings_max += 128) * sizeof(*console));
 
-        console[consolestrings++].type = dividerstring;
+        console[consolestrings++].stringtype = dividerstring;
     }
 }
 
 kern_t altkern[] =
 {
-    { ' ',  '(',  -1 }, { ' ',  'T',  -1 }, { '"',  '+',  -1 }, { '"',  '.',  -1 }, { '"',  ',',  -1 }, { '"',  'a',  -1 },
-    { '"',  'c',  -1 }, { '"',  'd',  -1 }, { '"',  'e',  -1 }, { '"',  'g',  -1 }, { '"',  'j',  -2 }, { '"',  'o',  -1 },
-    { '"',  'q',  -1 }, { '"',  's',  -1 }, { '"',  'J',  -2 }, { '\\', '\\', -2 }, { '\\', 't',  -1 }, { '\\', 'T',  -1 },
-    { '\\', 'V',  -1 }, { '\'', 'a',  -1 }, { '\'', 'a',  -1 }, { '\'', 'c',  -1 }, { '\'', 'd',  -1 }, { '\'', 'e',  -1 },
-    { '\'', 'g',  -1 }, { '\'', 'j',  -2 }, { '\'', 'o',  -1 }, { '\'', 's',  -1 }, { '\'', 'J',  -2 }, { '+',  'j',  -2 },
-    { '.',  '\\', -1 }, { '.',  '4',  -1 }, { '.',  '7',  -1 }, { ',',  '4',  -1 }, { ',',  '7',  -1 }, { '/',  '/',  -2 },
-    { '/',  'a',  -1 }, { '/',  'd',  -1 }, { '/',  'o',  -1 }, { ':', '\\',  -1 }, { '_',  'f',  -1 }, { '_',  't',  -1 },
-    { '_',  'v',  -1 }, { '(',  '(',  -1 }, { ')',  '.',  -1 }, { ')',  ')',  -1 }, { '0',  ',',  -1 }, { '0',  ';',  -1 },
-    { '0',  'j',  -2 }, { '1',  '"',  -1 }, { '1',  '\\', -1 }, { '1',  '\'', -1 }, { '1',  'j',  -2 }, { '2',  'j',  -2 },
+    { ' ',  '(',  -1 }, { ' ',  'T',  -1 }, { '"',  '+',  -1 }, { '"',  ',',  -1 }, { '"',  '.',  -1 }, { '"',  'J',  -2 },
+    { '"',  'a',  -1 }, { '"',  'c',  -1 }, { '"',  'd',  -1 }, { '"',  'e',  -1 }, { '"',  'g',  -1 }, { '"',  'j',  -2 },
+    { '"',  'o',  -1 }, { '"',  'q',  -1 }, { '"',  's',  -1 }, { '(',  '(',  -1 }, { ')',  ')',  -1 }, { ')',  '.',  -1 },
+    { '+',  'j',  -2 }, { ',',  '4',  -1 }, { ',',  '7',  -1 }, { '.',  '4',  -1 }, { '.',  '7',  -1 }, { '.',  '\\', -1 },
+    { '/',  '/',  -2 }, { '/',  'a',  -1 }, { '/',  'd',  -1 }, { '/',  'o',  -1 }, { '0',  ',',  -1 }, { '0',  ';',  -1 },
+    { '0',  'j',  -2 }, { '1',  '"',  -1 }, { '1',  '\'', -1 }, { '1',  '\\', -1 }, { '1',  'j',  -2 }, { '2',  'j',  -2 },
     { '3',  ',',  -1 }, { '3',  ';',  -1 }, { '3',  'j',  -2 }, { '4',  'j',  -2 }, { '5',  ',',  -1 }, { '5',  ';',  -1 },
-    { '5',  'j',  -2 }, { '6',  ',',  -1 }, { '6',  'j',  -2 }, { '7',  '.',  -2 }, { '7',  ',',  -2 }, { '7',  ';',  -1 },
+    { '5',  'j',  -2 }, { '6',  ',',  -1 }, { '6',  'j',  -2 }, { '7',  ',',  -2 }, { '7',  '.',  -2 }, { '7',  ';',  -1 },
     { '7',  'j',  -2 }, { '8',  ',',  -1 }, { '8',  ';',  -1 }, { '8',  'j',  -2 }, { '9',  ',',  -1 }, { '9',  ';',  -1 },
-    { '9',  'j',  -2 }, { 'F',  '.',  -1 }, { 'F',  ',',  -1 }, { 'F',  ';',  -1 }, { 'L',  '\\', -2 }, { 'L',  '"',  -1 },
-    { 'L',  '\'', -1 }, { 'L',  'Y',  -1 }, { 'P',  '.',  -1 }, { 'P',  ',',  -1 }, { 'P',  ';',  -1 }, { 'P',  '_',  -1 },
-    { 'T',  ' ',  -1 }, { 'T',  '.',  -1 }, { 'T',  ',',  -1 }, { 'T',  ';',  -1 }, { 'T',  'a',  -1 }, { 'T',  'e',  -1 },
-    { 'T',  'o',  -1 }, { 'V',  '.',  -1 }, { 'V',  ',',  -1 }, { 'V',  ';',  -1 }, { 'Y',  '.',  -1 }, { 'Y',  ',',  -1 },
-    { 'Y',  ';',  -1 }, { 'a',  '"',  -1 }, { 'a',  '\\', -1 }, { 'a',  '\'', -1 }, { 'a',  'j',  -2 }, { 'b',  ',',  -1 },
-    { 'b',  ';',  -1 }, { 'b',  '"',  -1 }, { 'b',  '\\', -1 }, { 'b',  '\'', -1 }, { 'b',  'j',  -2 }, { 'c',  '\\', -1 },
-    { 'c',  ',',  -1 }, { 'c',  ';',  -1 }, { 'c',  '"',  -1 }, { 'c',  '\'', -1 }, { 'c',  'j',  -2 }, { 'd',  'j',  -2 },
-    { 'e',  '\\', -1 }, { 'e',  ',',  -1 }, { 'e',  ';',  -1 }, { 'e',  '"',  -1 }, { 'e',  '\'', -1 }, { 'e',  '_',  -1 },
+    { '9',  'j',  -2 }, { ':', '\\',  -1 }, { 'F',  ' ',  -1 }, { 'F',  ',',  -1 }, { 'F',  '.',  -1 }, { 'F',  ';',  -1 },
+    { 'L',  ' ',  -1 }, { 'L',  '"',  -1 }, { 'L',  'Y',  -1 }, { 'L',  '\'', -1 }, { 'L',  '\\', -2 }, { 'P',  ',',  -1 },
+    { 'P',  '.',  -1 }, { 'P',  ';',  -1 }, { 'P',  '_',  -1 }, { 'T',  ' ',  -1 }, { 'T',  ',',  -1 }, { 'T',  '.',  -1 },
+    { 'T',  ';',  -1 }, { 'T',  'a',  -1 }, { 'T',  'e',  -1 }, { 'T',  'o',  -1 }, { 'V',  ',',  -1 }, { 'V',  '.',  -1 },
+    { 'V',  ';',  -1 }, { 'Y',  ',',  -1 }, { 'Y',  '.',  -1 }, { 'Y',  ';',  -1 }, { '\'', 'J',  -2 }, { '\'', 'a',  -1 },
+    { '\'', 'c',  -1 }, { '\'', 'd',  -1 }, { '\'', 'e',  -1 }, { '\'', 'g',  -1 }, { '\'', 'j',  -2 }, { '\'', 'o',  -1 },
+    { '\\', 'T',  -1 }, { '\\', 'V',  -1 }, { '\\', '\\', -2 }, { '\\', 't',  -1 }, { '_',  'f',  -1 }, { '_',  't',  -1 },
+    { '_',  'v',  -1 }, { 'a',  '"',  -1 }, { 'a',  '\'', -1 }, { 'a',  '\\', -1 }, { 'a',  'j',  -2 }, { 'b',  '"',  -1 },
+    { 'b',  ',',  -1 }, { 'b',  ';',  -1 }, { 'b',  '\'', -1 }, { 'b',  '\\', -1 }, { 'b',  'j',  -2 }, { 'c',  '"',  -1 },
+    { 'c',  ',',  -1 }, { 'c',  ';',  -1 }, { 'c',  '\'', -1 }, { 'c',  '\\', -1 }, { 'c',  'j',  -2 }, { 'd',  'j',  -2 },
+    { 'e',  '"',  -1 }, { 'e',  ',',  -1 }, { 'e',  ';',  -1 }, { 'e',  '\'', -1 }, { 'e',  '\\', -1 }, { 'e',  '_',  -1 },
     { 'e',  'j',  -2 }, { 'f',  ' ',  -1 }, { 'f',  ',',  -2 }, { 'f',  ';',  -1 }, { 'f',  '_',  -1 }, { 'f',  'a',  -1 },
     { 'f',  'j',  -2 }, { 'h',  '\\', -1 }, { 'h',  'j',  -2 }, { 'i',  'j',  -2 }, { 'k',  'j',  -2 }, { 'l',  'j',  -2 },
-    { 'm',  '"',  -1 }, { 'm',  '\\', -1 }, { 'm',  '\'', -1 }, { 'm',  'j',  -2 }, { 'n',  '\\', -1 }, { 'n',  '"',  -1 },
-    { 'n',  '\'', -1 }, { 'n',  'j',  -2 }, { 'o',  '\\', -1 }, { 'o',  ',',  -1 }, { 'o',  ';',  -1 }, { 'o',  '"',  -1 },
-    { 'o',  '\'', -1 }, { 'o',  'j',  -2 }, { 'p',  '\\', -1 }, { 'p',  ',',  -1 }, { 'p',  ';',  -1 }, { 'p',  '"',  -1 },
-    { 'p',  '\'', -1 }, { 'p',  'j',  -2 }, { 'r',  ' ',  -1 }, { 'r',  '\\', -1 }, { 'r',  ')',  -1 }, { 'r',  '.',  -2 },
-    { 'r',  ',',  -2 }, { 'r',  ';',  -1 }, { 'r',  '"',  -1 }, { 'r',  '\'', -1 }, { 'r',  '_',  -2 }, { 'r',  'a',  -1 },
-    { 'r',  'j',  -2 }, { 's',  '\\', -1 }, { 's',  ',',  -1 }, { 's',  ';',  -1 }, { 's',  'j',  -2 }, { 't',  '\\', -1 },
-    { 't',  'j',  -2 }, { 'u',  'j',  -2 }, { 'v',  '\\', -1 }, { 'v',  ',',  -1 }, { 'v',  ';',  -1 }, { 'v',  'j',  -2 },
-    { 'w',  '\\', -1 }, { 'w',  'j',  -2 }, { 'x',  '\\', -1 }, { 'x',  'j',  -2 }, { 'y',  '\\', -1 }, { 'z',  '\\', -1 },
-    { 'z',  'j',  -2 }, { '\0', '\0',  0 }
+    { 'm',  '"',  -1 }, { 'm',  '\'', -1 }, { 'm',  '\\', -1 }, { 'm',  'j',  -2 }, { 'n',  '"',  -1 }, { 'n',  '\'', -1 },
+    { 'n',  '\\', -1 }, { 'n',  'j',  -2 }, { 'o',  '"',  -1 }, { 'o',  ',',  -1 }, { 'o',  ';',  -1 }, { 'o',  '\'', -1 },
+    { 'o',  '\\', -1 }, { 'o',  'j',  -2 }, { 'p',  '"',  -1 }, { 'p',  ',',  -1 }, { 'p',  ';',  -1 }, { 'p',  '\'', -1 },
+    { 'p',  '\\', -1 }, { 'p',  'j',  -2 }, { 'r',  ' ',  -1 }, { 'r',  ')',  -1 }, { 'r',  ',',  -2 }, { 'r',  '.',  -2 },
+    { 'r',  ';',  -1 }, { 'r',  '\'', -1 }, { 'r',  '\\', -1 }, { 'r',  '_',  -2 }, { 'r',  'a',  -1 }, { 'r',  'j',  -2 },
+    { 's',  ',',  -1 }, { 's',  ';',  -1 }, { 's',  '\\', -1 }, { 's',  'j',  -2 }, { 't',  '\\', -1 }, { 't',  'j',  -2 },
+    { 'u',  'j',  -2 }, { 'v',  ',',  -1 }, { 'v',  ';',  -1 }, { 'v',  '\\', -1 }, { 'v',  'j',  -2 }, { 'w',  '\\', -1 },
+    { 'w',  'j',  -2 }, { 'x',  '\\', -1 }, { 'x',  'j',  -2 }, { 'y',  '\\', -1 }, { 'z',  '\\', -1 }, { 'z',  'j',  -2 },
+    { '\0', '\0',  0 }
 };
 
-static int C_TextWidth(const char *text, const dboolean formatting, const dboolean kerning)
+int C_TextWidth(const char *text, const dboolean formatting, const dboolean kerning)
 {
     const int       len = (int)strlen(text);
     unsigned char   prevletter = '\0';
@@ -434,10 +410,11 @@ static int C_TextWidth(const char *text, const dboolean formatting, const dboole
     for (int i = 0; i < len; i++)
     {
         const unsigned char letter = text[i];
-        const unsigned char nextletter = (i < len - 1 ? text[i + 1] : '\0');
-        const int           c = letter - CONSOLEFONTSTART;
+        unsigned char nextletter;
 
-        if (letter == '<' && i < len - 2 && (text[i + 1] == 'b' || text[i + 1] == 'i') && text[i + 2] == '>' && formatting)
+        if (letter == ' ')
+            w += spacewidth;
+        else if (letter == '<' && i < len - 2 && (text[i + 1] == 'b' || text[i + 1] == 'i') && text[i + 2] == '>' && formatting)
             i += 2;
         else if (letter == '<' && i < len - 3 && text[i + 1] == '/' && text[i + 2] == 'b' && text[i + 3] == '>' && formatting)
             i += 3;
@@ -466,12 +443,18 @@ static int C_TextWidth(const char *text, const dboolean formatting, const dboole
             w += SHORT(degree->width);
             i++;
         }
-        else if (letter == 215 || (letter == 'x' && isdigit(prevletter) && (nextletter == '\0' || isdigit(nextletter))))
+        else if (letter == 215 || (letter == 'x' && isdigit(prevletter)
+            && ((nextletter = (i < len - 1 ? text[i + 1] : '\0')) == '\0' || isdigit(nextletter))))
             w += SHORT(multiply->width);
-        else if (c >= 0 && c < CONSOLEFONTSIZE)
-            w += SHORT(consolefont[c]->width);
         else
-            w += SHORT(unknown->width);
+        {
+            const int   c = letter - CONSOLEFONTSTART;
+
+            if (c >= 0 && c < CONSOLEFONTSIZE)
+                w += SHORT(consolefont[c]->width);
+            else
+                w += SHORT(unknownchar->width);
+        }
 
         if (kerning)
             for (int j = 0; altkern[j].char1; j++)
@@ -528,7 +511,6 @@ void C_Init(void)
         consolefont[i] = W_CacheLumpName(buffer);
     }
 
-    consolebackcolor = nearestcolors[con_backcolor] << 8;
     consolecaretcolor = nearestcolors[consolecaretcolor];
     consolelowfpscolor = nearestcolors[consolelowfpscolor];
     consolehighfpscolor = nearestcolors[consolehighfpscolor];
@@ -562,11 +544,12 @@ void C_Init(void)
     regomark = W_CacheLumpName("DRFON174");
     degree = W_CacheLumpName("DRFON176");
     multiply = W_CacheLumpName("DRFON215");
-    unknown = W_CacheLumpName("DRFON000");
+    unknownchar = W_CacheLumpName("DRFON000");
 
     caret = W_CacheLumpName("DRCARET");
     divider = W_CacheLumpName("DRDIVIDE");
     warning = W_CacheLumpName("DRFONWRN");
+    altunderscores = W_CacheLumpName("DRFONUND");
 
     bindlist = W_CacheLumpName("DRBNDLST");
     cmdlist = W_CacheLumpName("DRCMDLST");
@@ -594,6 +577,9 @@ void C_ShowConsole(void)
     caretwait = 0;
 
     viewplayer->damagecount = MIN(viewplayer->damagecount, (NUMREDPALS - 1) << 3);
+
+    for (int i = 0; i < MAX_MOUSE_BUTTONS; i++)
+        mousebuttons[i] = false;
 
     if (gamestate == GS_TITLESCREEN && !devparm)
         S_StartSound(NULL, sfx_swtchn);
@@ -678,8 +664,8 @@ static void C_DrawBackground(int height)
     else
         blurred = (consoleheight == CONSOLEHEIGHT && !dowipe);
 
-    for (int i = 0; i < height; i++)
-        screens[0][i] = tinttab50[blurscreen[i] + consolebackcolor];
+    for (int i = 0, color = nearestcolors[con_backcolor] << 8; i < height; i++)
+        screens[0][i] = tinttab50[blurscreen[i] + color];
 
     for (int i = height - 2; i > 1; i -= 3)
     {
@@ -744,7 +730,6 @@ static void C_DrawConsoleText(int x, int y, char *text, const int color1, const 
     for (int i = 0; i < truncate; i++)
     {
         const unsigned char letter = text[i];
-        const unsigned char nextletter = (i < len - 1 ? text[i + 1] : '\0');
 
         if (letter == '<' && i < len - 2 && tolower(text[i + 1]) == 'b' && text[i + 2] == '>' && formatting)
         {
@@ -769,10 +754,12 @@ static void C_DrawConsoleText(int x, int y, char *text, const int color1, const 
         }
         else
         {
-            patch_t     *patch = NULL;
-            const int   c = letter - CONSOLEFONTSTART;
+            patch_t         *patch = NULL;
+            unsigned char   nextletter;
 
-            if (letter == '\t')
+            if (letter == ' ' && formatting)
+                x += spacewidth;
+            else if (letter == '\t')
                 x = (x > tabs[++tab] ? x + spacewidth : tabs[tab]);
             else if (letter == 153)
                 patch = trademark;
@@ -780,26 +767,39 @@ static void C_DrawConsoleText(int x, int y, char *text, const int color1, const 
                 patch = copyright;
             else if (letter == 174)
                 patch = regomark;
-            else if (letter == 215 || (letter == 'x' && isdigit(prevletter) && (nextletter == '\0' || isdigit(nextletter))))
+            else if (letter == 176)
+                patch = degree;
+            else if (letter == 215 || (letter == 'x' && isdigit(prevletter)
+                && ((nextletter = (i < len - 1 ? text[i + 1] : '\0')) == '\0' || isdigit(nextletter))))
                 patch = multiply;
-            else if (c >= 0 && c < CONSOLEFONTSIZE)
-                patch = consolefont[c];
             else
-                patch = unknown;
+            {
+                const int   c = letter - CONSOLEFONTSTART;
+
+                if (c >= 0 && c < CONSOLEFONTSIZE)
+                    patch = consolefont[c];
+                else
+                    patch = unknownchar;
+            }
+
+            if (kerning)
+            {
+                for (int j = 0; altkern[j].char1; j++)
+                    if (prevletter == altkern[j].char1 && letter == altkern[j].char2)
+                    {
+                        x += altkern[j].adjust;
+                        break;
+                    }
+
+                if (prevletter == '/' && italics)
+                    x -= 2;
+            }
 
             if (patch)
             {
-                if (kerning)
-                    for (int j = 0; altkern[j].char1; j++)
-                        if (prevletter == altkern[j].char1 && letter == altkern[j].char2)
-                        {
-                            x += altkern[j].adjust;
-                            break;
-                        }
-
                 V_DrawConsoleTextPatch(x, y, patch, (lastcolor1 = (bold == 1 ? boldcolor : (bold == 2 ? color1 : (italics ?
                     (color1 == consolewarningcolor ? color1 : consoleitalicscolor) : color1)))), color2,
-                    (italics && letter != '_' && letter != ','), translucency);
+                    (italics && letter != '_' && letter != ',' && letter != '/'), translucency);
                 x += SHORT(patch->width);
             }
 
@@ -863,13 +863,13 @@ char *C_GetTimeStamp(unsigned int tics)
     if ((hours += tics / 3600) >= 24)
         hours %= 24;
 
-    M_snprintf(buffer, 9, "%02i:%02i:%02i", hours, minutes, seconds);
+    M_snprintf(buffer, 9, "%02d:%02d:%02d", hours, minutes, seconds);
     return buffer;
 }
 
 static void C_DrawTimeStamp(int x, int y, unsigned int tics)
 {
-    static char buffer[9];
+    char    buffer[9];
 
     M_StringCopy(buffer, C_GetTimeStamp(tics), 9);
     y -= CONSOLEHEIGHT - consoleheight;
@@ -889,7 +889,7 @@ void C_UpdateFPS(void)
 {
     if (fps && !dowipe && !paused && !menuactive)
     {
-        static char buffer[32];
+        char    buffer[32];
 
         M_snprintf(buffer, sizeof(buffer), "%i FPS (%.1fms)", fps, 1000.0 / fps);
 
@@ -1000,51 +1000,53 @@ void C_Drawer(void)
         for (i = start; i < end; i++)
         {
             const int           y = CONSOLELINEHEIGHT * (i - start + MAX(0, CONSOLELINES - consolestrings)) - CONSOLELINEHEIGHT / 2 + 1;
-            const stringtype_t  type = console[i].type;
+            const stringtype_t  stringtype = console[i].stringtype;
 
-            if (type == playermessagestring || type == obituarystring)
+            if (stringtype == playermessagestring || stringtype == obituarystring)
             {
                 if (console[i].count > 1)
                 {
-                    static char buffer[CONSOLETEXTMAXLENGTH];
+                    char    buffer[CONSOLETEXTMAXLENGTH];
 
                     M_snprintf(buffer, sizeof(buffer), "%s (%s)", console[i].string, commify(console[i].count));
                     C_DrawConsoleText(CONSOLETEXTX, y, buffer, consoleplayermessagecolor,
-                        NOBACKGROUNDCOLOR, consoleboldcolor, tinttab66, notabs, true, true);
+                        NOBACKGROUNDCOLOR, consoleplayermessagecolor, tinttab66, notabs, true, true);
                 }
                 else
                     C_DrawConsoleText(CONSOLETEXTX, y, console[i].string, consoleplayermessagecolor,
-                        NOBACKGROUNDCOLOR, consoleboldcolor, tinttab66, notabs, true, true);
+                        NOBACKGROUNDCOLOR, consoleplayermessagecolor, tinttab66, notabs, true, true);
 
                 if (con_timestamps)
                     C_DrawTimeStamp(timestampx, y, console[i].tics);
             }
-            else if (type == outputstring)
-                C_DrawConsoleText(CONSOLETEXTX, y, console[i].string, consolecolors[type],
+            else if (stringtype == outputstring)
+                C_DrawConsoleText(CONSOLETEXTX, y, console[i].string, consolecolors[stringtype],
                     NOBACKGROUNDCOLOR, consoleboldcolor, tinttab66, console[i].tabs, true, true);
-            else if (type == dividerstring)
+            else if (stringtype == dividerstring)
                 V_DrawConsoleTextPatch(CONSOLETEXTX, y + 5 - (CONSOLEHEIGHT - consoleheight),
                     divider, consoledividercolor, NOBACKGROUNDCOLOR, false, tinttab50);
-            else if (type == headerstring)
+            else if (stringtype == headerstring)
             {
-                if (M_StringCompare(console[i].string, BINDLISTTITLE))
+                const headertype_t  headertype = console[i].headertype;
+
+                if (headertype == bindlistheader)
                     V_DrawBigTranslucentPatch(CONSOLETEXTX, y + 4 - (CONSOLEHEIGHT - consoleheight), bindlist);
-                else if (M_StringCompare(console[i].string, CMDLISTTITLE))
+                else if (headertype == cmdlistheader)
                     V_DrawBigTranslucentPatch(CONSOLETEXTX, y + 4 - (CONSOLEHEIGHT - consoleheight), cmdlist);
-                else if (M_StringCompare(console[i].string, CVARLISTTITLE))
+                else if (headertype == cvarlistheader)
                     V_DrawBigTranslucentPatch(CONSOLETEXTX, y + 4 - (CONSOLEHEIGHT - consoleheight), cvarlist);
-                else if (M_StringCompare(console[i].string, MAPLISTTITLE))
+                else if (headertype == maplistheader)
                     V_DrawBigTranslucentPatch(CONSOLETEXTX, y + 4 - (CONSOLEHEIGHT - consoleheight), maplist);
-                else if (M_StringCompare(console[i].string, MAPSTATSTITLE))
+                else if (headertype == mapstatsheader)
                     V_DrawBigTranslucentPatch(CONSOLETEXTX, y + 4 - (CONSOLEHEIGHT - consoleheight), mapstats);
-                else if (M_StringCompare(console[i].string, PLAYERSTATSTITLE))
+                else if (headertype == playerstatsheader)
                     V_DrawBigTranslucentPatch(CONSOLETEXTX, y + 4 - (CONSOLEHEIGHT - consoleheight), playerstats);
-                else if (M_StringCompare(console[i].string, THINGLISTTITLE))
+                else if (headertype == thinglistheader)
                     V_DrawBigTranslucentPatch(CONSOLETEXTX, y + 4 - (CONSOLEHEIGHT - consoleheight), thinglist);
             }
             else
-                C_DrawConsoleText(CONSOLETEXTX, y, console[i].string, consolecolors[type], NOBACKGROUNDCOLOR,
-                    (type == warningstring ? consolewarningboldcolor : consoleboldcolor), tinttab66, notabs, true, true);
+                C_DrawConsoleText(CONSOLETEXTX, y, console[i].string, consolecolors[stringtype], NOBACKGROUNDCOLOR,
+                    (stringtype == warningstring ? consolewarningboldcolor : consoleboldcolor), tinttab66, notabs, true, true);
         }
 
         if (quitcmd)
@@ -1087,7 +1089,7 @@ void C_Drawer(void)
         }
 
         // draw caret
-        if (consoledirection == 1 && windowfocused && !messageToPrint)
+        if (consoledirection == 1 && windowfocused && !messagetoprint)
         {
             if (caretwait < I_GetTimeMS())
             {
@@ -1267,7 +1269,7 @@ dboolean C_Responder(event_t *ev)
     if (quitcmd)
         I_Quit(true);
 
-    if ((consoleheight < CONSOLEHEIGHT && consoledirection == -1) || messageToPrint)
+    if ((consoleheight < CONSOLEHEIGHT && consoledirection == -1) || messagetoprint)
         return false;
 
     len = (int)strlen(consoleinput);
@@ -1538,7 +1540,8 @@ dboolean C_Responder(event_t *ev)
                         endspace2 = (output[len2 - 1] == ' ');
                         game = autocompletelist[autocomplete].game;
 
-                        if ((game == DOOM1AND2 || (gamemission == doom && game == DOOM1ONLY)
+                        if ((game == DOOM1AND2
+                            || (gamemission == doom && game == DOOM1ONLY)
                             || (gamemission != doom && game == DOOM2ONLY))
                             && M_StringStartsWith(output, input)
                             && input[strlen(input) - 1] != '+'
@@ -1579,7 +1582,7 @@ dboolean C_Responder(event_t *ev)
                         M_StringCopy(currentinput, consoleinput, sizeof(currentinput));
 
                     for (i = (inputhistory == -1 ? consolestrings : inputhistory) - 1; i >= 0; i--)
-                        if (console[i].type == inputstring
+                        if (console[i].stringtype == inputstring
                             && !M_StringCompare(consoleinput, console[i].string)
                             && C_TextWidth(console[i].string, false, true) <= CONSOLEINPUTPIXELWIDTH)
                         {
@@ -1610,7 +1613,7 @@ dboolean C_Responder(event_t *ev)
                     if (inputhistory != -1)
                     {
                         for (i = inputhistory + 1; i < consolestrings; i++)
-                            if (console[i].type == inputstring
+                            if (console[i].stringtype == inputstring
                                 && !M_StringCompare(consoleinput, console[i].string)
                                 && C_TextWidth(console[i].string, false, true) <= CONSOLEINPUTPIXELWIDTH)
                             {
@@ -1821,17 +1824,16 @@ static const char *dayofweek(int d, int m, int y)
 
 void C_PrintCompileDate(void)
 {
-    int day, month, year, hour, minute;
+    int     day, month, year, hour, minute;
+    char    mth[4] = "";
 
-    static const char mths[] = "JanFebMarAprMayJunJulAugSepOctNovDec";
+    const char mths[] = "JanFebMarAprMayJunJulAugSepOctNovDec";
 
-    static const char *months[] =
+    const char *months[] =
     {
         "", "January", "February", "March", "April", "May", "June",
         "July", "August", "September", "October", "November", "December"
     };
-
-    static char mth[4] = "";
 
     if (sscanf(__DATE__, "%3s %2d %4d", mth, &day, &year) != 3 || sscanf(__TIME__, "%2d:%2d:%*d", &hour, &minute) != 2)
         return;

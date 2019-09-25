@@ -53,8 +53,8 @@ static visplane_t   *lastvisplane;
 visplane_t          *floorplane;
 visplane_t          *ceilingplane;
 
-int                *openings;                   // dropoff overflow
-int                *lastopening;                // dropoff overflow
+int                 *openings;                  // dropoff overflow
+int                 *lastopening;               // dropoff overflow
 
 // Clip values are the solid pixel bounding the range.
 //  floorclip starts out SCREENHEIGHT
@@ -151,6 +151,9 @@ void R_ClearPlanes(void)
     memset(cachedheight, 0, sizeof(cachedheight));
 }
 
+//
+// R_RaiseVisplanes
+//
 static void R_RaiseVisplanes(visplane_t **vp)
 {
     static unsigned int numvisplanes;
@@ -325,51 +328,69 @@ static void R_MakeSpans(visplane_t *pl)
 // 1 cycle per 32 units (2 in 64)
 #define SWIRLFACTOR2    (8192 / 32)
 
+static int  offsets[1024 * 4096];
+
 //
 // R_DistortedFlat
-//
 // Generates a distorted flat from a normal one using a two-dimensional sine wave pattern.
+// [crispy] Optimized to precalculate offsets
 //
 static byte *R_DistortedFlat(int flatnum)
 {
-    static int  swirltic = -1;
-    static int  lastflat = -1;
-    static int  offset[4096];
     static byte distortedflat[4096];
-    byte        *normalflat;
-    int         leveltic = leveltime;
+    static int  prevleveltime = -1;
+    static int  prevflatnum = -1;
+    static byte *normalflat;
+    static int  *offset;
 
-    // Already swirled this one?
-    if (swirltic == leveltic && lastflat == flatnum)
-        return distortedflat;
+    if (prevleveltime != leveltime)
+    {
+        offset = &offsets[(leveltime & 1023) << 12];
+        prevleveltime = leveltime;
 
-    swirltic = leveltic;
-    lastflat = flatnum;
-
-    leveltic *= SPEED;
-
-    for (int x = 0; x < 64; x++)
-        for (int y = 0; y < 64; y++)
+        if (prevflatnum != flatnum)
         {
-            int x1, y1;
-            int sinvalue, sinvalue2;
-
-            sinvalue = finesine[(y * SWIRLFACTOR + leveltic * 5 + 900) & 8191];
-            sinvalue2 = finesine[(x * SWIRLFACTOR2 + leveltic * 4 + 300) & 8191];
-            x1 = x + 128 + ((sinvalue * AMP) >> FRACBITS) + ((sinvalue2 * AMP2) >> FRACBITS);
-            sinvalue = finesine[(x * SWIRLFACTOR + leveltic * 3 + 700) & 8191];
-            sinvalue2 = finesine[(y * SWIRLFACTOR2 + leveltic * 4 + 1200) & 8191];
-            y1 = y + 128 + ((sinvalue * AMP) >> FRACBITS) + ((sinvalue2 * AMP2) >> FRACBITS);
-
-            offset[(y << 6) + x] = ((y1 & 63) << 6) + (x1 & 63);
+            normalflat = lumpinfo[firstflat + flatnum]->cache;
+            prevflatnum = flatnum;
         }
 
-    normalflat = lumpinfo[firstflat + flatnum]->cache;
+        for (int i = 0; i < 4096; i++)
+            distortedflat[i] = normalflat[offset[i]];
+    }
+    else if (prevflatnum != flatnum)
+    {
+        normalflat = lumpinfo[firstflat + flatnum]->cache;
+        prevflatnum = flatnum;
 
-    for (int i = 0; i < 4096; i++)
-        distortedflat[i] = normalflat[offset[i]];
+        for (int i = 0; i < 4096; i++)
+            distortedflat[i] = normalflat[offset[i]];
+    }
 
     return distortedflat;
+}
+
+//
+// R_InitDistortedFlats
+// [BH] Moved to separate function and called at startup
+//
+void R_InitDistortedFlats(void)
+{
+    for (int i = 0, *offset = offsets; i < 1024 * SPEED; i += SPEED, offset += 4096)
+        for (int y = 0; y < 64; y++)
+            for (int x = 0; x < 64; x++)
+            {
+                int x1, y1;
+                int sinvalue, sinvalue2;
+
+                sinvalue = finesine[(y * SWIRLFACTOR + i * 5 + 900) & 8191];
+                sinvalue2 = finesine[(x * SWIRLFACTOR2 + i * 4 + 300) & 8191];
+                x1 = x + 128 + ((sinvalue * AMP) >> FRACBITS) + ((sinvalue2 * AMP2) >> FRACBITS);
+                sinvalue = finesine[(x * SWIRLFACTOR + i * 3 + 700) & 8191];
+                sinvalue2 = finesine[(y * SWIRLFACTOR2 + i * 4 + 1200) & 8191];
+                y1 = y + 128 + ((sinvalue * AMP) >> FRACBITS) + ((sinvalue2 * AMP2) >> FRACBITS);
+
+                offset[(y << 6) + x] = ((y1 & 63) << 6) + (x1 & 63);
+            }
 }
 
 //
@@ -387,9 +408,9 @@ void R_DrawPlanes(void)
             if (picnum == skyflatnum || (picnum & PL_SKYFLAT))
             {
                 int             texture;
-                int             offset = skycolumnoffset >> FRACBITS;
-                angle_t         flip = 0;
+                angle_t         flip = 0U;
                 const rpatch_t  *tex_patch;
+                int             skyoffset = skycolumnoffset >> FRACBITS;
 
                 // killough 10/98: allow skies to come from sidedefs.
                 // Allows scrolling and/or animated skies, as well as
@@ -427,7 +448,8 @@ void R_DrawPlanes(void)
                     // DOOM always flipped the picture, so we make it optional,
                     // to make it easier to use the new feature, while to still
                     // allow old sky textures to be used.
-                    flip = (l->special == TransferSkyTextureToTaggedSectors_Flipped ? 0u : ~0u);
+                    if (l->special != TransferSkyTextureToTaggedSectors_Flipped)
+                        flip = ~0U;
                 }
                 else
                 {
@@ -449,7 +471,7 @@ void R_DrawPlanes(void)
                     if (dc_yl <= dc_yh)
                     {
                         dc_x = x;
-                        dc_source = R_GetTextureColumn(tex_patch, (((an + xtoviewangle[x]) ^ flip) >> ANGLETOSKYSHIFT) + offset);
+                        dc_source = R_GetTextureColumn(tex_patch, (((an + xtoviewangle[x]) ^ flip) >> ANGLETOSKYSHIFT) + skyoffset);
                         skycolfunc();
                     }
                 }

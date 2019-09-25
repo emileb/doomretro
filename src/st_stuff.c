@@ -314,7 +314,7 @@ static void ST_initCheats(void)
 }
 
 #define NONE        -1
-#define IDMUS_MAX   50
+#define IDMUS_MAX   60
 
 static const int mus[IDMUS_MAX][6] =
 {
@@ -368,7 +368,17 @@ static const int mus[IDMUS_MAX][6] =
     /* 46 */ { NONE,        NONE,        NONE,        mus_e2m4,   NONE,        NONE       },
     /* 47 */ { NONE,        NONE,        NONE,        mus_e2m6,   NONE,        NONE       },
     /* 48 */ { NONE,        NONE,        NONE,        mus_e2m5,   NONE,        NONE       },
-    /* 49 */ { NONE,        NONE,        NONE,        mus_e1m9,   NONE,        NONE       }
+    /* 49 */ { NONE,        NONE,        NONE,        mus_e1m9,   NONE,        NONE       },
+    /* 50 */ { NONE,        NONE,        NONE,        NONE,       NONE,        NONE       },
+    /* 51 */ { NONE,        NONE,        NONE,        mus_e5m1,   NONE,        NONE       },
+    /* 52 */ { NONE,        NONE,        NONE,        mus_e5m2,   NONE,        NONE       },
+    /* 53 */ { NONE,        NONE,        NONE,        mus_e5m3,   NONE,        NONE       },
+    /* 54 */ { NONE,        NONE,        NONE,        mus_e5m4,   NONE,        NONE       },
+    /* 55 */ { NONE,        NONE,        NONE,        mus_e5m5,   NONE,        NONE       },
+    /* 56 */ { NONE,        NONE,        NONE,        mus_e5m6,   NONE,        NONE       },
+    /* 57 */ { NONE,        NONE,        NONE,        mus_e5m7,   NONE,        NONE       },
+    /* 58 */ { NONE,        NONE,        NONE,        mus_e5m8,   NONE,        NONE       },
+    /* 59 */ { NONE,        NONE,        NONE,        mus_e5m9,   NONE,        NONE       }
 };
 
 //
@@ -477,9 +487,6 @@ dboolean ST_Responder(event_t *ev)
                 dboolean    berserkgiven = false;
                 dboolean    weaponsgiven = false;
 
-                S_StartSound(NULL, sfx_getpow);
-                C_CCMDOutput(cheat_ammonokey.sequence);
-
                 // [BH] note if doesn't have full armor before giving it
                 if (viewplayer->armorpoints < idfa_armor || viewplayer->armortype < idfa_armor_class)
                 {
@@ -510,6 +517,9 @@ dboolean ST_Responder(event_t *ev)
                 // [BH] only acknowledge cheat if player was given something
                 if (ammogiven || armorgiven || berserkgiven || weaponsgiven)
                 {
+                    S_StartSound(NULL, sfx_getpow);
+                    C_CCMDOutput(cheat_ammonokey.sequence);
+
                     // [BH] flash screen
                     P_AddBonus();
 
@@ -532,9 +542,6 @@ dboolean ST_Responder(event_t *ev)
                 dboolean    berserkgiven = false;
                 dboolean    keysgiven = false;
                 dboolean    weaponsgiven = false;
-
-                S_StartSound(NULL, sfx_getpow);
-                C_CCMDOutput(cheat_ammo.sequence);
 
                 // [BH] note if doesn't have full armor before giving it
                 if (viewplayer->armorpoints < idkfa_armor || viewplayer->armortype < idkfa_armor_class)
@@ -570,6 +577,9 @@ dboolean ST_Responder(event_t *ev)
                 // [BH] only acknowledge cheat if player was given something
                 if (ammogiven || armorgiven || berserkgiven || weaponsgiven || keysgiven)
                 {
+                    S_StartSound(NULL, sfx_getpow);
+                    C_CCMDOutput(cheat_ammo.sequence);
+
                     // [BH] flash screen
                     P_AddBonus();
 
@@ -585,21 +595,21 @@ dboolean ST_Responder(event_t *ev)
             // 'mus' cheat for changing music
             else if (cht_CheckCheat(&cheat_mus_xy, ev->data2) && !nomusic && musicVolume)
             {
-                char   buf[3];
+                char   buffer[3];
 
                 // [BH] only display message if parameter is valid
-                cht_GetParam(&cheat_mus_xy, buf);
+                cht_GetParam(&cheat_mus_xy, buffer);
 
                 // [BH] rewritten to use mus[] LUT
                 // [BH] fix crash if IDMUS0y and IDMUSx0 entered in DOOM,
                 //  IDMUS21 to IDMUS39 entered in shareware, and IDMUS00
                 //  entered in DOOM II
-                if (buf[0] >= '0' && buf[0] <= '9' && buf[1] >= '0' && buf[1] <= '9')
+                if (buffer[0] >= '0' && buffer[0] <= '9' && buffer[1] >= '0' && buffer[1] <= '9')
                 {
-                    int musnum = (buf[0] - '0') * 10 + (buf[1] - '0');
+                    int musnum = (buffer[0] - '0') * 10 + (buffer[1] - '0');
 
                     S_StartSound(NULL, sfx_getpow);
-                    C_Input("%s%c%c", cheat_mus_xy.sequence, buf[0], buf[1]);
+                    C_Input("%s%c%c", cheat_mus_xy.sequence, buffer[0], buffer[1]);
 
                     if (musnum < IDMUS_MAX)
                     {
@@ -670,7 +680,6 @@ dboolean ST_Responder(event_t *ev)
                 {
                     S_StartSound(NULL, sfx_getpow);
                     C_CCMDOutput(cheat_powerup[i - 1].sequence);
-                    C_Output(s_STSTR_BEHOLD);
 
                     if ((i != pw_strength && viewplayer->powers[i] >= 0 && viewplayer->powers[i] <= STARTFLASHING)
                         || (i == pw_strength && !viewplayer->powers[i]))
@@ -797,9 +806,11 @@ dboolean ST_Responder(event_t *ev)
                 // [BH] can only enter cheat while player is alive
                 && viewplayer->health > 0)
             {
-                // [BH] message stays on screen until parameter entered or another key
-                //  pressed to cancel. Code is in hu_stuff.c.
                 idbehold = true;
+
+                C_Output(s_STSTR_BEHOLD);
+                HU_SetPlayerMessage(s_STSTR_BEHOLD, false, false);
+                message_dontfuckwithme = true;
             }
 
             // 'choppers' invulnerability & chainsaw
@@ -929,24 +940,24 @@ dboolean ST_Responder(event_t *ev)
 
             if (cht_CheckCheat(&cheat_clev_xy, ev->data2))
             {
-                char   buf[3];
+                char   buffer[3];
                 char   lump[6];
                 int    epsd;
                 int    map;
 
-                cht_GetParam(&cheat_clev_xy, buf);
+                cht_GetParam(&cheat_clev_xy, buffer);
 
                 if (gamemode == commercial)
                 {
                     epsd = 1;
-                    map = (buf[0] - '0') * 10 + buf[1] - '0';
-                    M_snprintf(lump, sizeof(lump), "MAP%c%c", buf[0], buf[1]);
+                    map = (buffer[0] - '0') * 10 + buffer[1] - '0';
+                    M_snprintf(lump, sizeof(lump), "MAP%c%c", buffer[0], buffer[1]);
                 }
                 else
                 {
-                    epsd = buf[0] - '0';
-                    map = buf[1] - '0';
-                    M_snprintf(lump, sizeof(lump), "E%cM%c", buf[0], buf[1]);
+                    epsd = buffer[0] - '0';
+                    map = buffer[1] - '0';
+                    M_snprintf(lump, sizeof(lump), "E%cM%c", buffer[0], buffer[1]);
 
                     if (chex && epsd != 1)
                         return false;
@@ -963,12 +974,12 @@ dboolean ST_Responder(event_t *ev)
                     static char message[128];
 
                     S_StartSound(NULL, sfx_getpow);
-                    C_Input("%s%c%c", cheat_clev_xy.sequence, buf[0], buf[1]);
+                    C_Input("%s%c%c", cheat_clev_xy.sequence, buffer[0], buffer[1]);
 
                     if (BTSX)
-                        M_snprintf(lump, sizeof(lump), "E%iM%c%c", (BTSXE1 ? 1 : 2), buf[0], buf[1]);
+                        M_snprintf(lump, sizeof(lump), "E%iM%c%c", (BTSXE1 ? 1 : 2), buffer[0], buffer[1]);
                     else if (FREEDOOM && gamemode != commercial)
-                        M_snprintf(lump, sizeof(lump), "C%cM%c", buf[0], buf[1]);
+                        M_snprintf(lump, sizeof(lump), "C%cM%c", buffer[0], buffer[1]);
 
                     M_snprintf(message, sizeof(message), (M_StringCompare(lump, mapnum) ? s_STSTR_CLEVSAME : s_STSTR_CLEV), lump);
 
@@ -983,7 +994,7 @@ dboolean ST_Responder(event_t *ev)
                     samelevel = (gameepisode == epsd && gamemap == map);
                     gameepisode = epsd;
 
-                    if (gamemission == doom && epsd <= 4)
+                    if (gamemission == doom)
                     {
                         episode = gameepisode;
                         EpiDef.lastOn = episode - 1;
@@ -1094,7 +1105,7 @@ static void ST_UpdateFaceWidget(void)
             }
             else
             {
-                angle_t     badguyangle = R_PointToAngle2(viewx, viewy, viewplayer->attacker->x, viewplayer->attacker->y);
+                angle_t     badguyangle = R_PointToAngle(viewplayer->attacker->x, viewplayer->attacker->y);
                 angle_t     diffang;
 
                 if (badguyangle > viewangle)
@@ -1332,7 +1343,7 @@ void ST_Drawer(dboolean fullscreen, dboolean refresh)
     // Do red-/gold-shifts from damage/items
     ST_DoPaletteStuff();
 
-    if (vid_widescreen || (menuactive && !messageToPrint) || inhelpscreens)
+    if (vid_widescreen || menuactive || messagetoprint || inhelpscreens)
         return;
 
     st_statusbaron = (!fullscreen || automapactive);

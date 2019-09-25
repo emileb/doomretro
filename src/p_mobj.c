@@ -150,7 +150,7 @@ void P_ExplodeMissile(mobj_t *mo)
 // P_XYMovement
 //
 #define STOPSPEED       0x1000
-#define WATERFRICTION   0xFB00
+#define WATERFRICTION   0xD500
 
 static int  puffcount;
 
@@ -181,7 +181,7 @@ static void P_XYMovement(mobj_t *mo)
 
     // [BH] give smoke trails to rockets
     if (flags2 & MF2_SMOKETRAIL)
-        if (puffcount++ > 1)
+        if (puffcount++)
             P_SpawnSmokeTrail(mo->x, mo->y, mo->z, mo->angle);
 
     mo->momx = BETWEEN(-MAXMOVE, mo->momx, MAXMOVE);
@@ -213,7 +213,7 @@ static void P_XYMovement(mobj_t *mo)
         ymove -= stepy;
 
         // killough 3/15/98: Allow objects to drop off
-        if (!P_TryMove(mo, ptryx, ptryy, true))
+        if (!P_TryMove(mo, ptryx, ptryy, 1))
         {
             // blocked move
             // killough 8/11/98: bouncing off walls
@@ -325,7 +325,7 @@ static void P_XYMovement(mobj_t *mo)
     }
     else if ((flags2 & MF2_FEETARECLIPPED) && corpse && !player)
     {
-        // [BH] reduce friction for corpses in water
+        // [BH] increase friction for corpses in water
         mo->momx = FixedMul(mo->momx, WATERFRICTION);
         mo->momy = FixedMul(mo->momy, WATERFRICTION);
     }
@@ -367,11 +367,12 @@ static void P_ZMovement(mobj_t *mo)
 {
     player_t    *player = mo->player;
     int         flags = mo->flags;
+    fixed_t     floorz = mo->floorz;
 
     // check for smooth step up
-    if (player && player->mo == mo && mo->z < mo->floorz && !viewplayer->jumptics)
+    if (player && player->mo == mo && mo->z < floorz && !viewplayer->jumptics)
     {
-        player->viewheight -= mo->floorz - mo->z;
+        player->viewheight -= floorz - mo->z;
         player->deltaviewheight = (VIEWHEIGHT - player->viewheight) >> 3;
     }
 
@@ -388,10 +389,12 @@ static void P_ZMovement(mobj_t *mo)
     }
 
     // clip movement
-    if (mo->z <= mo->floorz)
+    if (mo->z <= floorz)
     {
+        int blood = mo->blood;
+
         // [BH] remove blood the moment it hits the ground and spawn blood splats in its place
-        if ((mo->flags2 & MF2_BLOOD) && mo->blood)
+        if (blood && (mo->flags2 & MF2_BLOOD))
         {
             P_RemoveMobj(mo);
 
@@ -400,14 +403,15 @@ static void P_ZMovement(mobj_t *mo)
                 int x = mo->x;
                 int y = mo->y;
 
-                P_SpawnBloodSplat(x, y, mo->blood, mo->floorz, NULL);
+                P_SpawnBloodSplat(x, y, blood, floorz, NULL);
 
-                if (mo->blood != FUZZYBLOOD)
+                if (blood != FUZZYBLOOD)
                 {
-                    P_SpawnBloodSplat(x + (M_RandomInt(-3, 3) << FRACBITS), y + (M_RandomInt(-3, 3) << FRACBITS),
-                        mo->blood, mo->floorz, NULL);
-                    P_SpawnBloodSplat(x + (M_RandomInt(-3, 3) << FRACBITS), y + (M_RandomInt(-3, 3) << FRACBITS),
-                        mo->blood, mo->floorz, NULL);
+                    int r1 = M_RandomInt(-3, 3) << FRACBITS;
+                    int r2 = M_RandomInt(-3, 3) << FRACBITS;
+
+                    P_SpawnBloodSplat(x + r1, y + r2, blood, floorz, NULL);
+                    P_SpawnBloodSplat(x - r1, y - r2, blood, floorz, NULL);
                 }
             }
 
@@ -443,7 +447,7 @@ static void P_ZMovement(mobj_t *mo)
             mo->momz = 0;
         }
 
-        mo->z = mo->floorz;
+        mo->z = floorz;
 
         if (!((flags ^ MF_MISSILE) & (MF_MISSILE | MF_NOCLIP)))
         {
@@ -528,6 +532,9 @@ static void P_NightmareRespawn(mobj_t *mobj)
 
     if (mthing->options & MTF_AMBUSH)
         mo->flags |= MF_AMBUSH;
+
+    // killough 11/98: transfer friendliness from deceased
+    mo->flags = (mo->flags & ~MF_FRIEND) | (mobj->flags & MF_FRIEND);
 
     mo->reactiontime = 18;
 
@@ -921,7 +928,7 @@ static void P_SpawnPlayer(const mapthing_t *mthing)
     viewplayer->viewheight = VIEWHEIGHT;
     viewplayer->viewz = viewplayer->oldviewz = mobj->z + viewplayer->viewheight;
 
-    if ((mobj->flags2 & MF2_FEETARECLIPPED) && r_liquid_clipsprites)
+    if ((mobj->flags2 & MF2_FEETARECLIPPED) && r_liquid_lowerview)
         viewplayer->viewz -= FOOTCLIPSIZE;
 
     viewplayer->psprites[ps_weapon].sx = 0;
@@ -999,6 +1006,7 @@ mobj_t *P_SpawnMapThing(mapthing_t *mthing, dboolean spawnmonsters)
     mobj_t  *mobj;
     fixed_t x, y, z;
     short   type = mthing->type;
+    short   options = mthing->options;
     int     flags;
     int     musicid = 0;
 
@@ -1012,7 +1020,7 @@ mobj_t *P_SpawnMapThing(mapthing_t *mthing, dboolean spawnmonsters)
     else if ((type >= Player2Start && type <= Player4Start) || type == PlayerDeathmatchStart)
         return NULL;
 
-    if (mthing->options & MTF_NETGAME)
+    if (options & MTF_NOTSINGLE)
         return NULL;
 
     if (gameskill == sk_baby)
@@ -1041,7 +1049,7 @@ mobj_t *P_SpawnMapThing(mapthing_t *mthing, dboolean spawnmonsters)
     }
 
     // check for appropriate skill level
-    if (!(mthing->options & (MTF_EASY | MTF_NORMAL | MTF_HARD)) && (!canmodify || !r_fixmaperrors) && type != VisualModeCamera)
+    if (!(options & (MTF_EASY | MTF_NORMAL | MTF_HARD)) && (!canmodify || !r_fixmaperrors) && type != VisualModeCamera)
     {
         if (*mobjinfo[i].name1)
             C_Warning("The %s at (%i,%i) didn't spawn because it has no skill flags.", mobjinfo[i].name1, mthing->x, mthing->y);
@@ -1051,22 +1059,8 @@ mobj_t *P_SpawnMapThing(mapthing_t *mthing, dboolean spawnmonsters)
         return NULL;
     }
 
-    if (!(mthing->options & bit))
+    if (!(options & bit))
         return NULL;
-
-    // find which type to spawn
-
-    if (mobjinfo[i].flags & MF_COUNTKILL)
-    {
-        // don't spawn any monsters if -nomonsters
-        if (!spawnmonsters && i != MT_KEEN)
-            return NULL;
-
-        totalkills++;
-        monstercount[i]++;
-    }
-    else if (i == MT_BARREL)
-        barrelcount++;
 
     // [BH] don't spawn any monster corpses if -nomonsters
     if ((mobjinfo[i].flags & MF_CORPSE) && !spawnmonsters && i != MT_MISC62)
@@ -1084,10 +1078,30 @@ mobj_t *P_SpawnMapThing(mapthing_t *mthing, dboolean spawnmonsters)
     if (mthing->options & MTF_AMBUSH)
         mobj->flags |= MF_AMBUSH;
 
+    if (!(mobj->flags & MF_FRIEND) && (options & MTF_FRIEND))
+    {
+        mobj->flags |= MF_FRIEND;           // killough 10/98:
+        mbfcompatible = true;
+        P_UpdateThinker(&mobj->thinker);    // transfer friendliness flag
+    }
+
     flags = mobj->flags;
 
-    if (mobj->tics > 0)
-        mobj->tics = 1 + (M_Random() % mobj->tics);
+    if (flags & MF_COUNTKILL)
+    {
+        // don't spawn any monsters if -nomonsters
+        if (!spawnmonsters && i != MT_KEEN)
+            return NULL;
+
+        // killough 7/20/98: exclude friends
+        if (!((flags ^ MF_COUNTKILL) & (MF_FRIEND | MF_COUNTKILL)))
+        {
+            totalkills++;
+            monstercount[i]++;
+        }
+    }
+    else if (i == MT_BARREL)
+        barrelcount++;
 
     if (flags & MF_COUNTITEM)
         totalitems++;
@@ -1095,7 +1109,16 @@ mobj_t *P_SpawnMapThing(mapthing_t *mthing, dboolean spawnmonsters)
     if (flags & MF_SPECIAL)
         totalpickups++;
 
+    if (mobj->tics > 0)
+        mobj->tics = 1 + (M_Random() % mobj->tics);
+
     mobj->angle = ((mthing->angle % 45) ? mthing->angle * (ANG45 / 45) : ANG45 * (mthing->angle / 45));
+
+    // [BH] identify boss monsters so sounds won't be clipped
+    if (gamemode != commercial)
+        if (gamemap == 8 && ((gameepisode == 1 && i == MT_BRUISER) || (gameepisode == 2 && i == MT_CYBORG)
+            || (gameepisode == 3 && i == MT_SPIDER)))
+            mobj->flags2 |= MF2_BOSS;
 
     // [BH] randomly mirror corpses
     if ((flags & MF_CORPSE) && r_corpses_mirrored && (M_Random() & 1))
@@ -1133,8 +1156,6 @@ mobj_t *P_SpawnMapThing(mapthing_t *mthing, dboolean spawnmonsters)
 //
 // P_SpawnPuff
 //
-extern fixed_t  attackrange;
-
 void P_SpawnPuff(fixed_t x, fixed_t y, fixed_t z, angle_t angle)
 {
     mobj_t      *th = Z_Calloc(1, sizeof(*th), PU_LEVEL, NULL);
@@ -1226,8 +1247,8 @@ void P_SpawnBlood(fixed_t x, fixed_t y, fixed_t z, angle_t angle, int damage, mo
 
         th->type = type;
         th->info = info;
-        th->x = x;
-        th->y = y;
+        th->x = x + M_RandomInt(-2, 2) * FRACUNIT;
+        th->y = y + M_RandomInt(-2, 2) * FRACUNIT;
         th->flags = info->flags;
         th->flags2 = (info->flags2 | ((M_Random() & 1) * MF2_MIRRORED));
 
@@ -1315,7 +1336,7 @@ void P_CheckMissileSpawn(mobj_t *th)
     th->y += (th->momy >> 1);
     th->z += (th->momz >> 1);
 
-    if (!P_TryMove(th, th->x, th->y, false))
+    if (!P_TryMove(th, th->x, th->y, 0))
         P_ExplodeMissile(th);
 }
 
@@ -1374,24 +1395,30 @@ void P_SpawnPlayerMissile(mobj_t *source, mobjtype_t type)
         slope = PLAYERSLOPE(source->player);
     else
     {
-        // see which target is to be aimed at
-        slope = P_AimLineAttack(source, an, 16 * 64 * FRACUNIT);
+        // killough 8/2/98: prefer autoaiming at enemies
+        int mask = MF_FRIEND;
 
-        if (!linetarget)
+        do
         {
-            slope = P_AimLineAttack(source, (an += 1 << 26), 16 * 64 * FRACUNIT);
+            // see which target is to be aimed at
+            slope = P_AimLineAttack(source, an, 16 * 64 * FRACUNIT, mask);
 
             if (!linetarget)
             {
-                slope = P_AimLineAttack(source, (an -= 2 << 26), 16 * 64 * FRACUNIT);
+                slope = P_AimLineAttack(source, (an += 1 << 26), 16 * 64 * FRACUNIT, mask);
 
                 if (!linetarget)
                 {
-                    an = source->angle;
-                    slope = (usemouselook ? PLAYERSLOPE(source->player) : 0);
+                    slope = P_AimLineAttack(source, (an -= 2 << 26), 16 * 64 * FRACUNIT, mask);
+
+                    if (!linetarget)
+                    {
+                        an = source->angle;
+                        slope = (usemouselook ? PLAYERSLOPE(source->player) : 0);
+                    }
                 }
             }
-        }
+        } while (mask && (mask = 0, !linetarget));  // killough 8/2/98
     }
 
     x = source->x;
@@ -1417,14 +1444,12 @@ void P_SpawnPlayerMissile(mobj_t *source, mobjtype_t type)
 
     P_NoiseAlert(source);
 
-    if (type == MT_ROCKET && r_rockettrails && !hacx && viewplayer->readyweapon == wp_missile)
+    if (type == MT_ROCKET && r_rockettrails && !hacx && viewplayer->readyweapon == wp_missile && !D4V)
     {
         th->flags2 |= MF2_SMOKETRAIL;
         puffcount = 0;
-        th->nudge = 1;
     }
 
     P_CheckMissileSpawn(th);
-
     A_Recoil(source->player->readyweapon);
 }

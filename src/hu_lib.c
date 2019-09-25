@@ -51,6 +51,8 @@
 
 extern patch_t  *consolefont[CONSOLEFONTSIZE];
 extern patch_t  *degree;
+extern patch_t  *unknownchar;
+extern patch_t  *altunderscores;
 extern int      white;
 
 static void HUlib_ClearTextLine(hu_textline_t *t)
@@ -133,11 +135,14 @@ static void HUlib_DrawAltHUDTextLine(hu_textline_t *l)
             (viewplayer->fixedcolormap == INVERSECOLORMAP ? colormaps[0][32 * 256 + white] : nearestblack));
     }
 
+    if (idbehold)
+        althudtextfunc(x, HU_ALTHUDMSGY + 12, screens[0], altunderscores, color);
+
     for (int i = 0; i < len; i++)
     {
         unsigned char   letter = l->l[i];
         unsigned char   nextletter = l->l[i + 1];
-        patch_t         *patch;
+        patch_t         *patch = unknownchar;
         int             j = 0;
 
         if (letter == 194 && nextletter == 176)
@@ -146,7 +151,12 @@ static void HUlib_DrawAltHUDTextLine(hu_textline_t *l)
             i++;
         }
         else
-            patch = consolefont[letter - CONSOLEFONTSTART];
+        {
+            const int   c = letter - CONSOLEFONTSTART;
+
+            if (c >= 0 && c < CONSOLEFONTSIZE)
+                patch = consolefont[c];
+        }
 
         // [BH] apply kerning to certain character pairs
         while (altkern[j].char1)
@@ -227,14 +237,14 @@ kern_t kern[] =
 
 void HUlib_DrawTextLine(hu_textline_t *l, dboolean external)
 {
-    int         w = 0;
-    int         tw = 0;
-    int         x, y;
-    int         maxx, maxy;
-    static char prev;
-    byte        *fb1 = screens[0];
-    byte        *fb2 = screens[(r_screensize < 7 && !automapactive)];
-    int         len = l->len;
+    int             w = 0;
+    int             tw = 0;
+    int             x, y;
+    int             maxx, maxy;
+    unsigned char   prev = '\0';
+    byte            *fb1 = screens[0];
+    byte            *fb2 = screens[(r_screensize < 7 && !automapactive)];
+    int             len = l->len;
 
     if (external)
     {

@@ -46,7 +46,7 @@
 // declaring a cheat
 #define CHEAT(value, parameters)    { value, parameters, 0, 0, "", 0 }
 
-#define TIMELIMIT                   (TICRATE * 2)
+#define CHEATTIMEOUT                (2 * TICRATE)
 
 typedef struct
 {
@@ -68,7 +68,6 @@ int cht_CheckCheat(cheatseq_t *cht, unsigned char key);
 
 void cht_GetParam(cheatseq_t *cht, char *buffer);
 
-extern dboolean     idbehold;
 extern int          leveltime;
 
 extern cheatseq_t   cheat_mus;

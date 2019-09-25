@@ -605,7 +605,7 @@ enum
 #define vid_pillarboxes_default                 false
 
 #define vid_scaleapi_direct3d                   "direct3d"
-#if defined(__MACOSX__)
+#if defined(__APPLE__)
 #define vid_scaleapi_metal                      "metal"
 #endif
 #define vid_scaleapi_opengl                     "opengl"
@@ -636,7 +636,7 @@ enum
 
 #define vid_windowsize_default                  "768x480"
 
-#if defined(_WIN32) || defined(__MACOSX__)
+#if defined(_WIN32)
 #define wad_default                             ""
 #endif
 
@@ -732,8 +732,9 @@ enum
 #define MOUSEMOUSELOOK_DEFAULT                  -1
 #define MOUSENEXTWEAPON_DEFAULT                 MOUSE_WHEELDOWN
 #define MOUSEPREVWEAPON_DEFAULT                 MOUSE_WHEELUP
-#define MOUSESTRAFE_DEFAULT                     -1
 #define MOUSERUN_DEFAULT                        -1
+#define MOUSESCREENSHOT_DEFAULT                 -1
+#define MOUSESTRAFE_DEFAULT                     -1
 #define MOUSEUSE_DEFAULT                        -1
 
 typedef enum

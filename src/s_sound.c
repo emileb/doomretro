@@ -185,6 +185,7 @@ void S_Init(void)
             C_Warning("The <b>SDL_AUDIODRIVER</b> environment variable has been set to <b>\"%s\"</b>.", audiobuffer);
 
         SDL_setenv("SDL_AUDIODRIVER", "DirectSound", false);
+        free(audiobuffer);
 #endif
 
         InitSfxModule();
@@ -320,7 +321,7 @@ static int S_GetMusicNum(void)
                 mus_e1m9    // Tim          E4M9
             };
 
-            mnum = spmus[(s_randommusic ? M_RandomIntNoRepeat(1, 28, mnum) : gamemap) - 1];
+            mnum = spmus[(s_randommusic ? M_RandomIntNoRepeat(1, 9, mnum) : gamemap) - 1];
         }
     }
 
@@ -346,7 +347,7 @@ void S_Start(void)
 // so stereo positioning and distance calculations continue to work even after
 // the corresponding map object has already disappeared.
 // Thanks to jeff-d and kb1 for discussing this feature and the former for the
-// original implementation idea: https://www.doomworld.com/vb/post/1585325
+// original implementation idea: <https://www.doomworld.com/vb/post/1585325>
 void S_UnlinkSound(mobj_t *origin)
 {
     if (nosfx || !origin)
@@ -409,12 +410,15 @@ static int S_GetChannel(mobj_t *origin, sfxinfo_t *sfxinfo)
 // Changes volume and stereo-separation variables from the norm of a sound
 // effect to be played. If the sound is not audible, returns false. Otherwise,
 // modifies parameters and returns true.
-static dboolean S_AdjustSoundParams(fixed_t x, fixed_t y, int *vol, int *sep)
+static dboolean S_AdjustSoundParams(mobj_t *origin, int *vol, int *sep)
 {
-    fixed_t dist = 0;
-    fixed_t adx, ady;
-    mobj_t  *listener = viewplayer->mo;
-    angle_t angle;
+    fixed_t     dist = 0;
+    fixed_t     adx, ady;
+    mobj_t      *listener = viewplayer->mo;
+    angle_t     angle;
+    dboolean    boss = origin->flags2 & MF2_BOSS;
+    fixed_t     x = origin->x;
+    fixed_t     y = origin->y;
 
     // calculate the distance to sound origin and clip it if necessary
     // killough 11/98: scale coordinates down before calculations start
@@ -437,7 +441,7 @@ static dboolean S_AdjustSoundParams(fixed_t x, fixed_t y, int *vol, int *sep)
         return (*vol > 0);
     }
 
-    if (dist > S_CLIPPING_DIST)
+    if (!boss && dist > S_CLIPPING_DIST)
         return false;
 
     // angle of source to listener
@@ -454,7 +458,7 @@ static dboolean S_AdjustSoundParams(fixed_t x, fixed_t y, int *vol, int *sep)
         *sep = NORM_SEP - FixedMul(S_STEREO_SWING, finesine[angle]);
 
     // volume calculation
-    *vol = (dist < S_CLOSE_DIST ? snd_SfxVolume : snd_SfxVolume * (S_CLIPPING_DIST - dist) / S_ATTENUATOR);
+    *vol = (dist < S_CLOSE_DIST || boss ? snd_SfxVolume : snd_SfxVolume * (S_CLIPPING_DIST - dist) / S_ATTENUATOR);
 
     return (*vol > 0);
 }
@@ -484,11 +488,11 @@ static void S_StartSoundAtVolume(mobj_t *origin, int sfx_id, int pitch)
 
     // Check to see if it is audible, and if not, modify the parms
     if (origin && origin != viewplayer->mo)
-        if (!S_AdjustSoundParams(origin->x, origin->y, &volume, &sep))
+        if (!S_AdjustSoundParams(origin, &volume, &sep))
             return;
 
     // kill old sound
-    if (origin || gamestate != GS_LEVEL)
+    if (origin || (gamestate == GS_FINALE && sfx_id == sfx_dshtgn))
         for (cnum = 0; cnum < s_channels; cnum++)
             if (channels[cnum].sfxinfo && channels[cnum].sfxinfo->singularity == sfx->singularity && channels[cnum].origin == origin)
             {
@@ -590,7 +594,7 @@ void S_UpdateSounds(void)
                         volume = snd_SfxVolume;
                 }
 
-                if (!S_AdjustSoundParams(origin->x, origin->y, &volume, &sep))
+                if (!S_AdjustSoundParams(origin, &volume, &sep))
                     S_StopChannel(cnum);
                 else
                     I_UpdateSoundParams(c->handle, volume, sep);
@@ -622,7 +626,7 @@ void S_ChangeMusic(int music_id, dboolean looping, dboolean allowrestart, dboole
     musicinfo_t *music = &S_music[music_id];
     char        namebuf[9];
     void        *handle = NULL;
-    int         mapinfomusic;
+    int         mapinfomusic = 0;
 
     // current music which should play
     musinfo.current_item = -1;
@@ -636,10 +640,15 @@ void S_ChangeMusic(int music_id, dboolean looping, dboolean allowrestart, dboole
     M_snprintf(namebuf, sizeof(namebuf), "d_%s", music->name);
 
     // get lumpnum if necessary
-    if (mapstart && (mapinfomusic = P_GetMapMusic((gameepisode - 1) * 10 + gamemap)) > 0)
+    if (autosigil)
+    {
+        if (music_id == mus_intro || (music_id == mus_inter && gameepisode != 5))
+            music->lumpnum = W_GetLastNumForName(namebuf);
+        else
+            music->lumpnum = W_CheckNumForName(namebuf);
+    }
+    else if (mapstart && (mapinfomusic = P_GetMapMusic((gameepisode - 1) * 10 + gamemap)) > 0)
         music->lumpnum = mapinfomusic;
-    else if (autosigil && music_id == mus_intro)
-        music->lumpnum = W_GetLastNumForName(namebuf);
     else if (!music->lumpnum)
         music->lumpnum = W_CheckNumForName(namebuf);
 
@@ -648,14 +657,11 @@ void S_ChangeMusic(int music_id, dboolean looping, dboolean allowrestart, dboole
         C_Warning("The <b>%s</b> music lump can't be found.", uppercase(namebuf));
         return;
     }
-    else
-    {
-        // Load & register it
-        music->data = W_CacheLumpNum(music->lumpnum);
-        handle = I_RegisterSong(music->data, W_LumpLength(music->lumpnum));
-    }
 
-    if (!handle)
+    // Load & register it
+    music->data = W_CacheLumpNum(music->lumpnum);
+
+    if (!(handle = I_RegisterSong(music->data, W_LumpLength(music->lumpnum))))
 #if defined(_WIN32)
         if (!serverMidiPlaying)
 #endif
@@ -689,17 +695,17 @@ void S_ChangeMusic(int music_id, dboolean looping, dboolean allowrestart, dboole
 
 void S_StopMusic(void)
 {
-    if (mus_playing)
-    {
-        if (mus_paused)
-            I_ResumeSong();
+    if (!mus_playing)
+        return;
 
-        I_StopSong();
-        I_UnRegisterSong(mus_playing->handle);
-        W_ReleaseLumpNum(mus_playing->lumpnum);
-        mus_playing->data = NULL;
-        mus_playing = NULL;
-    }
+    if (mus_paused)
+        I_ResumeSong();
+
+    I_StopSong();
+    I_UnRegisterSong(mus_playing->handle);
+    W_ReleaseLumpNum(mus_playing->lumpnum);
+    mus_playing->data = NULL;
+    mus_playing = NULL;
 }
 
 void S_ChangeMusInfoMusic(int lumpnum, int looping)

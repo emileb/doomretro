@@ -79,7 +79,7 @@ int             skilllevel = skilllevel_default;
 int             quickSaveSlot;
 
 // true = message to be printed
-dboolean        messageToPrint;
+dboolean        messagetoprint;
 // ...and here is the message string!
 static char     *messageString;
 
@@ -227,6 +227,7 @@ enum
     ep2,
     ep3,
     ep4,
+    ep5,
     ep_end
 };
 
@@ -507,7 +508,7 @@ void M_DarkBackground(void)
 {
     static byte blurscreen1[SCREENWIDTH * SCREENHEIGHT];
     static byte blurscreen2[(SCREENHEIGHT - SBARHEIGHT) * SCREENWIDTH];
-    static int  prevtic;
+    static int  prevtic = -1;
 
     blurheight = (SCREENHEIGHT - (vid_widescreen && gamestate == GS_LEVEL) * SBARHEIGHT) * SCREENWIDTH;
 
@@ -1180,8 +1181,10 @@ void M_UpdateSaveGameName(int i)
             switch (gamemission)
             {
                 case doom:
-                    for (int j = 0; j < 9 * 4; j++)
-                        if (M_StringCompare(savegamestrings[i], RemoveMapNum(*mapnames[j])))
+                    for (int j = 0; j < 9 * 5; j++)
+                        if (M_StringCompare(savegamestrings[i], RemoveMapNum(*mapnames[j]))
+                            || M_StringCompare(savegamestrings[i], s_CAPTION_E1M4B)
+                            || M_StringCompare(savegamestrings[i], s_CAPTION_E1M8B))
                         {
                             match = true;
                             break;
@@ -1259,7 +1262,7 @@ void M_UpdateSaveGameName(int i)
                 savegamestrings[i][len] = '.';
                 savegamestrings[i][len + 1] = '\0';
             }
-            else
+            else if (len >= 1)
             {
                 savegamestrings[i][len - 1] = '.';
                 savegamestrings[i][len] = '.';
@@ -1326,7 +1329,7 @@ static void M_QuickSave(void)
 //
 static void M_QuickLoadResponse(int key)
 {
-    messageToPrint = false;
+    messagetoprint = false;
 
     if (key == 'y')
     {
@@ -1476,67 +1479,67 @@ static void M_Sound(int choice)
 
 static void M_SfxVol(int choice)
 {
-    if (!nosfx)
+    if (nosfx)
+        return;
+
+    switch (choice)
     {
-        switch (choice)
-        {
-            case 0:
-                if (sfxVolume > 0)
-                {
-                    S_SetSfxVolume(--sfxVolume * MAX_SFX_VOLUME / 31);
-                    S_StartSound(NULL, sfx_stnmov);
-                    s_sfxvolume = sfxVolume * 100 / 31;
-                    C_PctCVAROutput(stringize(s_sfxvolume), s_sfxvolume);
-                    M_SaveCVARs();
-                }
+        case 0:
+            if (sfxVolume > 0)
+            {
+                S_SetSfxVolume(--sfxVolume * MAX_SFX_VOLUME / 31);
+                S_StartSound(NULL, sfx_stnmov);
+                s_sfxvolume = sfxVolume * 100 / 31;
+                C_PctCVAROutput(stringize(s_sfxvolume), s_sfxvolume);
+                M_SaveCVARs();
+            }
 
-                break;
+            break;
 
-            case 1:
-                if (sfxVolume < 31)
-                {
-                    S_SetSfxVolume(++sfxVolume * MAX_SFX_VOLUME / 31);
-                    S_StartSound(NULL, sfx_stnmov);
-                    s_sfxvolume = sfxVolume * 100 / 31;
-                    C_PctCVAROutput(stringize(s_sfxvolume), s_sfxvolume);
-                    M_SaveCVARs();
-                }
+        case 1:
+            if (sfxVolume < 31)
+            {
+                S_SetSfxVolume(++sfxVolume * MAX_SFX_VOLUME / 31);
+                S_StartSound(NULL, sfx_stnmov);
+                s_sfxvolume = sfxVolume * 100 / 31;
+                C_PctCVAROutput(stringize(s_sfxvolume), s_sfxvolume);
+                M_SaveCVARs();
+            }
 
-                break;
-        }
+            break;
     }
 }
 
 static void M_MusicVol(int choice)
 {
-    if (!nomusic)
+    if (nomusic)
+        return;
+
+    switch (choice)
     {
-        switch (choice)
-        {
-            case 0:
-                if (musicVolume > 0)
-                {
-                    S_SetMusicVolume(--musicVolume * MAX_MUSIC_VOLUME / 31);
-                    S_StartSound(NULL, sfx_stnmov);
-                    s_musicvolume = musicVolume * 100 / 31;
-                    C_PctCVAROutput(stringize(s_musicvolume), s_musicvolume);
-                    M_SaveCVARs();
-                }
+        case 0:
+            if (musicVolume > 0)
+            {
+                S_SetMusicVolume(--musicVolume * MAX_MUSIC_VOLUME / 31);
+                S_StartSound(NULL, sfx_stnmov);
+                s_musicvolume = musicVolume * 100 / 31;
+                C_PctCVAROutput(stringize(s_musicvolume), s_musicvolume);
+                M_SaveCVARs();
+            }
 
-                break;
+            break;
 
-            case 1:
-                if (musicVolume < 31)
-                {
-                    S_SetMusicVolume(++musicVolume * MAX_MUSIC_VOLUME / 31);
-                    S_StartSound(NULL, sfx_stnmov);
-                    s_musicvolume = musicVolume * 100 / 31;
-                    C_PctCVAROutput(stringize(s_musicvolume), s_musicvolume);
-                    M_SaveCVARs();
-                }
+        case 1:
+            if (musicVolume < 31)
+            {
+                S_SetMusicVolume(++musicVolume * MAX_MUSIC_VOLUME / 31);
+                S_StartSound(NULL, sfx_stnmov);
+                s_musicvolume = musicVolume * 100 / 31;
+                C_PctCVAROutput(stringize(s_musicvolume), s_musicvolume);
+                M_SaveCVARs();
+            }
 
-                break;
-        }
+            break;
     }
 }
 
@@ -1584,6 +1587,12 @@ static void M_DrawNewGame(void)
         NewDef.x = (chex ? 98 : 48);
         NewDef.y = 63;
     }
+    else if (M_NGAME)
+    {
+        M_DrawPatchWithShadow((chex ? 118 : 96), 14 + OFFSET, W_CacheLumpName("M_NGAME"));
+        NewDef.x = (chex ? 98 : 48);
+        NewDef.y = 63;
+    }
     else
         M_DrawCenteredString(19 + OFFSET, uppercase(s_M_NEWGAME));
 
@@ -1611,23 +1620,29 @@ static void M_DrawEpisode(void)
 {
     M_DarkBackground();
 
-        if (M_NEWG)
-        {
-            M_DrawPatchWithShadow(96, 14 + OFFSET, W_CacheLumpName("M_NEWG"));
-            EpiDef.x = 48;
-            EpiDef.y = 63;
-        }
-        else
-            M_DrawCenteredString(19 + OFFSET, uppercase(s_M_NEWGAME));
+    if (M_NEWG)
+    {
+        M_DrawPatchWithShadow(96, 14 + OFFSET, W_CacheLumpName("M_NEWG"));
+        EpiDef.x = 48;
+        EpiDef.y = 63;
+    }
+    else if (M_NGAME)
+    {
+        M_DrawPatchWithShadow(96, 14 + OFFSET, W_CacheLumpName("M_NGAME"));
+        EpiDef.x = 48;
+        EpiDef.y = 63;
+    }
+    else
+        M_DrawCenteredString(19 + OFFSET, uppercase(s_M_NEWGAME));
 
-        if (M_EPISOD)
-        {
-            M_DrawPatchWithShadow(54, 38 + OFFSET, W_CacheLumpName("M_EPISOD"));
-            EpiDef.x = 48;
-            EpiDef.y = 63;
-        }
-        else
-            M_DrawCenteredString(44 + OFFSET, s_M_WHICHEPISODE);
+    if (M_EPISOD)
+    {
+        M_DrawPatchWithShadow(54, 38 + OFFSET, W_CacheLumpName("M_EPISOD"));
+        EpiDef.x = 48;
+        EpiDef.y = 63;
+    }
+    else
+        M_DrawCenteredString(44 + OFFSET, s_M_WHICHEPISODE);
 }
 
 void M_SetWindowCaption(void)
@@ -1639,7 +1654,8 @@ void M_SetWindowCaption(void)
     else
     {
         if (nerve && (currentMenu == &ExpDef || currentMenu == &NewDef))
-            M_snprintf(caption, sizeof(caption), "%s: %s", gamedescription, (expansion == 1 ? s_CAPTION_HELLONEARTH : s_CAPTION_NERVE));
+            M_snprintf(caption, sizeof(caption), "%s: %s", gamedescription,
+                (expansion == 1 ? s_CAPTION_HELLONEARTH : s_CAPTION_NERVE));
         else
             M_StringCopy(caption, gamedescription, sizeof(caption));
 
@@ -1653,13 +1669,35 @@ void M_SetWindowCaption(void)
 static void M_DrawExpansion(void)
 {
     M_DarkBackground();
-    M_DrawCenteredString(19 + OFFSET, uppercase(s_M_NEWGAME));
-    M_DrawCenteredString(44 + OFFSET, s_M_WHICHEXPANSION);
+
+    if (M_NEWG)
+    {
+        M_DrawPatchWithShadow(96, 14 + OFFSET, W_CacheLumpName("M_NEWG"));
+        EpiDef.x = 48;
+        EpiDef.y = 63;
+    }
+    else if (M_NGAME)
+    {
+        M_DrawPatchWithShadow(96, 14 + OFFSET, W_CacheLumpName("M_NGAME"));
+        EpiDef.x = 48;
+        EpiDef.y = 63;
+    }
+    else
+        M_DrawCenteredString(19 + OFFSET, uppercase(s_M_NEWGAME));
+
+    if (M_EPISOD)
+    {
+        M_DrawPatchWithShadow(54, 38 + OFFSET, W_CacheLumpName("M_EPISOD"));
+        EpiDef.x = 48;
+        EpiDef.y = 63;
+    }
+    else
+        M_DrawCenteredString(44 + OFFSET, s_M_WHICHEXPANSION);
 }
 
 static void M_VerifyNightmare(int key)
 {
-    messageToPrint = false;
+    messagetoprint = false;
 
     if (key != 'y')
         M_SetupNextMenu(&NewDef);
@@ -1681,7 +1719,8 @@ static void M_ChooseSkill(int choice)
             M_StartMessage(s_NIGHTMARE, M_VerifyNightmare, true);
         else
         {
-            M_snprintf(tempstring, sizeof(tempstring), "%s\n\n%s", s_NIGHTMARE, (usinggamepad ? s_PRESSA : s_PRESSYN));
+            M_snprintf(tempstring, sizeof(tempstring), "%s\n\n%s",
+                s_NIGHTMARE, (usinggamepad ? s_PRESSA : s_PRESSYN));
             M_StartMessage(tempstring, M_VerifyNightmare, true);
         }
 
@@ -1704,7 +1743,8 @@ static void M_Episode(int choice)
             M_StartMessage(s_SWSTRING, NULL, false);
         else
         {
-            M_snprintf(tempstring, sizeof(tempstring), "%s\n\n%s", s_SWSTRING, (usinggamepad ? s_PRESSA : s_PRESSKEY));
+            M_snprintf(tempstring, sizeof(tempstring), "%s\n\n%s",
+                s_SWSTRING, (usinggamepad ? s_PRESSA : s_PRESSKEY));
             M_StartMessage(tempstring, NULL, false);
         }
 
@@ -1839,7 +1879,7 @@ void M_EndingGame(void)
 
 static void M_EndGameResponse(int key)
 {
-    messageToPrint = false;
+    messagetoprint = false;
 
     if (key != 'y')
     {
@@ -1917,7 +1957,7 @@ extern dboolean waspaused;
 
 static void M_QuitResponse(int key)
 {
-    messageToPrint = false;
+    messagetoprint = false;
 
     if (key != 'y')
     {
@@ -1954,20 +1994,29 @@ static void M_QuitResponse(int key)
     I_Quit(true);
 }
 
-static char *M_SelectEndMessage(void)
-{
-    if (deh_strlookup[p_QUITMSG].assigned == 2)
-        return s_QUITMSG;
-    else
-        return *endmsg[M_Random() % NUM_QUITMESSAGES + (gamemission != doom) * NUM_QUITMESSAGES];
-}
-
 void M_QuitDOOM(int choice)
 {
-    static char endstring[160];
+#if defined(_WIN32)
+    char        *OS = "Windows";
+#elif defined(__APPLE__)
+    char        *OS = "macOS";
+#else
+    char        *OS = "Linux";
+#endif
+
+    static char endstring[320];
+    static char line1[160];
+    static char line2[160];
 
     quitting = true;
-    M_snprintf(endstring, sizeof(endstring), "%s\n\n%s", M_SelectEndMessage(), (usinggamepad ? s_DOSA : s_DOSY));
+
+    if (deh_strlookup[p_QUITMSG].assigned == 2)
+        M_StringCopy(line1, s_QUITMSG, sizeof(line1));
+    else
+        M_snprintf(line1, sizeof(line1), *endmsg[M_Random() % NUM_QUITMESSAGES + (gamemission != doom) * NUM_QUITMESSAGES], OS);
+
+    M_snprintf(line2, sizeof(line2), (usinggamepad ? s_DOSA : s_DOSY), OS);
+    M_snprintf(endstring, sizeof(endstring), "%s\n\n%s", line1, line2);
 #ifndef __ANDROID__
     M_StartMessage(endstring, M_QuitResponse, true);
 #else
@@ -2048,7 +2097,7 @@ static void M_ChangeSensitivity(int choice)
                         m_sensitivity--;
 
                     m_sensitivity += 2;
-                    C_IntCVAROutput("m_sensitivity", m_sensitivity);
+                    C_IntCVAROutput(stringize(m_sensitivity), m_sensitivity);
                     M_SliderSound();
                     M_SaveCVARs();
                 }
@@ -2209,7 +2258,7 @@ static void M_DrawThermo(int x, int y, int thermWidth, float thermDot, float fac
 void M_StartMessage(char *string, void *routine, dboolean input)
 {
     messageLastMenuActive = menuactive;
-    messageToPrint = true;
+    messagetoprint = true;
     messageString = string;
     messageRoutine = (void (*)(int))routine;
     messageNeedsInput = input;
@@ -2389,16 +2438,16 @@ void M_ChangeGamma(dboolean shift)
             C_StrCVAROutput(stringize(r_gamma), "off");
         else
         {
-            static char buf[128];
+            static char buffer[128];
             int         len;
 
-            M_snprintf(buf, sizeof(buf), "%.2f", r_gamma);
-            len = (int)strlen(buf);
+            M_snprintf(buffer, sizeof(buffer), "%.2f", r_gamma);
+            len = (int)strlen(buffer);
 
-            if (len >= 2 && buf[len - 1] == '0' && buf[len - 2] == '0')
-                buf[len - 1] = '\0';
+            if (len >= 2 && buffer[len - 1] == '0' && buffer[len - 2] == '0')
+                buffer[len - 1] = '\0';
 
-            C_StrCVAROutput(stringize(r_gamma), buf);
+            C_StrCVAROutput(stringize(r_gamma), buffer);
         }
     }
 
@@ -2411,17 +2460,17 @@ void M_ChangeGamma(dboolean shift)
     }
     else
     {
-        static char buf[128];
+        static char buffer[128];
         int         len;
 
-        M_snprintf(buf, sizeof(buf), s_GAMMALVL, r_gamma);
-        len = (int)strlen(buf);
+        M_snprintf(buffer, sizeof(buffer), s_GAMMALVL, r_gamma);
+        len = (int)strlen(buffer);
 
-        if (len >= 2 && buf[len - 1] == '0' && buf[len - 2] == '0')
-            buf[len - 1] = '\0';
+        if (len >= 2 && buffer[len - 1] == '0' && buffer[len - 2] == '0')
+            buffer[len - 1] = '\0';
 
-        C_Output(buf);
-        HU_SetPlayerMessage(buf, false, false);
+        C_Output(buffer);
+        HU_SetPlayerMessage(buffer, false, false);
     }
 
     message_dontfuckwithme = true;
@@ -2457,7 +2506,7 @@ dboolean M_Responder(event_t *ev)
             // activate menu item
             if (gamepadbuttons & GAMEPAD_A)
             {
-                key = (messageToPrint && messageNeedsInput ? (ch = 'y') : KEY_ENTER);
+                key = (messagetoprint && messageNeedsInput ? (ch = 'y') : KEY_ENTER);
                 gamepadwait = I_GetTime() + 8 * !(currentMenu == &OptionsDef && itemOn == 5);
                 usinggamepad = true;
             }
@@ -2465,7 +2514,7 @@ dboolean M_Responder(event_t *ev)
             // previous/exit menu
             else if (gamepadbuttons & GAMEPAD_B)
             {
-                key = (messageToPrint && messageNeedsInput ? (ch = 'n') : KEY_BACKSPACE);
+                key = (messagetoprint && messageNeedsInput ? (ch = 'n') : KEY_BACKSPACE);
                 gamepadwait = I_GetTime() + 8;
                 gamepadpress = true;
                 usinggamepad = true;
@@ -2481,7 +2530,7 @@ dboolean M_Responder(event_t *ev)
                 usinggamepad = true;
             }
 
-            else if (!messageToPrint)
+            else if (!messagetoprint)
             {
                 // select previous menu item
                 if (gamepadthumbLY < 0 || gamepadthumbRY < 0 || (gamepadbuttons & GAMEPAD_DPAD_UP))
@@ -2532,27 +2581,39 @@ dboolean M_Responder(event_t *ev)
         }
     }
 
-    if (ev->type == ev_mouse && mousewait < I_GetTime() && menuactive)
+    if (ev->type == ev_mouse && mousewait < I_GetTime())
     {
-        // activate menu item
-        if (ev->data1 & MOUSE_LEFTBUTTON)
+        if (menuactive)
         {
-            key = KEY_ENTER;
-            mousewait = I_GetTime() + 5;
-            usinggamepad = false;
+            // activate menu item
+            if (ev->data1 & MOUSE_LEFTBUTTON)
+            {
+                key = KEY_ENTER;
+                mousewait = I_GetTime() + 5;
+                usinggamepad = false;
+            }
+
+            // previous menu
+            else if (ev->data1 & MOUSE_RIGHTBUTTON)
+            {
+                key = KEY_BACKSPACE;
+                mousewait = I_GetTime() + 5;
+                usinggamepad = false;
+            }
         }
 
-        // previous menu
-        else if (ev->data1 & MOUSE_RIGHTBUTTON)
+        // screenshot
+        if (mousescreenshot != -1 && ev->data1 & mousescreenshot)
         {
-            key = KEY_BACKSPACE;
             mousewait = I_GetTime() + 5;
             usinggamepad = false;
+            G_ScreenShot();
+            return false;
         }
     }
     else if (ev->type == ev_mousewheel)
     {
-        if (!messageToPrint)
+        if (!messagetoprint)
         {
             // select previous menu item
             if (ev->data1 > 0)
@@ -2740,7 +2801,7 @@ dboolean M_Responder(event_t *ev)
     }
 
     // Take care of any messages that need input
-    if (messageToPrint && !keydown)
+    if (messagetoprint && !keydown)
     {
         ch = (key == KEY_ENTER ? 'y' : tolower(ch));
 
@@ -2755,7 +2816,7 @@ dboolean M_Responder(event_t *ev)
 #endif
         keydown = key;
         menuactive = messageLastMenuActive;
-        messageToPrint = false;
+        messagetoprint = false;
 
         if (messageRoutine)
             messageRoutine(ch);
@@ -2938,6 +2999,7 @@ dboolean M_Responder(event_t *ev)
         {
             keydown = key;
             functionkey = KEY_F7;
+            M_StartControlPanel();
             S_StartSound(NULL, sfx_swtchn);
             M_EndGame(0);
             return false;
@@ -3464,7 +3526,6 @@ void M_StartControlPanel(void)
     if (gamestate == GS_LEVEL)
     {
         playerangle = viewplayer->mo->angle;
-        spindirection = ((M_Random() & 1) ? -1 : 1);
 
         if (!vid_widescreen && !automapactive && !inhelpscreens)
             R_SetViewSize(8);
@@ -3494,7 +3555,7 @@ void M_Drawer(void)
     static short    x, y;
 
     // Horiz. & Vertically center string and print it.
-    if (messageToPrint)
+    if (messagetoprint)
     {
         char    string[80];
         int     start = 0;
@@ -3694,10 +3755,11 @@ void M_Init(void)
     menuactive = false;
     itemOn = currentMenu->lastOn;
     skullAnimCounter = 10;
-    messageToPrint = false;
+    messagetoprint = false;
     messageString = NULL;
     messageLastMenuActive = false;
     quickSaveSlot = -1;
+    spindirection = ((M_Random() & 1) ? 1 : -1);
 
     if (autostart)
     {
@@ -3722,14 +3784,11 @@ void M_Init(void)
     else if (gamemode == commercial)
         NewDef.prevMenu = (nerve ? &ExpDef : &MainDef);
     else if (gamemode == registered || W_CheckNumForName("E4M1") < 0)
-        EpiDef.numitems--;
+        EpiDef.numitems = 3;
     else if (gamemode == retail && sigil)
-        EpiDef.numitems++;
-
-#if !defined(_WIN32)
-    s_DOSY = s_OTHERY;
-    s_DOSA = s_OTHERA;
-#endif
+        EpiDef.numitems = 5;
+    else
+        EpiDef.numitems = 4;
 
     if (M_StringCompare(s_EMPTYSTRING, "null data"))
         s_EMPTYSTRING = "-";

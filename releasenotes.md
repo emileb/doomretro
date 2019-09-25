@@ -1,3 +1,127 @@
+### DOOM Retro v3.0.3
+
+* The behavior of the `-nodeh` command-line parameter has changed. It will still disable the automatic loading of `.deh` files, `.bex` files and `DEHACKED` lumps, but will now load `.deh` and `.bex` files if selected in the WAD launcher or specified using the `-deh` command-line parameter.
+* A bug has been fixed whereby dogs spawned in front of the player using the `spawn` CCMD in the console would always be friendly, even when the `friendly` keyword wasn’t used. This bug also affected PWADs that would replace the dog using a `DEHACKED` patch. All monsters of that type spawned at the start of a map would be friendly and therefore attack and be attacked by other monsters. (An example of this are the nightmare demons in [*Eviternity*](https://www.doomworld.com/idgames/levels/doom2/Ports/megawads/eviternity).)
+* The following compatibility fixes have been implemented for Noiser’s [*DOOM 4 VANILLA*](https://www.doomworld.com/forum/topic/108725-doom-4-vanilla-new-v12-released-faster-weapons/):
+  * `D4V.WAD` will now always be the last PWAD to be loaded if selected together with another PWAD in the WAD launcher.
+  * All monsters are now correctly named when using the `spawn` CCMD and in obituaries in the console.
+  * The summoner’s projectiles no longer have smoke trails.
+  * The super chainsaw and mega doll are now rendered correctly.
+* Minor changes have been made to text that is output to the console.
+* The word `monster` may now be used instead of a specific monster type to name the nearest monster to the player when using the `name` CCMD.
+* Only monsters who are alive can be named using the `name` CCMD.
+* Jumping will now always work as intended.
+* A bug has been fixed whereby looking up and down with a gamepad when the `gp_invertyaxis` CVAR was `off` would still be inverted, and when `on` would not be and also cause the player’s view to jitter.
+* The double shotgun sound can now be heard again in *DOOM II’s* cast sequence.
+* The crosshair displayed using the `crosshair` CVAR no longer needs the `mouselook` CVAR to be `on`.
+* The correct music will now be played on the intermission screen of episodes 1 to 4 when John Romero’s megawad [*SIGIL*](http://SI6IL.com/) has been autoloaded.
+
+---
+
+###### Saturday, September 14, 2019
+
+### DOOM Retro v3.0.2
+
+* Changes have been made to improve the overall stability of *DOOM Retro*.
+* A bug has been fixed whereby nearby monsters wouldn’t hear when the player fired the BFG-9000.
+* Infighting among monsters will now work correctly.
+* Shots fired by the player’s hitscan weapons will no longer be lowered if the player is standing in liquid and the `r_liquid_lowerview` CVAR is `off`. Similarly, shots fired by the hitscan weapons of some monsters will no longer be lowered if the monster is standing in liquid and the `r_liquid_clipsprites` CVAR is `off`.
+* The following compatibility fixes have been implemented for Noiser’s [*DOOM 4 VANILLA*](https://www.doomworld.com/forum/topic/108725-doom-4-vanilla-new-v12-released-faster-weapons/):
+  * Cacodemons and hell knights will now always bleed red blood, regardless of the value of the `r_blood` CVAR.
+  * Gore nests are no longer translucent or randomly mirrored when destroyed, regardless of the value of the `r_corpses_mirrored` CVAR.
+  * A gore nest may now be spawned in front of the player by entering `spawn gore nest` in the console.
+  * Rocket trails are disabled, regardless of the value of the `r_rockettrails` CVAR.
+* Minor changes have been made to text that is output to the console.
+
+---
+
+###### Monday, September 9, 2019
+
+### DOOM Retro v3.0.1
+
+* Changes have been made to improve the overall stability of *DOOM Retro*.
+* A bug has been fixed whereby the BFG-9000 wouldn’t always target monsters correctly when fired, and in some instances would kill the player themselves.
+
+---
+
+###### Saturday, September 7, 2019
+
+### DOOM Retro v3.0
+
+* *DOOM Retro* now uses [*SDL v2.0.10*](https://www.libsdl.org) and [*SDL_image v2.0.5*](https://www.libsdl.org/SDL_image).
+* When *DOOM Retro* is opened for the first time and the WAD launcher automatically navigates to a *DOOM* or *DOOM II* installation it has found, the corresponding IWAD will now also be selected.
+* Optimizations have been made to further improve the overall performance and stability of *DOOM Retro*.
+* The format of savegames has needed to be changed, breaking compatibility with previous versions of *DOOM Retro*. (Provisions have also been put in place to avoid breaking compatibility when adding new features in the future.)
+* If the 32-bit binary of *DOOM Retro* is used on a 64-bit version of *Windows*, a warning is now displayed in the console at startup recommending the 64-bit binary instead.
+* The logo on the splash screen is now animated.
+* The branding in the console has been redesigned.
+* The following changes have been made to the support for John Romero’s megawad [*SIGIL*](http://SI6IL.com/):
+  * `SIGIL.wad` will now only be automatically loaded alongside *The Ultimate DOOM* and not the registered version of *DOOM*.
+  * If [*Buckethead’s*](https://en.wikipedia.org/wiki/Buckethead) `SIGIL_SHREDS.wad` is found, it will now also be automatically loaded.
+  * Savegame descriptions will now be updated with the current map’s name when saving over an existing savegame.
+  * The `IDMUS` cheat can now be used to play *SIGIL’s* music.
+  * The `episode` CVAR will now be updated if the `IDCLEV` cheat is used to warp to a map in *SIGIL*.
+  * Par times are now displayed on the intermission screen for each map.
+  * The `next`, `last` and `random` parameters of the `map` CCMD now accommodate for *SIGIL’s* maps.
+* Minor changes have been made to text that is output to the console.
+* Minor improvements have been made to how blood hits the floor.
+* Fading to black upon quitting is now smoother, and will now also occur when a PWAD has its own `COLORMAP` lump.
+* *DOOM Retro’s* support for [*MBF*](https://doomwiki.org/wiki/MBF)-compatible maps has been improved by supporting monsters with the `MF_FRIEND` flag. This also allows the following:
+  * The `spawn` CCMD may now be used to spawn a friendly monster in front of the player. For example, to spawn a friendly imp, enter `spawn friendly imp` in the console. These monsters will follow the player around and occasionally attack other monsters.
+  * A [*helper dog*](https://doomwiki.org/wiki/Helper_dog) may now be spawned in the current map by entering `spawn friendly dog` in the console (whereas just entering `spawn dog` will spawn a dog that will attack the player).
+  * All friendly monsters in the current map may be killed by entering `kill friends` in the console.
+  * Obituaries, as well as the `thinglist` CCMD, now indicate if a monster is friendly.
+* The player can now give any monster a unique name using the new `name` CCMD. For example, entering `name cacodemon Hissy` will give the name Hissy to the nearest cacodemon that the player can see. The name given will then be used in any obituary that involves that monster. This also allows the following:
+  * The `thinglist` CCMD will now show a monster’s name.
+  * The `kill` CCMD may now be used to kill a monster by specifying its name.
+* Further improvements have been made to the console’s autocomplete feature.
+* A bug has been fixed whereby music often wouldn’t play at all in episode 4 of *The Ultimate DOOM* if the `s_randommusic` CVAR was `on`.
+* The following changes have been made to the `mapstats` CCMD:
+  * The PWAD of the current map will now always be correct.
+  * Improvements have been made to how *BOOM* compatibility is detected.
+  * Whether the current map is *MBF*-compatible or not is now displayed.
+  * The author of some of the maps in *DOOM II: No Rest For The Living* has been corrected.
+* The `playerstats` CCMD now shows how many times the player has saved the game in the current map.
+* The `+screenshot` action can now be bound to a mouse button.
+* A camera’s shutter sound is now played when taking a screenshot using the <kbd>PRINTSCREEN</kbd> key.
+* A bug has been fixed whereby starting a new game after playing either *E1M4B: Phobos Mission Control* or *E1M8B: Tech Gone Bad* would cause the wrong map to be loaded.
+* Partially restoring behavior present in *Vanilla DOOM*, the sound effects of the bosses (that is, the barons of hell in E1M8, the cyberdemon in E2M8 and the spider mastermind in E3M8) are no longer clipped by distance from the player.
+* Improvements have been made in determining if animated flats depict liquid.
+* The edges of liquid sectors are now rendered better in some instances.
+* The status bar will no longer be partially displayed in the background when ending a game from the options menu.
+* The friction applied to corpses in liquid is now greater rather than less than the friction applied when not in liquid.
+* A bug has been fixed whereby the colors used in the automap would be wrong in some rare instances.
+* The external automap displayed when the `am_external` CVAR is `on` will now:
+  * Also fade to black when quitting *DOOM Retro*.
+  * No longer be negatively affected by the `vid_vsync` CVAR.
+  * Be displayed correctly when the help screen is opened on the main screen by pressing the <kbd>F1</kbd> key.
+* Entering the `IDBEHOLD` cheat without any parameter will now:
+  * Timeout after 2 seconds like all the other cheats.
+  * Show underscores under the message if entered when the alternate widescreen HUD is displayed.
+* A bug has been fixed whereby if the player fires their weapon the moment they are exiting a map, a crash could occur when they then try to spawn in the next one.
+* The player will no longer move forward slightly once spawning in a new map in some rare instances.
+* The lighting of sectors that have sector special 17 (“Light Flickers (Randomly)”) will now always flicker as intended.
+* Gradual lighting is now applied to doors and crushing ceilings over damaging sectors.
+* A compatibility fix has been implemented for [*Eviternity*](https://www.doomworld.com/idgames/levels/doom2/Ports/megawads/eviternity) that changes the blood of nightmare demons to green.
+* If the `+use` action is used against a wall that has a line special requiring it to be shot at instead, or has a scrolling or translucent texture, the player will now make an “oof” sound.
+* The effects of using the `fastmonsters` CCMD are now immediate.
+* The effects of changing the `con_backcolor` CVAR are now immediate.
+* The direction the menu’s background spins is now the same as the direction the player last turned.
+* The `freeze`, `notarget`, `pistolstart`, `regenhealth` and `respawnitems` CCMDs will now all be turned off when enabling vanilla mode.
+* If the filename of a PWAD is used in the caption of *DOOM Retro’s* window, the correct case will be used.
+* The crosshair displayed when the `crosshair` CVAR is `cross` or `dot` will now always be displayed correctly.
+* The use of the color blue in the alternate widescreen HUD has been improved.
+* The designs of the 4 and 5 digits used in the alternate widescreen HUD have been tweaked slightly.
+* Recoiling of the player’s weapon when the `weaponrecoil` CVAR is `on` no longer requires the `mouselook` CVAR to be `on`, or a control to be bound to the `+mouselook` action.
+* A bug has been fixed whereby a gamepad could randomly start vibrating during a game even though the player was using the mouse and/or keyboard instead.
+* A bug has also been fixed whereby a gamepad could continue to vibrate once it should have stopped doing so in some rare instances.
+* If an error is found in a `MAPINFO` lump, a warning will now be displayed in the console rather than *DOOM Retro* exiting with an error.
+* The `IDFA` and `IDKFA` cheats will no longer work if the player already has all the items those cheats provide.
+
+---
+
+###### Saturday, June 1, 2019
+
 ### DOOM Retro v2.9.3
 
 * The following changes have been made to the support for John Romero’s megawad [*SIGIL*](http://SI6IL.com/):

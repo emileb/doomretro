@@ -623,7 +623,7 @@ void R_InitColumnFunctions(void)
             info->colfunc = tlcolfunc;
             info->altcolfunc = tl50colfunc;
         }
-        else if (info->doomednum == MegaSphere && !hacx)
+        else if (info->doomednum == MegaSphere && !D4V && !hacx)
         {
             info->colfunc = megaspherecolfunc;
             info->altcolfunc = basecolfunc;
@@ -703,9 +703,6 @@ void R_InitColumnFunctions(void)
             mo->colfunc = mo->info->colfunc;
             mo->altcolfunc = mo->info->altcolfunc;
         }
-
-    if (chex)
-        mobjinfo[MT_BLOOD].blood = GREENBLOOD;
 }
 
 //
@@ -721,6 +718,7 @@ void R_Init(void)
     R_InitLightTables();
     R_InitTranslationTables();
     R_InitPatches();
+    R_InitDistortedFlats();
     R_InitColumnFunctions();
 }
 
@@ -772,7 +770,7 @@ static void R_SetupFrame(void)
         viewz = viewplayer->oldviewz + FixedMul(viewplayer->viewz - viewplayer->oldviewz, fractionaltic);
         viewangle = R_InterpolateAngle(mo->oldangle, mo->angle, fractionaltic);
 
-        if (canmouselook)
+        if (canmouselook || weaponrecoil)
         {
             pitch = (viewplayer->oldlookdir + (int)((viewplayer->lookdir - viewplayer->oldlookdir)
                 * FIXED2DOUBLE(fractionaltic))) / MLOOKUNIT;
@@ -791,7 +789,7 @@ static void R_SetupFrame(void)
         viewz = viewplayer->viewz;
         viewangle = mo->angle;
 
-        if (canmouselook)
+        if (canmouselook || weaponrecoil)
         {
             pitch = viewplayer->lookdir / MLOOKUNIT;
 

@@ -146,6 +146,35 @@ dboolean IsBFGEdition(const char *iwadname)
     return (result1 && result2);
 }
 
+dboolean IsUltimateDOOM(const char *iwadname)
+{
+    FILE        *fp = fopen(iwadname, "rb");
+    filelump_t  lump;
+    wadinfo_t   header;
+    const char  *n = lump.name;
+    int         result = false;
+
+    if (!fp)
+        return false;
+
+    // read IWAD header
+    if (fread(&header, 1, sizeof(header), fp) == sizeof(header))
+    {
+        fseek(fp, LONG(header.infotableofs), SEEK_SET);
+
+        for (header.numlumps = LONG(header.numlumps); header.numlumps && fread(&lump, sizeof(lump), 1, fp); header.numlumps--)
+            if (n[0] == 'E' && n[1] == '4' && n[2] == 'M' && n[3] == '1')
+            {
+                result = true;
+                break;
+            }
+    }
+
+    fclose(fp);
+
+    return result;
+}
+
 char *GetCorrectCase(char *path)
 {
 #if defined(_WIN32)
@@ -243,8 +272,13 @@ dboolean W_AddFile(char *filename, dboolean automatic)
     }
 
     lumps_str = commify((int64_t)numlumps - startlump);
-    C_Output("%s %s lump%s from %s <b>%s</b>.", (automatic ? "Automatically added" : "Added"), lumps_str,
-        (numlumps - startlump == 1 ? "" : "s"), (wadfile->type == IWAD ? "IWAD" : "PWAD"), wadfile->path);
+    C_Output("%s %s lump%s from %s <b>%s</b>.%s", (automatic ? "Automatically added" : "Added"), lumps_str,
+        (numlumps - startlump == 1 ? "" : "s"), (wadfile->type == IWAD ? "IWAD" : "PWAD"), wadfile->path,
+        (M_StringCompare(leafname(filename), "SIGIL.wad") ? " Episode 5 is available." : ""));
+
+    if (M_StringCompare(leafname(filename), "doom.wad"))
+        C_Output("<i><b>E1M4B: Phobos Mission Control</b></i> and <i><b>E1M8B: Tech Gone Bad</b></i> "
+            "are available using the <b>map</b> CCMD.");
 
     free(fileinfo);
     free(lumps_str);
@@ -330,7 +364,8 @@ GameMission_t IWADRequiredByPWAD(char *pwadname)
     for (header.numlumps = LONG(header.numlumps); header.numlumps && fread(&lump, sizeof(lump), 1, fp); header.numlumps--)
         if (n[0] == 'E' && isdigit((int)n[1]) && n[2] == 'M' && isdigit((int)n[3]) && n[4] == '\0')
             result = doom;
-        else if (n[0] == 'M' && n[1] == 'A' && n[2] == 'P' && isdigit((int)n[3]) && isdigit((int)n[4]) && n[5] == '\0')
+        else if (n[0] == 'M' && n[1] == 'A' && n[2] == 'P' && isdigit((int)n[3]) && isdigit((int)n[4]) && n[5] == '\0'
+            && !M_StringCompare(leaf, "d4v.wad"))
             result = doom2;
 
     fclose(fp);
@@ -488,7 +523,7 @@ int W_GetSecondNumForName(const char *name)
                 break;
 
     if (i == numlumps)
-        I_Error("W_GetResourceNumForName2: %s not found!", name);
+        I_Error("W_GetSecondNumForName: %s not found!", name);
 
     return i;
 }

@@ -105,8 +105,6 @@ struct mapinfo_s
     int         titlepatch;
 };
 
-mobj_t *P_SpawnMapThing(mapthing_t *mthing, dboolean spawnmonsters);
-
 //
 // MAP related Lookup tables.
 // Store VERTEXES, LINEDEFS, SIDEDEFS, etc.
@@ -244,7 +242,8 @@ static dboolean samelevel;
 
 mapformat_t     mapformat;
 
-dboolean        boomlinespecials;
+dboolean        boomcompatible;
+dboolean        mbfcompatible;
 dboolean        blockmaprebuilt;
 dboolean        nojump = false;
 dboolean        nomouselook = false;
@@ -345,7 +344,6 @@ static void P_LoadSegs(int lump)
 
     numsegs = W_LumpLength(lump) / sizeof(mapseg_t);
     segs = calloc_IfSameLevel(segs, numsegs, sizeof(seg_t));
-    boomlinespecials = false;
 
     if (!data || !numsegs)
         I_Error("There are no segs in this map.");
@@ -523,8 +521,10 @@ static void P_LoadSegs(int lump)
                 }
             }
 
-        if (li->linedef->special >= BOOMLINESPECIALS)
-            boomlinespecials = true;
+        if (li->linedef->special >= MBFLINESPECIALS)
+            mbfcompatible = true;
+        else if (li->linedef->special >= BOOMLINESPECIALS)
+            boomcompatible = true;
     }
 
     W_ReleaseLumpNum(lump);
@@ -539,8 +539,6 @@ static void P_LoadSegs_V4(int lump)
 
     if (!data || !numsegs)
         I_Error("This map has no segs.");
-
-    boomlinespecials = false;
 
     for (int i = 0; i < numsegs; i++)
     {
@@ -629,8 +627,10 @@ static void P_LoadSegs_V4(int lump)
 
         li->offset = GetOffset(li->v1, (side ? ldef->v2 : ldef->v1));
 
-        if (li->linedef->special >= BOOMLINESPECIALS)
-            boomlinespecials = true;
+        if (li->linedef->special >= MBFLINESPECIALS)
+            mbfcompatible = true;
+        else if (li->linedef->special >= BOOMLINESPECIALS)
+            boomcompatible = true;
     }
 
     W_ReleaseLumpNum(lump);
@@ -682,7 +682,7 @@ static void P_LoadSubsectors_V4(int lump)
 //
 static void P_LoadSectors(int lump)
 {
-    const byte  *data = W_CacheLumpNum(lump);
+    mapsector_t *data = W_CacheLumpNum(lump);
 
     numsectors = W_LumpLength(lump) / sizeof(mapsector_t);
     sectors = calloc_IfSameLevel(sectors, numsectors, sizeof(sector_t));
@@ -691,7 +691,7 @@ static void P_LoadSectors(int lump)
     for (int i = 0; i < numsectors; i++)
     {
         sector_t    *ss = sectors + i;
-        mapsector_t *ms = (mapsector_t *)data + i;
+        mapsector_t *ms = data + i;
 
         ss->id = i;
         ss->floorheight = SHORT(ms->floorheight) << FRACBITS;
@@ -896,8 +896,6 @@ static void P_LoadNodes_V4(int lump)
 
 static void P_LoadZSegs(const byte *data)
 {
-    boomlinespecials = false;
-
     for (int i = 0; i < numsegs; i++)
     {
         line_t              *ldef;
@@ -958,8 +956,10 @@ static void P_LoadZSegs(const byte *data)
 
         li->offset = GetOffset(li->v1, (side ? ldef->v2 : ldef->v1));
 
-        if (li->linedef->special >= BOOMLINESPECIALS)
-            boomlinespecials = true;
+        if (li->linedef->special >= MBFLINESPECIALS)
+            mbfcompatible = true;
+        else if (li->linedef->special >= BOOMLINESPECIALS)
+            boomcompatible = true;
     }
 }
 
@@ -1177,7 +1177,14 @@ static void P_LoadThings(int lump)
                 mt.type = Zombieman;
 
             if ((thing = P_SpawnMapThing(&mt, !nomonsters)))
+            {
+                int flags = thing->flags;
+
                 thing->id = thingid;
+
+                if ((flags & MF_TOUCHY) || (flags & MF_BOUNCES) || (flags & MF_FRIEND))
+                    mbfcompatible = true;
+            }
         }
     }
 
@@ -1328,11 +1335,11 @@ static void P_LoadSideDefs(int lump)
 // killough 4/4/98: delay using texture names until after linedefs are loaded, to allow overloading
 static void P_LoadSideDefs2(int lump)
 {
-    const byte  *data = W_CacheLumpNum(lump);
+    mapsidedef_t    *data = W_CacheLumpNum(lump);
 
     for (int i = 0; i < numsides; i++)
     {
-        mapsidedef_t    *msd = (mapsidedef_t *)data + i;
+        mapsidedef_t    *msd = data + i;
         side_t          *sd = sides + i;
         sector_t        *sec;
         unsigned short  sector_num = SHORT(msd->sector);
@@ -1480,18 +1487,24 @@ static void P_CreateBlockMap(void)
 
     blockmaprebuilt = true;
 
-    for(i = 0; i < numvertexes; i++)
+    for (i = 0; i < numvertexes; i++)
     {
-        if((vertexes[i].x >> FRACBITS) < minx)
+        if ((vertexes[i].x >> FRACBITS) < minx)
             minx = vertexes[i].x >> FRACBITS;
-        else if((vertexes[i].x >> FRACBITS) > maxx)
+        else if ((vertexes[i].x >> FRACBITS) > maxx)
             maxx = vertexes[i].x >> FRACBITS;
 
-        if((vertexes[i].y >> FRACBITS) < miny)
+        if ((vertexes[i].y >> FRACBITS) < miny)
             miny = vertexes[i].y >> FRACBITS;
-        else if((vertexes[i].y >> FRACBITS) > maxy)
+        else if ((vertexes[i].y >> FRACBITS) > maxy)
             maxy = vertexes[i].y >> FRACBITS;
     }
+
+    // [crispy] doombsp/DRAWING.M:175-178
+    minx -= 8;
+    miny -= 8;
+    maxx += 8;
+    maxy += 8;
 
     // Save blockmap parameters
     bmaporgx = minx << FRACBITS;
@@ -1526,9 +1539,6 @@ static void P_CreateBlockMap(void)
 
         unsigned int    tot = bmapwidth * bmapheight;           // size of blockmap
         bmap_t          *bmap = calloc(sizeof(*bmap), tot);     // array of blocklists
-
-        if (!bmap)
-            I_Error("Unable to recreate blockmap.");
 
         for (i = 0; i < numlines; i++)
         {
@@ -1599,7 +1609,7 @@ static void P_CreateBlockMap(void)
         //
         // 4 words, unused if this routine is called, are reserved at the start.
         {
-            int count = tot + 6;  // we need at least 1 word per block, plus reserved's
+            int count = tot + 6;                // we need at least 1 word per block, plus reserved's
 
             for (i = 0; (unsigned int)i < tot; i++)
                 if (bmap[i].n)
@@ -1611,11 +1621,11 @@ static void P_CreateBlockMap(void)
 
         // Now compress the blockmap.
         {
-            int     ndx = (tot += 4);   // Advance index to start of linedef lists
-            bmap_t  *bp = bmap;         // Start of uncompressed blockmap
+            int     ndx = (tot += 4);           // Advance index to start of linedef lists
+            bmap_t  *bp = bmap;                 // Start of uncompressed blockmap
 
-            blockmaplump[ndx++] = 0;    // Store an empty blockmap list at start
-            blockmaplump[ndx++] = -1;   // (Used for compression)
+            blockmaplump[ndx++] = 0;            // Store an empty blockmap list at start
+            blockmaplump[ndx++] = -1;           // (Used for compression)
 
             for (i = 4; (unsigned int)i < tot; i++, bp++)
                 if (bp->n)                                              // Non-empty blocklist
@@ -1633,7 +1643,7 @@ static void P_CreateBlockMap(void)
                     // Empty blocklist: point to reserved empty blocklist
                     blockmaplump[i] = tot;
 
-            free(bmap);                 // Free uncompressed blockmap
+            free(bmap);                         // Free uncompressed blockmap
         }
     }
 
@@ -1659,7 +1669,7 @@ static void P_LoadBlockMap(int lump)
     if (lump >= numlumps || (lumplen = W_LumpLength(lump)) < 8 || (count = lumplen / 2) >= 0x10000)
     {
         P_CreateBlockMap();
-        C_Warning("This map's <b>BLOCKMAP</b> lump was %s and needed to be rebuilt.", (lumplen ? "invalid" : "empty"));
+        C_Warning("This map's <b>BLOCKMAP</b> lump was rebuilt.");
     }
     else if (M_CheckParm("-blockmap"))
     {
@@ -1689,8 +1699,6 @@ static void P_LoadBlockMap(int lump)
             blockmaplump[i] = (t == -1 ? -1l : ((unsigned int)t & 0xFFFF));
         }
 
-        Z_Free(wadblockmaplump);
-
         // Read the header
         bmaporgx = blockmaplump[0] << FRACBITS;
         bmaporgy = blockmaplump[1] << FRACBITS;
@@ -1699,10 +1707,9 @@ static void P_LoadBlockMap(int lump)
 
         if (!P_VerifyBlockMap(count))
         {
-            Z_Free(blockmaplump);
-            blockmaplump = NULL;
+            free(blockmaplump);
             P_CreateBlockMap();
-            C_Warning("This map's <b>BLOCKMAP</b> lump was invalid and needed to be rebuilt.");
+            C_Warning("This map's <b>BLOCKMAP</b> lump was rebuilt.");
         }
     }
 
@@ -1996,7 +2003,7 @@ void P_MapName(int ep, int map)
 
             if (*mapinfoname)
                 M_snprintf(maptitle, sizeof(maptitle), "%s: %s", mapnum, mapinfoname);
-            else if (W_CheckMultipleLumps(mapnum) > 1 && dehcount == 1 && !chex)
+            else if (W_CheckMultipleLumps(mapnum) > 1 && dehcount == 1)
             {
                 mapnumonly = true;
                 M_StringCopy(maptitle, mapnum, sizeof(maptitle));
@@ -2164,6 +2171,9 @@ void P_SetupLevel(int ep, int map)
     char        lumpname[6];
     int         lumpnum;
     static int  prevlumpnum = -1;
+
+    boomcompatible = false;
+    mbfcompatible = false;
 
     totalkills = 0;
     totalitems = 0;
@@ -2610,7 +2620,7 @@ char *P_GetMapAuthor(int map)
 void P_GetMapLiquids(int map)
 {
     for (int i = 0; i < liquidlumps; i++)
-        sectors[mapinfo[QualifyMap(map)].liquid[i]].terraintype = WATER;
+        sectors[mapinfo[QualifyMap(map)].liquid[i]].terraintype = LIQUID;
 }
 
 int P_GetMapMusic(int map)
@@ -2630,7 +2640,7 @@ char *P_GetMapMusicTitle(int map)
 
 char *P_GetMapName(int map)
 {
-    return (MAPINFO >= 0 ? mapinfo[QualifyMap(map)].name : ((E1M4B || *speciallumpname) && map == 4 ? s_CAPTION_E1M4B :
+    return (MAPINFO >= 0 && !sigil ? mapinfo[QualifyMap(map)].name : ((E1M4B || *speciallumpname) && map == 4 ? s_CAPTION_E1M4B :
         ((E1M8B || *speciallumpname) && map == 8 ? s_CAPTION_E1M8B : "")));
 }
 

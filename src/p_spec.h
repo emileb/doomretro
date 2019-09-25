@@ -57,15 +57,12 @@ void P_InitPicAnims(void);
 void P_SetTimer(int minutes);
 void P_SpawnSpecials(void);
 void P_SetLiquids(void);
-dboolean P_IsLiquidSector(sector_t *sector);
-dboolean P_IsLiquidFlat(int floorpic);
 void P_SetLifts(void);
 
 // every tic
 void P_UpdateSpecials(void);
 
 dboolean P_SectorActive(special_e t, sector_t *sec);
-dboolean P_SectorHasLightSpecial(sector_t *sec);
 
 dboolean P_CheckTag(line_t *line);
 
@@ -225,7 +222,7 @@ typedef struct
     degenmobj_t *soundorg;
 } button_t;
 
-#define MAXBUTTONS  16
+#define MAXBUTTONS  32
 
 // 1 second, in ticks.
 #define BUTTONTIME  35

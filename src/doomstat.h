@@ -116,6 +116,8 @@ extern dboolean         BTSXE3B;
 extern dboolean         E1M4B;
 extern dboolean         E1M8B;
 extern dboolean         sprfix18;
+extern dboolean         eviternity;
+extern dboolean         D4V;
 
 extern dboolean         DMENUPIC;
 extern dboolean         FREEDOOM;
@@ -130,6 +132,7 @@ extern dboolean         M_MSENS;
 extern dboolean         M_MSGOFF;
 extern dboolean         M_MSGON;
 extern dboolean         M_NEWG;
+extern dboolean         M_NGAME;
 extern dboolean         M_NMARE;
 extern dboolean         M_OPTTTL;
 extern dboolean         M_PAUSE;

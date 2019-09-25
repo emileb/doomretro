@@ -55,6 +55,7 @@ button_t            *buttonlist = NULL;
 int                 maxbuttons = MAXBUTTONS;
 
 extern texture_t    **textures;
+extern dboolean     autousing;
 
 //
 // P_InitSwitchList()
@@ -1030,6 +1031,20 @@ dboolean P_UseSpecialLine(mobj_t *thing, line_t *line, int side)
         case SR_Light_ChangeTo35:
             EV_LightTurnOn(line, (canmodify && gamemission == doom2 && gamemap == 4 ? 0 : 35));
             P_ChangeSwitchTexture(line, true);
+            break;
+
+        case G1_Floor_RaiseToLowestCeiling:
+        case G1_Door_OpenStay:
+        case G1_Floor_RaiseToNextHighestFloor_ChangesTexture:
+        case Scroll_ScrollTextureLeft:
+        case Scroll_ScrollTextureRight:
+        case G1_ExitLevel:
+        case G1_ExitLevel_GoesToSecretLevel:
+        case Scroll_ScrollWallUsingSidedefOffsets:
+        case Translucent_MiddleTexture:
+            if (thing->player && !autousing)
+                S_StartSound(thing, sfx_noway);
+
             break;
     }
 

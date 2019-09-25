@@ -160,7 +160,7 @@ static void R_FixWiggle(sector_t *sector)
             int heightbits;
         } scalevalues_t;
 
-        static const scalevalues_t scalevalues[] =
+        const scalevalues_t scalevalues[] =
         {
             { 2048 * FRACUNIT, 12 }, { 1024 * FRACUNIT, 12 }, { 1024 * FRACUNIT, 11 },
             {  512 * FRACUNIT, 11 }, {  512 * FRACUNIT, 10 }, {  256 * FRACUNIT, 10 },
@@ -535,12 +535,11 @@ void R_StoreWallRange(const int start, const int stop)
     // killough 1/98 -- fix 2s line HOM
     if (ds_p == drawsegs + maxdrawsegs)
     {
-        const size_t        pos = ds_p - drawsegs;
-        const unsigned int  newmax = (maxdrawsegs ? 2 * maxdrawsegs : MAXDRAWSEGS);
+        const size_t    pos = ds_p - drawsegs;
 
-        drawsegs = I_Realloc(drawsegs, newmax * sizeof(*drawsegs));
+        maxdrawsegs = (maxdrawsegs ? 2 * maxdrawsegs : MAXDRAWSEGS);
+        drawsegs = I_Realloc(drawsegs, maxdrawsegs * sizeof(*drawsegs));
         ds_p = drawsegs + pos;
-        maxdrawsegs = newmax;
     }
 
     // calculate rw_distance for scale calculation
@@ -760,7 +759,7 @@ void R_StoreWallRange(const int start, const int stop)
             }
         }
 
-        if (worldlow > worldbottom && frontsector->interpfloorheight != backsector->floorheight)
+        if (worldlow > worldbottom && frontsector->interpfloorheight != backsector->interpfloorheight)
         {
             // bottom texture
             if ((missingbottomtexture = sidedef->missingbottomtexture))
@@ -775,6 +774,9 @@ void R_StoreWallRange(const int start, const int stop)
                 bottombrightmap = (usebrightmaps && !nobrightmap[bottomtexture] ? brightmap[bottomtexture] : NULL);
                 rw_bottomtexturemid = ((linedef->flags & ML_DONTPEGBOTTOM) ? worldtop : worldlow - liquidoffset)
                     + FixedMod(sidedef->rowoffset, height);
+
+                if (liquidoffset)
+                    rw_bottomtexturemid += 4 * FRACUNIT;
             }
         }
 

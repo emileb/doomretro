@@ -579,8 +579,12 @@ enum
     W1_Teleport_MonstersOnly_Silent                                = 268,
     WR_Teleport_MonstersOnly_Silent                                = 269,
 
+    MBFLINESPECIALS                                                = 271,
+
     TransferSkyTextureToTaggedSectors                              = 271,
-    TransferSkyTextureToTaggedSectors_Flipped                      = 272
+    TransferSkyTextureToTaggedSectors_Flipped                      = 272,
+
+    NUMLINESPECIALS                                                = 272
 };
 
 enum
@@ -602,6 +606,8 @@ enum
     DamageNegative10Or20PercentHealth                   = 16,
     LightFlickers_Randomly                              = 17
 };
+
+extern dboolean islightspecial[];
 
 enum
 {
@@ -923,7 +929,7 @@ typedef struct
 
     // for color translation and shadow draw,
     //  maxbright frames as well
-    lighttable_t        *colormap[2];
+    lighttable_t        *colormap;
 
     mobj_t              *mobj;
 

@@ -200,7 +200,7 @@ static char *GetRegistryString(registryvalue_t *reg_val)
     if (RegQueryValueEx(key, reg_val->value, NULL, &valtype, NULL, &len) == ERROR_SUCCESS && valtype == REG_SZ)
     {
         // Allocate a buffer for the value and read the value
-        result = malloc(len);
+        result = malloc(len + 1);
 
         if (RegQueryValueEx(key, reg_val->value, NULL, &valtype, (unsigned char *)result, &len) != ERROR_SUCCESS)
         {
@@ -439,6 +439,10 @@ char *D_FindWADByName(char *filename)
 
 void D_InitIWADFolder(void)
 {
+#if defined(_WIN32)
+    char    path[MAX_PATH];
+#endif
+
     BuildIWADDirList();
 
     for (int i = 0; i < num_iwad_dirs; i++)
@@ -448,6 +452,20 @@ void D_InitIWADFolder(void)
             strreplace(iwadfolder, "/", "\\");
             break;
         }
+
+#if defined(_WIN32)
+    M_snprintf(path, sizeof(path), "%s"DIR_SEPARATOR_S"DOOM.WAD", iwadfolder);
+
+    if (M_FileExists(path))
+        wad = "DOOM.WAD";
+    else
+    {
+        M_snprintf(path, sizeof(path), "%s"DIR_SEPARATOR_S"DOOM2.WAD", iwadfolder);
+
+        if (M_FileExists(path))
+            wad = "DOOM2.WAD";
+    }
+#endif
 }
 
 //
@@ -544,7 +562,9 @@ void D_SetSaveGameFolder(dboolean output)
         savegamefolder_free = savegamefolder;
         savegamefolder = M_StringJoin(savegamefolder, (*pwadfile ? pwadfile : iwad_name), DIR_SEPARATOR_S, NULL);
 
+#if !defined(__APPLE__)
         free(appdatafolder);
+#endif
         free(savegamefolder_free);
     }
 
@@ -630,7 +650,7 @@ void D_SetGameDescription(void)
     {
         // DOOM 1. But which version?
         if (modifiedgame && *pwadfile)
-            gamedescription = M_StringJoin(uppercase(pwadfile), ".WAD", NULL);
+            gamedescription = M_StringJoin(pwadfile, (strcmp(pwadfile, uppercase(pwadfile)) ? ".wad" : ".WAD"), NULL);
         else if (FREEDOOM)
             gamedescription = s_CAPTION_FREEDOOM1;
         else if (gamemode == retail)
@@ -644,7 +664,12 @@ void D_SetGameDescription(void)
     {
         // DOOM 2 of some kind. But which mission?
         if (modifiedgame && *pwadfile)
-            gamedescription = M_StringJoin(uppercase(pwadfile), ".WAD", NULL);
+        {
+            if (M_StringCompare(pwadfile, "nerve"))
+                gamedescription = s_CAPTION_DOOM2;
+            else
+                gamedescription = M_StringJoin(pwadfile, (strcmp(pwadfile, uppercase(pwadfile)) ? ".wad" : ".WAD"), NULL);
+        }
         else if (FREEDOOM)
             gamedescription = (FREEDM ? s_CAPTION_FREEDM : s_CAPTION_FREEDOOM2);
         else if (nerve)

@@ -299,7 +299,10 @@ enum
     MF2_DECORATION                = 0x10000000,
 
     // Object is a missile from a monster
-    MF2_MONSTERMISSILE            = 0x40000000
+    MF2_MONSTERMISSILE            = 0x40000000,
+
+    // Object is a boss monster
+    MF2_BOSS                      = 0x80000000
 };
 
 typedef enum
@@ -408,6 +411,9 @@ typedef struct mobj_s
 
     short               gear;                   // killough 11/98: used in torque simulation
 
+    short               pursuecount;
+    short               strafecount;
+
     int                 bloodsplats;
 
     int                 blood;
@@ -426,6 +432,8 @@ typedef struct mobj_s
 
     int                 id;
     int                 musicid;
+
+    char                name[100];
 } mobj_t;
 
 typedef struct bloodsplat_s
