@@ -221,6 +221,7 @@ char    *s_PD_ALL6 = "";
 char    *s_SECRET = "";
 
 char    *s_GGSAVED = GGSAVED;
+char    *s_GGAUTOSAVED = "";
 char    *s_GGLOADED = "";
 char    *s_GGAUTOLOADED = "";
 char    *s_GGDELETED = "";
@@ -788,6 +789,7 @@ deh_strs deh_strlookup[] =
     { &s_SECRET,                     "SECRET"                     },
 
     { &s_GGSAVED,                    "GGSAVED"                    },
+    { &s_GGAUTOSAVED,                "GGAUTOSAVED"                },
     { &s_GGLOADED,                   "GGLOADED"                   },
     { &s_GGAUTOLOADED,               "GGAUTOLOADED"               },
     { &s_GGDELETED,                  "GGDELETED"                  },
@@ -1702,8 +1704,8 @@ static const char *deh_sfxinfo[] =
 // Ammo information for the few types of ammo
 static const char *deh_ammo[] =
 {
-    "Max ammo",         // maxammo[]
-    "Per ammo"          // clipammo[]
+    "Max Ammo",         // maxammo[]
+    "Per Ammo"          // clipammo[]
 };
 
 // WEAPONS - Dehacked block name = "Weapon"
@@ -1711,12 +1713,12 @@ static const char *deh_ammo[] =
 // Basically a list of frames and what kind of ammo (see above) it uses.
 static const char *deh_weapon[] =
 {
-    "Ammo type",        // .ammo
-    "Deselect frame",   // .upstate
-    "Select frame",     // .downstate
-    "Bobbing frame",    // .readystate
-    "Shooting frame",   // .atkstate
-    "Firing frame"      // .flashstate
+    "Ammo Type",        // .ammo
+    "Deselect Frame",   // .upstate
+    "Select Frame",     // .downstate
+    "Bobbing Frame",    // .readystate
+    "Shooting Frame",   // .atkstate
+    "Firing Frame"      // .flashstate
 };
 
 // CHEATS - Dehacked block name = "Cheat"
@@ -1725,9 +1727,9 @@ static const char *deh_weapon[] =
 // These are just plain funky terms compared with id's
 static const char *deh_cheat[] =
 {
-    "Change music",     // idmus
+    "Change Music",     // idmus
     "Chainsaw",         // idchoppers
-    "God mode",         // iddqd
+    "God Mode",         // iddqd
     "Ammo & Keys",      // idkfa
     "Ammo",             // idfa
     "No Clipping 1",    // idspispopd
@@ -1738,7 +1740,7 @@ static const char *deh_cheat[] =
     "Radiation Suit",   // idbeholdr
     "Auto-map",         // idbeholda
     "Lite-Amp Goggles", // idbeholdl
-    "BEHOLD menu",      // idbehold
+    "BEHOLD Menu",      // idbehold
     "Level Warp",       // idclev
     "Player Position"   // idmypos
 };
@@ -3239,7 +3241,12 @@ static void deh_procMisc(DEHFILE *fpin, char *line)
         else if (M_StringCompare(key, deh_misc[14]))                // BFG Cells/Shot
             bfgcells = value;
         else if (M_StringCompare(key, deh_misc[15]))                // Monsters Infight
-            species_infighting = !!value;
+        {
+            if (value == 202)
+                species_infighting = false;
+            else if (value == 221)
+                species_infighting = true;
+        }
         else
             C_Warning("Invalid misc item string index for \"%s\".", key);
     }

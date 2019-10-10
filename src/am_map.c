@@ -73,6 +73,7 @@ int am_tswallcolor = am_tswallcolor_default;
 int am_wallcolor = am_wallcolor_default;
 
 // Automap color priorities
+#define PATHPRIORITY           10
 #define WALLPRIORITY            9
 #define ALLMAPWALLPRIORITY      8
 #define CDWALLPRIORITY          7
@@ -85,10 +86,10 @@ int am_wallcolor = am_wallcolor_default;
 
 static byte playercolor;
 static byte thingcolor;
-static byte pathcolor;
 static byte markcolor;
 static byte backcolor;
 
+static byte *pathcolor;
 static byte *wallcolor;
 static byte *allmapwallcolor;
 static byte *teleportercolor;
@@ -336,6 +337,7 @@ void AM_SetColors(void)
     byte        priority[256] = { 0 };
     static byte priorities[256 * 256];
 
+    priority[nearestcolors[am_pathcolor]] = PATHPRIORITY;
     priority[nearestcolors[am_wallcolor]] = WALLPRIORITY;
     priority[nearestcolors[am_allmapwallcolor]] = ALLMAPWALLPRIORITY;
     priority[nearestcolors[am_cdwallcolor]] = CDWALLPRIORITY;
@@ -348,7 +350,6 @@ void AM_SetColors(void)
 
     playercolor = nearestcolors[am_playercolor];
     thingcolor = nearestcolors[am_thingcolor];
-    pathcolor = nearestcolors[am_pathcolor];
     markcolor = nearestcolors[am_markcolor];
     backcolor = nearestcolors[am_backcolor];
     am_crosshaircolor2 = &tinttab60[nearestcolors[am_crosshaircolor] << 8];
@@ -357,6 +358,7 @@ void AM_SetColors(void)
         for (int y = 0; y < 256; y++)
             priorities[(x << 8) + y] = (priority[x] > priority[y] ? x : y);
 
+    pathcolor = &priorities[nearestcolors[am_pathcolor] << 8];
     wallcolor = &priorities[nearestcolors[am_wallcolor] << 8];
     allmapwallcolor = &priorities[nearestcolors[am_allmapwallcolor] << 8];
     cdwallcolor = &priorities[nearestcolors[am_cdwallcolor] << 8];
@@ -373,7 +375,8 @@ void AM_GetGridSize(void)
     int width = -1;
     int height = -1;
 
-    if (sscanf(am_gridsize, "%10ix%10i", &width, &height) == 2 && width >= 4 && width <= 4096 && height >= 4 && height <= 4096)
+    if (sscanf(am_gridsize, "%10ix%10i", &width, &height) == 2
+        && width >= 4 && width <= 4096 && height >= 4 && height <= 4096)
     {
         gridwidth = width << MAPBITS;
         gridheight = height << MAPBITS;
@@ -615,6 +618,7 @@ void AM_AddMark(void)
 
     markpoints[markpointnum].x = x;
     markpoints[markpointnum].y = y;
+
     M_snprintf(message, sizeof(message), s_AMSTR_MARKEDSPOT, ++markpointnum);
     C_Output(message);
     HU_SetPlayerMessage(message, false, true);
@@ -654,15 +658,14 @@ void AM_AddToPath(void)
     const int   y = viewplayer->mo->y >> FRACTOMAPBITS;
 
     if (pathpointnum)
-    {
-        if (ABS(pathpoints[pathpointnum - 1].x - x) < FRACUNIT && ABS(pathpoints[pathpointnum - 1].y - y) < FRACUNIT)
+        if (ABS(pathpoints[pathpointnum - 1].x - x) < FRACUNIT
+            && ABS(pathpoints[pathpointnum - 1].y - y) < FRACUNIT)
             return;
 
-        if (pathpointnum >= pathpointnum_max)
-        {
-            pathpointnum_max = (pathpointnum_max ? pathpointnum_max << 1 : 1024);
-            pathpoints = I_Realloc(pathpoints, pathpointnum_max * sizeof(*pathpoints));
-        }
+    if (pathpointnum >= pathpointnum_max)
+    {
+        pathpointnum_max = (pathpointnum_max ? pathpointnum_max << 1 : 1024);
+        pathpoints = I_Realloc(pathpoints, pathpointnum_max * sizeof(*pathpoints));
     }
 
     pathpoints[pathpointnum].x = x;
@@ -1170,7 +1173,6 @@ static void AM_RotatePoint(mpoint_t *point)
 
     point->x -= x;
     point->y -= y;
-
     temp = FixedMul(point->x, am_frame.cos) - FixedMul(point->y, am_frame.sin) + x;
     point->y = FixedMul(point->x, am_frame.sin) + FixedMul(point->y, am_frame.cos) + y;
     point->x = temp;
@@ -1402,7 +1404,8 @@ static __inline void PUTTRANSDOT(unsigned int x, unsigned int y, byte *color)
 //
 // Classic Bresenham w/ whatever optimizations needed for speed
 //
-static void AM_DrawFline(int x0, int y0, int x1, int y1, byte *color, void (*putdot)(unsigned int, unsigned int, byte *))
+static void AM_DrawFline(int x0, int y0, int x1, int y1, byte *color,
+    void (*putdot)(unsigned int, unsigned int, byte *))
 {
     int dx = x1 - x0;
     int dy = y1 - y0;
@@ -1884,8 +1887,8 @@ static void AM_DrawMarks(void)
         "122222211111122112211221122222211122221101111110",
         "011111101122221112222221122112211221111112222211"
         "122222211221122112211221122222211122221101111110",
-        "111111111222222112222221111112210011222101122211"
-        "012221100122110001221000012210000122100001111000",
+        "111111111222222112222221111112210001122100012211"
+        "001122100012211001122100012211000122100001111000",
         "011111101122221112222221122112211221122111222211"
         "122222211221122112211221122222211122221101111110",
         "011111101122221112222221122112211221122112222221"
@@ -1976,13 +1979,13 @@ static void AM_DrawPath(void)
 
                 AM_RotatePoint(&start);
                 AM_RotatePoint(&end);
-                AM_DrawMline2(start.x, start.y, end.x, end.y, &pathcolor);
+                AM_DrawBigMline(start.x, start.y, end.x, end.y, pathcolor);
             }
 
             if (pathpointnum > 1 && !freeze && !(viewplayer->cheats & CF_NOCLIP))
             {
                 AM_RotatePoint(&player);
-                AM_DrawMline2(end.x, end.y, player.x, player.y, &pathcolor);
+                AM_DrawBigMline(end.x, end.y, player.x, player.y, pathcolor);
             }
         }
         else
@@ -1990,10 +1993,10 @@ static void AM_DrawPath(void)
             for (int i = 1; i < pathpointnum; i++)
                 if (ABS(pathpoints[i - 1].x - pathpoints[i].x) <= FRACUNIT * 4
                     && ABS(pathpoints[i - 1].y - pathpoints[i].y) <= FRACUNIT * 4)
-                    AM_DrawMline2(pathpoints[i - 1].x, pathpoints[i - 1].y, pathpoints[i].x, pathpoints[i].y, &pathcolor);
+                    AM_DrawBigMline(pathpoints[i - 1].x, pathpoints[i - 1].y, pathpoints[i].x, pathpoints[i].y, pathcolor);
 
             if (pathpointnum > 1 && !freeze && !(viewplayer->cheats & CF_NOCLIP))
-                AM_DrawMline2(pathpoints[pathpointnum - 1].x, pathpoints[pathpointnum - 1].y, player.x, player.y, &pathcolor);
+                AM_DrawBigMline(pathpoints[pathpointnum - 1].x, pathpoints[pathpointnum - 1].y, player.x, player.y, pathcolor);
         }
     }
 }

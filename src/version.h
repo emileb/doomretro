@@ -39,9 +39,9 @@
 #if !defined(__VERSION_H__)
 #define __VERSION_H__
 
-#define PACKAGE_VERSION                 3,0,3,0
-#define PACKAGE_VERSIONSTRING           "3.0.3"
-#define PACKAGE_NAMEANDVERSIONSTRING    "DOOM Retro v3.0.3"
+#define PACKAGE_VERSION                 3,0,4,0
+#define PACKAGE_VERSIONSTRING           "3.0.4"
+#define PACKAGE_NAMEANDVERSIONSTRING    "DOOM Retro v3.0.4"
 #define PACKAGE_SAVEGAMEVERSIONSTRING   "DOOM Retro v3.0"
 
 #define PACKAGE                         "doomretro"
@@ -58,6 +58,6 @@
                                         "property of their respective holders. DOOM Retro is in no way affiliated with nor endorsed " \
                                         "by id Software."
 #define PACKAGE_WAD                     "doomretro.wad"
-#define PACKAGE_WIKI_HELP_URL           "https://github.com/bradharding/doomretro/wiki/THE-CONSOLE"
+#define PACKAGE_WIKIHELPURL             "https://github.com/bradharding/doomretro/wiki/THE-CONSOLE"
 
 #endif

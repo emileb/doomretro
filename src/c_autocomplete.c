@@ -39,7 +39,8 @@
 #include "c_console.h"
 #include "doomdef.h"
 
-autocomplete_t autocompletelist[] = {
+autocomplete_t autocompletelist[] =
+{
     { "alias ",                                      DOOM1AND2 },
     { "alwaysrun ",                                  DOOM1AND2 },
     { "alwaysrun off",                               DOOM1AND2 },
@@ -368,6 +369,9 @@ autocomplete_t autocompletelist[] = {
     { "autoload off",                                DOOM1AND2 },
     { "autoload on",                                 DOOM1AND2 },
     { "+automap",                                    DOOM1AND2 },
+    { "autosave ",                                   DOOM1AND2 },
+    { "autosave off",                                DOOM1AND2 },
+    { "autosave on",                                 DOOM1AND2 },
     { "autotilt ",                                   DOOM1AND2 },
     { "autotilt off",                                DOOM1AND2 },
     { "autotilt on",                                 DOOM1AND2 },
@@ -5859,6 +5863,11 @@ autocomplete_t autocompletelist[] = {
     { "if autoload off then ",                       DOOM1AND2 },
     { "if autoload on ",                             DOOM1AND2 },
     { "if autoload on then ",                        DOOM1AND2 },
+    { "if autosave ",                                DOOM1AND2 },
+    { "if autosave off ",                            DOOM1AND2 },
+    { "if autosave off then ",                       DOOM1AND2 },
+    { "if autosave on ",                             DOOM1AND2 },
+    { "if autosave on then ",                        DOOM1AND2 },
     { "if autotilt ",                                DOOM1AND2 },
     { "if autotilt off ",                            DOOM1AND2 },
     { "if autotilt off then ",                       DOOM1AND2 },
@@ -6702,6 +6711,7 @@ autocomplete_t autocompletelist[] = {
     { "name mancubus ",                              DOOM2ONLY },
     { "name monster ",                               DOOM1AND2 },
     { "name painelemental ",                         DOOM2ONLY },
+    { "name player ",                                DOOM1AND2 },
     { "name revenant ",                              DOOM2ONLY },
     { "name shotgunguy ",                            DOOM1AND2 },
     { "name spectre ",                               DOOM1AND2 },
@@ -7075,6 +7085,7 @@ autocomplete_t autocompletelist[] = {
     { "reset am_wallcolor",                          DOOM1AND2 },
     { "reset autoaim",                               DOOM1AND2 },
     { "reset autoload",                              DOOM1AND2 },
+    { "reset autosave",                              DOOM1AND2 },
     { "reset autotilt",                              DOOM1AND2 },
     { "reset autouse",                               DOOM1AND2 },
     { "reset centerweapon",                          DOOM1AND2 },

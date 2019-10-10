@@ -288,16 +288,13 @@ dboolean P_GiveBackpack(dboolean giveammo, dboolean stat)
 //
 // P_GiveFullAmmo
 //
-dboolean P_GiveFullAmmo(dboolean stat)
+dboolean P_GiveFullAmmo(void)
 {
     dboolean    result = false;
 
     for (int i = 0; i < NUMAMMO; i++)
         if (viewplayer->ammo[i] < viewplayer->maxammo[i])
         {
-            if (stat)
-                P_UpdateAmmoStat(i, viewplayer->maxammo[i] - viewplayer->ammo[i]);
-
             viewplayer->ammo[i] = viewplayer->maxammo[i];
             result = true;
         }
@@ -351,9 +348,31 @@ dboolean P_GiveAllWeapons(void)
 {
     dboolean    result = false;
 
+    if (!viewplayer->weaponowned[wp_chainsaw])
+    {
+        viewplayer->weaponowned[wp_chainsaw] = true;
+        viewplayer->fistorchainsaw = wp_chainsaw;
+
+        if (viewplayer->readyweapon == wp_fist)
+            viewplayer->pendingweapon = wp_chainsaw;
+
+        result = true;
+    }
+
     if (!viewplayer->weaponowned[wp_shotgun])
     {
         viewplayer->weaponowned[wp_shotgun] = true;
+        result = true;
+    }
+
+    if (gamemode == commercial && !viewplayer->weaponowned[wp_supershotgun])
+    {
+        viewplayer->weaponowned[wp_supershotgun] = true;
+        viewplayer->preferredshotgun = wp_supershotgun;
+
+        if (viewplayer->readyweapon == wp_shotgun)
+            viewplayer->pendingweapon = wp_supershotgun;
+
         result = true;
     }
 
@@ -382,28 +401,6 @@ dboolean P_GiveAllWeapons(void)
             viewplayer->weaponowned[wp_bfg] = true;
             result = true;
         }
-    }
-
-    if (!viewplayer->weaponowned[wp_chainsaw])
-    {
-        viewplayer->weaponowned[wp_chainsaw] = true;
-        viewplayer->fistorchainsaw = wp_chainsaw;
-
-        if (viewplayer->readyweapon == wp_fist)
-            viewplayer->pendingweapon = wp_chainsaw;
-
-        result = true;
-    }
-
-    if (gamemode == commercial && !viewplayer->weaponowned[wp_supershotgun])
-    {
-        viewplayer->weaponowned[wp_supershotgun] = true;
-        viewplayer->preferredshotgun = wp_supershotgun;
-
-        if (viewplayer->readyweapon == wp_shotgun)
-            viewplayer->pendingweapon = wp_supershotgun;
-
-        result = true;
     }
 
     return result;
@@ -1743,7 +1740,9 @@ static void P_WriteObituary(mobj_t *target, mobj_t *inflicter, mobj_t *source, d
 
                         C_Obituary("%s %s %s with their %s%s.",
                             titlecase(playername),
-                            (target->type == MT_BARREL ? "exploded" : (gibbed ? "gibbed" : "killed")),
+                            (target->type == MT_BARREL ? "exploded" : (gibbed ? "gibbed" :
+                                (M_StringCompare(targetname, "\x44\x6F\x6E\x61\x6C\x64\x20\x54\x72\x75\x6D\x70") ?
+                                "\x69\x6D\x70\x65\x61\x63\x68\x65\x64" : "killed"))),
                             targetname,
                             weaponinfo[readyweapon].description,
                             (readyweapon == wp_fist && viewplayer->powers[pw_strength] ? " while they went berserk" : ""));

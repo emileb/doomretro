@@ -38,13 +38,16 @@
 
 #if defined(_WIN32)
 #pragma warning( disable : 4091 )
+
 #include <ShlObj.h>
 #include <io.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+
 #if defined(_MSC_VER)
 #include <direct.h>
 #endif
+
 #else
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -66,6 +69,7 @@
 
 #if defined(__APPLE__)
 #import <Cocoa/Cocoa.h>
+
 #include <dirent.h>
 #include <libgen.h>
 #include <mach-o/dyld.h>
@@ -107,26 +111,16 @@ dboolean M_FileExists(const char *filename)
         fclose(fstream);
         return true;
     }
-    else
-        // If we can't open because the file is a directory, the
-        // "file" exists at least!
-        return (errno == EISDIR);
+
+    return false;
 }
 
 // Check if a folder exists
 dboolean M_FolderExists(const char *folder)
 {
-#if defined(_WIN32)
-    if (!_access(folder, 0))
-    {
-        struct stat status;
+    struct stat status;
 
-        stat(folder, &status);
-        return !!(status.st_mode & S_IFDIR);
-    }
-#endif
-
-    return false;
+    return (!stat(folder, &status) && (status.st_mode & S_IFDIR));
 }
 
 // Safe string copy function that works like OpenBSD's strlcpy().
@@ -139,8 +133,8 @@ dboolean M_StringCopy(char *dest, const char *src, const size_t dest_size)
         strncpy(dest, src, dest_size - 1);
         return (src[strlen(dest)] == '\0');
     }
-    else
-        return false;
+
+    return false;
 }
 
 char *M_ExtractFolder(char *path)
@@ -151,11 +145,9 @@ char *M_ExtractFolder(char *path)
     if (!*path)
         return "";
 
-    folder = malloc(MAX_PATH);
-    M_StringCopy(folder, path, MAX_PATH);
-    pos = strrchr(folder, DIR_SEPARATOR);
+    folder = M_StringDuplicate(path);
 
-    if (pos)
+    if ((pos = strrchr(folder, DIR_SEPARATOR)))
         *pos = '\0';
 
     return folder;
@@ -176,7 +168,8 @@ char *M_GetAppDataFolder(void)
 #else
     // On Linux and macOS, if ../share/doomretro doesn't exist then we're dealing with
     // a portable installation, and we write doomretro.cfg to the executable directory.
-    char    *resourcefolder = M_StringJoin(executablefolder, DIR_SEPARATOR_S".."DIR_SEPARATOR_S"share"DIR_SEPARATOR_S PACKAGE, NULL);
+    char    *resourcefolder = M_StringJoin(executablefolder,
+                DIR_SEPARATOR_S".."DIR_SEPARATOR_S"share"DIR_SEPARATOR_S PACKAGE, NULL);
     DIR     *resourcedir = opendir(resourcefolder);
 
     free(resourcefolder);
@@ -217,7 +210,8 @@ char *M_GetResourceFolder(void)
 #if !defined(_WIN32)
     // On Linux and macOS, first assume that the executable is in .../bin and
     // try to load resources from ../share/doomretro.
-    char    *resourcefolder = M_StringJoin(executablefolder, DIR_SEPARATOR_S".."DIR_SEPARATOR_S"share"DIR_SEPARATOR_S PACKAGE, NULL);
+    char    *resourcefolder = M_StringJoin(executablefolder,
+                DIR_SEPARATOR_S".."DIR_SEPARATOR_S"share"DIR_SEPARATOR_S PACKAGE, NULL);
     DIR     *resourcedir = opendir(resourcefolder);
 
     if (resourcedir)
@@ -584,7 +578,8 @@ char *titlecase(const char *str)
         if (len > 1)
             for (int i = 1; i < len; i++)
                 if ((newstr[i - 1] != '\'' || (i >= 2 && newstr[i - 2] == ' '))
-                    && !isalnum((unsigned char)newstr[i - 1]) && isalnum((unsigned char)newstr[i]))
+                    && !isalnum((unsigned char)newstr[i - 1])
+                    && isalnum((unsigned char)newstr[i]))
                     newstr[i] = toupper(newstr[i]);
     }
 
@@ -604,7 +599,6 @@ char *sentencecase(const char *str)
 char *commify(int64_t value)
 {
     char    result[64];
-    char    *p;
 
     M_snprintf(result, sizeof(result), "%lli", value);
 
@@ -632,8 +626,7 @@ char *commify(int64_t value)
         } while (true);
     }
 
-    p = M_StringDuplicate(result);
-    return p;
+    return M_StringDuplicate(result);
 }
 
 char *uncommify(const char *input)
@@ -747,7 +740,7 @@ char *removenonalpha(const char *input)
 
 char *trimwhitespace(char *input)
 {
-    char *end;
+    char    *end;
 
     while (isspace((unsigned char)*input))
         input++;

@@ -81,9 +81,14 @@
 #include <dirent.h>
 #include <fnmatch.h>
 #include <libgen.h>
+
 #if !defined(__OpenBSD__) && !defined(__ANDROID__)
 #include <wordexp.h>
 #endif
+#endif
+
+#if defined(__APPLE__)
+#import <Cocoa/Cocoa.h>
 #endif
 
 static char *iwadsrequired[] =
@@ -111,6 +116,8 @@ dboolean            wipe = wipe_default;
 
 char                *packageconfig;
 char                *packagewad;
+
+char                dehwarning[256] = "";
 
 #if defined(_WIN32)
 char                *previouswad;
@@ -678,7 +685,7 @@ static void LoadDehFile(char *path)
                 chexdeh = true;
 
             if (HasDehackedLump(path))
-                C_Warning("<b>%s</b> will be ignored.", dehpath);
+                M_snprintf(dehwarning, sizeof(dehwarning), "<b>%s</b> was ignored.", dehpath);
             else
                 ProcessDehFile(dehpath, 0);
 
@@ -693,7 +700,7 @@ static void LoadDehFile(char *path)
         if (dehpath && !DehFileProcessed(dehpath))
         {
             if (HasDehackedLump(path))
-                C_Warning("<b>%s</b> will be ignored.", dehpath);
+                M_snprintf(dehwarning, sizeof(dehwarning), "<b>%s</b> was ignored.", dehpath);
             else
                 ProcessDehFile(dehpath, 0);
 
@@ -771,7 +778,7 @@ static void D_CheckSupportedPWAD(char *filename)
 {
     const char  *leaf = leafname(filename);
 
-    if (M_StringCompare(leaf, "SIGIL.WAD"))
+    if (M_StringCompare(leaf, "SIGIL.wad") || M_StringCompare(leaf, "SIGIL_v1_2.wad") || M_StringCompare(leaf, "SIGIL_v1_21.wad"))
     {
         sigil = true;
         episode = 5;
@@ -818,10 +825,6 @@ static dboolean D_IsUnsupportedPWAD(char *filename)
     return M_StringCompare(leafname(filename), "voices.wad");
 }
 
-#if defined(__APPLE__)
-#import <Cocoa/Cocoa.h>
-#endif
-
 static dboolean D_CheckParms(void)
 {
     dboolean    result = false;
@@ -848,12 +851,38 @@ static dboolean D_CheckParms(void)
                 {
                     char    fullpath[MAX_PATH];
 
-                    M_snprintf(fullpath, sizeof(fullpath), "%s"DIR_SEPARATOR_S"%s", M_ExtractFolder(myargv[1]), "SIGIL.WAD");
+                    M_snprintf(fullpath, sizeof(fullpath), "%s"DIR_SEPARATOR_S"%s", M_ExtractFolder(myargv[1]), "SIGIL_v1_21.wad");
 
                     if (W_MergeFile(fullpath, true))
                     {
                         modifiedgame = true;
                         sigil = true;
+                    }
+                    else
+                    {
+                        M_snprintf(fullpath, sizeof(fullpath), "%s"DIR_SEPARATOR_S"%s", M_ExtractFolder(myargv[1]), "SIGIL_v1_2.wad");
+
+                        if (W_MergeFile(fullpath, true))
+                        {
+                            modifiedgame = true;
+                            sigil = true;
+                        }
+                        else
+                        {
+                            M_snprintf(fullpath, sizeof(fullpath), "%s"DIR_SEPARATOR_S"%s", M_ExtractFolder(myargv[1]), "SIGIL.wad");
+
+                            if (W_MergeFile(fullpath, true))
+                            {
+                                modifiedgame = true;
+                                sigil = true;
+                            }
+                        }
+                    }
+
+                    if (sigil)
+                    {
+                        M_snprintf(fullpath, sizeof(fullpath), "%s"DIR_SEPARATOR_S"%s", M_ExtractFolder(myargv[1]), "SIGIL_SHREDS.wad");
+                        W_MergeFile(fullpath, true);
                     }
                 }
                 // if DOOM2.WAD is selected, load NERVE.WAD automatically if present
@@ -1102,14 +1131,37 @@ static int D_OpenWADLauncher(void)
                     {
                         char    fullpath[MAX_PATH];
 
-                        M_snprintf(fullpath, sizeof(fullpath), "%s"DIR_SEPARATOR_S"%s", M_ExtractFolder(file), "SIGIL.WAD");
+                        M_snprintf(fullpath, sizeof(fullpath), "%s"DIR_SEPARATOR_S"%s", M_ExtractFolder(file), "SIGIL_v1_21.wad");
 
                         if (W_MergeFile(fullpath, true))
                         {
                             modifiedgame = true;
                             sigil = true;
+                        }
+                        else
+                        {
+                            M_snprintf(fullpath, sizeof(fullpath), "%s"DIR_SEPARATOR_S"%s", M_ExtractFolder(file), "SIGIL_v1_2.wad");
 
-                            M_snprintf(fullpath, sizeof(fullpath), "%s"DIR_SEPARATOR_S"%s", M_ExtractFolder(file), "SIGIL_SHREDS.WAD");
+                            if (W_MergeFile(fullpath, true))
+                            {
+                                modifiedgame = true;
+                                sigil = true;
+                            }
+                            else
+                            {
+                                M_snprintf(fullpath, sizeof(fullpath), "%s"DIR_SEPARATOR_S"%s", M_ExtractFolder(file), "SIGIL.wad");
+
+                                if (W_MergeFile(fullpath, true))
+                                {
+                                    modifiedgame = true;
+                                    sigil = true;
+                                }
+                            }
+                        }
+
+                        if (sigil)
+                        {
+                            M_snprintf(fullpath, sizeof(fullpath), "%s"DIR_SEPARATOR_S"%s", M_ExtractFolder(file), "SIGIL_SHREDS.wad");
                             W_MergeFile(fullpath, true);
                         }
                     }
@@ -1607,17 +1659,21 @@ static void D_ProcessDehInWad(void)
     if (chexdeh || M_CheckParm("-nodeh"))
         return;
 
+    if (*dehwarning)
+        C_Warning(dehwarning);
+
     if (hacx || FREEDOOM)
     {
         for (int i = 0; i < numlumps; i++)
-            if (!strncasecmp(lumpinfo[i]->name, "DEHACKED", 8))
+            if (M_StringCompare(lumpinfo[i]->name, "DEHACKED"))
                 ProcessDehFile(NULL, i);
     }
     else
     {
         for (int i = numlumps - 1; i >= 0; i--)
-            if (!strncasecmp(lumpinfo[i]->name, "DEHACKED", 8))
-                ProcessDehFile(NULL, i);
+            if (M_StringCompare(lumpinfo[i]->name, "DEHACKED"))
+                if (!M_StringCompare(leafname(lumpinfo[i]->wadfile->path), "SIGIL_v1_2.wad"))
+                    ProcessDehFile(NULL, i);
     }
 }
 
@@ -1857,9 +1913,9 @@ static void D_DoomMainSetup(void)
     WISCRT2 = (W_CheckMultipleLumps("WISCRT2") > 1);
     DSSECRET = (W_CheckNumForName("DSSECRET") >= 0);
 
-    I_InitGamepad();
-
     I_InitGraphics();
+
+    I_InitGamepad();
 
     D_IdentifyVersion();
     InitGameVersion();

@@ -373,16 +373,18 @@ void S_UnlinkSound(mobj_t *origin)
 static int S_GetChannel(mobj_t *origin, sfxinfo_t *sfxinfo)
 {
     // channel number to use
-    int         cnum;
+    int         cnum = 0;
     channel_t   *c;
 
     // Find an open channel
-    for (cnum = 0; cnum < s_channels && channels[cnum].sfxinfo; cnum++)
-        if (origin && channels[cnum].origin == origin && channels[cnum].sfxinfo->singularity == sfxinfo->singularity)
-        {
-            S_StopChannel(cnum);
-            break;
-        }
+    if (origin)
+        for (; cnum < s_channels && channels[cnum].sfxinfo; cnum++)
+            if (channels[cnum].origin == origin
+                && channels[cnum].sfxinfo->singularity == sfxinfo->singularity)
+            {
+                S_StopChannel(cnum);
+                break;
+            }
 
     // None available
     if (cnum == s_channels)
@@ -494,7 +496,9 @@ static void S_StartSoundAtVolume(mobj_t *origin, int sfx_id, int pitch)
     // kill old sound
     if (origin || (gamestate == GS_FINALE && sfx_id == sfx_dshtgn))
         for (cnum = 0; cnum < s_channels; cnum++)
-            if (channels[cnum].sfxinfo && channels[cnum].sfxinfo->singularity == sfx->singularity && channels[cnum].origin == origin)
+            if (channels[cnum].sfxinfo
+                && channels[cnum].sfxinfo->singularity == sfx->singularity
+                && channels[cnum].origin == origin)
             {
                 S_StopChannel(cnum);
                 break;
@@ -523,7 +527,8 @@ void S_StartSectorSound(degenmobj_t *degenmobj, int sfx_id)
 void S_StartSoundOnce(void *origin, int sfx_id)
 {
     for (int cnum = 0; cnum < s_channels; cnum++)
-        if (channels[cnum].sfxinfo && channels[cnum].sfxinfo->singularity == S_sfx[sfx_id].singularity
+        if (channels[cnum].sfxinfo
+            && channels[cnum].sfxinfo->singularity == S_sfx[sfx_id].singularity
             && channels[cnum].origin == origin)
         {
             S_StopChannel(cnum);
@@ -625,8 +630,8 @@ void S_ChangeMusic(int music_id, dboolean looping, dboolean allowrestart, dboole
 {
     musicinfo_t *music = &S_music[music_id];
     char        namebuf[9];
-    void        *handle = NULL;
-    int         mapinfomusic = 0;
+    void        *handle;
+    int         mapinfomusic;
 
     // current music which should play
     musinfo.current_item = -1;
@@ -666,10 +671,12 @@ void S_ChangeMusic(int music_id, dboolean looping, dboolean allowrestart, dboole
         if (!serverMidiPlaying)
 #endif
         {
-            char    *filename = M_TempFile(M_StringJoin(namebuf, ".MP3", NULL));
+            char    *filename = M_TempFile(M_StringJoin(namebuf, ".mp3", NULL));
 
             if (M_WriteFile(filename, music->data, W_LumpLength(music->lumpnum)))
                 handle = Mix_LoadMUS(filename);
+
+            free(filename);
 
             if (!handle)
             {

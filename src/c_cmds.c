@@ -497,6 +497,8 @@ consolecmd_t consolecmds[] =
         "Toggles vertical autoaiming as the player fires\ntheir weapon while using mouselook."),
     CVAR_BOOL(autoload, "", bool_cvars_func1, bool_cvars_func2, BOOLVALUEALIAS,
         "Toggles automatically loading the last savegame\nafter the player dies."),
+    CVAR_BOOL(autosave, "", bool_cvars_func1, bool_cvars_func2, BOOLVALUEALIAS,
+        "Toggles automatically saving the game at the start\nof each map."),
     CVAR_BOOL(autotilt, "", bool_cvars_func1, autotilt_cvar_func2, BOOLVALUEALIAS,
         "Toggles automatically tilting the player's view\nwhile going up or down flights of stairs."),
     CVAR_BOOL(autouse, "", bool_cvars_func1, bool_cvars_func2, BOOLVALUEALIAS,
@@ -2047,7 +2049,7 @@ static void give_cmd_func2(char *cmd, char *parms)
             if (P_GiveAllWeapons())
                 result = true;
 
-            if (P_GiveFullAmmo(false))
+            if (P_GiveFullAmmo())
                 result = true;
 
             if (P_GiveArmor(blue_armor_class, false))
@@ -2103,7 +2105,7 @@ static void give_cmd_func2(char *cmd, char *parms)
         }
         else if (M_StringCompare(parm, "ammo") || M_StringCompare(parm, "fullammo"))
         {
-            if (P_GiveFullAmmo(false))
+            if (P_GiveFullAmmo())
             {
                 P_AddBonus();
                 S_StartSound(viewplayer->mo, sfx_itemup);
@@ -2255,11 +2257,11 @@ static void god_cmd_func2(char *cmd, char *parms)
 static void help_cmd_func2(char *cmd, char *parms)
 {
 #if defined(_WIN32)
-    ShellExecute(NULL, "open", PACKAGE_WIKI_HELP_URL, NULL, NULL, SW_SHOWNORMAL);
+    ShellExecute(NULL, "open", PACKAGE_WIKIHELPURL, NULL, NULL, SW_SHOWNORMAL);
 #elif defined(__linux__)
-    system("xdg-open "PACKAGE_WIKI_HELP_URL);
+    system("xdg-open "PACKAGE_WIKIHELPURL);
 #elif defined(__APPLE__)
-    system("open "PACKAGE_WIKI_HELP_URL);
+    system("open "PACKAGE_WIKIHELPURL);
 #else
     C_HideConsoleFast();
     M_ShowHelp(0);
@@ -3438,10 +3440,18 @@ static int      namecmdtype = NUMMOBJTYPES;
 
 static dboolean name_cmd_func1(char *cmd, char *parms)
 {
-    char *parm = removenonalpha(parms);
+    char    *parm = M_StringDuplicate(parms);
 
     if (!*parm)
         return true;
+
+    if (M_StringStartsWith(parm, "player"))
+    {
+        M_StringCopy(namecmdold, "player", sizeof(namecmdold));
+        strreplace(parm, "player", "");
+        M_StringCopy(namecmdnew, trimwhitespace(parm), sizeof(namecmdnew));
+        return (namecmdnew[0] != '\0');
+    }
 
     if (gamestate == GS_LEVEL)
     {
@@ -3450,10 +3460,11 @@ static dboolean name_cmd_func1(char *cmd, char *parms)
 
         if (M_StringStartsWith(parm, "monster"))
         {
+            M_StringCopy(namecmdold, "monster", sizeof(namecmdold));
             strreplace(parm, "monster", "");
-            M_StringCopy(namecmdnew, parm, sizeof(namecmdnew));
+            M_StringCopy(namecmdnew, trimwhitespace(parm), sizeof(namecmdnew));
             namecmdanymonster = true;
-            return true;
+            return (namecmdnew[0] != '\0');
         }
         else
             namecmdanymonster = false;
@@ -3465,25 +3476,25 @@ static dboolean name_cmd_func1(char *cmd, char *parms)
                 {
                     M_StringCopy(namecmdold, mobjinfo[i].name1, sizeof(namecmdold));
                     strreplace(parm, removenonalpha(mobjinfo[i].name1), "");
-                    M_StringCopy(namecmdnew, parm, sizeof(namecmdnew));
+                    M_StringCopy(namecmdnew, trimwhitespace(parm), sizeof(namecmdnew));
                     namecmdtype = i;
-                    return true;
+                    return (namecmdnew[0] != '\0');
                 }
                 else if (*mobjinfo[i].name2 && M_StringStartsWith(parm, removenonalpha(mobjinfo[i].name2)))
                 {
                     M_StringCopy(namecmdold, mobjinfo[i].name2, sizeof(namecmdold));
                     strreplace(parm, removenonalpha(mobjinfo[i].name2), "");
-                    M_StringCopy(namecmdnew, parm, sizeof(namecmdnew));
+                    M_StringCopy(namecmdnew, trimwhitespace(parm), sizeof(namecmdnew));
                     namecmdtype = i;
-                    return true;
+                    return (namecmdnew[0] != '\0');
                 }
                 else if (*mobjinfo[i].name3 && M_StringStartsWith(parm, removenonalpha(mobjinfo[i].name3)))
                 {
                     M_StringCopy(namecmdold, mobjinfo[i].name3, sizeof(namecmdold));
                     strreplace(parm, removenonalpha(mobjinfo[i].name3), "");
-                    M_StringCopy(namecmdnew, parm, sizeof(namecmdnew));
+                    M_StringCopy(namecmdnew, trimwhitespace(parm), sizeof(namecmdnew));
                     namecmdtype = i;
-                    return true;
+                    return (namecmdnew[0] != '\0');
                 }
             }
     }
@@ -3497,6 +3508,13 @@ static void name_cmd_func2(char *cmd, char *parms)
     {
         C_ShowDescription(C_GetIndex("name"));
         C_Output("<b>%s</b> %s", cmd, NAMECMDFORMAT);
+    }
+    else if (M_StringCompare(namecmdold, "player"))
+    {
+        C_Output("The player has been %s %s.", (M_StringCompare(playername, playername_default) ? "named" : "renamed"), namecmdnew);
+        M_StripQuotes(namecmdnew);
+        playername = M_StringDuplicate(namecmdnew);
+        M_SaveCVARs();
     }
     else
     {
@@ -3528,12 +3546,14 @@ static void name_cmd_func2(char *cmd, char *parms)
 
         if (bestmobj)
         {
+            M_StripQuotes(namecmdnew);
+            C_Output("The nearest %s%s has been %s %s.", (namecmdfriendly ? "friendly " : ""), namecmdold,
+                (*bestmobj->name ? "renamed" : "named"), namecmdnew);
             M_StringCopy(bestmobj->name, namecmdnew, sizeof(bestmobj->name));
-            C_Output("The nearest %s%s is now called %s.", (namecmdfriendly ? "friendly " : ""), namecmdold, namecmdnew);
         }
         else
-            C_Warning("The player couldn't find a %s%s nearby.",
-                (namecmdfriendly ? "friendly " : ""), (namecmdanymonster ? "monster" : namecmdold));
+            C_Warning("%s %s%s couldn't be found nearby.",
+                (isvowel(namecmdold[0]) ? "An" : "A"), (namecmdfriendly ? "friendly " : ""), namecmdold);
     }
 }
 
@@ -4109,7 +4129,7 @@ static void C_PlayerStats_NoGame(void)
         C_TabbedOutput(tabs, "Favorite skill level\t-\t-");
     else
     {
-        char * level = titlecase(*skilllevels[favorite]);
+        char    *level = titlecase(*skilllevels[favorite]);
 
         if (level[strlen(level) - 1] == '.')
             level[strlen(level) - 1] = '\0';

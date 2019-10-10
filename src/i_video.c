@@ -358,10 +358,7 @@ static void FreeSurfaces(void)
 void I_ShutdownGraphics(void)
 {
     I_CapFPS(0);
-    FreeSurfaces();
     SDL_QuitSubSystem(SDL_INIT_VIDEO);
-    free(oscreen);
-    oscreen = NULL;
 }
 
 #if defined(_WIN32)
@@ -1618,12 +1615,13 @@ static void SetVideoMode(dboolean output)
 
         if (output)
         {
+            char    *width_str = commify(height * 4 / 3);
+            char    *height_str = commify(height);
+
             if (nearestlinear)
             {
                 char    *upscaledwidth_str = commify((int64_t)upscaledwidth * SCREENWIDTH);
                 char    *upscaledheight_str = commify((int64_t)upscaledheight * SCREENHEIGHT);
-                char    *width_str = commify(height * 4 / 3);
-                char    *height_str = commify(height);
 
                 C_Output("The %ix%i screen is scaled up to %sx%s using nearest-neighbor interpolation.",
                     SCREENWIDTH, SCREENHEIGHT, upscaledwidth_str, upscaledheight_str);
@@ -1631,31 +1629,16 @@ static void SetVideoMode(dboolean output)
 
                 free(upscaledwidth_str);
                 free(upscaledheight_str);
-                free(width_str);
-                free(height_str);
             }
             else if (M_StringCompare(vid_scalefilter, vid_scalefilter_linear) && !software)
-            {
-                char    *width_str = commify(height * 4 / 3);
-                char    *height_str = commify(height);
-
                 C_Output("The %ix%i screen is scaled up to %sx%s using linear filtering.",
                     SCREENWIDTH, SCREENHEIGHT, width_str, height_str);
-
-                free(width_str);
-                free(height_str);
-            }
             else
-            {
-                char    *width_str = commify(height * 4 / 3);
-                char    *height_str = commify(height);
-
                 C_Output("The %ix%i screen is scaled up to %sx%s using nearest-neighbor interpolation.",
                     SCREENWIDTH, SCREENHEIGHT, width_str, height_str);
 
-                free(width_str);
-                free(height_str);
-            }
+            free(width_str);
+            free(height_str);
         }
 
         I_CapFPS(0);
