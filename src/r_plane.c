@@ -45,12 +45,18 @@
 #include "r_sky.h"
 #include "w_wad.h"
 
-#define MAXVISPLANES    384
+#define MAXVISPLANES    128                     // must be a power of 2
 
-static visplane_t   *visplanes = NULL;
-static visplane_t   *lastvisplane;
+static visplane_t   *visplanes[MAXVISPLANES];   // killough
+static visplane_t   *freetail;                  // killough
+static visplane_t   **freehead = &freetail;     // killough
 visplane_t          *floorplane;
 visplane_t          *ceilingplane;
+
+// killough -- hash function for visplanes
+// Empirically verified to be fairly uniform:
+#define visplane_hash(picnum, lightlevel, height) \
+    ((unsigned int)((picnum) * 3 + (lightlevel) + (height) * 7) & (MAXVISPLANES - 1))
 
 int                 *openings;                  // dropoff overflow
 int                 *lastopening;               // dropoff overflow
@@ -143,36 +149,29 @@ void R_ClearPlanes(void)
         ceilingclip[i] = -1;
     }
 
-    lastvisplane = visplanes;
+    for (int i = 0; i < MAXVISPLANES; i++)
+        for (*freehead = visplanes[i], visplanes[i] = NULL; *freehead;)
+            freehead = &(*freehead)->next;
+
     lastopening = openings;
 
     // texture calculation
     memset(cachedheight, 0, sizeof(cachedheight));
 }
 
-//
-// R_RaiseVisplanes
-//
-static void R_RaiseVisplanes(visplane_t **vp)
+// New function, by Lee Killough
+static visplane_t *new_visplane(unsigned int hash)
 {
-    static unsigned int numvisplanes;
+    visplane_t  *check = freetail;
 
-    if (lastvisplane - visplanes == numvisplanes)
-    {
-        unsigned int    numvisplanes_old = numvisplanes;
-        visplane_t      *visplanes_old = visplanes;
+    if (!check)
+        check = calloc(1, sizeof(*check));
+    else if (!(freetail = freetail->next))
+        freehead = &freetail;
 
-        numvisplanes = (numvisplanes ? 2 * numvisplanes : MAXVISPLANES);
-        visplanes = I_Realloc(visplanes, numvisplanes * sizeof(*visplanes));
-        memset(visplanes + numvisplanes_old, 0, (numvisplanes - numvisplanes_old) * sizeof(*visplanes));
-
-        lastvisplane = visplanes + numvisplanes_old;
-        floorplane = visplanes + (floorplane - visplanes_old);
-        ceilingplane = visplanes + (ceilingplane - visplanes_old);
-
-        if (vp)
-            *vp = visplanes + (*vp - visplanes_old);
-    }
+    check->next = visplanes[hash];
+    visplanes[hash] = check;
+    return check;
 }
 
 //
@@ -180,7 +179,8 @@ static void R_RaiseVisplanes(visplane_t **vp)
 //
 visplane_t *R_FindPlane(fixed_t height, int picnum, int lightlevel, fixed_t x, fixed_t y)
 {
-    visplane_t  *check;
+    visplane_t      *check;
+    unsigned int    hash;                                       // killough
 
     if (picnum == skyflatnum || (picnum & PL_SKYFLAT))          // killough 10/98
     {
@@ -188,14 +188,16 @@ visplane_t *R_FindPlane(fixed_t height, int picnum, int lightlevel, fixed_t x, f
         lightlevel = 0;
     }
 
-    for (check = visplanes; check < lastvisplane; check++)
+    // New visplane algorithm uses hash table -- killough
+    hash = visplane_hash(picnum, lightlevel, height);
+
+    for (check = visplanes[hash]; check; check = check->next)   // killough
         if (height == check->height && picnum == check->picnum && lightlevel == check->lightlevel
             && x == check->xoffset && y == check->yoffset)
             return check;
 
-    R_RaiseVisplanes(&check);
+    check = new_visplane(hash);                                 // killough
 
-    lastvisplane++;
     check->height = height;
     check->picnum = picnum;
     check->lightlevel = lightlevel;
@@ -213,8 +215,28 @@ visplane_t *R_FindPlane(fixed_t height, int picnum, int lightlevel, fixed_t x, f
         check->yoffset = y;
     }
 
-    memset(check->top, USHRT_MAX, sizeof(check->top));
+    memset(check->top, UINT_MAX, sizeof(check->top));
     return check;
+}
+
+//
+// R_DupPlane
+//
+visplane_t *R_DupPlane(const visplane_t *pl, int start, int stop)
+{
+    visplane_t  *new_pl = new_visplane(visplane_hash(pl->picnum, pl->lightlevel, pl->height));
+
+    new_pl->height = pl->height;
+    new_pl->picnum = pl->picnum;
+    new_pl->lightlevel = pl->lightlevel;
+    new_pl->xoffset = pl->xoffset;
+    new_pl->yoffset = pl->yoffset;
+    new_pl->left = start;
+    new_pl->right = stop;
+
+    memset(new_pl->top, UINT_MAX, sizeof(new_pl->top));
+
+    return new_pl;
 }
 
 //
@@ -250,31 +272,17 @@ visplane_t *R_CheckPlane(visplane_t *pl, int start, int stop)
         intrh = stop;
     }
 
-    for (x = intrl; x <= intrh && pl->top[x] == USHRT_MAX; x++);
+    for (x = intrl; x <= intrh && pl->top[x] == UINT_MAX; x++);
 
-    // [crispy] fix HOM if ceilingplane and floorplane are the same visplane (e.g. both skies)
-    if (!(pl == floorplane && markceiling && floorplane == ceilingplane) && x > intrh)
+    if (x > intrh)
     {
         pl->left = unionl;
         pl->right = unionh;
-    }
-    else
-    {
-        // make a new visplane
-        R_RaiseVisplanes(&pl);
-        lastvisplane->height = pl->height;
-        lastvisplane->picnum = pl->picnum;
-        lastvisplane->lightlevel = pl->lightlevel;
-        lastvisplane->xoffset = pl->xoffset;
-        lastvisplane->yoffset = pl->yoffset;
-
-        pl = lastvisplane++;
-        pl->left = start;
-        pl->right = stop;
-        memset(pl->top, USHRT_MAX, sizeof(pl->top));
+        return pl;
     }
 
-    return pl;
+    // make a new visplane
+    return R_DupPlane(pl, start, stop);
 }
 
 //
@@ -291,15 +299,15 @@ static void R_MakeSpans(visplane_t *pl)
     yoffset = pl->yoffset;
     planeheight = ABS(pl->height - viewz);
     planezlight = zlight[MIN((pl->lightlevel >> LIGHTSEGSHIFT) + extralight, LIGHTLEVELS - 1)];
-    pl->top[pl->left - 1] = USHRT_MAX;
-    pl->top[stop] = USHRT_MAX;
+    pl->top[pl->left - 1] = UINT_MAX;
+    pl->top[stop] = UINT_MAX;
 
     for (int x = pl->left; x <= stop; x++)
     {
-        unsigned short  t1 = pl->top[x - 1];
-        unsigned short  b1 = pl->bottom[x - 1];
-        unsigned short  t2 = pl->top[x];
-        unsigned short  b2 = pl->bottom[x];
+        unsigned int    t1 = pl->top[x - 1];
+        unsigned int    b1 = pl->bottom[x - 1];
+        unsigned int    t2 = pl->top[x];
+        unsigned int    b2 = pl->bottom[x];
 
         for (; t1 < t2 && t1 <= b1; t1++)
             R_MapPlane(t1, spanstart[t1], x);
@@ -398,90 +406,88 @@ void R_InitDistortedFlats(void)
 //
 void R_DrawPlanes(void)
 {
-    for (visplane_t *pl = visplanes; pl < lastvisplane; pl++)
-        if (pl->left <= pl->right)
-        {
-            int picnum = pl->picnum;
-
-            // sky flat
-            if (picnum == skyflatnum || (picnum & PL_SKYFLAT))
+    for (int i = 0; i < MAXVISPLANES; i++)
+        for (visplane_t *pl = visplanes[i]; pl; pl = pl->next)
+            if (pl->left <= pl->right)
             {
-                int             texture;
-                angle_t         flip = 0U;
-                const rpatch_t  *tex_patch;
-                int             skyoffset = skycolumnoffset >> FRACBITS;
+                int picnum = pl->picnum;
 
-                // killough 10/98: allow skies to come from sidedefs.
-                // Allows scrolling and/or animated skies, as well as
-                // arbitrary multiple skies per level without having
-                // to use info lumps.
-                angle_t         an = viewangle;
-
-                if (picnum & PL_SKYFLAT)
+                // sky flat
+                if (picnum == skyflatnum || (picnum & PL_SKYFLAT))
                 {
-                    // Sky Linedef
-                    const line_t    *l = lines + (picnum & ~PL_SKYFLAT);
+                    int             texture;
+                    angle_t         flip = 0U;
+                    const rpatch_t  *tex_patch;
+                    int             skyoffset = skycolumnoffset >> FRACBITS;
 
-                    // Sky transferred from first sidedef
-                    const side_t    *s = sides + *l->sidenum;
+                    // killough 10/98: allow skies to come from sidedefs.
+                    // Allows scrolling and/or animated skies, as well as
+                    // arbitrary multiple skies per level without having
+                    // to use info lumps.
+                    angle_t         an = viewangle;
 
-                    // Texture comes from upper texture of reference sidedef
-                    texture = texturetranslation[s->toptexture];
+                    if (picnum & PL_SKYFLAT)
+                    {
+                        // Sky Linedef
+                        const line_t    *l = lines + (picnum & ~PL_SKYFLAT);
 
-                    // Horizontal offset is turned into an angle offset,
-                    // to allow sky rotation as well as careful positioning.
-                    // However, the offset is scaled very small, so that it
-                    // allows a long-period of sky rotation.
-                    an += s->textureoffset;
+                        // Sky transferred from first sidedef
+                        const side_t    *s = sides + *l->sidenum;
 
-                    // Vertical offset allows careful sky positioning.
-                    dc_texturemid = s->rowoffset - 28 * FRACUNIT;
+                        // Texture comes from upper texture of reference sidedef
+                        texture = texturetranslation[s->toptexture];
 
-                    dc_texheight = textureheight[texture] >> FRACBITS;
+                        // Horizontal offset is turned into an angle offset,
+                        // to allow sky rotation as well as careful positioning.
+                        // However, the offset is scaled very small, so that it
+                        // allows a long-period of sky rotation.
+                        an += s->textureoffset;
 
-                    if (canmouselook)
-                        dc_texturemid = dc_texturemid * dc_texheight / SKYSTRETCH_HEIGHT;
+                        // Vertical offset allows careful sky positioning.
+                        dc_texturemid = s->rowoffset - 28 * FRACUNIT;
 
-                    // We sometimes flip the picture horizontally.
+                        dc_texheight = textureheight[texture] >> FRACBITS;
 
-                    // DOOM always flipped the picture, so we make it optional,
-                    // to make it easier to use the new feature, while to still
-                    // allow old sky textures to be used.
-                    if (l->special != TransferSkyTextureToTaggedSectors_Flipped)
-                        flip = ~0U;
+                        if (canmouselook)
+                            dc_texturemid = dc_texturemid * dc_texheight / SKYSTRETCH_HEIGHT;
+
+                        // We sometimes flip the picture horizontally.
+
+                        // DOOM always flipped the picture, so we make it optional,
+                        // to make it easier to use the new feature, while to still
+                        // allow old sky textures to be used.
+                        if (l->special != TransferSkyTextureToTaggedSectors_Flipped)
+                            flip = ~0U;
+                    }
+                    else
+                    {
+                        // Normal DOOM sky, only one allowed per level
+                        texture = skytexture;
+                        dc_texheight = textureheight[texture] >> FRACBITS;
+                        dc_texturemid = skytexturemid;
+                    }
+
+                    dc_colormap[0] = (viewplayer->fixedcolormap == INVERSECOLORMAP && r_textures ? fixedcolormap : fullcolormap);
+                    dc_iscale = skyiscale;
+                    tex_patch = R_CacheTextureCompositePatchNum(texture);
+
+                    for (int x = pl->left; x <= pl->right; x++)
+                        if ((dc_yl = pl->top[x]) != UINT_MAX)
+                            if (dc_yl <= (dc_yh = pl->bottom[x]))
+                            {
+                                dc_x = x;
+                                dc_source = R_GetTextureColumn(tex_patch,
+                                    (((an + xtoviewangle[x]) ^ flip) >> ANGLETOSKYSHIFT) + skyoffset);
+                                skycolfunc();
+                            }
                 }
                 else
                 {
-                    // Normal DOOM sky, only one allowed per level
-                    texture = skytexture;
-                    dc_texheight = textureheight[texture] >> FRACBITS;
-                    dc_texturemid = skytexturemid;
-                }
+                    // regular flat
+                    ds_source = (terraintypes[picnum] != SOLID && r_liquid_swirl ? R_DistortedFlat(picnum) :
+                        lumpinfo[flattranslation[picnum]]->cache);
 
-                dc_colormap[0] = (viewplayer->fixedcolormap == INVERSECOLORMAP && r_textures ? fixedcolormap : fullcolormap);
-                dc_iscale = skyiscale;
-                tex_patch = R_CacheTextureCompositePatchNum(texture);
-
-                for (int x = pl->left; x <= pl->right; x++)
-                {
-                    dc_yl = pl->top[x];
-                    dc_yh = pl->bottom[x];
-
-                    if (dc_yl <= dc_yh)
-                    {
-                        dc_x = x;
-                        dc_source = R_GetTextureColumn(tex_patch, (((an + xtoviewangle[x]) ^ flip) >> ANGLETOSKYSHIFT) + skyoffset);
-                        skycolfunc();
-                    }
+                    R_MakeSpans(pl);
                 }
             }
-            else
-            {
-                // regular flat
-                ds_source = (terraintypes[picnum] != SOLID && r_liquid_swirl ? R_DistortedFlat(picnum) :
-                    lumpinfo[flattranslation[picnum]]->cache);
-
-                R_MakeSpans(pl);
-            }
-        }
 }

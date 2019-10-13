@@ -357,7 +357,6 @@ static void FreeSurfaces(void)
 
 void I_ShutdownGraphics(void)
 {
-    I_CapFPS(0);
     SDL_QuitSubSystem(SDL_INIT_VIDEO);
 }
 
@@ -381,9 +380,9 @@ static void SetCapsLockState(dboolean enabled)
 dboolean GetCapsLockState(void)
 {
 #if defined(_WIN32)
-    return !!(GetKeyState(VK_CAPITAL) & 0xFFFF);
+    return (GetKeyState(VK_CAPITAL) & 0xFFFF);
 #else
-    return !!(SDL_GetModState() & KMOD_CAPS);
+    return (SDL_GetModState() & KMOD_CAPS);
 #endif
 }
 
@@ -1852,7 +1851,7 @@ void I_ToggleFullscreen(void)
     M_SaveCVARs();
 
     if (nearestlinear)
-        I_UpdateBlitFunc(viewplayer && !!viewplayer->damagecount);
+        I_UpdateBlitFunc(viewplayer && viewplayer->damagecount);
 
     if (vid_fullscreen)
         C_StrCVAROutput(stringize(vid_fullscreen), "on");

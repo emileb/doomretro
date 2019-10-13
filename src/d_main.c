@@ -109,9 +109,11 @@ char                *pwadfile = "";
 char                *iwadfolder = iwadfolder_default;
 int                 turbo = turbo_default;
 int                 units = units_default;
+
 #if defined(_WIN32)
 char                *wad = wad_default;
 #endif
+
 dboolean            wipe = wipe_default;
 
 char                *packageconfig;
@@ -673,9 +675,37 @@ static char *FindDehPath(char *path, char *ext, char *pattern)
 #endif
 }
 
+typedef struct
+{
+    char        filename[MAX_PATH];
+    dboolean    present;
+} loaddehlast_t;
+
+// [BH] A list of DeHackEd files to load last
+static loaddehlast_t loaddehlast[7] =
+{
+    { "VORTEX_DoomRetro.deh" },
+    { "2_MARKV.deh"          },
+    { "3_HELLST.deh"         },
+    { "4_HAR.deh"            },
+    { "5_GRNADE.deh"         },
+    { "6_LIGHT.deh"          },
+    { "7_GAUSS.deh"          }
+};
+
 static void LoadDehFile(char *path)
 {
     char    *dehpath = FindDehPath(path, ".bex", ".[Bb][Ee][Xx]");
+    char    *dehfile = leafname(path);
+
+    for (int i = 0; i < 7; i++)
+        if (M_StringCompare(dehfile, loaddehlast[i].filename))
+        {
+            loaddehlast[i].present = true;
+            return;
+        }
+
+    free(dehfile);
 
     if (dehpath)
     {
@@ -1576,7 +1606,7 @@ static int D_OpenWADLauncher(void)
                     }
 
                     // always merge D4V.WAD last
-                    if (*D4Vpath)
+                    if (D4Vpath)
                         if (W_MergeFile(D4Vpath, false))
                             modifiedgame = true;
                 }
@@ -1675,6 +1705,10 @@ static void D_ProcessDehInWad(void)
                 if (!M_StringCompare(leafname(lumpinfo[i]->wadfile->path), "SIGIL_v1_2.wad"))
                     ProcessDehFile(NULL, i);
     }
+
+    for (int i = 0; i < 7; i++)
+        if (loaddehlast[i].present)
+            ProcessDehFile(loaddehlast[i].filename, 0);
 }
 
 static void D_ParseStartupString(const char *string)
@@ -1814,7 +1848,7 @@ static void D_DoomMainSetup(void)
     if (!M_FileExists(packagewad))
         I_Error("%s can't be found.", packagewad);
 
-    p = M_CheckParmsWithArgs("-file", "-pwad", 1, 1);
+    p = M_CheckParmsWithArgs("-file", "-pwad", "-merge", 1, 1);
 
     if (!(choseniwad = D_CheckParms()))
     {
@@ -1877,8 +1911,73 @@ static void D_DoomMainSetup(void)
                             pwadfile = removeext(leafname(file));
                     }
                 }
+                else
+                {
+                    int     iwadrequired = IWADRequiredByPWAD(file);
+                    char    fullpath[MAX_PATH];
+
+                    if (iwadrequired == none)
+                        iwadrequired = doom2;
+
+                    // try the current folder first
+                    M_snprintf(fullpath, sizeof(fullpath), "%s"DIR_SEPARATOR_S"%s", M_ExtractFolder(file), iwadsrequired[iwadrequired]);
+                    D_IdentifyIWADByName(fullpath);
+
+                    if (W_AddFile(fullpath, true))
+                    {
+                        iwadfile = M_StringDuplicate(fullpath);
+                        iwadfolder = M_ExtractFolder(fullpath);
+                        D_CheckSupportedPWAD(file);
+
+                        if (W_MergeFile(file, false))
+                        {
+                            modifiedgame = true;
+
+                            if (IWADRequiredByPWAD(file) != none)
+                                pwadfile = removeext(leafname(file));
+                        }
+                    }
+                    else
+                    {
+                        // otherwise try the iwadfolder CVAR
+                        M_snprintf(fullpath, sizeof(fullpath), "%s"DIR_SEPARATOR_S"%s", iwadfolder, iwadsrequired[iwadrequired]);
+                        D_IdentifyIWADByName(fullpath);
+
+                        if (W_AddFile(fullpath, true))
+                        {
+                            iwadfile = M_StringDuplicate(fullpath);
+                            D_CheckSupportedPWAD(file);
+
+                            if (W_MergeFile(file, false))
+                            {
+                                modifiedgame = true;
+
+                                if (IWADRequiredByPWAD(file) != none)
+                                    pwadfile = removeext(leafname(file));
+                            }
+                        }
+                        else
+                        {
+                            // still nothing? try some common installation folders
+                            if (W_AddFile(D_FindWADByName(iwadsrequired[iwadrequired]), true))
+                            {
+                                iwadfile = M_StringDuplicate(fullpath);
+                                D_CheckSupportedPWAD(file);
+
+                                if (W_MergeFile(file, false))
+                                {
+                                    modifiedgame = true;
+
+                                    if (IWADRequiredByPWAD(file) != none)
+                                        pwadfile = removeext(leafname(file));
+                                }
+                            }
+                        }
+                    }
+                }
+
             }
-        } while ((p = M_CheckParmsWithArgs("-file", "-pwad", 1, p)));
+        } while ((p = M_CheckParmsWithArgs("-file", "-pwad", "-merge", 1, p)));
 
     if (!iwadfile && !modifiedgame && !choseniwad)
         I_Error(PACKAGE_NAME" couldn't find any IWADs.");
@@ -1968,7 +2067,7 @@ static void D_DoomMainSetup(void)
     startmap = 1;
     autostart = false;
 
-    if ((p = M_CheckParmsWithArgs("-skill", "-skilllevel", 1, 1)))
+    if ((p = M_CheckParmsWithArgs("-skill", "-skilllevel", "", 1, 1)))
     {
         char **skilllevels[] =
         {

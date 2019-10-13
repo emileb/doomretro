@@ -327,7 +327,7 @@ static dboolean P_GiveWeapon(weapontype_t weapon, dboolean dropped, dboolean sta
 
     if (ammotype != am_noammo)
         // give one clip with a dropped weapon, two clips with a found weapon
-        gaveammo = !!P_GiveAmmo(ammotype, (dropped ? 1 : 2), stat);
+        gaveammo = P_GiveAmmo(ammotype, (dropped ? 1 : 2), stat);
 
     if (!viewplayer->weaponowned[weapon])
     {
@@ -704,7 +704,7 @@ dboolean P_GivePower(int power)
             break;
     }
 
-    given = !(viewplayer->powers[power] > 0);
+    given = (viewplayer->powers[power] <= 0);
     viewplayer->powers[power] = tics[power];
     return given;
 }
@@ -930,8 +930,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, dboolean message, dbo
 
         // invulnerability power-up
         case SPR_PINV:
-            if (!P_GivePower(pw_invulnerability))
-                return;
+            P_GivePower(pw_invulnerability);
 
             if (message)
                 HU_PlayerMessage(s_GOTINVUL, true, false);
@@ -944,8 +943,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, dboolean message, dbo
         {
             dboolean    strength = viewplayer->powers[pw_strength];
 
-            if (!P_GivePower(pw_strength))
-                return;
+            P_GivePower(pw_strength);
 
             if (message)
                 HU_PlayerMessage(s_GOTBERSERK, true, false);
@@ -960,8 +958,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, dboolean message, dbo
 
         // partial invisibility power-up
         case SPR_PINS:
-            if (!P_GivePower(pw_invisibility))
-                return;
+            P_GivePower(pw_invisibility);
 
             if (message)
                 HU_PlayerMessage(s_GOTINVIS, true, false);
@@ -971,8 +968,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, dboolean message, dbo
 
         // radiation shielding suit power-up
         case SPR_SUIT:
-            if (!P_GivePower(pw_ironfeet))
-                return;
+            P_GivePower(pw_ironfeet);
 
             if (message)
                 HU_PlayerMessage(s_GOTSUIT, true, false);
@@ -992,8 +988,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, dboolean message, dbo
 
         // light amplification visor power-up
         case SPR_PVIS:
-            if (!P_GivePower(pw_infrared))
-                return;
+            P_GivePower(pw_infrared);
 
             if (message)
                 HU_PlayerMessage(s_GOTVISOR, true, false);
@@ -1678,7 +1673,8 @@ static void P_WriteObituary(mobj_t *target, mobj_t *inflicter, mobj_t *source, d
                     M_StringCopy(targetname, target->name, sizeof(targetname));
                 else
                     M_snprintf(targetname, sizeof(targetname), "%s %s%s",
-                        (isvowel(target->info->name1[0]) ? "an" : "a"),
+                        ((target->flags & MF_FRIEND) && monstercount[target->type] == 1 ? "the"
+                            : (isvowel(target->info->name1[0]) ? "an" : "a")),
                         ((target->flags & MF_FRIEND) ? "friendly " : ""),
                         (*target->info->name1 ? target->info->name1 : "monster"));
 
@@ -1708,7 +1704,8 @@ static void P_WriteObituary(mobj_t *target, mobj_t *inflicter, mobj_t *source, d
                             M_StringCopy(targetname, target->name, sizeof(targetname));
                         else
                             M_snprintf(targetname, sizeof(targetname), "%s %s%s",
-                                (isvowel(target->info->name1[0]) ? "an" : "a"),
+                                ((target->flags & MF_FRIEND) && monstercount[target->type] == 1 ? "the"
+                                    : (isvowel(target->info->name1[0]) ? "an" : "a")),
                                 ((target->flags & MF_FRIEND) ? "friendly " : ""),
                                 (*target->info->name1 ? target->info->name1 : "monster"));
 
@@ -1734,7 +1731,8 @@ static void P_WriteObituary(mobj_t *target, mobj_t *inflicter, mobj_t *source, d
                             M_StringCopy(targetname, target->name, sizeof(targetname));
                         else
                             M_snprintf(targetname, sizeof(targetname), "%s %s%s",
-                                (isvowel(target->info->name1[0]) ? "an" : "a"),
+                                ((target->flags & MF_FRIEND) && monstercount[target->type] == 1 ? "the"
+                                    : (isvowel(target->info->name1[0]) ? "an" : "a")),
                                 ((target->flags & MF_FRIEND) ? "friendly " : ""),
                                 (*target->info->name1 ? target->info->name1 : "monster"));
 
@@ -1766,7 +1764,8 @@ static void P_WriteObituary(mobj_t *target, mobj_t *inflicter, mobj_t *source, d
                         M_StringCopy(targetname, target->name, sizeof(targetname));
                     else
                         M_snprintf(targetname, sizeof(targetname), "%s %s%s",
-                            (isvowel(target->info->name1[0]) ? "an" : "a"),
+                            ((target->flags &MF_FRIEND) && monstercount[target->type] == 1 ? "the"
+                                : (isvowel(target->info->name1[0]) ? "an" : "a")),
                             ((target->flags & MF_FRIEND) ? "friendly " : ""),
                             (*target->info->name1 ? target->info->name1 : "monster"));
 
@@ -1781,7 +1780,8 @@ static void P_WriteObituary(mobj_t *target, mobj_t *inflicter, mobj_t *source, d
                     M_StringCopy(sourcename, source->name, sizeof(sourcename));
                 else
                     M_snprintf(sourcename, sizeof(sourcename), "%s %s%s",
-                        (isvowel(source->info->name1[0]) ? "an" : "a"),
+                        ((source->flags &MF_FRIEND) && monstercount[source->type] == 1 ? "the"
+                            : (isvowel(source->info->name1[0]) ? "an" : "a")),
                         ((source->flags & MF_FRIEND) ? "friendly " : ""),
                         (*source->info->name1 ? source->info->name1 : "monster"));
 
@@ -1798,7 +1798,9 @@ static void P_WriteObituary(mobj_t *target, mobj_t *inflicter, mobj_t *source, d
                         M_StringCopy(targetname, target->name, sizeof(targetname));
                     else
                         M_snprintf(targetname, sizeof(targetname), "%s %s%s",
-                            (source->type == target->type ? "another" : (isvowel(target->info->name1[0]) ? "an" : "a")),
+                            (source->type == target->type ? "another"
+                                : ((target->flags & MF_FRIEND) && monstercount[target->type] == 1 ? "the"
+                                : (isvowel(target->info->name1[0]) ? "an" : "a"))),
                             ((target->flags & MF_FRIEND) ? "friendly " : ""),
                             (*target->info->name1 ? target->info->name1 : "monster"));
 
@@ -2130,10 +2132,13 @@ void P_DamageMobj(mobj_t *target, mobj_t *inflicter, mobj_t *source, int damage,
         {
             int gibhealth = info->gibhealth;
 
-            if (type == MT_BARREL || (type == MT_PAIN && !D4V) || type == MT_SKULL)
-                target->colfunc = tlredcolfunc;
-            else if (type == MT_BRUISER || (type == MT_KNIGHT && !D4V))
-                target->colfunc = redtogreencolfunc;
+            if (!(flags & MF_FUZZ))
+            {
+                if (type == MT_BARREL || (type == MT_PAIN && !D4V) || type == MT_SKULL)
+                    target->colfunc = tlredcolfunc;
+                else if (type == MT_BRUISER || (type == MT_KNIGHT && !D4V))
+                    target->colfunc = redtogreencolfunc;
+            }
 
             // [crispy] the lethal pellet of a point-blank SSG blast
             // gets an extra damage boost for the occasional gib chance

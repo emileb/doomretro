@@ -51,6 +51,8 @@
 
 extern patch_t  *consolefont[CONSOLEFONTSIZE];
 extern patch_t  *degree;
+extern patch_t  *lsquote;
+extern patch_t  *ldquote;
 extern patch_t  *unknownchar;
 extern patch_t  *altunderscores;
 extern int      white;
@@ -156,6 +158,14 @@ static void HUlib_DrawAltHUDTextLine(hu_textline_t *l)
 
             if (c >= 0 && c < CONSOLEFONTSIZE)
                 patch = consolefont[c];
+
+            if (!i || prevletter == ' ')
+            {
+                if (letter == '\'')
+                    patch = lsquote;
+                else if (letter == '\"')
+                    patch = ldquote;
+            }
         }
 
         // [BH] apply kerning to certain character pairs
@@ -187,7 +197,7 @@ void HUlib_DrawAltAutomapTextLine(hu_textline_t *l, dboolean external)
     {
         unsigned char   letter = l->l[i];
         unsigned char   nextletter = l->l[i + 1];
-        patch_t         *patch;
+        patch_t         *patch = unknownchar;
         int             j = 0;
 
         if (letter == 194 && nextletter == 176)
@@ -196,7 +206,20 @@ void HUlib_DrawAltAutomapTextLine(hu_textline_t *l, dboolean external)
             i++;
         }
         else
-            patch = consolefont[letter - CONSOLEFONTSTART];
+        {
+            const int   c = letter - CONSOLEFONTSTART;
+
+            if (c >= 0 && c < CONSOLEFONTSIZE)
+                patch = consolefont[c];
+
+            if (!i || prevletter == ' ')
+            {
+                if (letter == '\'')
+                    patch = lsquote;
+                else if (letter == '\"')
+                    patch = ldquote;
+            }
+        }
 
         // [BH] apply kerning to certain character pairs
         while (altkern[j].char1)

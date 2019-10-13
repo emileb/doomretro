@@ -76,6 +76,8 @@ patch_t                 *degree;
 patch_t                 *unknownchar;
 patch_t                 *altunderscores;
 patch_t                 *brand;
+patch_t                 *lsquote;
+patch_t                 *ldquote;
 
 static patch_t          *dot;
 static patch_t          *trademark;
@@ -99,7 +101,7 @@ static short            spacewidth;
 static char             consoleinput[255];
 static int              numautocomplete;
 int                     consolestrings;
-size_t                  consolestrings_max = 0;
+size_t                  consolestringsmax = 0;
 
 static size_t           undolevels;
 static undohistory_t    *undohistory;
@@ -163,8 +165,8 @@ void C_Input(const char *string, ...)
     M_vsnprintf(buffer, CONSOLETEXTMAXLENGTH - 1, string, argptr);
     va_end(argptr);
 
-    if (consolestrings >= (int)consolestrings_max)
-        console = I_Realloc(console, (consolestrings_max += 128) * sizeof(*console));
+    if (consolestrings >= (int)consolestringsmax)
+        console = I_Realloc(console, (consolestringsmax += CONSOLESTRINGSMAX) * sizeof(*console));
 
     M_StringCopy(console[consolestrings].string, buffer, 1024);
     console[consolestrings++].stringtype = inputstring;
@@ -229,8 +231,9 @@ void C_Output(const char *string, ...)
     LOGI("%s",buffer);
     LogWritter_Write(buffer);
 #endif
-    if (consolestrings >= (int)consolestrings_max)
-        console = I_Realloc(console, (consolestrings_max += 128) * sizeof(*console));
+    if (consolestrings >= (int)consolestringsmax)
+        console = I_Realloc(console, (consolestringsmax += CONSOLESTRINGSMAX) * sizeof(*console));
+
 
     M_StringCopy(console[consolestrings].string, buffer, 1024);
     console[consolestrings++].stringtype = outputstring;
@@ -246,8 +249,8 @@ void C_TabbedOutput(const int tabs[8], const char *string, ...)
     M_vsnprintf(buffer, CONSOLETEXTMAXLENGTH - 1, string, argptr);
     va_end(argptr);
 
-    if (consolestrings >= (int)consolestrings_max)
-        console = I_Realloc(console, (consolestrings_max += 128) * sizeof(*console));
+    if (consolestrings >= (int)consolestringsmax)
+        console = I_Realloc(console, (consolestringsmax += CONSOLESTRINGSMAX) * sizeof(*console));
 
     M_StringCopy(console[consolestrings].string, buffer, 1024);
     console[consolestrings].stringtype = outputstring;
@@ -258,8 +261,8 @@ void C_TabbedOutput(const int tabs[8], const char *string, ...)
 
 void C_Header(const headertype_t headertype)
 {
-    if (consolestrings >= (int)consolestrings_max)
-        console = I_Realloc(console, (consolestrings_max += 128) * sizeof(*console));
+    if (consolestrings >= (int)consolestringsmax)
+        console = I_Realloc(console, (consolestringsmax += CONSOLESTRINGSMAX) * sizeof(*console));
 
     console[consolestrings].stringtype = headerstring;
     console[consolestrings].headertype = headertype;
@@ -278,8 +281,8 @@ void C_Warning(const char *string, ...)
 
     if (!consolestrings || !M_StringCompare(console[consolestrings - 1].string, buffer))
     {
-        if (consolestrings >= (int)consolestrings_max)
-            console = I_Realloc(console, (consolestrings_max += 128) * sizeof(*console));
+        if (consolestrings >= (int)consolestringsmax)
+            console = I_Realloc(console, (consolestringsmax += CONSOLESTRINGSMAX) * sizeof(*console));
 
         M_StringCopy(console[consolestrings].string, buffer, 1024);
         console[consolestrings++].stringtype = warningstring;
@@ -304,8 +307,8 @@ void C_PlayerMessage(const char *string, ...)
     }
     else
     {
-        if (consolestrings >= (int)consolestrings_max)
-            console = I_Realloc(console, (consolestrings_max += 128) * sizeof(*console));
+        if (consolestrings >= (int)consolestringsmax)
+            console = I_Realloc(console, (consolestringsmax += CONSOLESTRINGSMAX) * sizeof(*console));
 
         M_StringCopy(console[consolestrings].string, buffer, 1024);
         console[consolestrings].stringtype = playermessagestring;
@@ -333,8 +336,8 @@ void C_Obituary(const char *string, ...)
     }
     else
     {
-        if (consolestrings >= (int)consolestrings_max)
-            console = I_Realloc(console, (consolestrings_max += 128) * sizeof(*console));
+        if (consolestrings >= (int)consolestringsmax)
+            console = I_Realloc(console, (consolestringsmax += CONSOLESTRINGSMAX) * sizeof(*console));
 
         M_StringCopy(console[consolestrings].string, buffer, 1024);
         console[consolestrings].stringtype = obituarystring;
@@ -359,8 +362,8 @@ void C_AddConsoleDivider(void)
 {
     if (!consolestrings || console[consolestrings - 1].stringtype != dividerstring)
     {
-        if (consolestrings >= (int)consolestrings_max)
-            console = I_Realloc(console, (consolestrings_max += 128) * sizeof(*console));
+        if (consolestrings >= (int)consolestringsmax)
+            console = I_Realloc(console, (consolestringsmax += CONSOLESTRINGSMAX) * sizeof(*console));
 
         console[consolestrings++].stringtype = dividerstring;
     }
@@ -368,37 +371,37 @@ void C_AddConsoleDivider(void)
 
 const kern_t altkern[] =
 {
-    { ' ',  '(',  -1 }, { ' ',  'T',  -1 }, { '!',  ' ',   2 }, { '"',  '+',  -1 }, { '"',  ',',  -1 }, { '"',  '.',  -1 },
+    { ' ',  '(',  -1 }, { ' ',  'T',  -1 }, { '!',  ' ',   2 }, { '"',  '+',  -1 }, { '"',  ',',  -1 }, { '"',  '.',  -2 },
     { '"',  'J',  -2 }, { '"',  'a',  -1 }, { '"',  'c',  -1 }, { '"',  'd',  -1 }, { '"',  'e',  -1 }, { '"',  'g',  -1 },
-    { '"',  'j',  -2 }, { '"',  'o',  -1 }, { '"',  'q',  -1 }, { '"',  's',  -1 }, { '(',  '(',  -1 }, { ')',  ')',  -1 },
-    { ')',  '.',  -1 }, { '+',  'j',  -2 }, { ',',  '4',  -1 }, { ',',  '7',  -1 }, { '.',  '4',  -1 }, { '.',  '7',  -1 },
-    { '.',  '\\', -1 }, { '/',  '/',  -2 }, { '/',  'a',  -1 }, { '/',  'd',  -1 }, { '/',  'o',  -1 }, { '0',  ',',  -1 },
-    { '0',  ';',  -1 }, { '0',  'j',  -2 }, { '1',  '"',  -1 }, { '1',  '\'', -1 }, { '1',  '\\', -1 }, { '1',  'j',  -2 },
-    { '2',  'j',  -2 }, { '3',  ',',  -1 }, { '3',  ';',  -1 }, { '3',  'j',  -2 }, { '4',  'j',  -2 }, { '5',  ',',  -1 },
-    { '5',  ';',  -1 }, { '5',  'j',  -2 }, { '6',  ',',  -1 }, { '6',  'j',  -2 }, { '7',  ',',  -2 }, { '7',  '.',  -2 },
-    { '7',  ';',  -1 }, { '7',  'j',  -2 }, { '8',  ',',  -1 }, { '8',  ';',  -1 }, { '8',  'j',  -2 }, { '9',  ',',  -1 },
-    { '9',  ';',  -1 }, { '9',  'j',  -2 }, { ':', '\\',  -1 }, { '?',  ' ',   2 }, { 'F',  ' ',  -1 }, { 'F',  ',',  -1 },
-    { 'F',  '.',  -1 }, { 'F',  ';',  -1 }, { 'L',  ' ',  -1 }, { 'L',  '"',  -1 }, { 'L',  'Y',  -1 }, { 'L',  '\'', -1 },
-    { 'L',  '\\', -2 }, { 'P',  ',',  -1 }, { 'P',  '.',  -1 }, { 'P',  ';',  -1 }, { 'P',  '_',  -1 }, { 'T',  ' ',  -1 },
-    { 'T',  ',',  -1 }, { 'T',  '.',  -1 }, { 'T',  ';',  -1 }, { 'T',  'a',  -1 }, { 'T',  'e',  -1 }, { 'T',  'o',  -1 },
-    { 'V',  ',',  -1 }, { 'V',  '.',  -1 }, { 'V',  ';',  -1 }, { 'V',  'a',  -1 }, { 'Y',  ',',  -1 }, { 'Y',  '.',  -1 },
-    { 'Y',  ';',  -1 }, { '\'', 'J',  -2 }, { '\'', 'a',  -1 }, { '\'', 'c',  -1 }, { '\'', 'd',  -1 }, { '\'', 'e',  -1 },
-    { '\'', 'g',  -1 }, { '\'', 'j',  -2 }, { '\'', 'o',  -1 }, { '\\', 'T',  -1 }, { '\\', 'V',  -1 }, { '\\', '\\', -2 },
-    { '\\', 't',  -1 }, { '_',  'f',  -1 }, { '_',  't',  -1 }, { '_',  'v',  -1 }, { 'a',  '"',  -1 }, { 'a',  '\'', -1 },
-    { 'a',  '\\', -1 }, { 'a',  'j',  -2 }, { 'b',  '"',  -1 }, { 'b',  ',',  -1 }, { 'b',  ';',  -1 }, { 'b',  '\'', -1 },
-    { 'b',  '\\', -1 }, { 'b',  'j',  -2 }, { 'c',  '"',  -1 }, { 'c',  ',',  -1 }, { 'c',  ';',  -1 }, { 'c',  '\'', -1 },
-    { 'c',  '\\', -1 }, { 'c',  'j',  -2 }, { 'd',  'j',  -2 }, { 'e',  '"',  -1 }, { 'e',  ',',  -1 }, { 'e',  ';',  -1 },
-    { 'e',  '\'', -1 }, { 'e',  '\\', -1 }, { 'e',  '_',  -1 }, { 'e',  'j',  -2 }, { 'f',  ' ',  -1 }, { 'f',  ',',  -2 },
-    { 'f',  ';',  -1 }, { 'f',  '_',  -1 }, { 'f',  'a',  -1 }, { 'f',  'j',  -2 }, { 'h',  '\\', -1 }, { 'h',  'j',  -2 },
-    { 'i',  'j',  -2 }, { 'k',  'j',  -2 }, { 'l',  'j',  -2 }, { 'm',  '"',  -1 }, { 'm',  '\'', -1 }, { 'm',  '\\', -1 },
-    { 'm',  'j',  -2 }, { 'n',  '"',  -1 }, { 'n',  '\'', -1 }, { 'n',  '\\', -1 }, { 'n',  'j',  -2 }, { 'o',  '"',  -1 },
-    { 'o',  ',',  -1 }, { 'o',  ';',  -1 }, { 'o',  '\'', -1 }, { 'o',  '\\', -1 }, { 'o',  'j',  -2 }, { 'p',  '"',  -1 },
-    { 'p',  ',',  -1 }, { 'p',  ';',  -1 }, { 'p',  '\'', -1 }, { 'p',  '\\', -1 }, { 'p',  'j',  -2 }, { 'r',  ' ',  -1 },
-    { 'r',  ')',  -1 }, { 'r',  ',',  -2 }, { 'r',  '.',  -1 }, { 'r',  ';',  -1 }, { 'r',  '\'', -1 }, { 'r',  '\\', -1 },
-    { 'r',  '_',  -2 }, { 'r',  'a',  -1 }, { 'r',  'j',  -2 }, { 's',  ',',  -1 }, { 's',  ';',  -1 }, { 's',  '\\', -1 },
-    { 's',  'j',  -2 }, { 't',  '\\', -1 }, { 't',  'j',  -2 }, { 'u',  'j',  -2 }, { 'v',  ',',  -1 }, { 'v',  ';',  -1 },
-    { 'v',  '\\', -1 }, { 'v',  'a',  -1 }, { 'v',  'j',  -2 }, { 'w',  '\\', -1 }, { 'w',  'j',  -2 }, { 'x',  '\\', -1 },
-    { 'x',  'j',  -2 }, { 'y',  '\\', -1 }, { 'z',  '\\', -1 }, { 'z',  'j',  -2 }, { '\0', '\0',  0 }
+    { '"',  'j',  -2 }, { '"',  'o',  -1 }, { '"',  'q',  -1 }, { '"',  's',  -1 }, { '\'', 's',  -1 }, { '(',  '(',  -1 },
+    { ')',  ')',  -1 }, { ')',  '.',  -1 }, { '+',  'j',  -2 }, { ',',  '4',  -1 }, { ',',  '7',  -1 }, { '.',  '4',  -1 },
+    { '.',  '7',  -1 }, { '.',  '\\', -1 }, { '/',  '/',  -2 }, { '/',  'a',  -1 }, { '/',  'd',  -1 }, { '/',  'o',  -1 },
+    { '0',  ',',  -1 }, { '0',  ';',  -1 }, { '0',  'j',  -2 }, { '1',  '"',  -1 }, { '1',  '\'', -1 }, { '1',  '\\', -1 },
+    { '1',  'j',  -2 }, { '2',  'j',  -2 }, { '3',  ',',  -1 }, { '3',  ';',  -1 }, { '3',  'j',  -2 }, { '4',  'j',  -2 },
+    { '5',  ',',  -1 }, { '5',  ';',  -1 }, { '5',  'j',  -2 }, { '6',  ',',  -1 }, { '6',  'j',  -2 }, { '7',  ',',  -2 },
+    { '7',  '.',  -2 }, { '7',  ';',  -1 }, { '7',  'j',  -2 }, { '8',  ',',  -1 }, { '8',  ';',  -1 }, { '8',  'j',  -2 },
+    { '9',  ',',  -1 }, { '9',  ';',  -1 }, { '9',  'j',  -2 }, { ':', '\\',  -1 }, { '?',  ' ',   2 }, { 'F',  ' ',  -1 },
+    { 'F',  ',',  -1 }, { 'F',  '.',  -1 }, { 'F',  ';',  -1 }, { 'L',  ' ',  -1 }, { 'L',  '"',  -1 }, { 'L',  'Y',  -1 },
+    { 'L',  '\'', -1 }, { 'L',  '\\', -2 }, { 'P',  ',',  -1 }, { 'P',  '.',  -1 }, { 'P',  ';',  -1 }, { 'P',  '_',  -1 },
+    { 'T',  ' ',  -1 }, { 'T',  ',',  -1 }, { 'T',  '.',  -1 }, { 'T',  ';',  -1 }, { 'T',  'a',  -1 }, { 'T',  'e',  -1 },
+    { 'T',  'o',  -1 }, { 'V',  ',',  -1 }, { 'V',  '.',  -1 }, { 'V',  ';',  -1 }, { 'V',  'a',  -1 }, { 'Y',  ',',  -1 },
+    { 'Y',  '.',  -1 }, { 'Y',  ';',  -1 }, { '\'', 'J',  -2 }, { '\'', 'a',  -1 }, { '\'', 'c',  -1 }, { '\'', 'd',  -1 },
+    { '\'', 'e',  -1 }, { '\'', 'g',  -1 }, { '\'', 'j',  -2 }, { '\'', 'o',  -1 }, { '\\', 'T',  -1 }, { '\\', 'V',  -1 },
+    { '\\', '\\', -2 }, { '\\', 't',  -1 }, { '_',  'f',  -1 }, { '_',  't',  -1 }, { '_',  'v',  -1 }, { 'a',  '"',  -1 },
+    { 'a',  '\'', -1 }, { 'a',  '\\', -1 }, { 'a',  'j',  -2 }, { 'b',  '"',  -1 }, { 'b',  ',',  -1 }, { 'b',  ';',  -1 },
+    { 'b',  '\'', -1 }, { 'b',  '\\', -1 }, { 'b',  'j',  -2 }, { 'c',  '"',  -1 }, { 'c',  ',',  -1 }, { 'c',  ';',  -1 },
+    { 'c',  '\'', -1 }, { 'c',  '\\', -1 }, { 'c',  'j',  -2 }, { 'd',  'j',  -2 }, { 'e',  '"',  -1 }, { 'e',  ',',  -1 },
+    { 'e',  ';',  -1 }, { 'e',  '\'', -1 }, { 'e',  '\\', -1 }, { 'e',  '_',  -1 }, { 'e',  'j',  -2 }, { 'f',  ' ',  -1 },
+    { 'f',  ',',  -2 }, { 'f',  ';',  -1 }, { 'f',  '_',  -1 }, { 'f',  'a',  -1 }, { 'f',  'j',  -2 }, { 'h',  '\\', -1 },
+    { 'h',  'j',  -2 }, { 'i',  'j',  -2 }, { 'k',  'j',  -2 }, { 'l',  'j',  -2 }, { 'm',  '"',  -1 }, { 'm',  '\'', -1 },
+    { 'm',  '\\', -1 }, { 'm',  'j',  -2 }, { 'n',  '"',  -1 }, { 'n',  '\'', -1 }, { 'n',  '\\', -1 }, { 'n',  'j',  -2 },
+    { 'o',  '"',  -1 }, { 'o',  ',',  -1 }, { 'o',  ';',  -1 }, { 'o',  '\'', -1 }, { 'o',  '\\', -1 }, { 'o',  'j',  -2 },
+    { 'p',  '"',  -1 }, { 'p',  ',',  -1 }, { 'p',  ';',  -1 }, { 'p',  '\'', -1 }, { 'p',  '\\', -1 }, { 'p',  'j',  -2 },
+    { 'r',  ' ',  -1 }, { 'r',  ')',  -1 }, { 'r',  ',',  -2 }, { 'r',  '.',  -1 }, { 'r',  ';',  -1 }, { 'r',  '\'', -1 },
+    { 'r',  '\\', -1 }, { 'r',  '_',  -2 }, { 'r',  'a',  -1 }, { 'r',  'j',  -2 }, { 's',  ',',  -1 }, { 's',  ';',  -1 },
+    { 's',  '\\', -1 }, { 's',  'j',  -2 }, { 't',  '\\', -1 }, { 't',  'j',  -2 }, { 'u',  'j',  -2 }, { 'v',  ',',  -1 },
+    { 'v',  ';',  -1 }, { 'v',  '\\', -1 }, { 'v',  'a',  -1 }, { 'v',  'j',  -2 }, { 'w',  '\\', -1 }, { 'w',  'j',  -2 },
+    { 'x',  '\\', -1 }, { 'x',  'j',  -2 }, { 'y',  '\\', -1 }, { 'z',  '\\', -1 }, { 'z',  'j',  -2 }, { '\0', '\0',  0 }
 };
 
 int C_TextWidth(const char *text, const dboolean formatting, const dboolean kerning)
@@ -463,11 +466,17 @@ int C_TextWidth(const char *text, const dboolean formatting, const dboolean kern
         else
         {
             const int   c = letter - CONSOLEFONTSTART;
+            int         width = SHORT((c >= 0 && c < CONSOLEFONTSIZE ? consolefont[c] : unknownchar)->width);
 
-            if (c >= 0 && c < CONSOLEFONTSIZE)
-                w += SHORT(consolefont[c]->width);
-            else
-                w += SHORT(unknownchar->width);
+            if (!i || prevletter == ' ' || prevletter == '\t')
+            {
+                if (letter == '\'')
+                    width = SHORT(lsquote->width);
+                else if (letter == '\"')
+                    width = SHORT(ldquote->width);
+            }
+
+            w += width;
         }
 
         if (kerning)
@@ -560,6 +569,8 @@ void C_Init(void)
 
     brand = W_CacheLumpName("DRBRAND");
     dot = W_CacheLumpName("DRFON046");
+    lsquote = W_CacheLumpName("DRFON145");
+    ldquote = W_CacheLumpName("DRFON147");
     trademark = W_CacheLumpName("DRFON153");
     copyright = W_CacheLumpName("DRFON169");
     regomark = W_CacheLumpName("DRFON174");
@@ -798,10 +809,15 @@ static int C_DrawConsoleText(int x, int y, char *text, const int color1, const i
             {
                 const int   c = letter - CONSOLEFONTSTART;
 
-                if (c >= 0 && c < CONSOLEFONTSIZE)
-                    patch = consolefont[c];
-                else
-                    patch = unknownchar;
+                patch = (c >= 0 && c < CONSOLEFONTSIZE ? consolefont[c] : unknownchar);
+
+                if (!i || prevletter == ' ' || prevletter == '\t')
+                {
+                    if (letter == '\'')
+                        patch = lsquote;
+                    else if (letter == '\"')
+                        patch = ldquote;
+                }
             }
 
             if (kerning)
@@ -1553,7 +1569,7 @@ dboolean C_Responder(event_t *ev)
                     spaces1 = numspaces(input);
                     endspace1 = (input[strlen(input) - 1] == ' ');
 
-                    while ((direction == -1 && autocomplete > 0) || (direction == 1 && autocomplete < numautocomplete - 1))
+                    while ((direction == -1 && autocomplete > 0) || (direction == 1 && autocomplete <= numautocomplete))
                     {
                         static char output[255];
                         int         spaces2;

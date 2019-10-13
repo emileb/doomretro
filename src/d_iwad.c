@@ -52,6 +52,8 @@
 #include "version.h"
 #include "w_wad.h"
 
+extern char *pwadfile;
+
 // Array of locations to search for IWAD files
 //
 // "128 IWAD search directories should be enough for anybody".
@@ -200,7 +202,7 @@ static char *GetRegistryString(registryvalue_t *reg_val)
     if (RegQueryValueEx(key, reg_val->value, NULL, &valtype, NULL, &len) == ERROR_SUCCESS && valtype == REG_SZ)
     {
         // Allocate a buffer for the value and read the value
-        result = malloc(len + 1);
+        result = malloc((size_t)len + 1);
 
         if (RegQueryValueEx(key, reg_val->value, NULL, &valtype, (unsigned char *)result, &len) != ERROR_SUCCESS)
         {
@@ -240,6 +242,7 @@ static void CheckUninstallStrings(void)
             char    *path = unstr + len;
 
             AddIWADDir(path);
+            free(path);
         }
     }
 }
@@ -532,8 +535,6 @@ static char *SaveGameIWADName(void)
     return NULL;
 }
 
-extern char *pwadfile;
-
 //
 // SetSaveGameFolder
 //
@@ -541,7 +542,7 @@ extern char *pwadfile;
 //
 void D_SetSaveGameFolder(dboolean output)
 {
-    int p = M_CheckParmsWithArgs("-save", "-savedir", 1, 1);
+    int p = M_CheckParmsWithArgs("-save", "-savedir", "", 1, 1);
 
     if (p)
     {

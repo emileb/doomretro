@@ -46,7 +46,7 @@
 #include "p_local.h"
 #include "s_sound.h"
 
-#define AUTOTILTUNIT    20
+#define AUTOTILTUNIT    30
 #define AUTOTILTMAX     300
 #define MINSTEPSIZE     (8 * FRACUNIT)
 #define MAXSTEPSIZE     (24 * FRACUNIT)
@@ -220,7 +220,7 @@ void P_MovePlayer(void)
     signed char forward = cmd->forwardmove;
     signed char side = cmd->sidemove;
 
-    mo->angle += cmd->angleturn << FRACBITS;
+    mo->angle += (cmd->angleturn * turbo / 100) << FRACBITS;
 
     // killough 10/98:
     //
@@ -298,7 +298,7 @@ static void P_ReduceDamageCount(void)
         viewplayer->damagecount--;
 
     if (r_shake_damage)
-        I_UpdateBlitFunc(!!viewplayer->damagecount);
+        I_UpdateBlitFunc(viewplayer->damagecount);
 }
 
 //
@@ -375,7 +375,7 @@ static void P_DeathThink(void)
             mo->angle += (delta < ANG180 ? ANG5 : -ANG5);
 
             if (r_shake_damage)
-                I_UpdateBlitFunc(!!viewplayer->damagecount);
+                I_UpdateBlitFunc(viewplayer->damagecount);
         }
     }
     else

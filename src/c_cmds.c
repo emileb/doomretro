@@ -290,7 +290,7 @@ static void god_cmd_func2(char *cmd, char *parms);
 static void help_cmd_func2(char *cmd, char *parms);
 static void if_cmd_func2(char *cmd, char *parms);
 static dboolean kill_cmd_func1(char *cmd, char *parms);
-void kill_cmd_func2(char *cmd, char *parms);
+static void kill_cmd_func2(char *cmd, char *parms);
 static void load_cmd_func2(char *cmd, char *parms);
 static dboolean map_cmd_func1(char *cmd, char *parms);
 static void map_cmd_func2(char *cmd, char *parms);
@@ -444,49 +444,48 @@ consolecmd_t consolecmds[] =
         "Toggles the player to always run when they move."),
     CVAR_INT(am_allmapcdwallcolor, am_allmapcdwallcolour, color_cvars_func1, color_cvars_func2, CF_NONE, NOVALUEALIAS,
         "The color of lines in the automap with a change in\nceiling height when the player has a computer\narea map power-up "
-        "(<b>0</b> to <b>255</b>, or <b>#</b><i>rrggbb</i>)."),
+        "(<b>0</b> to <b>255</b>)."),
     CVAR_INT(am_allmapfdwallcolor, am_allmapfdwallcolour, color_cvars_func1, color_cvars_func2, CF_NONE, NOVALUEALIAS,
         "The color of lines in the automap with a change in\nfloor height when the player has a computer\narea map power-up (<b>0</b> "
-        "to <b>255</b>, or <b>#</b><i>rrggbb</i>)."),
+        "to <b>255</b>)."),
     CVAR_INT(am_allmapwallcolor, am_allmapwallcolour, color_cvars_func1, color_cvars_func2, CF_NONE, NOVALUEALIAS,
-        "The color of solid walls in the automap when the\nplayer has a computer area map power-up (<b>0</b> to\n<b>255</b>, or "
-        "<b>#</b><i>rrggbb</i>)."),
+        "The color of solid walls in the automap when the\nplayer has a computer area map power-up (<b>0</b> to\n<b>255</b>)."),
     CVAR_INT(am_backcolor, am_backcolour, color_cvars_func1, color_cvars_func2, CF_NONE, NOVALUEALIAS,
-        "The color of the automap's background (<b>0</b> to <b>255</b>,\nor <b>#</b><i>rrggbb</i>)."),
+        "The color of the automap's background (<b>0</b> to <b>255</b>)."),
     CVAR_INT(am_cdwallcolor, am_cdwallcolour, color_cvars_func1, color_cvars_func2, CF_NONE, NOVALUEALIAS,
-        "The color of lines in the automap with a change in\nceiling height (<b>0</b> to <b>255</b>, or <b>#</b><i>rrggbb</i>)."),
+        "The color of lines in the automap with a change in\nceiling height (<b>0</b> to <b>255</b>)."),
     CVAR_INT(am_crosshaircolor, am_crosshaircolour, color_cvars_func1, color_cvars_func2, CF_NONE, NOVALUEALIAS,
-        "The color of the crosshair in the automap (<b>0</b> to <b>255</b>,\nor <b>#</b><i>rrggbb</i>)."),
+        "The color of the crosshair in the automap (<b>0</b> to\n<b>255</b>)."),
     CVAR_BOOL(am_external, "", bool_cvars_func1, am_external_cvar_func2, BOOLVALUEALIAS,
         "Toggles showing the automap on an external\ndisplay."),
     CVAR_INT(am_fdwallcolor, am_fdwallcolour, color_cvars_func1, color_cvars_func2, CF_NONE, NOVALUEALIAS,
-        "The color of lines in the automap with a change in\nfloor height (<b>0</b> to <b>255</b>, or <b>#</b><i>rrggbb</i>)."),
+        "The color of lines in the automap with a change in\nfloor height (<b>0</b> to <b>255</b>)."),
     CVAR_BOOL(am_followmode, "", am_followmode_cvar_func1, bool_cvars_func2, BOOLVALUEALIAS,
         "Toggles follow mode in the automap."),
     CVAR_BOOL(am_grid, "", bool_cvars_func1, bool_cvars_func2, BOOLVALUEALIAS,
         "Toggles the grid in the automap."),
     CVAR_INT(am_gridcolor, am_gridcolour, color_cvars_func1, color_cvars_func2, CF_NONE, NOVALUEALIAS,
-        "The color of the grid in the automap (<b>0</b> to <b>255</b>, or\n<b>#</b><i>rrggbb</i>)."),
+        "The color of the grid in the automap (<b>0</b> to <b>255</b>)."),
     CVAR_OTHER(am_gridsize, "", null_func1, am_gridsize_cvar_func2,
         "The size of the grid in the automap (<i>width</i><b>\xD7</b><i>height</i>)."),
     CVAR_INT(am_markcolor, am_markcolour, color_cvars_func1, color_cvars_func2, CF_NONE, NOVALUEALIAS,
-        "The color of marks in the automap (<b>0</b> to <b>255</b>, or\n<b>#</b><i>rrggbb</i>)."),
+        "The color of marks in the automap (<b>0</b> to <b>255</b>)."),
     CVAR_BOOL(am_path, "", bool_cvars_func1, am_path_cvar_func2, BOOLVALUEALIAS,
         "Toggles the player's path in the automap."),
     CVAR_INT(am_pathcolor, am_pathcolour, color_cvars_func1, color_cvars_func2, CF_NONE, NOVALUEALIAS,
-        "The color of the player's path in the automap (<b>0</b> to\n<b>255</b>, or <b>#</b><i>rrggbb</i>)."),
+        "The color of the player's path in the automap (<b>0</b> to\n<b>255</b>)."),
     CVAR_INT(am_playercolor, am_playercolour, color_cvars_func1, color_cvars_func2, CF_NONE, NOVALUEALIAS,
-        "The color of the player in the automap (<b>0</b> to <b>255</b>, or\n<b>#</b><i>rrggbb</i>)."),
+        "The color of the player in the automap (<b>0</b> to <b>255</b>)."),
     CVAR_BOOL(am_rotatemode, "", bool_cvars_func1, bool_cvars_func2, BOOLVALUEALIAS,
         "Toggles rotate mode in the automap."),
     CVAR_INT(am_teleportercolor, am_teleportercolour, color_cvars_func1, color_cvars_func2, CF_NONE, NOVALUEALIAS,
-        "The color of teleporters in the automap (<b>0</b> to <b>255</b>,\nor <b>#</b><i>rrggbb</i>)."),
+        "The color of teleporters in the automap (<b>0</b> to <b>255</b>)."),
     CVAR_INT(am_thingcolor, am_thingcolour, color_cvars_func1, color_cvars_func2, CF_NONE, NOVALUEALIAS,
-        "The color of things in the automap (<b>0</b> to <b>255</b>, or\n<b>#</b><i>rrggbb</i>)."),
+        "The color of things in the automap (<b>0</b> to <b>255</b>)."),
     CVAR_INT(am_tswallcolor, am_tswallcolour, color_cvars_func1, color_cvars_func2, CF_NONE, NOVALUEALIAS,
-        "The color of lines in the automap with no change in\nheight (<b>0</b> to <b>255</b>, or <b>#</b><i>rrggbb</i>)."),
+        "The color of lines in the automap with no change in\nheight (<b>0</b> to <b>255</b>)."),
     CVAR_INT(am_wallcolor, am_wallcolour, color_cvars_func1, color_cvars_func2, CF_NONE, NOVALUEALIAS,
-        "The color of solid walls in the automap (<b>0</b> to <b>255</b>, or\n<b>#</b><i>rrggbb</i>)."),
+        "The color of solid walls in the automap (<b>0</b> to <b>255</b>)."),
     CVAR_INT(ammo, "", player_cvars_func1, player_cvars_func2, CF_NONE, NOVALUEALIAS,
         "The amount of ammo for the player's currently\nequipped weapon."),
     CVAR_INT(armor, armour, player_cvars_func1, player_cvars_func2, CF_PERCENT, NOVALUEALIAS,
@@ -514,7 +513,7 @@ consolecmd_t consolecmds[] =
     CMD(cmdlist, ccmdlist, null_func1, cmdlist_cmd_func2, true, "[<i>searchstring</i>]",
         "Lists all console commands."),
     CVAR_INT(con_backcolor, con_backcolour, color_cvars_func1, color_cvars_func2, CF_NONE, NOVALUEALIAS,
-        "The color of the console's background (<b>0</b> to <b>255</b>, or\n<b>#</b><i>rrggbb</i>)."),
+        "The color of the console's background (<b>0</b> to <b>255</b>)."),
     CVAR_BOOL(con_obituaries, "", bool_cvars_func1, bool_cvars_func2, BOOLVALUEALIAS,
         "Toggles obituaries in the console when monsters\nare killed or resurrected."),
     CVAR_BOOL(con_timestamps, "", bool_cvars_func1, bool_cvars_func2, BOOLVALUEALIAS,
@@ -524,7 +523,7 @@ consolecmd_t consolecmds[] =
     CVAR_INT(crosshair, "", crosshair_cvar_func1, crosshair_cvar_func2, CF_NONE, CROSSHAIRVALUEALIAS,
         "Toggles a crosshair (<b>none</b>, <b>cross</b> or <b>dot</b>)."),
     CVAR_INT(crosshaircolor, crosshaircolour, color_cvars_func1, color_cvars_func2, CF_NONE, NOVALUEALIAS,
-        "The color of the crosshair (<b>0</b> to <b>255</b>, or <b>#</b><i>rrggbb</i>)."),
+        "The color of the crosshair (<b>0</b> to <b>255</b>)."),
     CMD(cvarlist, "", null_func1, cvarlist_cmd_func2, true, "[<i>searchstring</i>]",
         "Lists all console variables."),
     CMD(endgame, "", game_func1, endgame_cmd_func2, false, "",
@@ -538,7 +537,7 @@ consolecmd_t consolecmds[] =
     CVAR_INT(expansion, "", int_cvars_func1, expansion_cvar_func2, CF_NONE, NOVALUEALIAS,
         "The currently selected <i><b>DOOM II</b></i> expansion in the\nmenu (<b>1</b> or <b>2</b>)."),
     CVAR_INT(facebackcolor, facebackcolour, color_cvars_func1, color_cvars_func2, CF_NONE, FACEBACKVALUEALIAS,
-        "The color behind the player's face in the status bar\n(<b>none</b>, <b>0</b> to <b>255</b>, or <b>#</b><i>rrggbb</i>)."),
+        "The color behind the player's face in the status bar\n(<b>none</b>, <b>0</b> to <b>255</b>)."),
     CMD(fastmonsters, "", fastmonsters_cmd_func1, fastmonsters_cmd_func2, true, "[<b>on</b>|<b>off</b>]",
         "Toggles fast monsters."),
     CMD(freeze, "", alive_func1, freeze_cmd_func2, true, "[<b>on</b>|<b>off</b>]",
@@ -726,7 +725,7 @@ consolecmd_t consolecmds[] =
     CVAR_INT(r_shake_damage, "", int_cvars_func1, int_cvars_func2, CF_PERCENT, NOVALUEALIAS,
         "The amount the screen shakes when the player is\nattacked (<b>0%</b> to <b>100%</b>)."),
     CVAR_INT(r_skycolor, r_skycolour, r_skycolor_cvar_func1, r_skycolor_cvar_func2, CF_NONE, SKYVALUEALIAS,
-        "The color of the sky (<b>none</b>, <b>0</b> to <b>255</b>, or <b>#</b><i>rrggbb</i>)."),
+        "The color of the sky (<b>none</b>, or <b>0</b> to <b>255</b>)."),
     CVAR_BOOL(r_textures, "", bool_cvars_func1, r_textures_cvar_func2, BOOLVALUEALIAS,
         "Toggles displaying all textures."),
     CVAR_BOOL(r_translucency, "", bool_cvars_func1, r_translucency_cvar_func2, BOOLVALUEALIAS,
@@ -1600,7 +1599,7 @@ static void bindlist_cmd_func2(char *cmd, char *parms)
 static void clear_cmd_func2(char *cmd, char *parms)
 {
     consolestrings = 0;
-    consolestrings_max = 0;
+    consolestringsmax = 0;
     C_Output("");
 }
 
@@ -1734,6 +1733,7 @@ static void condump_cmd_func2(char *cmd, char *parms)
                 }
 
                 fputc('\n', file);
+                free(string);
             }
         }
 
@@ -2485,43 +2485,43 @@ void kill_cmd_func2(char *cmd, char *parms)
                 {
                     const int   flags = thing->flags;
 
-                    if (!all && (((flags & MF_FRIEND) && !friends) || (!(flags & MF_FRIEND) && friends)))
-                        continue;
-
-                    if (thing->flags2 & MF2_MONSTERMISSILE)
+                    if (all || !!(flags & MF_FRIEND) == friends)
                     {
-                        thing->flags2 |= MF2_MASSACRE;
-                        P_ExplodeMissile(thing);
-                    }
-                    else if (thing->health > 0)
-                    {
-                        const mobjtype_t    type = thing->type;
-
-                        if (type == MT_PAIN)
-                        {
-                            A_Fall(thing, NULL, NULL);
-                            P_SetMobjState(thing, S_PAIN_DIE6);
-                            viewplayer->mobjcount[MT_PAIN]++;
-                            stat_monsterskilled_painelementals = SafeAdd(stat_monsterskilled_painelementals, 1);
-                            viewplayer->killcount++;
-                            stat_monsterskilled = SafeAdd(stat_monsterskilled, 1);
-                            kills++;
-                        }
-                        else if ((flags & MF_SHOOTABLE) && type != MT_PLAYER && type != MT_BARREL && type != MT_BOSSBRAIN
-                            && (type != MT_HEAD || !hacx))
+                        if (thing->flags2 & MF2_MONSTERMISSILE)
                         {
                             thing->flags2 |= MF2_MASSACRE;
-                            P_DamageMobj(thing, NULL, NULL, thing->health, false);
+                            P_ExplodeMissile(thing);
+                        }
+                        else if (thing->health > 0)
+                        {
+                            const mobjtype_t    type = thing->type;
 
-                            if (!(flags & MF_NOBLOOD))
+                            if (type == MT_PAIN)
                             {
-                                const int   r = M_RandomInt(-1, 1);
-
-                                thing->momx += FRACUNIT * r;
-                                thing->momy += FRACUNIT * M_RandomIntNoRepeat(-1, 1, (!r ? 0 : 2));
+                                A_Fall(thing, NULL, NULL);
+                                P_SetMobjState(thing, S_PAIN_DIE6);
+                                viewplayer->mobjcount[MT_PAIN]++;
+                                stat_monsterskilled_painelementals = SafeAdd(stat_monsterskilled_painelementals, 1);
+                                viewplayer->killcount++;
+                                stat_monsterskilled = SafeAdd(stat_monsterskilled, 1);
+                                kills++;
                             }
+                            else if ((flags & MF_SHOOTABLE) && type != MT_PLAYER && type != MT_BARREL && type != MT_BOSSBRAIN
+                                && (type != MT_HEAD || !hacx))
+                            {
+                                thing->flags2 |= MF2_MASSACRE;
+                                P_DamageMobj(thing, NULL, NULL, thing->health, false);
 
-                            kills++;
+                                if (!(flags & MF_NOBLOOD))
+                                {
+                                    const int   r = M_RandomInt(-1, 1);
+
+                                    thing->momx += FRACUNIT * r;
+                                    thing->momy += FRACUNIT * M_RandomIntNoRepeat(-1, 1, (!r ? 0 : 2));
+                                }
+
+                                kills++;
+                            }
                         }
                     }
 
@@ -3455,7 +3455,9 @@ static dboolean name_cmd_func1(char *cmd, char *parms)
 
     if (gamestate == GS_LEVEL)
     {
-        if ((namecmdfriendly = M_StringStartsWith(parm, "friendly")))
+        if ((namecmdfriendly = M_StringStartsWith(parm, "friendly ")))
+            strreplace(parm, "friendly ", "");
+        else if ((namecmdfriendly = M_StringStartsWith(parm, "friendly")))
             strreplace(parm, "friendly", "");
 
         if (M_StringStartsWith(parm, "monster"))
@@ -5183,7 +5185,7 @@ static void vanilla_cmd_func2(char *cmd, char *parms)
 
         SC_Close();
 
-        buddha = !!(viewplayer->cheats & CF_BUDDHA);
+        buddha = viewplayer->cheats & CF_BUDDHA;
         viewplayer->cheats &= ~CF_BUDDHA;
 
         C_Output(s_STSTR_VON);
@@ -5227,7 +5229,7 @@ static void bool_cvars_func2(char *cmd, char *parms)
 
                 if ((value == 0 || value == 1) && value != *(dboolean *)consolecmds[i].variable)
                 {
-                    *(dboolean *)consolecmds[i].variable = !!value;
+                    *(dboolean *)consolecmds[i].variable = value;
                     M_SaveCVARs();
                 }
             }
@@ -5653,7 +5655,7 @@ static dboolean gp_deadzone_cvars_func1(char *cmd, char *parms)
     if ((result = sscanf(parms, "%10f%%", &value)) != 1)
         result = sscanf(parms, "%10f", &value);
 
-    return !!result;
+    return result;
 }
 
 static void gp_deadzone_cvars_func2(char *cmd, char *parms)
@@ -5929,7 +5931,7 @@ static void r_bloodsplats_translucency_cvar_func2(char *cmd, char *parms)
 
         if ((value == 0 || value == 1) && value != r_bloodsplats_translucency)
         {
-            r_bloodsplats_translucency = !!value;
+            r_bloodsplats_translucency = value;
             M_SaveCVARs();
             R_InitColumnFunctions();
 
@@ -5991,7 +5993,7 @@ static void r_detail_cvar_func2(char *cmd, char *parms)
 
         if ((value == r_detail_low || value == r_detail_high) && r_detail != value)
         {
-            r_detail = !!value;
+            r_detail = value;
             M_SaveCVARs();
         }
     }
@@ -6018,7 +6020,7 @@ static void r_dither_cvar_func2(char *cmd, char *parms)
 
         if ((value == 0 || value == 1) && value != r_dither)
         {
-            r_dither = !!value;
+            r_dither = value;
             M_SaveCVARs();
             R_InitColumnFunctions();
         }
@@ -6046,7 +6048,7 @@ static void r_fixmaperrors_cvar_func2(char *cmd, char *parms)
 
         if ((value == 0 || value == 1) && value != r_fixmaperrors)
         {
-            r_fixmaperrors = !!value;
+            r_fixmaperrors = value;
             M_SaveCVARs();
 
             if (gamestate == GS_LEVEL && !togglingvanilla && !resettingcvar)
@@ -6158,7 +6160,7 @@ static void r_hud_translucency_cvar_func2(char *cmd, char *parms)
 
         if ((value == 0 || value == 1) && value != r_hud_translucency)
         {
-            r_hud_translucency = !!value;
+            r_hud_translucency = value;
             M_SaveCVARs();
             HU_SetTranslucency();
         }
@@ -6247,7 +6249,7 @@ static void r_shadows_translucency_cvar_func2(char *cmd, char *parms)
 
         if ((value == 0 || value == 1) && value != r_shadows_translucency)
         {
-            r_shadows_translucency = !!value;
+            r_shadows_translucency = value;
             M_SaveCVARs();
 
             for (int i = 0; i < numsectors; i++)
@@ -6319,7 +6321,7 @@ static void r_textures_cvar_func2(char *cmd, char *parms)
 
         if ((value == 0 || value == 1) && value != r_textures)
         {
-            r_textures = !!value;
+            r_textures = value;
             M_SaveCVARs();
             R_InitColumnFunctions();
 
@@ -6366,7 +6368,7 @@ static void r_translucency_cvar_func2(char *cmd, char *parms)
 
         if ((value == 0 || value == 1) && value != r_translucency)
         {
-            r_translucency = !!value;
+            r_translucency = value;
             M_SaveCVARs();
             R_InitColumnFunctions();
 
@@ -6552,9 +6554,9 @@ static void units_cvar_func2(char *cmd, char *parms)
     {
         const int   value = C_LookupValueFromAlias(parms, UNITSVALUEALIAS);
 
-        if ((value == 0 || value == 1) && value != units)
+        if ((value == units_imperial || value == units_metric) && value != units)
         {
-            units = !!value;
+            units = value;
             M_SaveCVARs();
         }
     }
@@ -6754,7 +6756,7 @@ static void vid_showfps_cvar_func2(char *cmd, char *parms)
 
     if (vid_showfps != vid_showfps_old)
     {
-        I_UpdateBlitFunc(!!viewplayer->damagecount);
+        I_UpdateBlitFunc(viewplayer->damagecount);
 
         if (vid_showfps)
             starttime = SDL_GetPerformanceCounter();

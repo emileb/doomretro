@@ -1,3 +1,24 @@
+### DOOM Retro v3.0.5
+
+* Extensive optimizations have been made to further improve the overall performance and stability of *DOOM Retro*.
+* Minor changes have been made to the character set used in the console.
+* Minor changes have been made to text that is output to the console.
+* Picking up more than one powerup of the same type now works correctly.
+* The `-file` parameter may now be used without an `-iwad` parameter on the command-line.
+* A bug has been fixed whereby using either the `nomonsters` CCMD in the console, or `-nomonsters` on the command-line, would not stop monsters from being spawned in maps.
+* The speed the player turns is now affected by the `turbo` CVAR and `-turbo` command-line parameter.
+* The correct sky textures will now be displayed when playing [*Back To Saturn X E1: Get Out Of My Stations*](https://www.doomworld.com/idgames/levels/doom2/megawads/btsx_e1) or [*Back To Saturn X E2: Tower in the Fountain of Sparks*](https://www.doomworld.com/vb/thread/69960) and the `mouselook` CVAR is `off`.
+* The `friendly` parameter will now work correctly with the `name` CCMD.
+* A bug has been fixed whereby using the `monster` or `monsters` parameters with the `kill` CCMD would cause a crash.
+* Minor improvements have been made to the support of `DEHACKED` lumps.
+* The bullet puffs when shooting lost souls are now vertically centered.
+* Obituaries that involve a friendly monster will now indicate if there’s only one of them in the map.
+* Further improvements have been made to the support for Noiser’s [*DOOM 4 VANILLA*](https://www.doomworld.com/forum/topic/108725-doom-4-vanilla-new-v12-released-faster-weapons/).
+
+---
+
+###### Tuesday, October 1, 2019
+
 ### DOOM Retro v3.0.4
 
 * Optimizations have been made to further improve the overall performance and stability of *DOOM Retro*.
