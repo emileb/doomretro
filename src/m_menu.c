@@ -107,7 +107,7 @@ dboolean        menuactive;
 static dboolean savegames;
 dboolean        startingnewgame;
 
-char            savegamestrings[10][SAVESTRINGSIZE];
+char            savegamestrings[6][SAVESTRINGSIZE];
 
 static short    itemOn;                 // menu item skull is on
 static short    skullAnimCounter;       // skull animation counter
@@ -1815,7 +1815,7 @@ static void M_DrawOptions(void)
 
     if (usinggamepad && !M_MSENS)
         M_DrawThermo(OptionsDef.x - 1, OptionsDef.y + 16 * (mousesens + 1) + OFFSET + !hacx, 9,
-            gp_sensitivity / (float)gp_sensitivity_max * 8.0f, 8.0f, 8);
+            gp_sensitivity_horizontal / (float)gp_sensitivity_horizontal_max * 8.0f, 8.0f, 8);
     else
         M_DrawThermo(OptionsDef.x - 1, OptionsDef.y + 16 * (mousesens + 1) + OFFSET + !hacx, 9,
             m_sensitivity / (float)m_sensitivity_max * 8.0f, 8.0f, 8);
@@ -1870,7 +1870,7 @@ void M_EndingGame(void)
     if (gamemission == pack_nerve)
         gamemission = doom2;
 
-    C_CCMDOutput("endgame");
+    C_InputNoRepeat("endgame");
 
     C_AddConsoleDivider();
     M_SetWindowCaption();
@@ -2042,14 +2042,14 @@ static void M_ChangeSensitivity(int choice)
         switch (choice)
         {
             case 0:
-                if (gp_sensitivity > gp_sensitivity_min)
+                if (gp_sensitivity_horizontal > gp_sensitivity_horizontal_min)
                 {
-                    if (gp_sensitivity & 1)
-                        gp_sensitivity++;
+                    if (gp_sensitivity_horizontal & 1)
+                        gp_sensitivity_horizontal++;
 
-                    gp_sensitivity -= 2;
-                    I_SetGamepadSensitivity();
-                    C_IntCVAROutput(stringize(gp_sensitivity), gp_sensitivity);
+                    gp_sensitivity_horizontal -= 2;
+                    I_SetGamepadHorizontalSensitivity();
+                    C_IntCVAROutput(stringize(gp_sensitivity_horizontal), gp_sensitivity_horizontal);
                     M_SliderSound();
                     M_SaveCVARs();
                 }
@@ -2057,14 +2057,14 @@ static void M_ChangeSensitivity(int choice)
                 break;
 
             case 1:
-                if (gp_sensitivity < gp_sensitivity_max)
+                if (gp_sensitivity_horizontal < gp_sensitivity_horizontal_max)
                 {
-                    if (gp_sensitivity & 1)
-                        gp_sensitivity--;
+                    if (gp_sensitivity_horizontal & 1)
+                        gp_sensitivity_horizontal--;
 
-                    gp_sensitivity += 2;
-                    I_SetGamepadSensitivity();
-                    C_IntCVAROutput(stringize(gp_sensitivity), gp_sensitivity);
+                    gp_sensitivity_horizontal += 2;
+                    I_SetGamepadHorizontalSensitivity();
+                    C_IntCVAROutput(stringize(gp_sensitivity_horizontal), gp_sensitivity_horizontal);
                     M_SliderSound();
                     M_SaveCVARs();
                 }
@@ -3681,7 +3681,7 @@ void M_Drawer(void)
                     }
                     else if (M_StringCompare(name, "M_MSENS") && !M_MSENS)
                         M_DrawString(x, y + OFFSET, (usinggamepad ? s_M_GAMEPADSENSITIVITY : s_M_MOUSESENSITIVITY));
-                    else if (W_CheckMultipleLumps(name) > 1)
+                    else if (W_CheckMultipleLumps(name) > 1 || lumpinfo[W_GetNumForName(name)]->wadfile->type == PWAD)
                         M_DrawPatchWithShadow(x, y + OFFSET, W_CacheLumpName(name));
                     else if (**text)
                         M_DrawString(x, y + OFFSET, *text);
@@ -3789,6 +3789,13 @@ void M_Init(void)
         EpiDef.numitems = 5;
     else
         EpiDef.numitems = 4;
+
+    if (EpiDef.lastOn > EpiDef.numitems)
+    {
+        EpiDef.lastOn = EpiDef.numitems;
+        episode = EpiDef.numitems + 1;
+        M_SaveCVARs();
+    }
 
     if (M_StringCompare(s_EMPTYSTRING, "null data"))
         s_EMPTYSTRING = "-";

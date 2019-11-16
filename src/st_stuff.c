@@ -229,6 +229,8 @@ static int                  st_oldhealth = -1;
 // used for evil grin
 dboolean                    oldweaponsowned[NUMWEAPONS];
 
+int                         st_palette = 0;
+
 // count until face changes
 int                         st_facecount;
 
@@ -420,9 +422,8 @@ void ST_AutomapEvent(int type)
         st_firsttime = true;
 }
 
-extern char     cheatkey;
-extern int      episode;
-extern menu_t   EpiDef;
+extern char cheatkey;
+extern int  episode;
 
 static int ST_CalcPainOffset(void);
 
@@ -442,7 +443,7 @@ dboolean ST_Responder(event_t *ev)
             if (cht_CheckCheat(&cheat_god, ev->data2) && gameskill != sk_nightmare)
             {
                 S_StartSound(NULL, sfx_getpow);
-                C_CCMDOutput(cheat_god.sequence);
+                C_Input(cheat_god.sequence);
 
                 // [BH] if player is dead, resurrect them first
                 if (viewplayer->health <= 0)
@@ -518,7 +519,7 @@ dboolean ST_Responder(event_t *ev)
                 if (ammogiven || armorgiven || berserkgiven || weaponsgiven)
                 {
                     S_StartSound(NULL, sfx_getpow);
-                    C_CCMDOutput(cheat_ammonokey.sequence);
+                    C_Input(cheat_ammonokey.sequence);
 
                     // [BH] flash screen
                     P_AddBonus();
@@ -578,7 +579,7 @@ dboolean ST_Responder(event_t *ev)
                 if (ammogiven || armorgiven || berserkgiven || weaponsgiven || keysgiven)
                 {
                     S_StartSound(NULL, sfx_getpow);
-                    C_CCMDOutput(cheat_ammo.sequence);
+                    C_Input(cheat_ammo.sequence);
 
                     // [BH] flash screen
                     P_AddBonus();
@@ -647,7 +648,7 @@ dboolean ST_Responder(event_t *ev)
                 && viewplayer->health > 0)
             {
                 S_StartSound(NULL, sfx_getpow);
-                C_CCMDOutput(gamemode == commercial ? cheat_commercial_noclip.sequence : cheat_noclip.sequence);
+                C_Input(gamemode == commercial ? cheat_commercial_noclip.sequence : cheat_noclip.sequence);
 
                 viewplayer->cheats ^= CF_NOCLIP;
 
@@ -679,7 +680,7 @@ dboolean ST_Responder(event_t *ev)
                     && viewplayer->health > 0)
                 {
                     S_StartSound(NULL, sfx_getpow);
-                    C_CCMDOutput(cheat_powerup[i - 1].sequence);
+                    C_Input(cheat_powerup[i - 1].sequence);
 
                     if ((i != pw_strength && viewplayer->powers[i] >= 0 && viewplayer->powers[i] <= STARTFLASHING)
                         || (i == pw_strength && !viewplayer->powers[i]))
@@ -819,7 +820,7 @@ dboolean ST_Responder(event_t *ev)
                      && viewplayer->health > 0)
             {
                 S_StartSound(NULL, sfx_getpow);
-                C_CCMDOutput(cheat_choppers.sequence);
+                C_Input(cheat_choppers.sequence);
 
                 if (!(viewplayer->cheats & CF_CHOPPERS))
                 {
@@ -871,7 +872,7 @@ dboolean ST_Responder(event_t *ev)
             else if (cht_CheckCheat(&cheat_mypos, ev->data2))
             {
                 S_StartSound(NULL, sfx_getpow);
-                C_CCMDOutput(cheat_mypos.sequence);
+                C_Input(cheat_mypos.sequence);
 
                 // [BH] message stays on screen until toggled off again using
                 //  cheat. Code is in hu_stuff.c.
@@ -889,7 +890,7 @@ dboolean ST_Responder(event_t *ev)
             else if (cht_CheckCheat(&cheat_buddha, ev->data2) && gameskill != sk_nightmare && viewplayer->health > 0)
             {
                 S_StartSound(NULL, sfx_getpow);
-                C_CCMDOutput(cheat_buddha.sequence);
+                C_Input(cheat_buddha.sequence);
 
                 viewplayer->cheats ^= CF_BUDDHA;
 
@@ -913,7 +914,7 @@ dboolean ST_Responder(event_t *ev)
             else if ((automapactive || mapwindow) && cht_CheckCheat(&cheat_amap, ev->data2))
             {
                 S_StartSound(NULL, sfx_getpow);
-                C_CCMDOutput(cheat_amap.sequence);
+                C_Input(cheat_amap.sequence);
 
                 if (viewplayer->cheats & CF_ALLMAP)
                 {
@@ -1248,8 +1249,6 @@ void ST_Ticker(void)
         }
 }
 
-int st_palette = 0;
-
 static void ST_DoPaletteStuff(void)
 {
     int palette = 0;
@@ -1263,7 +1262,7 @@ static void ST_DoPaletteStuff(void)
         if (viewplayer->bonuscount)
             palette = STARTBONUSPALS - 1 + MIN((viewplayer->bonuscount + 7) >> 3, NUMBONUSPALS);
         else
-            palette = MIN((count >> 3) + r_berserkintensity, NUMREDPALS);
+            palette = MIN((count >> 3) + (doom4vanilla ? r_berserkintensity + 3 : r_berserkintensity), NUMREDPALS);
     }
     else if (count)
         palette = STARTREDPALS + MIN((count + 7) >> 3, NUMREDPALS - 1);

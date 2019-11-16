@@ -212,6 +212,8 @@ void P_UnsetBloodSplatPosition(bloodsplat_t *splat);
 void P_SetThingPosition(mobj_t *thing);
 void P_SetBloodSplatPosition(bloodsplat_t *splat);
 
+void P_CheckIntercepts(void);
+
 //
 // P_MAP
 //
@@ -230,6 +232,7 @@ extern line_t   *blockline;
 
 extern dboolean infight;
 
+void P_CheckSpechits(void);
 dboolean P_CheckPosition(mobj_t *thing, fixed_t x, fixed_t y);
 mobj_t *P_CheckOnmobj(mobj_t *thing);
 void P_FakeZMovement(mobj_t *mo);

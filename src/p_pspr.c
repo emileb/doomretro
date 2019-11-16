@@ -173,7 +173,8 @@ dboolean P_CheckAmmo(weapontype_t weapon)
     else if (viewplayer->weaponowned[wp_shotgun]
         && viewplayer->ammo[am_shell] >= weaponinfo[wp_shotgun].minammo)
         viewplayer->pendingweapon = wp_shotgun;
-    else if (viewplayer->ammo[am_clip] >= weaponinfo[wp_pistol].minammo)
+    else if (viewplayer->weaponowned[wp_pistol]
+        && viewplayer->ammo[am_clip] >= weaponinfo[wp_pistol].minammo)
         viewplayer->pendingweapon = wp_pistol;
     else if (viewplayer->weaponowned[wp_chainsaw])
         viewplayer->pendingweapon = wp_chainsaw;
@@ -326,7 +327,8 @@ void A_ReFire(mobj_t *actor, player_t *player, pspdef_t *psp)
 
 void A_CheckReload(mobj_t *actor, player_t *player, pspdef_t *psp)
 {
-    P_CheckAmmo(player->readyweapon);
+    if (!P_CheckAmmo(player->readyweapon))
+        P_SetPsprite(ps_weapon, weaponinfo[player->readyweapon].downstate);
 }
 
 //

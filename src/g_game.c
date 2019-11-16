@@ -284,12 +284,12 @@ void G_BuildTiccmd(ticcmd_t *cmd)
         if (gamekeydown[keyboardright] || (gamepadbuttons & gamepadright))
             cmd->angleturn -= angleturn[(turnheld < SLOWTURNTICS ? 2 : run)];
         else if (gamepadthumbRX > 0)
-            cmd->angleturn -= (int)(gamepadangleturn[run] * gamepadthumbRXright * gamepadsensitivity);
+            cmd->angleturn -= (int)(gamepadangleturn[run] * gamepadthumbRXright * gamepadhorizontalsensitivity);
 
         if (gamekeydown[keyboardleft] || (gamepadbuttons & gamepadleft))
             cmd->angleturn += angleturn[(turnheld < SLOWTURNTICS ? 2 : run)];
         else if (gamepadthumbRX < 0)
-            cmd->angleturn += (int)(gamepadangleturn[run] * gamepadthumbRXleft * gamepadsensitivity);
+            cmd->angleturn += (int)(gamepadangleturn[run] * gamepadthumbRXleft * gamepadhorizontalsensitivity);
     }
 
     if (gamepadthumbRY)
@@ -298,7 +298,7 @@ void G_BuildTiccmd(ticcmd_t *cmd)
         {
             if (!automapactive)
             {
-                cmd->lookdir = (int)(48 * (gamepadthumbRY < 0 ? gamepadthumbRYup : gamepadthumbRYdown) * gamepadsensitivity);
+                cmd->lookdir = (int)(48 * (gamepadthumbRY < 0 ? gamepadthumbRYup : gamepadthumbRYdown) * gamepadverticalsensitivity);
 
                 if (!gp_invertyaxis)
                     cmd->lookdir = -cmd->lookdir;
@@ -328,7 +328,7 @@ void G_BuildTiccmd(ticcmd_t *cmd)
         if (gp_thumbsticks == 2)
             side = (int)(sidemove[run] * gamepadthumbLXright);
         else
-            cmd->angleturn -= (int)(gamepadangleturn[run] * gamepadthumbLXright * gamepadsensitivity);
+            cmd->angleturn -= (int)(gamepadangleturn[run] * gamepadthumbLXright * gamepadhorizontalsensitivity);
     }
 
     if (gamekeydown[keyboardstrafeleft] || gamekeydown[keyboardstrafeleft2] || (gamepadbuttons & gamepadstrafeleft))
@@ -338,7 +338,7 @@ void G_BuildTiccmd(ticcmd_t *cmd)
         if (gp_thumbsticks == 2)
             side -= (int)(sidemove[run] * gamepadthumbLXleft);
         else
-            cmd->angleturn += (int)(gamepadangleturn[run] * gamepadthumbLXleft * gamepadsensitivity);
+            cmd->angleturn += (int)(gamepadangleturn[run] * gamepadthumbLXleft * gamepadhorizontalsensitivity);
     }
 
     if ((gamekeydown[keyboardjump] || mousebuttons[mousejump] || (gamepadbuttons & gamepadjump)) && !nojump)
@@ -517,7 +517,7 @@ static void G_ResetPlayer(void)
 {
     viewplayer->health = initial_health;
     viewplayer->armorpoints = 0;
-    viewplayer->armortype = NOARMOR;
+    viewplayer->armortype = armortype_none;
     viewplayer->preferredshotgun = wp_shotgun;
     viewplayer->fistorchainsaw = wp_fist;
     memset(viewplayer->weaponowned, false, sizeof(viewplayer->weaponowned));
@@ -1071,7 +1071,7 @@ static void G_DoReborn(void)
     else
     {
         gameaction = ga_loadlevel;
-        C_CCMDOutput("restartmap");
+        C_InputNoRepeat("restartmap");
     }
 }
 
@@ -1148,8 +1148,7 @@ void G_SecretExitLevel(void)
     gameaction = ga_completed;
 }
 
-extern int      episode;
-extern menu_t   EpiDef;
+extern int  episode;
 
 static void G_DoCompleted(void)
 {
@@ -1353,7 +1352,7 @@ static void G_DoCompleted(void)
     stat_mapscompleted = SafeAdd(stat_mapscompleted, 1);
     M_SaveCVARs();
 
-    C_CCMDOutput("exitmap");
+    C_InputNoRepeat("exitmap");
 
     WI_Start(&wminfo);
 }
@@ -1559,6 +1558,8 @@ static void G_DoSaveGame(void)
         rename(savegame_file, backup_savegame_file);
         rename(temp_savegame_file, savegame_file);
 
+        free(backup_savegame_file);
+
         if (!consolestrings || !M_StringStartsWith(console[consolestrings - 1].string, "save "))
             C_Input("save %s", savegame_file);
 
@@ -1741,7 +1742,7 @@ void G_InitNew(skill_t skill, int ep, int map)
         || (!M_StringStartsWith(console[consolestrings - 2].string, "map ")
             && !M_StringStartsWith(console[consolestrings - 1].string, "load ")
             && !M_StringStartsWith(console[consolestrings - 1].string, "Warping ")))
-        C_CCMDOutput("newgame");
+        C_InputNoRepeat("newgame");
 
     G_DoLoadLevel();
 }

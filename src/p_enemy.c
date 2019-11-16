@@ -112,7 +112,7 @@ static void P_RecursiveSound(sector_t *sec, int soundblocks, mobj_t *soundtarget
 void P_NoiseAlert(mobj_t *target)
 {
     // [BH] don't alert if notarget CCMD is enabled
-    if (target && target->player && (viewplayer->cheats & CF_NOTARGET))
+    if (target->player && (viewplayer->cheats & CF_NOTARGET))
         return;
 
     validcount++;
@@ -369,24 +369,21 @@ static dboolean P_SmartMove(mobj_t *actor)
 {
     mobj_t      *target = actor->target;
     int         dropoff = 0;
-    dboolean    onlift;
-    int         underdamage;
+    int         underdamage = P_IsUnderDamage(actor);
 
     // killough 9/12/98: stay on a lift if target is on one
-    onlift = (target && target->health > 0
-        && target->subsector->sector->tag == actor->subsector->sector->tag
-        && actor->subsector->sector->islift);
-
-    underdamage = P_IsUnderDamage(actor);
+    dboolean    onlift = (target && target->health > 0
+                    && target->subsector->sector->tag == actor->subsector->sector->tag
+                    && actor->subsector->sector->islift);
 
     // killough 10/98: allow dogs to drop off of taller ledges sometimes.
     // dropoff==1 means always allow it, dropoff==2 means only up to 128 high,
     // and only if the target is immediately on the other side of the line.
     if (actor->type == MT_DOGS
         && target && !((target->flags ^ actor->flags) & MF_FRIEND)
-        && P_ApproxDistance(actor->x - target->x, actor->y - target->y) < FRACUNIT * 144
+        && (target->player || P_ApproxDistance(actor->x - target->x, actor->y - target->y) < FRACUNIT * 144)
         && M_Random() < 235)
-        dropoff = 2;
+        dropoff = (target->player ? 1 : 2);
 
     if (!P_Move(actor, dropoff))
         return false;
@@ -663,7 +660,7 @@ static dboolean P_LookForMonsters(mobj_t *actor)
         if (!(mo->flags & MF_COUNTKILL) || mo == actor || mo->health <= 0)
             continue;           // not a valid monster
 
-        if (!((mo->flags ^ actor->flags) & MF_FRIEND))
+        if (!((mo->flags ^ actor->flags) & MF_FRIEND) && !infight)
             continue;           // don't attack other friends
 
         // If the monster is already engaged in a one-on-one attack
@@ -703,16 +700,14 @@ static dboolean P_LookForMonsters(mobj_t *actor)
 //
 static dboolean P_LookForPlayer(mobj_t *actor, dboolean allaround)
 {
-    mobj_t  *mo;
+    mobj_t  *mo = viewplayer->mo;
 
     // the player is dead, if near the player then look for other monsters
-    if (infight && P_CheckSight(actor, viewplayer->mo))
+    if (infight && P_CheckSight(actor, mo))
         return P_LookForMonsters(actor);
 
     if (viewplayer->cheats & CF_NOTARGET)
         return false;
-
-    mo = viewplayer->mo;
 
     // killough 9/9/98: friendly monsters go about players differently
     if (actor->flags & MF_FRIEND)
@@ -1169,7 +1164,7 @@ void A_CyberAttack(mobj_t *actor, player_t *player, pspdef_t *psp)
     mo = P_SpawnMissile(actor, target, MT_ROCKET);
 
     // [BH] give cyberdemon rockets smoke trails
-    if (r_rockettrails && !D4V)
+    if (r_rockettrails && !doom4vanilla)
         mo->flags2 |= MF2_SMOKETRAIL;
 }
 
@@ -1232,7 +1227,7 @@ void A_Tracer(mobj_t *actor, player_t *player, pspdef_t *psp)
         return;
 
     // spawn a puff of smoke behind the homing rocket
-    if (!D4V)
+    if (!doom4vanilla)
         P_SpawnSmokeTrail(actor->x, actor->y, actor->z, actor->angle);
 
     // adjust direction
@@ -2322,7 +2317,7 @@ void A_PlaySound(mobj_t *actor, player_t *player, pspdef_t *psp)
 
 void A_RandomJump(mobj_t *actor, player_t *player, pspdef_t *psp)
 {
-    // [BH] allow A_RandomJump to work for weapon states as well
+    // [BH] allow A_RandomJump() to work for weapon states as well
     if (psp)
     {
         state_t *state = psp->state;

@@ -117,7 +117,7 @@ extern dboolean         E1M4B;
 extern dboolean         E1M8B;
 extern dboolean         sprfix18;
 extern dboolean         eviternity;
-extern dboolean         D4V;
+extern dboolean         doom4vanilla;
 
 extern dboolean         DMENUPIC;
 extern dboolean         FREEDOOM;
@@ -198,7 +198,7 @@ extern gamestate_t      gamestate;
 //  WAD, partly set at startup time.
 
 extern int              gametime;
-extern struct tm        *gamestarttime;
+extern struct tm        gamestarttime;
 
 extern int              vid_capfps;
 extern dboolean         realframe;

@@ -63,7 +63,6 @@ dboolean        autousing = false;
 int             deathcount = 0;
 int             deadlookdir = -1;
 
-extern fixed_t  animatedliquiddiff;
 extern dboolean canmouselook;
 extern dboolean skipaction;
 extern dboolean usemouselook;
@@ -252,7 +251,7 @@ void P_MovePlayer(void)
         }
     }
 
-    if (autotilt && !mouselook)
+    if (autotilt && !(mouselook || freeze || (viewplayer->cheats & MF_NOCLIP)))
     {
         if (!P_CheckForSteps(32) && !P_CheckForSteps(24))
         {
@@ -261,11 +260,8 @@ void P_MovePlayer(void)
                 if ((viewplayer->lookdir -= AUTOTILTUNIT) < AUTOTILTUNIT)
                     viewplayer->lookdir = 0;
             }
-            else
-            {
-                if ((viewplayer->lookdir += AUTOTILTUNIT) > -AUTOTILTUNIT)
-                    viewplayer->lookdir = 0;
-            }
+            else if ((viewplayer->lookdir += AUTOTILTUNIT) > -AUTOTILTUNIT)
+                viewplayer->lookdir = 0;
         }
     }
     else if (canmouselook)
@@ -280,11 +276,8 @@ void P_MovePlayer(void)
                 if ((viewplayer->lookdir -= 16 * MLOOKUNIT) < 16 * MLOOKUNIT)
                     viewplayer->lookdir = 0;
             }
-            else
-            {
-                if ((viewplayer->lookdir += 16 * MLOOKUNIT) > -16 * MLOOKUNIT)
-                    viewplayer->lookdir = 0;
-            }
+            else if ((viewplayer->lookdir += 16 * MLOOKUNIT) > -16 * MLOOKUNIT)
+                viewplayer->lookdir = 0;
         }
     }
 }
@@ -455,6 +448,8 @@ void P_ChangeWeapon(weapontype_t newweapon)
                 newweapon = wp_chainsaw;
                 viewplayer->fistorchainsaw = wp_chainsaw;
             }
+            else
+                newweapon = wp_nochange;
         }
         else if (viewplayer->readyweapon == wp_chainsaw)
         {

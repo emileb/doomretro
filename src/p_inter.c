@@ -59,16 +59,16 @@ int             initial_health = 100;
 int             initial_bullets = 50;
 int             maxhealth = MAXHEALTH * 2;
 int             max_armor = 200;
-int             green_armor_class = GREENARMOR;
-int             blue_armor_class = BLUEARMOR;
+int             green_armor_class = armortype_green;
+int             blue_armor_class = armortype_blue;
 int             max_soul = 200;
 int             soul_health = 100;
 int             mega_health = 200;
 int             god_health = 100;
 int             idfa_armor = 200;
-int             idfa_armor_class = BLUEARMOR;
+int             idfa_armor_class = armortype_blue;
 int             idkfa_armor = 200;
-int             idkfa_armor_class = BLUEARMOR;
+int             idkfa_armor_class = armortype_blue;
 int             bfgcells = BFGCELLS;
 dboolean        species_infighting = false;
 
@@ -144,8 +144,6 @@ void P_UpdateAmmoStat(ammotype_t ammotype, int num)
             break;
     }
 }
-
-dboolean P_CheckAmmo(weapontype_t weapon);
 
 //
 // P_TakeAmmo
@@ -778,7 +776,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, dboolean message, dbo
                 armorhighlight = I_GetTimeMS() + HUD_ARMOR_HIGHLIGHT_WAIT;
 
                 if (!viewplayer->armortype)
-                    viewplayer->armortype = GREENARMOR;
+                    viewplayer->armortype = armortype_green;
             }
 
             if (message)
@@ -1220,7 +1218,7 @@ dboolean P_TakeSpecialThing(mobjtype_t type)
     {
         // green armor
         case MT_MISC0:
-            if (viewplayer->armortype != GREENARMOR)
+            if (viewplayer->armortype != armortype_green)
                 return false;
 
             if (viewplayer->armorpoints < green_armor_class * 100)
@@ -1232,7 +1230,7 @@ dboolean P_TakeSpecialThing(mobjtype_t type)
 
         // blue armor
         case MT_MISC1:
-            if (viewplayer->armortype != BLUEARMOR)
+            if (viewplayer->armortype != armortype_blue)
                 return false;
 
             if (viewplayer->armorpoints < blue_armor_class * 100)
@@ -1414,12 +1412,10 @@ dboolean P_TakeSpecialThing(mobjtype_t type)
                 return false;
 
             viewplayer->powers[pw_strength] = 0;
+            viewplayer->fistorchainsaw = wp_chainsaw;
 
             if (viewplayer->readyweapon == wp_fist && viewplayer->weaponowned[wp_chainsaw])
-            {
                 viewplayer->pendingweapon = wp_chainsaw;
-                viewplayer->fistorchainsaw = wp_chainsaw;
-            }
 
             return true;
 
@@ -1673,8 +1669,8 @@ static void P_WriteObituary(mobj_t *target, mobj_t *inflicter, mobj_t *source, d
                     M_StringCopy(targetname, target->name, sizeof(targetname));
                 else
                     M_snprintf(targetname, sizeof(targetname), "%s %s%s",
-                        ((target->flags & MF_FRIEND) && monstercount[target->type] == 1 ? "the"
-                            : (isvowel(target->info->name1[0]) ? "an" : "a")),
+                        ((target->flags & MF_FRIEND) && monstercount[target->type] == 1 ? "the" :
+                            (isvowel(target->info->name1[0]) ? "an" : "a")),
                         ((target->flags & MF_FRIEND) ? "friendly " : ""),
                         (*target->info->name1 ? target->info->name1 : "monster"));
 
@@ -1704,8 +1700,8 @@ static void P_WriteObituary(mobj_t *target, mobj_t *inflicter, mobj_t *source, d
                             M_StringCopy(targetname, target->name, sizeof(targetname));
                         else
                             M_snprintf(targetname, sizeof(targetname), "%s %s%s",
-                                ((target->flags & MF_FRIEND) && monstercount[target->type] == 1 ? "the"
-                                    : (isvowel(target->info->name1[0]) ? "an" : "a")),
+                                ((target->flags & MF_FRIEND) && monstercount[target->type] == 1 ? "the" :
+                                    (isvowel(target->info->name1[0]) ? "an" : "a")),
                                 ((target->flags & MF_FRIEND) ? "friendly " : ""),
                                 (*target->info->name1 ? target->info->name1 : "monster"));
 
@@ -1731,8 +1727,8 @@ static void P_WriteObituary(mobj_t *target, mobj_t *inflicter, mobj_t *source, d
                             M_StringCopy(targetname, target->name, sizeof(targetname));
                         else
                             M_snprintf(targetname, sizeof(targetname), "%s %s%s",
-                                ((target->flags & MF_FRIEND) && monstercount[target->type] == 1 ? "the"
-                                    : (isvowel(target->info->name1[0]) ? "an" : "a")),
+                                ((target->flags & MF_FRIEND) && monstercount[target->type] == 1 ? "the" :
+                                    (isvowel(target->info->name1[0]) ? "an" : "a")),
                                 ((target->flags & MF_FRIEND) ? "friendly " : ""),
                                 (*target->info->name1 ? target->info->name1 : "monster"));
 
@@ -1764,8 +1760,8 @@ static void P_WriteObituary(mobj_t *target, mobj_t *inflicter, mobj_t *source, d
                         M_StringCopy(targetname, target->name, sizeof(targetname));
                     else
                         M_snprintf(targetname, sizeof(targetname), "%s %s%s",
-                            ((target->flags &MF_FRIEND) && monstercount[target->type] == 1 ? "the"
-                                : (isvowel(target->info->name1[0]) ? "an" : "a")),
+                            ((target->flags &MF_FRIEND) && monstercount[target->type] == 1 ? "the" :
+                                (isvowel(target->info->name1[0]) ? "an" : "a")),
                             ((target->flags & MF_FRIEND) ? "friendly " : ""),
                             (*target->info->name1 ? target->info->name1 : "monster"));
 
@@ -1780,8 +1776,8 @@ static void P_WriteObituary(mobj_t *target, mobj_t *inflicter, mobj_t *source, d
                     M_StringCopy(sourcename, source->name, sizeof(sourcename));
                 else
                     M_snprintf(sourcename, sizeof(sourcename), "%s %s%s",
-                        ((source->flags &MF_FRIEND) && monstercount[source->type] == 1 ? "the"
-                            : (isvowel(source->info->name1[0]) ? "an" : "a")),
+                        ((source->flags &MF_FRIEND) && monstercount[source->type] == 1 ? "the" :
+                            (isvowel(source->info->name1[0]) ? "an" : "a")),
                         ((source->flags & MF_FRIEND) ? "friendly " : ""),
                         (*source->info->name1 ? source->info->name1 : "monster"));
 
@@ -1798,9 +1794,9 @@ static void P_WriteObituary(mobj_t *target, mobj_t *inflicter, mobj_t *source, d
                         M_StringCopy(targetname, target->name, sizeof(targetname));
                     else
                         M_snprintf(targetname, sizeof(targetname), "%s %s%s",
-                            (source->type == target->type ? "another"
-                                : ((target->flags & MF_FRIEND) && monstercount[target->type] == 1 ? "the"
-                                : (isvowel(target->info->name1[0]) ? "an" : "a"))),
+                            (source->type == target->type ? "another" :
+                                ((target->flags & MF_FRIEND) && monstercount[target->type] == 1 ? "the" :
+                                (isvowel(target->info->name1[0]) ? "an" : "a"))),
                             ((target->flags & MF_FRIEND) ? "friendly " : ""),
                             (*target->info->name1 ? target->info->name1 : "monster"));
 
@@ -1885,7 +1881,7 @@ void P_KillMobj(mobj_t *target, mobj_t *inflicter, mobj_t *source)
         if (!(target->flags & MF_FUZZ))
             target->bloodsplats = CORPSEBLOODSPLATS;
 
-        if (r_corpses_mirrored && type != MT_CHAINGUY && type != MT_CYBORG && (type != MT_PAIN || !D4V) && (M_Random() & 1))
+        if (r_corpses_mirrored && type != MT_CHAINGUY && type != MT_CYBORG && (type != MT_PAIN || !doom4vanilla) && (M_Random() & 1))
             target->flags2 |= MF2_MIRRORED;
     }
 
@@ -1939,7 +1935,7 @@ void P_KillMobj(mobj_t *target, mobj_t *inflicter, mobj_t *source)
 
     target->tics = MAX(1, target->tics - (M_Random() & 3));
 
-    if (type == MT_BARREL || (type == MT_PAIN && !D4V) || type == MT_SKULL)
+    if (type == MT_BARREL || (type == MT_PAIN && !doom4vanilla) || type == MT_SKULL)
         target->flags2 &= ~MF2_CASTSHADOW;
 
     if (chex)
@@ -2069,13 +2065,13 @@ void P_DamageMobj(mobj_t *target, mobj_t *inflicter, mobj_t *source, int damage,
 
         if (adjust && tplayer->armorpoints)
         {
-            int saved = damage / (tplayer->armortype == GREENARMOR ? 3 : 2);
+            int saved = damage / (tplayer->armortype == armortype_green ? 3 : 2);
 
             if (tplayer->armorpoints <= saved)
             {
                 // armor is used up
                 saved = tplayer->armorpoints;
-                tplayer->armortype = NOARMOR;
+                tplayer->armortype = armortype_none;
             }
 
             tplayer->armorpoints -= saved;
@@ -2134,9 +2130,9 @@ void P_DamageMobj(mobj_t *target, mobj_t *inflicter, mobj_t *source, int damage,
 
             if (!(flags & MF_FUZZ))
             {
-                if (type == MT_BARREL || (type == MT_PAIN && !D4V) || type == MT_SKULL)
+                if (type == MT_BARREL || (type == MT_PAIN && !doom4vanilla) || type == MT_SKULL)
                     target->colfunc = tlredcolfunc;
-                else if (type == MT_BRUISER || (type == MT_KNIGHT && !D4V))
+                else if (type == MT_BRUISER || (type == MT_KNIGHT && !doom4vanilla))
                     target->colfunc = redtogreencolfunc;
             }
 

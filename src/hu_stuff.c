@@ -599,7 +599,7 @@ static void HU_DrawHUD(void)
 
         armor_x = HUD_ARMOR_X - (armor_x + (armor_x & 1) + tallpercentwidth) / 2;
 
-        if ((patch = (viewplayer->armortype == GREENARMOR ? greenarmorpatch : bluearmorpatch)))
+        if ((patch = (viewplayer->armortype == armortype_green ? greenarmorpatch : bluearmorpatch)))
             hudfunc(HUD_ARMOR_X - SHORT(patch->width) / 2, HUD_ARMOR_Y - SHORT(patch->height) - 3, patch, tinttab66);
 
         if (armorhighlight > currenttime)
@@ -840,7 +840,7 @@ static void HU_DrawAltHUD(void)
 
     if (armor)
     {
-        barcolor2 = (viewplayer->armortype == GREENARMOR ? green : blue);
+        barcolor2 = (viewplayer->armortype == armortype_green ? green : blue);
         barcolor1 = barcolor2 + coloroffset;
         DrawAltHUDNumber2(ALTHUD_LEFT_X - AltHUDNumber2Width(armor), ALTHUD_Y, armor, color);
         althudfunc(ALTHUD_LEFT_X + 5, ALTHUD_Y, altarmpatch, WHITE, color);
@@ -1068,10 +1068,6 @@ void HU_Erase(void)
         HUlib_EraseTextLine(&w_title);
 }
 
-extern fixed_t  m_x, m_y;
-extern fixed_t  m_h, m_w;
-extern int      direction;
-
 void HU_Ticker(void)
 {
     const dboolean  idmypos = viewplayer->cheats & CF_MYPOS;
@@ -1097,18 +1093,24 @@ void HU_Ticker(void)
 
         if (automapactive && !am_followmode)
         {
-            int x = (m_x + m_w / 2) >> MAPBITS;
-            int y = (m_y + m_h / 2) >> MAPBITS;
+            mpoint_t    center = am_frame.center;
+            int         x = center.x >> MAPBITS;
+            int         y = center.y >> MAPBITS;
 
             M_snprintf(buffer, sizeof(buffer), s_STSTR_MYPOS, direction, x, y,
                 R_PointInSubsector(x, y)->sector->floorheight >> FRACBITS);
         }
         else
         {
-            int angle = (int)(viewangle * 90.0 / ANG90);
+            int     angle = (int)(viewangle * 90.0 / ANG90);
+            mobj_t  *mo = viewplayer->mo;
+            int     z = mo->z;
+
+            if ((mo->flags2 & MF2_FEETARECLIPPED) && r_liquid_lowerview)
+                z -= FOOTCLIPSIZE;
 
             M_snprintf(buffer, sizeof(buffer), s_STSTR_MYPOS, (angle == 360 ? 0 : angle),
-                viewx >> FRACBITS, viewy >> FRACBITS, viewplayer->mo->z >> FRACBITS);
+                viewx >> FRACBITS, viewy >> FRACBITS, z >> FRACBITS);
         }
 
         HUlib_AddMessageToSText(&w_message, buffer);
@@ -1138,7 +1140,7 @@ void HU_Ticker(void)
                     message[len] = '.';
                     message[len + 1] = '\0';
                 }
-                else
+                else if (len >= 1)
                 {
                     message[len - 1] = '.';
                     message[len] = '.';

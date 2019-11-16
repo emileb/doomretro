@@ -61,6 +61,7 @@
 
 #include "SDL.h"
 
+#include "c_console.h"
 #include "doomdef.h"
 #include "i_system.h"
 #include "m_misc.h"
@@ -169,7 +170,7 @@ char *M_GetAppDataFolder(void)
     // On Linux and macOS, if ../share/doomretro doesn't exist then we're dealing with
     // a portable installation, and we write doomretro.cfg to the executable directory.
     char    *resourcefolder = M_StringJoin(executablefolder,
-                DIR_SEPARATOR_S".."DIR_SEPARATOR_S"share"DIR_SEPARATOR_S PACKAGE, NULL);
+                DIR_SEPARATOR_S ".." DIR_SEPARATOR_S "share" DIR_SEPARATOR_S PACKAGE, NULL);
     DIR     *resourcedir = opendir(resourcefolder);
 
     free(resourcefolder);
@@ -195,7 +196,7 @@ char *M_GetAppDataFolder(void)
 
         free(executablefolder);
 
-        return M_StringJoin(buffer, DIR_SEPARATOR_S".config"DIR_SEPARATOR_S PACKAGE, NULL);
+        return M_StringJoin(buffer, DIR_SEPARATOR_S ".config" DIR_SEPARATOR_S PACKAGE, NULL);
 #endif
     }
     else
@@ -211,7 +212,7 @@ char *M_GetResourceFolder(void)
     // On Linux and macOS, first assume that the executable is in .../bin and
     // try to load resources from ../share/doomretro.
     char    *resourcefolder = M_StringJoin(executablefolder,
-                DIR_SEPARATOR_S".."DIR_SEPARATOR_S"share"DIR_SEPARATOR_S PACKAGE, NULL);
+                DIR_SEPARATOR_S ".." DIR_SEPARATOR_S "share" DIR_SEPARATOR_S PACKAGE, NULL);
     DIR     *resourcedir = opendir(resourcefolder);
 
     if (resourcedir)
@@ -458,19 +459,19 @@ char *M_StringDuplicate(const char *orig)
     char    *result = strdup(orig);
 
     if (!result)
-        I_Error("Failed to duplicate string (length %llu).", strlen(orig));
+        I_Error("Failed to duplicate string %s.", stringize(orig));
 
     return result;
 }
 
-// Returns true if 'str1' and 'str2' are the same.
+// Returns true if str1 and str2 are the same.
 // (Case-insensitive, return value reverse of strcasecmp() to avoid confusion.
 dboolean M_StringCompare(const char *str1, const char *str2)
 {
     return !strcasecmp(str1, str2);
 }
 
-// Returns true if 's' begins with the specified prefix.
+// Returns true if string begins with the specified prefix.
 dboolean M_StringStartsWith(const char *s, const char *prefix)
 {
     size_t  len = strlen(prefix);
@@ -478,7 +479,7 @@ dboolean M_StringStartsWith(const char *s, const char *prefix)
     return (strlen(s) >= len && !strncasecmp(s, prefix, len));
 }
 
-// Returns true if 's' ends with the specified suffix.
+// Returns true if string ends with the specified suffix.
 dboolean M_StringEndsWith(const char *s, const char *suffix)
 {
     size_t  len1 = strlen(s);

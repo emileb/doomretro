@@ -153,6 +153,8 @@ void P_LineOpening(line_t *line)
 {
     sector_t    *front;
     sector_t    *back;
+    fixed_t     frontfloor;
+    fixed_t     backfloor;
 
     if (line->sidenum[1] == NO_INDEX)
     {
@@ -164,16 +166,18 @@ void P_LineOpening(line_t *line)
     front = line->frontsector;
     back = line->backsector;
     opentop = MIN(front->ceilingheight, back->ceilingheight);
+    frontfloor = front->floorheight;
+    backfloor = back->floorheight;
 
-    if (front->floorheight > back->floorheight)
+    if (frontfloor > backfloor)
     {
-        openbottom = front->floorheight;
-        lowfloor = back->floorheight;
+        openbottom = frontfloor;
+        lowfloor = backfloor;
     }
     else
     {
-        openbottom = back->floorheight;
-        lowfloor = front->floorheight;
+        openbottom = backfloor;
+        lowfloor = frontfloor;
     }
 
     openrange = opentop - openbottom;
@@ -407,7 +411,7 @@ static intercept_t  *intercepts;
 static intercept_t  *intercept_p;
 
 // Check for limit and double size if necessary -- killough
-static void check_intercept(void)
+void P_CheckIntercepts(void)
 {
     static size_t   num_intercepts;
     size_t          offset = intercept_p - intercepts;
@@ -459,7 +463,7 @@ static dboolean PIT_AddLineIntercepts(line_t *ld)
     if ((frac = P_InterceptVector(&dltrace, &dl)) < 0)
         return true;    // behind source
 
-    check_intercept();  // killough
+    P_CheckIntercepts();  // killough
 
     intercept_p->frac = frac;
     intercept_p->isaline = true;
@@ -533,7 +537,7 @@ static dboolean PIT_AddThingIntercepts(mobj_t *thing)
                 if (frac < 0)
                     continue;
 
-                check_intercept();  // killough
+                P_CheckIntercepts();  // killough
 
                 intercept_p->frac = frac;
                 intercept_p->isaline = false;
@@ -549,7 +553,7 @@ static dboolean PIT_AddThingIntercepts(mobj_t *thing)
     // must have started inside the box, so add it as an intercept.
     if (!numfronts)
     {
-        check_intercept();  // killough
+        P_CheckIntercepts();  // killough
 
         intercept_p->frac = 0;
         intercept_p->isaline = false;
@@ -606,12 +610,12 @@ dboolean P_PathTraverse(fixed_t x1, fixed_t y1, fixed_t x2, fixed_t y2, int flag
     fixed_t xt2, yt2;
     int64_t _x1, _y1;
     int64_t _x2, _y2;
-    fixed_t xstep, ystep;
-    fixed_t partial;
+    fixed_t xstep = 256 * FRACUNIT, ystep = 256 * FRACUNIT;
+    fixed_t partial = FRACUNIT;
     fixed_t xintercept, yintercept;
     int     mapx, mapy;
     int     mapx1, mapy1;
-    int     mapxstep, mapystep;
+    int     mapxstep = 0, mapystep = 0;
 
     validcount++;
     intercept_p = intercepts;
@@ -657,12 +661,6 @@ dboolean P_PathTraverse(fixed_t x1, fixed_t y1, fixed_t x2, fixed_t y2, int flag
         partial = mapx1 & (FRACUNIT - 1);
         ystep = FixedDiv(y2 - y1, ABS(x2 - x1));
     }
-    else
-    {
-        mapxstep = 0;
-        partial = FRACUNIT;
-        ystep = 256 * FRACUNIT;
-    }
 
     yintercept = mapy1 + FixedMul(partial, ystep);
 
@@ -677,12 +675,6 @@ dboolean P_PathTraverse(fixed_t x1, fixed_t y1, fixed_t x2, fixed_t y2, int flag
         mapystep = -1;
         partial = mapy1 & (FRACUNIT - 1);
         xstep = FixedDiv(x2 - x1, ABS(y2 - y1));
-    }
-    else
-    {
-        mapystep = 0;
-        partial = FRACUNIT;
-        xstep = 256 * FRACUNIT;
     }
 
     xintercept = mapx1 + FixedMul(partial, xstep);

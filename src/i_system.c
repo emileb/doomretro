@@ -51,8 +51,6 @@
 #include "s_sound.h"
 #include "version.h"
 
-extern dboolean returntowidescreen;
-
 #if defined(_WIN32)
 extern char     *previouswad;
 
@@ -186,16 +184,15 @@ void I_PrintWindowsVersion(void)
             else if (info.dwMajorVersion == 10)
                 M_StringCopy(infoname, (info.wProductType == VER_NT_WORKSTATION ? "10" : "Server 2016"), sizeof(infoname));
 
-            C_Output("Running on %d-bit <i><b>Microsoft Windows %s%s%s%s%ws%s (Build %s)</b></i>.",
+            C_Output("Running on %i-bit <i><b>Microsoft Windows %s%s%s%s%ws%s (Build %s)</b></i>.",
                 bits, infoname, (*typename ? " " : ""), typename, (wcslen(info.szCSDVersion) ? " (" : ""),
-                (wcslen(info.szCSDVersion) ? info.szCSDVersion : L""), (wcslen(info.szCSDVersion) ? ")" : ""),
-                build);
+                (wcslen(info.szCSDVersion) ? info.szCSDVersion : L""), (wcslen(info.szCSDVersion) ? ")" : ""), build);
 
             free(build);
         }
 
         if (bits == 64 && sizeof(intptr_t) == 4)
-            C_Warning("The 64-bit version of <i>DOOM Retro</i> is recommended on this system.");
+            C_Warning("The 64-bit version of <i>" PACKAGE_NAME "</i> is recommended on this system.");
     }
 }
 #endif
@@ -205,7 +202,8 @@ void I_PrintSystemInfo(void)
     int     cores = SDL_GetCPUCount();
     char    *ram = commify(SDL_GetSystemRAM() / 1000);
 
-    C_Output("There %s %i logical core%s and %sGB of system RAM.", (cores > 1 ? "are" : "is"), cores, (cores > 1 ? "s" : ""), ram);
+    C_Output("There %s %i logical core%s and %sGB of system RAM on this PC.",
+        (cores > 1 ? "are" : "is"), cores, (cores > 1 ? "s" : ""), ram);
     free(ram);
 }
 
@@ -268,7 +266,8 @@ void I_Error(const char *error, ...)
         vid_widescreen = true;
 
 #if defined(_WIN32)
-    wad = M_StringDuplicate(previouswad);
+    if (previouswad)
+        wad = M_StringDuplicate(previouswad);
 #endif
 
     M_SaveCVARs();
@@ -314,7 +313,7 @@ void *I_Realloc(void *ptr, size_t size)
     void    *newp = realloc(ptr, size);
 
     if (!newp && size)
-        I_Error("I_Realloc: Failure trying to reallocate %i bytes", size);
+        I_Error("I_Realloc: Failure trying to reallocate %zu bytes", size);
 
     ptr = newp;
 

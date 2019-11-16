@@ -46,7 +46,8 @@ dboolean                    gp_analog = gp_analog_default;
 float                       gp_deadzone_left = gp_deadzone_left_default;
 float                       gp_deadzone_right = gp_deadzone_right_default;
 dboolean                    gp_invertyaxis = gp_invertyaxis_default;
-int                         gp_sensitivity = gp_sensitivity_default;
+int                         gp_sensitivity_horizontal = gp_sensitivity_horizontal_default;
+int                         gp_sensitivity_vertical = gp_sensitivity_vertical_default;
 dboolean                    gp_swapthumbsticks = gp_swapthumbsticks_default;
 int                         gp_thumbsticks = gp_thumbsticks_default;
 int                         gp_vibrate_barrels = gp_vibrate_barrels_default;
@@ -62,7 +63,8 @@ short                       gamepadthumbLX;
 short                       gamepadthumbLY;
 short                       gamepadthumbRX;
 short                       gamepadthumbRY;
-float                       gamepadsensitivity;
+float                       gamepadhorizontalsensitivity;
+float                       gamepadverticalsensitivity;
 short                       gamepadleftdeadzone;
 short                       gamepadrightdeadzone;
 
@@ -108,12 +110,12 @@ void I_InitGamepad(void)
             if (*name)
             {
                 if (M_StrCaseStr(name, "xinput"))
-                    C_Output("An <i><b>XInput</b></i> gamepad is connected.");
+                    C_OutputNoRepeat("An <i><b>XInput</b></i> gamepad is connected.");
                 else
-                    C_Output("A <i><b>DirectInput</b></i> gamepad called \"%s\" is connected.", name);
+                    C_OutputNoRepeat("A <i><b>DirectInput</b></i> gamepad called \"%s\" is connected.", name);
             }
             else
-                C_Output("A gamepad is connected.");
+                C_OutputNoRepeat("A gamepad is connected.");
 
             if (!(haptic = SDL_HapticOpenFromJoystick(joystick)) || SDL_HapticRumbleInit(haptic) < 0)
                 C_Warning("This gamepad doesn't support vibration.");
@@ -183,9 +185,16 @@ void I_StopGamepadVibration(void)
         SDL_HapticRumbleStop(haptic);
 }
 
-void I_SetGamepadSensitivity(void)
+void I_SetGamepadHorizontalSensitivity(void)
 {
-    gamepadsensitivity = (!gp_sensitivity ? 0.0f : 4.0f * gp_sensitivity / gp_sensitivity_max + 0.2f);
+    gamepadhorizontalsensitivity = (!gp_sensitivity_horizontal ? 0.0f :
+        4.0f * gp_sensitivity_horizontal / gp_sensitivity_horizontal_max + 0.2f);
+}
+
+void I_SetGamepadVerticalSensitivity(void)
+{
+    gamepadverticalsensitivity = (!gp_sensitivity_vertical ? 0.0f :
+        4.0f * gp_sensitivity_vertical / gp_sensitivity_vertical_max + 0.2f);
 }
 
 void I_SetGamepadLeftDeadZone(void)

@@ -79,7 +79,8 @@ extern dboolean     gp_analog;
 extern float        gp_deadzone_left;
 extern float        gp_deadzone_right;
 extern dboolean     gp_invertyaxis;
-extern int          gp_sensitivity;
+extern int          gp_sensitivity_horizontal;
+extern int          gp_sensitivity_vertical;
 extern dboolean     gp_swapthumbsticks;
 extern int          gp_thumbsticks;
 extern int          gp_vibrate_barrels;
@@ -284,7 +285,7 @@ enum
 #define am_gridsize_default                     "128x128"
 
 #define am_gridcolor_min                        0
-#define am_gridcolor_default                    6
+#define am_gridcolor_default                    111
 #define am_gridcolor_max                        255
 
 #define am_markcolor_min                        0
@@ -327,9 +328,9 @@ enum
 #define armor_default                           0
 #define armor_max                               INT_MAX
 
-#define armortype_min                           NOARMOR
-#define armortype_default                       NOARMOR
-#define armortype_max                           BLUEARMOR
+#define armortype_min                           armortype_none
+#define armortype_default                       armortype_none
+#define armortype_max                           armortype_blue
 
 #define autoaim_default                         true
 
@@ -384,9 +385,13 @@ enum
 
 #define gp_invertyaxis_default                  false
 
-#define gp_sensitivity_min                      0
-#define gp_sensitivity_default                  64
-#define gp_sensitivity_max                      128
+#define gp_sensitivity_horizontal_min           0
+#define gp_sensitivity_horizontal_default       64
+#define gp_sensitivity_horizontal_max           128
+
+#define gp_sensitivity_vertical_min             0
+#define gp_sensitivity_vertical_default         64
+#define gp_sensitivity_vertical_max             128
 
 #define gp_swapthumbsticks_default              false
 

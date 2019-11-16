@@ -74,7 +74,7 @@ static int      tmunstuck;      // killough 8/1/98: whether to allow unsticking
 
 // 1/11/98 killough: removed limit on special lines crossed
 line_t          **spechit;
-int             numspechit;
+int             numspechit = 0;
 
 static angle_t  shootangle;     // [BH] angle of blood and puffs for automap
 
@@ -303,17 +303,20 @@ dboolean P_TeleportMove(mobj_t *thing, fixed_t x, fixed_t y, fixed_t z, dboolean
 // intersection of the trajectory and the line, but that takes
 // longer and probably really isn't worth the effort.
 //
-// killough 11/98: reformatted
-//
 // [BH] Allow pain elementals to shoot lost souls through 2-sided walls with an ML_BLOCKMONSTERS
 //  flag. This is a compromise between BOOM and Vanilla DOOM behaviors, and allows pain elementals
 //  at the end of REQUIEM.WAD's MAP04 to do their thing.
 static dboolean PIT_CrossLine(line_t *ld)
 {
-    return (!((ld->flags ^ ML_TWOSIDED) & (ML_TWOSIDED | ML_BLOCKING/* | ML_BLOCKMONSTERS*/))
-        || tmbbox[BOXLEFT] > ld->bbox[BOXRIGHT] || tmbbox[BOXRIGHT] < ld->bbox[BOXLEFT]
-        || tmbbox[BOXTOP] < ld->bbox[BOXBOTTOM] || tmbbox[BOXBOTTOM] > ld->bbox[BOXTOP]
-        || P_PointOnLineSide(pe_x, pe_y, ld) == P_PointOnLineSide(ls_x, ls_y, ld));
+    if (!(ld->flags & ML_TWOSIDED) || (ld->flags & (ML_BLOCKING/* | ML_BLOCKMONSTERS*/)))
+        if (!(tmbbox[BOXLEFT] > ld->bbox[BOXRIGHT]
+            || tmbbox[BOXRIGHT] < ld->bbox[BOXLEFT]
+            || tmbbox[BOXTOP]    < ld->bbox[BOXBOTTOM]
+            || tmbbox[BOXBOTTOM] > ld->bbox[BOXTOP]))
+            if (P_PointOnLineSide(pe_x, pe_y, ld) != P_PointOnLineSide(ls_x, ls_y, ld))
+                return false;   // line blocks trajectory
+
+    return true;                // line doesn't block trajectory
 }
 
 // killough 8/1/98: used to test intersection between thing and line
@@ -329,6 +332,18 @@ static int untouched(line_t *ld)
         || (bbox[BOXTOP] = (y = tmthing->y) + tmradius) <= ld->bbox[BOXBOTTOM]
         || (bbox[BOXBOTTOM] = y - tmradius) >= ld->bbox[BOXTOP]
         || P_BoxOnLineSide(bbox, ld) != -1);
+}
+
+void P_CheckSpechits(void)
+{
+    static int  spechit_max;
+
+    // 1/11/98 killough: remove limit on lines hit, by array doubling
+    if (numspechit >= spechit_max)
+    {
+        spechit_max = (spechit_max ? spechit_max * 2 : 8);
+        spechit = I_Realloc(spechit, sizeof(*spechit) * spechit_max);
+    }
 }
 
 //
@@ -397,15 +412,7 @@ static dboolean PIT_CheckLine(line_t *ld)
     // if contacted a special line, add it to the list
     if (ld->special)
     {
-        static int  spechit_max;
-
-        // 1/11/98 killough: remove limit on lines hit, by array doubling
-        if (numspechit >= spechit_max)
-        {
-            spechit_max = (spechit_max ? spechit_max * 2 : 8);
-            spechit = I_Realloc(spechit, sizeof(*spechit) * spechit_max);
-        }
-
+        P_CheckSpechits();
         spechit[numspechit++] = ld;
     }
 
@@ -458,7 +465,7 @@ static dboolean PIT_CheckThing(mobj_t *thing)
     blockdist = thing->info->pickupradius + tmthing->radius;
 
     if (ABS(thing->x - tmx) >= blockdist || ABS(thing->y - tmy) >= blockdist)
-        return true;            // didn't hit it
+        return true;                    // didn't hit it
 
     // [BH] check if things are stuck and allow move if it makes them further apart
     if (!thing->player && !corpse)
@@ -473,9 +480,9 @@ static dboolean PIT_CheckThing(mobj_t *thing)
     if ((tmthing->flags2 & MF2_PASSMOBJ) && !infiniteheight && !(flags & MF_SPECIAL))
     {
         if (tmthing->z >= thing->z + thing->height)
-            return true;        // over thing
+            return true;                // over thing
         else if (tmthing->z + tmthing->height <= thing->z)
-            return true;        // under thing
+            return true;                // under thing
     }
 
     // check for skulls slamming into things
@@ -490,7 +497,7 @@ static dboolean PIT_CheckThing(mobj_t *thing)
 
         P_SetMobjState(tmthing, tmthing->info->spawnstate);
 
-        return false;           // stop moving
+        return false;                   // stop moving
     }
 
     // missiles can hit other things
@@ -503,10 +510,10 @@ static dboolean PIT_CheckThing(mobj_t *thing)
 
         // see if it went over/under
         if (tmthing->z > thing->z + height)
-            return true;        // overhead
+            return true;                // overhead
 
         if (tmthing->z + tmthing->height < thing->z)
-            return true;        // underneath
+            return true;                // underneath
 
         if (tmthing->target
             && (tmthing->target->type == type
@@ -544,7 +551,7 @@ static dboolean PIT_CheckThing(mobj_t *thing)
         }
 
         if (!(flags & MF_SHOOTABLE))
-            return !(flags & MF_SOLID);                         // didn't do any damage
+            return !(flags & MF_SOLID); // didn't do any damage
 
         // damage/explode
         P_DamageMobj(thing, tmthing, tmthing->target, ((M_Random() & 7) + 1) * tmthing->info->damage, true);
@@ -644,7 +651,8 @@ dboolean P_CheckLineSide(mobj_t *actor, fixed_t x, fixed_t y)
     yl = P_GetSafeBlockY(tmbbox[BOXBOTTOM] - bmaporgy);
     yh = P_GetSafeBlockY(tmbbox[BOXTOP] - bmaporgy);
 
-    validcount++;           // prevents checking same line twice
+    // prevents checking same line twice
+    validcount++;
 
     for (int bx = xl; bx <= xh; bx++)
         for (int by = yl; by <= yh; by++)
@@ -908,8 +916,8 @@ void P_FakeZMovement(mobj_t *mo)
 
 dboolean P_IsInLiquid(mobj_t *thing)
 {
-    if (!(thing->flags & MF_SHOOTABLE))
-        return (thing->subsector->sector->terraintype != SOLID);
+    if (thing->flags & MF_NOGRAVITY)
+        return false;
 
     for (const struct msecnode_s *seclist = thing->touching_sectorlist; seclist; seclist = seclist->m_tnext)
         if (seclist->m_sector->terraintype == SOLID)
@@ -981,15 +989,12 @@ dboolean P_TryMove(mobj_t *thing, fixed_t x, fixed_t y, int dropoff)
 
     P_SetThingPosition(thing);
 
-    if (thing->player && thing->player->mo == thing)
+    if (thing->player && thing->player->mo == thing && (x != oldx || y != oldy))
     {
         fixed_t dist = (fixed_t)hypot((x - oldx) >> FRACBITS, (y - oldy) >> FRACBITS);
 
-        if (dist)
-        {
-            stat_distancetraveled = SafeAdd(stat_distancetraveled, dist);
-            thing->player->distancetraveled += dist;
-        }
+        stat_distancetraveled = SafeAdd(stat_distancetraveled, dist);
+        viewplayer->distancetraveled += dist;
     }
 
     // [BH] check if new sector is liquid and clip/unclip feet as necessary
@@ -1004,10 +1009,14 @@ dboolean P_TryMove(mobj_t *thing, fixed_t x, fixed_t y, int dropoff)
         {
             // see if the line was crossed
             line_t  *ld = spechit[numspechit];
-            int     oldside = P_PointOnLineSide(oldx, oldy, ld);
 
-            if (oldside != P_PointOnLineSide(thing->x, thing->y, ld) && ld->special)
-                P_CrossSpecialLine(ld, oldside, thing);
+            if (ld->special)
+            {
+                int oldside = P_PointOnLineSide(oldx, oldy, ld);
+
+                if (oldside != P_PointOnLineSide(thing->x, thing->y, ld))
+                    P_CrossSpecialLine(ld, oldside, thing);
+            }
         }
 
     return true;
@@ -2017,7 +2026,7 @@ static void PIT_ChangeSector(mobj_t *thing)
 
             thing->flags &= ~MF_SOLID;
 
-            if (r_corpses_mirrored && type != MT_CHAINGUY && type != MT_CYBORG && (type != MT_PAIN || !D4V) && (M_Random() & 1))
+            if (r_corpses_mirrored && type != MT_CHAINGUY && type != MT_CYBORG && (type != MT_PAIN || !doom4vanilla) && (M_Random() & 1))
                 thing->flags2 |= MF2_MIRRORED;
 
             thing->height = 0;

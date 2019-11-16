@@ -276,14 +276,18 @@ dboolean W_AddFile(char *filename, dboolean automatic)
     }
 
     lumps_str = commify((int64_t)numlumps - startlump);
-    C_Output("%s %s lump%s from %s <b>%s</b>.%s", (automatic ? "Automatically added" : "Added"), lumps_str,
-        (numlumps - startlump == 1 ? "" : "s"), (wadfile->type == IWAD ? "IWAD" : "PWAD"), wadfile->path,
-        (M_StringCompare(leafname(filename), "SIGIL_v1_21.wad") || M_StringCompare(leafname(filename), "SIGIL_v1_2.wad")
-        || M_StringCompare(leafname(filename), "SIGIL.wad") ? " Episode 5 is available." : ""));
+    C_Output("%s %s lump%s from %s <b>%s</b>.", (automatic ? "Automatically added" : "Added"), lumps_str,
+        (numlumps - startlump == 1 ? "" : "s"), (wadfile->type == IWAD ? "IWAD" : "PWAD"), wadfile->path);
 
-    if (M_StringCompare(leafname(filename), "doom.wad"))
+    if (M_StringCompare(leafname(filename), "SIGIL_v1_21.wad")
+        || M_StringCompare(leafname(filename), "SIGIL_v1_2.wad")
+        || M_StringCompare(leafname(filename), "SIGIL.wad"))
+        C_Output("<i><b>SIGIL</b></i> is now available to play from the episode menu.");
+    else if (M_StringCompare(leafname(filename), "DOOM.WAD"))
         C_Output("<i><b>E1M4B: Phobos Mission Control</b></i> and <i><b>E1M8B: Tech Gone Bad</b></i> "
-            "are available using the <b>map</b> CCMD.");
+            "are now available to play using the <b>map</b> CCMD.");
+    else if (M_StringCompare(leafname(filename), "NERVE.WAD"))
+        C_Output("<i><b>No Rest For The Living</b></i> is now available to play from the expansion menu.");
 
     free(fileinfo);
     free(lumps_str);

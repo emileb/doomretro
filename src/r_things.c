@@ -88,7 +88,6 @@ static fixed_t          floorheight;
 dboolean                r_liquid_clipsprites = r_liquid_clipsprites_default;
 dboolean                r_playersprites = r_playersprites_default;
 
-extern fixed_t          animatedliquiddiff;
 extern dboolean         drawbloodsplats;
 extern dboolean         notranslucency;
 extern dboolean         SHT2A0;
@@ -1124,10 +1123,13 @@ void R_DrawPlayerSprites(void)
 //
 static void R_DrawBloodSplatSprite(const bloodsplatvissprite_t *splat)
 {
-    int         cliptop[SCREENWIDTH];
-    int         clipbot[SCREENWIDTH];
-    const int   x1 = splat->x1;
-    const int   x2 = splat->x2;
+    int             cliptop[SCREENWIDTH];
+    int             clipbot[SCREENWIDTH];
+    const int       x1 = splat->x1;
+    const int       x2 = splat->x2;
+    const fixed_t   scale = splat->scale;
+    const fixed_t   gx = splat->gx;
+    const fixed_t   gy = splat->gy;
 
     // initialize the clipping arrays
     for (int i = x1; i <= x2; i++)
@@ -1140,30 +1142,30 @@ static void R_DrawBloodSplatSprite(const bloodsplatvissprite_t *splat)
     // The first drawseg that has a greater scale is the clip seg.
     for (drawseg_t *ds = ds_p; ds-- > drawsegs;)
     {
-        int         r1;
-        int         r2;
         const int   silhouette = ds->silhouette;
 
         // determine if the drawseg obscures the bloodsplat
         if (ds->x1 > x2 || ds->x2 < x1 || (!silhouette && !ds->maskedtexturecol))
             continue;       // does not cover bloodsplat
 
-        if (ds->maxscale < splat->scale || (ds->minscale < splat->scale && !R_PointOnSegSide(splat->gx, splat->gy, ds->curline)))
+        if (ds->maxscale < scale || (ds->minscale < scale && !R_PointOnSegSide(gx, gy, ds->curline)))
             continue;       // seg is behind bloodsplat
+        else
+        {
+            // clip this piece of the bloodsplat
+            int r1 = MAX(ds->x1, x1);
+            int r2 = MIN(ds->x2, x2);
 
-        // clip this piece of the bloodsplat
-        r1 = MAX(ds->x1, x1);
-        r2 = MIN(ds->x2, x2);
+            if (silhouette & SIL_TOP)
+                for (int i = r1; i <= r2; i++)
+                    if (cliptop[i] < ds->sprtopclip[i])
+                        cliptop[i] = ds->sprtopclip[i];
 
-        if (silhouette & SIL_TOP)
-            for (int i = r1; i <= r2; i++)
-                if (cliptop[i] < ds->sprtopclip[i])
-                    cliptop[i] = ds->sprtopclip[i];
-
-        if (silhouette & SIL_BOTTOM)
-            for (int i = r1; i <= r2; i++)
-                if (clipbot[i] > ds->sprbottomclip[i])
-                    clipbot[i] = ds->sprbottomclip[i];
+            if (silhouette & SIL_BOTTOM)
+                for (int i = r1; i <= r2; i++)
+                    if (clipbot[i] > ds->sprbottomclip[i])
+                        clipbot[i] = ds->sprbottomclip[i];
+        }
     }
 
     // all clipping has been performed, so draw the bloodsplat
@@ -1233,10 +1235,13 @@ static void R_SortVisSprites(void)
 
 static void R_DrawSprite(const vissprite_t *spr)
 {
-    int         cliptop[SCREENWIDTH];
-    int         clipbot[SCREENWIDTH];
-    const int   x1 = spr->x1;
-    const int   x2 = spr->x2;
+    int             cliptop[SCREENWIDTH];
+    int             clipbot[SCREENWIDTH];
+    const int       x1 = spr->x1;
+    const int       x2 = spr->x2;
+    const fixed_t   scale = spr->scale;
+    const fixed_t   gx = spr->gx;
+    const fixed_t   gy = spr->gy;
 
     // initialize the clipping arrays
     for (int i = x1; i <= x2; i++)
@@ -1249,15 +1254,13 @@ static void R_DrawSprite(const vissprite_t *spr)
     // The first drawseg that has a greater scale is the clip seg.
     for (drawseg_t *ds = ds_p; ds-- > drawsegs;)
     {
-        int         r1;
-        int         r2;
         const int   silhouette = ds->silhouette;
 
         // determine if the drawseg obscures the sprite
         if (ds->x1 > x2 || ds->x2 < x1 || (!silhouette && !ds->maskedtexturecol))
             continue;       // does not cover sprite
 
-        if (ds->maxscale < spr->scale || (ds->minscale < spr->scale && !R_PointOnSegSide(spr->gx, spr->gy, ds->curline)))
+        if (ds->maxscale < scale || (ds->minscale < scale && !R_PointOnSegSide(gx, gy, ds->curline)))
         {
             // masked mid texture?
             if (ds->maskedtexturecol)
@@ -1266,20 +1269,22 @@ static void R_DrawSprite(const vissprite_t *spr)
             // seg is behind sprite
             continue;
         }
+        else
+        {
+            // clip this piece of the sprite
+            int r1 = MAX(ds->x1, x1);
+            int r2 = MIN(ds->x2, x2);
 
-        // clip this piece of the sprite
-        r1 = MAX(ds->x1, x1);
-        r2 = MIN(ds->x2, x2);
+            if (silhouette & SIL_TOP)
+                for (int i = r1; i <= r2; i++)
+                    if (cliptop[i] < ds->sprtopclip[i])
+                        cliptop[i] = ds->sprtopclip[i];
 
-        if (silhouette & SIL_TOP)
-            for (int i = r1; i <= r2; i++)
-                if (cliptop[i] < ds->sprtopclip[i])
-                    cliptop[i] = ds->sprtopclip[i];
-
-        if (silhouette & SIL_BOTTOM)
-            for (int i = r1; i <= r2; i++)
-                if (clipbot[i] > ds->sprbottomclip[i])
-                    clipbot[i] = ds->sprbottomclip[i];
+            if (silhouette & SIL_BOTTOM)
+                for (int i = r1; i <= r2; i++)
+                    if (clipbot[i] > ds->sprbottomclip[i])
+                        clipbot[i] = ds->sprbottomclip[i];
+        }
     }
 
     // killough 3/27/98:
@@ -1294,7 +1299,7 @@ static void R_DrawSprite(const vissprite_t *spr)
         sector_t    *phs = viewplayer->mo->subsector->sector->heightsec;
 
         if ((mh = spr->heightsec->interpfloorheight) > spr->gz
-            && (h = centeryfrac - FixedMul((mh -= viewz), spr->scale)) >= 0 && (h >>= FRACBITS) < viewheight)
+            && (h = centeryfrac - FixedMul((mh -= viewz), scale)) >= 0 && (h >>= FRACBITS) < viewheight)
         {
             if (mh <= 0 || (phs && viewz > phs->interpfloorheight))
             {
@@ -1312,7 +1317,7 @@ static void R_DrawSprite(const vissprite_t *spr)
         }
 
         if ((mh = spr->heightsec->interpceilingheight) < spr->gzt
-            && (h = centeryfrac - FixedMul(mh - viewz, spr->scale)) >= 0 && (h >>= FRACBITS) < viewheight)
+            && (h = centeryfrac - FixedMul(mh - viewz, scale)) >= 0 && (h >>= FRACBITS) < viewheight)
         {
             if (phs && viewz >= phs->interpceilingheight)
             {

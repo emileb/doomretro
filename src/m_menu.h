@@ -109,10 +109,15 @@ extern dboolean nosound;
 extern dboolean nosfx;
 extern dboolean firstevent;
 extern byte     grays[256];
-extern dboolean returntowidescreen;
 extern dboolean startingnewgame;
 extern dboolean inhelpscreens;
 extern int      spindirection;
-extern char     savegamestrings[10][SAVESTRINGSIZE];
+extern char     savegamestrings[6][SAVESTRINGSIZE];
+extern menu_t   EpiDef;
+extern menu_t   ExpDef;
+extern menu_t   LoadDef;
+extern menu_t   MainDef;
+extern menu_t   NewDef;
+extern menu_t   SaveDef;
 
 #endif

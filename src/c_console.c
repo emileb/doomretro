@@ -147,7 +147,7 @@ static int              consolecolors[STRINGTYPES];
 
 dboolean                scrollbardrawn;
 
-extern int              fps;
+extern int              framespersecond;
 extern int              refreshrate;
 extern dboolean         dowipe;
 extern dboolean         quitcmd;
@@ -171,6 +171,29 @@ void C_Input(const char *string, ...)
     M_StringCopy(console[consolestrings].string, buffer, 1024);
     console[consolestrings++].stringtype = inputstring;
     outputhistory = -1;
+}
+
+void C_InputNoRepeat(const char *string, ...)
+{
+    va_list argptr;
+    char    buffer[CONSOLETEXTMAXLENGTH];
+
+    if (togglingvanilla)
+        return;
+
+    va_start(argptr, string);
+    M_vsnprintf(buffer, CONSOLETEXTMAXLENGTH - 1, string, argptr);
+    va_end(argptr);
+
+    if (!consolestrings || !M_StringStartsWith(console[consolestrings - 1].string, buffer))
+    {
+        if (consolestrings >= (int)consolestringsmax)
+            console = I_Realloc(console, (consolestringsmax += CONSOLESTRINGSMAX) * sizeof(*console));
+
+        M_StringCopy(console[consolestrings].string, buffer, 1024);
+        console[consolestrings++].stringtype = inputstring;
+        outputhistory = -1;
+    }
 }
 
 void C_IntCVAROutput(char *cvar, int value)
@@ -206,17 +229,6 @@ void C_StrCVAROutput(char *cvar, char *string)
     free(cvar_free);
 }
 
-void C_CCMDOutput(const char *ccmd)
-{
-    if (consolestrings && M_StringStartsWith(console[consolestrings - 1].string, ccmd))
-        consolestrings--;
-
-    C_Input(ccmd);
-}
-
-#ifdef __ANDROID__
-#include "LogWritter.h"
-#endif
 
 void C_Output(const char *string, ...)
 {
@@ -238,6 +250,26 @@ void C_Output(const char *string, ...)
     M_StringCopy(console[consolestrings].string, buffer, 1024);
     console[consolestrings++].stringtype = outputstring;
     outputhistory = -1;
+}
+
+void C_OutputNoRepeat(const char *string, ...)
+{
+    va_list argptr;
+    char    buffer[CONSOLETEXTMAXLENGTH];
+
+    va_start(argptr, string);
+    M_vsnprintf(buffer, CONSOLETEXTMAXLENGTH - 1, string, argptr);
+    va_end(argptr);
+
+    if (!consolestrings || !M_StringStartsWith(console[consolestrings - 1].string, buffer))
+    {
+        if (consolestrings >= (int)consolestringsmax)
+            console = I_Realloc(console, (consolestringsmax += CONSOLESTRINGSMAX) * sizeof(*console));
+
+        M_StringCopy(console[consolestrings].string, buffer, 1024);
+        console[consolestrings++].stringtype = outputstring;
+        outputhistory = -1;
+    }
 }
 
 void C_TabbedOutput(const int tabs[8], const char *string, ...)
@@ -374,34 +406,35 @@ const kern_t altkern[] =
     { ' ',  '(',  -1 }, { ' ',  'T',  -1 }, { '!',  ' ',   2 }, { '"',  '+',  -1 }, { '"',  ',',  -1 }, { '"',  '.',  -2 },
     { '"',  'J',  -2 }, { '"',  'a',  -1 }, { '"',  'c',  -1 }, { '"',  'd',  -1 }, { '"',  'e',  -1 }, { '"',  'g',  -1 },
     { '"',  'j',  -2 }, { '"',  'o',  -1 }, { '"',  'q',  -1 }, { '"',  's',  -1 }, { '\'', 's',  -1 }, { '(',  '(',  -1 },
-    { ')',  ')',  -1 }, { ')',  '.',  -1 }, { '+',  'j',  -2 }, { ',',  '4',  -1 }, { ',',  '7',  -1 }, { '.',  '4',  -1 },
-    { '.',  '7',  -1 }, { '.',  '\\', -1 }, { '/',  '/',  -2 }, { '/',  'a',  -1 }, { '/',  'd',  -1 }, { '/',  'o',  -1 },
-    { '0',  ',',  -1 }, { '0',  ';',  -1 }, { '0',  'j',  -2 }, { '1',  '"',  -1 }, { '1',  '\'', -1 }, { '1',  '\\', -1 },
-    { '1',  'j',  -2 }, { '2',  'j',  -2 }, { '3',  ',',  -1 }, { '3',  ';',  -1 }, { '3',  'j',  -2 }, { '4',  'j',  -2 },
-    { '5',  ',',  -1 }, { '5',  ';',  -1 }, { '5',  'j',  -2 }, { '6',  ',',  -1 }, { '6',  'j',  -2 }, { '7',  ',',  -2 },
-    { '7',  '.',  -2 }, { '7',  ';',  -1 }, { '7',  'j',  -2 }, { '8',  ',',  -1 }, { '8',  ';',  -1 }, { '8',  'j',  -2 },
-    { '9',  ',',  -1 }, { '9',  ';',  -1 }, { '9',  'j',  -2 }, { ':', '\\',  -1 }, { '?',  ' ',   2 }, { 'F',  ' ',  -1 },
-    { 'F',  ',',  -1 }, { 'F',  '.',  -1 }, { 'F',  ';',  -1 }, { 'L',  ' ',  -1 }, { 'L',  '"',  -1 }, { 'L',  'Y',  -1 },
-    { 'L',  '\'', -1 }, { 'L',  '\\', -2 }, { 'P',  ',',  -1 }, { 'P',  '.',  -1 }, { 'P',  ';',  -1 }, { 'P',  '_',  -1 },
-    { 'T',  ' ',  -1 }, { 'T',  ',',  -1 }, { 'T',  '.',  -1 }, { 'T',  ';',  -1 }, { 'T',  'a',  -1 }, { 'T',  'e',  -1 },
-    { 'T',  'o',  -1 }, { 'V',  ',',  -1 }, { 'V',  '.',  -1 }, { 'V',  ';',  -1 }, { 'V',  'a',  -1 }, { 'Y',  ',',  -1 },
-    { 'Y',  '.',  -1 }, { 'Y',  ';',  -1 }, { '\'', 'J',  -2 }, { '\'', 'a',  -1 }, { '\'', 'c',  -1 }, { '\'', 'd',  -1 },
-    { '\'', 'e',  -1 }, { '\'', 'g',  -1 }, { '\'', 'j',  -2 }, { '\'', 'o',  -1 }, { '\\', 'T',  -1 }, { '\\', 'V',  -1 },
-    { '\\', '\\', -2 }, { '\\', 't',  -1 }, { '_',  'f',  -1 }, { '_',  't',  -1 }, { '_',  'v',  -1 }, { 'a',  '"',  -1 },
-    { 'a',  '\'', -1 }, { 'a',  '\\', -1 }, { 'a',  'j',  -2 }, { 'b',  '"',  -1 }, { 'b',  ',',  -1 }, { 'b',  ';',  -1 },
-    { 'b',  '\'', -1 }, { 'b',  '\\', -1 }, { 'b',  'j',  -2 }, { 'c',  '"',  -1 }, { 'c',  ',',  -1 }, { 'c',  ';',  -1 },
-    { 'c',  '\'', -1 }, { 'c',  '\\', -1 }, { 'c',  'j',  -2 }, { 'd',  'j',  -2 }, { 'e',  '"',  -1 }, { 'e',  ',',  -1 },
-    { 'e',  ';',  -1 }, { 'e',  '\'', -1 }, { 'e',  '\\', -1 }, { 'e',  '_',  -1 }, { 'e',  'j',  -2 }, { 'f',  ' ',  -1 },
-    { 'f',  ',',  -2 }, { 'f',  ';',  -1 }, { 'f',  '_',  -1 }, { 'f',  'a',  -1 }, { 'f',  'j',  -2 }, { 'h',  '\\', -1 },
-    { 'h',  'j',  -2 }, { 'i',  'j',  -2 }, { 'k',  'j',  -2 }, { 'l',  'j',  -2 }, { 'm',  '"',  -1 }, { 'm',  '\'', -1 },
-    { 'm',  '\\', -1 }, { 'm',  'j',  -2 }, { 'n',  '"',  -1 }, { 'n',  '\'', -1 }, { 'n',  '\\', -1 }, { 'n',  'j',  -2 },
-    { 'o',  '"',  -1 }, { 'o',  ',',  -1 }, { 'o',  ';',  -1 }, { 'o',  '\'', -1 }, { 'o',  '\\', -1 }, { 'o',  'j',  -2 },
-    { 'p',  '"',  -1 }, { 'p',  ',',  -1 }, { 'p',  ';',  -1 }, { 'p',  '\'', -1 }, { 'p',  '\\', -1 }, { 'p',  'j',  -2 },
-    { 'r',  ' ',  -1 }, { 'r',  ')',  -1 }, { 'r',  ',',  -2 }, { 'r',  '.',  -1 }, { 'r',  ';',  -1 }, { 'r',  '\'', -1 },
-    { 'r',  '\\', -1 }, { 'r',  '_',  -2 }, { 'r',  'a',  -1 }, { 'r',  'j',  -2 }, { 's',  ',',  -1 }, { 's',  ';',  -1 },
-    { 's',  '\\', -1 }, { 's',  'j',  -2 }, { 't',  '\\', -1 }, { 't',  'j',  -2 }, { 'u',  'j',  -2 }, { 'v',  ',',  -1 },
-    { 'v',  ';',  -1 }, { 'v',  '\\', -1 }, { 'v',  'a',  -1 }, { 'v',  'j',  -2 }, { 'w',  '\\', -1 }, { 'w',  'j',  -2 },
-    { 'x',  '\\', -1 }, { 'x',  'j',  -2 }, { 'y',  '\\', -1 }, { 'z',  '\\', -1 }, { 'z',  'j',  -2 }, { '\0', '\0',  0 }
+    { '(',  '-',  -1 }, { ')',  ')',  -1 }, { ')',  '.',  -1 }, { '+',  'j',  -2 }, { ',',  '4',  -1 }, { ',',  '7',  -1 },
+    { '.',  '"',  -1 }, { '.',  '4',  -1 }, { '.',  '7',  -1 }, { '.',  '\\', -1 }, { '/',  '/',  -2 }, { '/',  'a',  -1 },
+    { '/',  'd',  -1 }, { '/',  'o',  -1 }, { '0',  ',',  -1 }, { '0',  ';',  -1 }, { '0',  'j',  -2 }, { '1',  '"',  -1 },
+    { '1',  '\'', -1 }, { '1',  '\\', -1 }, { '1',  'j',  -2 }, { '2',  'j',  -2 }, { '3',  ',',  -1 }, { '3',  ';',  -1 },
+    { '3',  'j',  -2 }, { '4',  'j',  -2 }, { '5',  ',',  -1 }, { '5',  ';',  -1 }, { '5',  'j',  -2 }, { '6',  ',',  -1 },
+    { '6',  'j',  -2 }, { '7',  ',',  -2 }, { '7',  '.',  -2 }, { '7',  ';',  -1 }, { '7',  'j',  -2 }, { '8',  ',',  -1 },
+    { '8',  ';',  -1 }, { '8',  'j',  -2 }, { '9',  ',',  -1 }, { '9',  ';',  -1 }, { '9',  'j',  -2 }, { ':', '\\',  -1 },
+    { '?',  ' ',   2 }, { 'F',  ' ',  -1 }, { 'F',  ',',  -1 }, { 'F',  '.',  -1 }, { 'F',  ';',  -1 }, { 'L',  ' ',  -1 },
+    { 'L',  '"',  -1 }, { 'L',  'Y',  -1 }, { 'L',  '\'', -1 }, { 'L',  '\\', -2 }, { 'P',  ',',  -1 }, { 'P',  '.',  -1 },
+    { 'P',  ';',  -1 }, { 'P',  '_',  -1 }, { 'T',  ' ',  -1 }, { 'T',  ',',  -1 }, { 'T',  '.',  -1 }, { 'T',  ';',  -1 },
+    { 'T',  'a',  -1 }, { 'T',  'e',  -1 }, { 'T',  'o',  -1 }, { 'V',  ',',  -1 }, { 'V',  '.',  -1 }, { 'V',  ';',  -1 },
+    { 'V',  'a',  -1 }, { 'Y',  ',',  -1 }, { 'Y',  '.',  -1 }, { 'Y',  ';',  -1 }, { '\'', 'J',  -2 }, { '\'', 'a',  -1 },
+    { '\'', 'c',  -1 }, { '\'', 'd',  -1 }, { '\'', 'e',  -1 }, { '\'', 'g',  -1 }, { '\'', 'j',  -2 }, { '\'', 'o',  -1 },
+    { '\\', 'T',  -1 }, { '\\', 'V',  -1 }, { '\\', '\\', -2 }, { '\\', 't',  -1 }, { '_',  'f',  -1 }, { '_',  't',  -1 },
+    { '_',  'v',  -1 }, { 'a',  '"',  -1 }, { 'a',  '\'', -1 }, { 'a',  '\\', -1 }, { 'a',  'j',  -2 }, { 'b',  '"',  -1 },
+    { 'b',  ',',  -1 }, { 'b',  ';',  -1 }, { 'b',  '\'', -1 }, { 'b',  '\\', -1 }, { 'b',  'j',  -2 }, { 'c',  '"',  -1 },
+    { 'c',  ',',  -1 }, { 'c',  ';',  -1 }, { 'c',  '\'', -1 }, { 'c',  '\\', -1 }, { 'c',  'j',  -2 }, { 'd',  'j',  -2 },
+    { 'e',  '"',  -1 }, { 'e',  ',',  -1 }, { 'e',  ';',  -1 }, { 'e',  '\'', -1 }, { 'e',  '\\', -1 }, { 'e',  '_',  -1 },
+    { 'e',  'j',  -2 }, { 'f',  ' ',  -1 }, { 'f',  ',',  -2 }, { 'f',  ';',  -1 }, { 'f',  '_',  -1 }, { 'f',  'a',  -1 },
+    { 'f',  'j',  -2 }, { 'h',  '\\', -1 }, { 'h',  'j',  -2 }, { 'i',  'j',  -2 }, { 'k',  'j',  -2 }, { 'l',  'j',  -2 },
+    { 'm',  '"',  -1 }, { 'm',  '\'', -1 }, { 'm',  '\\', -1 }, { 'm',  'j',  -2 }, { 'n',  '"',  -1 }, { 'n',  '\'', -1 },
+    { 'n',  '\\', -1 }, { 'n',  'j',  -2 }, { 'o',  '"',  -1 }, { 'o',  ',',  -1 }, { 'o',  ';',  -1 }, { 'o',  '\'', -1 },
+    { 'o',  '\\', -1 }, { 'o',  'j',  -2 }, { 'p',  '"',  -1 }, { 'p',  ',',  -1 }, { 'p',  ';',  -1 }, { 'p',  '\'', -1 },
+    { 'p',  '\\', -1 }, { 'p',  'j',  -2 }, { 'r',  ' ',  -1 }, { 'r',  '"',  -1 }, { 'r',  ')',  -1 }, { 'r',  ',',  -2 },
+    { 'r',  '.',  -1 }, { 'r',  ';',  -1 }, { 'r',  '\'', -1 }, { 'r',  '\\', -1 }, { 'r',  '_',  -2 }, { 'r',  'a',  -1 },
+    { 'r',  'j',  -2 }, { 's',  ',',  -1 }, { 's',  ';',  -1 }, { 's',  '\\', -1 }, { 's',  'j',  -2 }, { 't',  '\\', -1 },
+    { 't',  'j',  -2 }, { 'u',  'j',  -2 }, { 'v',  ',',  -1 }, { 'v',  ';',  -1 }, { 'v',  '\\', -1 }, { 'v',  'a',  -1 },
+    { 'v',  'j',  -2 }, { 'w',  '\\', -1 }, { 'w',  'j',  -2 }, { 'x',  '\\', -1 }, { 'x',  'j',  -2 }, { 'y',  '\\', -1 },
+    { 'z',  '\\', -1 }, { 'z',  'j',  -2 }, { '\0', '\0',  0 }
 };
 
 int C_TextWidth(const char *text, const dboolean formatting, const dboolean kerning)
@@ -424,7 +457,7 @@ int C_TextWidth(const char *text, const dboolean formatting, const dboolean kern
             bold = (italics ? 2 : 1);
             i += 2;
         }
-        else if (letter == '<' && i < len - 2 && text[i + 1] == '/' && tolower(text[i + 2]) == 'b' && text[i + 3] == '>' && formatting)
+        else if (letter == '<' && i < len - 3 && text[i + 1] == '/' && tolower(text[i + 2]) == 'b' && text[i + 3] == '>' && formatting)
         {
             bold = 0;
             i += 3;
@@ -434,7 +467,7 @@ int C_TextWidth(const char *text, const dboolean formatting, const dboolean kern
             italics = true;
             i += 2;
         }
-        else if (letter == '<' && i < len - 2 && text[i + 1] == '/' && tolower(text[i + 2]) == 'i' && text[i + 3] == '>' && formatting)
+        else if (letter == '<' && i < len - 3 && text[i + 1] == '/' && tolower(text[i + 2]) == 'i' && text[i + 3] == '>' && formatting)
         {
             italics = false;
             i += 3;
@@ -445,15 +478,31 @@ int C_TextWidth(const char *text, const dboolean formatting, const dboolean kern
             w += SHORT(trademark->width);
             i++;
         }
+        else if (letter == '(' && i < len - 3 && tolower(text[i + 1]) == 't' && tolower(text[i + 1]) == 'm' && text[i + 2] == ')'
+            && formatting)
+        {
+            w += SHORT(trademark->width);
+            i += 3;
+        }
         else if (letter == 169)
         {
             w += SHORT(copyright->width);
             i++;
         }
+        else if (letter == '(' && i < len - 2 && tolower(text[i + 1]) == 'c' && text[i + 2] == ')' && formatting)
+        {
+            w += SHORT(copyright->width);
+            i += 2;
+        }
         else if (letter == 174)
         {
             w += SHORT(regomark->width);
             i++;
+        }
+        else if (letter == '(' && i < len - 2 && tolower(text[i + 1]) == 'r' && text[i + 2] == ')' && formatting)
+        {
+            w += SHORT(regomark->width);
+            i += 2;
         }
         else if (letter == 176)
         {
@@ -468,7 +517,7 @@ int C_TextWidth(const char *text, const dboolean formatting, const dboolean kern
             const int   c = letter - CONSOLEFONTSTART;
             int         width = SHORT((c >= 0 && c < CONSOLEFONTSIZE ? consolefont[c] : unknownchar)->width);
 
-            if (!i || prevletter == ' ' || prevletter == '\t')
+            if (!i || prevletter == ' ' || prevletter == '(' || prevletter == '[' || prevletter == '\t')
             {
                 if (letter == '\'')
                     width = SHORT(lsquote->width);
@@ -769,7 +818,7 @@ static int C_DrawConsoleText(int x, int y, char *text, const int color1, const i
             bold = (italics ? 2 : 1);
             i += 2;
         }
-        else if (letter == '<' && i < len - 2 && text[i + 1] == '/' && tolower(text[i + 2]) == 'b' && text[i + 3] == '>' && formatting)
+        else if (letter == '<' && i < len - 3 && text[i + 1] == '/' && tolower(text[i + 2]) == 'b' && text[i + 3] == '>' && formatting)
         {
             bold = 0;
             i += 3;
@@ -779,7 +828,7 @@ static int C_DrawConsoleText(int x, int y, char *text, const int color1, const i
             italics = true;
             i += 2;
         }
-        else if (letter == '<' && i < len - 2 && text[i + 1] == '/' && tolower(text[i + 2]) == 'i' && text[i + 3] == '>' && formatting)
+        else if (letter == '<' && i < len - 3 && text[i + 1] == '/' && tolower(text[i + 2]) == 'i' && text[i + 3] == '>' && formatting)
         {
             italics = false;
             i += 3;
@@ -796,10 +845,26 @@ static int C_DrawConsoleText(int x, int y, char *text, const int color1, const i
                 x = (x > tabs[++tab] ? x + spacewidth : tabs[tab]);
             else if (letter == 153)
                 patch = trademark;
+            else if (letter == '(' && i < len - 3 && tolower(text[i + 1]) == 't' && tolower(text[i + 1]) == 'm' && text[i + 2] == ')'
+                && formatting)
+            {
+                patch = trademark;
+                i += 3;
+            }
             else if (letter == 169)
                 patch = copyright;
+            else if (letter == '(' && i < len - 2 && tolower(text[i + 1]) == 'c' && text[i + 2] == ')' && formatting)
+            {
+                patch = copyright;
+                i += 2;
+            }
             else if (letter == 174)
                 patch = regomark;
+            else if (letter == '(' && i < len - 2 && tolower(text[i + 1]) == 'r' && text[i + 2] == ')' && formatting)
+            {
+                patch = regomark;
+                i += 2;
+            }
             else if (letter == 176)
                 patch = degree;
             else if (letter == 215 || (letter == 'x' && isdigit(prevletter)
@@ -811,7 +876,7 @@ static int C_DrawConsoleText(int x, int y, char *text, const int color1, const i
 
                 patch = (c >= 0 && c < CONSOLEFONTSIZE ? consolefont[c] : unknownchar);
 
-                if (!i || prevletter == ' ' || prevletter == '\t')
+                if (!i || prevletter == ' ' || prevletter == '(' || prevletter == '[' || prevletter == '\t')
                 {
                     if (letter == '\'')
                         patch = lsquote;
@@ -839,7 +904,7 @@ static int C_DrawConsoleText(int x, int y, char *text, const int color1, const i
             {
                 V_DrawConsoleTextPatch(x, y, patch, (lastcolor1 = (bold == 1 ? boldcolor : (bold == 2 ? color1 : (italics ?
                     (color1 == consolewarningcolor ? color1 : consoleitalicscolor) : color1)))), color2,
-                    (italics && letter != '_' && letter != ',' && letter != '/'), translucency);
+                    (italics && letter != '_' && letter != '-' && letter != ',' && letter != '/'), translucency);
                 x += SHORT(patch->width);
             }
 
@@ -849,6 +914,14 @@ static int C_DrawConsoleText(int x, int y, char *text, const int color1, const i
 
     if (truncate < len)
     {
+        if (kerning)
+            for (int j = 0; altkern[j].char1; j++)
+                if (prevletter == altkern[j].char1 && altkern[j].char2 == '.')
+                {
+                    x += altkern[j].adjust;
+                    break;
+                }
+
         V_DrawConsoleTextPatch(x, y, dot, lastcolor1, color2, false, translucency);
         x += SHORT(dot->width);
         V_DrawConsoleTextPatch(x, y, dot, lastcolor1, color2, false, translucency);
@@ -886,9 +959,9 @@ static void C_DrawOverlayText(int x, int y, const char *text, const int color)
 char *C_GetTimeStamp(unsigned int tics)
 {
     static char buffer[9];
-    int         hours = gamestarttime->tm_hour;
-    int         minutes = gamestarttime->tm_min;
-    int         seconds = gamestarttime->tm_sec;
+    int         hours = gamestarttime.tm_hour;
+    int         minutes = gamestarttime.tm_min;
+    int         seconds = gamestarttime.tm_sec;
 
     if ((seconds += ((tics /= TICRATE) % 3600) % 60) >= 60)
     {
@@ -902,13 +975,10 @@ char *C_GetTimeStamp(unsigned int tics)
         minutes %= 60;
     }
 
-    if ((hours += tics / 3600) >= 24)
-        hours %= 24;
+    if ((hours += tics / 3600) >= 12)
+        hours %= 12;
 
-    if (hours > 12)
-        hours -= 12;
-
-    M_snprintf(buffer, 9, "%s%d:%02d:%02d", (hours < 10 ? " " : ""), hours, minutes, seconds);
+    M_snprintf(buffer, 9, "%s%i:%02i:%02i", (hours < 10 ? " " : ""), hours, minutes, seconds);
     return buffer;
 }
 
@@ -939,14 +1009,15 @@ static void C_DrawTimeStamp(int x, int y, unsigned int tics)
 
 void C_UpdateFPS(void)
 {
-    if (fps && !dowipe && !paused && !menuactive)
+    if (framespersecond && !dowipe && !paused && !menuactive)
     {
         char    buffer[32];
 
-        M_snprintf(buffer, sizeof(buffer), "%i FPS (%.1fms)", fps, 1000.0 / fps);
+        M_snprintf(buffer, sizeof(buffer), "%i FPS (%.1fms)", framespersecond, 1000.0 / framespersecond);
 
         C_DrawOverlayText(CONSOLEWIDTH - C_TextWidth(buffer, false, false) - CONSOLETEXTX + 1, CONSOLETEXTY, buffer,
-            (fps < (refreshrate && vid_capfps != TICRATE ? refreshrate : TICRATE) ? consolelowfpscolor : consolehighfpscolor));
+            (framespersecond < (refreshrate && vid_capfps != TICRATE ? refreshrate : TICRATE) ? consolelowfpscolor :
+            consolehighfpscolor));
     }
 }
 

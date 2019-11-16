@@ -180,7 +180,7 @@ int                 gammaindex;
 static SDL_Rect     src_rect;
 static SDL_Rect     map_rect;
 
-int                 fps;
+int                 framespersecond;
 int                 refreshrate;
 
 #if defined(_WIN32)
@@ -302,7 +302,7 @@ dboolean keystate(int key)
     return state[TranslateKey2(key)];
 }
 
-void I_CapFPS(int frames)
+void I_CapFPS(int cap)
 {
 #if defined(_WIN32)
     static UINT CapFPSTimer;
@@ -313,7 +313,7 @@ void I_CapFPS(int frames)
         CapFPSTimer = 0;
     }
 
-    if (!frames || frames == TICRATE)
+    if (!cap || cap == TICRATE)
     {
         if (CapFPSEvent)
         {
@@ -328,7 +328,7 @@ void I_CapFPS(int frames)
 
         if (CapFPSEvent)
         {
-            CapFPSTimer = timeSetEvent(1000 / frames, 0, (LPTIMECALLBACK)CapFPSEvent, 0, (TIME_PERIODIC | TIME_CALLBACK_EVENT_SET));
+            CapFPSTimer = timeSetEvent(1000 / cap, 0, (LPTIMECALLBACK)CapFPSEvent, 0, (TIME_PERIODIC | TIME_CALLBACK_EVENT_SET));
 
             if (!CapFPSTimer)
             {
@@ -548,7 +548,7 @@ static void I_GetEvent(void)
                         else
                             gamepadthumbLX = clamp(Event->caxis.value, gamepadleftdeadzone);
 
-                        event.type = lasteventtype = ev_gamepad;
+                        event.type = ev_gamepad;
                         D_PostEvent(&event);
                         break;
 
@@ -558,7 +558,7 @@ static void I_GetEvent(void)
                         else
                             gamepadthumbLY = clamp(Event->caxis.value, gamepadleftdeadzone);
 
-                        event.type = lasteventtype = ev_gamepad;
+                        event.type = ev_gamepad;
                         D_PostEvent(&event);
                         break;
 
@@ -568,7 +568,7 @@ static void I_GetEvent(void)
                         else
                             gamepadthumbRX = clamp(Event->caxis.value, gamepadrightdeadzone);
 
-                        event.type = lasteventtype = ev_gamepad;
+                        event.type = ev_gamepad;
                         D_PostEvent(&event);
                         break;
 
@@ -578,7 +578,7 @@ static void I_GetEvent(void)
                         else
                             gamepadthumbRY = clamp(Event->caxis.value, gamepadrightdeadzone);
 
-                        event.type = lasteventtype = ev_gamepad;
+                        event.type = ev_gamepad;
                         D_PostEvent(&event);
                         break;
 
@@ -588,7 +588,7 @@ static void I_GetEvent(void)
                         else
                             gamepadbuttons &= ~GAMEPAD_LEFT_TRIGGER;
 
-                        event.type = lasteventtype = ev_gamepad;
+                        event.type = ev_gamepad;
                         D_PostEvent(&event);
                         break;
 
@@ -598,7 +598,7 @@ static void I_GetEvent(void)
                         else
                             gamepadbuttons &= ~GAMEPAD_RIGHT_TRIGGER;
 
-                        event.type = lasteventtype = ev_gamepad;
+                        event.type = ev_gamepad;
                         D_PostEvent(&event);
                         break;
                 }
@@ -633,6 +633,7 @@ static void I_GetEvent(void)
                     S_StartSound(NULL, sfx_swtchn);
                     M_QuitDOOM(0);
                 }
+
                 break;
 
             case SDL_WINDOWEVENT:
@@ -647,7 +648,6 @@ static void I_GetEvent(void)
                                 S_ResumeSound();
 
                             I_InitKeyboard();
-
                             break;
 
                         case SDL_WINDOWEVENT_FOCUS_LOST:
@@ -662,7 +662,6 @@ static void I_GetEvent(void)
                             }
 
                             I_ShutdownKeyboard();
-
                             break;
 
                         case SDL_WINDOWEVENT_EXPOSED:
@@ -804,7 +803,7 @@ static void CalculateFPS(void)
 
     if (starttime < currenttime - performancefrequency)
     {
-        fps = frames;
+        framespersecond = frames;
         frames = 0;
         starttime = currenttime;
     }
@@ -1522,7 +1521,8 @@ static void SetVideoMode(dboolean output)
             const char  *vendor = (const char *)pglGetString(GL_VENDOR);
 
             if (graphicscard && vendor)
-                C_Output("Using a <i><b>%s</b></i> graphics card by <i><b>%s</b></i>.", graphicscard, vendor);
+                C_Output("Using %s <i><b>%s</b></i> graphics card by <i><b>%s</b></i>.",
+                    (isvowel(graphicscard[0]) ? "an" : "a"), graphicscard, vendor);
         }
     }
 
@@ -1539,7 +1539,7 @@ static void SetVideoMode(dboolean output)
 
             if (major * 10 + minor < 21)
             {
-                C_Warning("<i>"PACKAGE_NAME"</i> requires at least <i>OpenGL v2.1</i>.");
+                C_Warning("<i>" PACKAGE_NAME "</i> requires at least <i>OpenGL v2.1</i>.");
 
                 vid_scaleapi = vid_scaleapi_direct3d;
                 M_SaveCVARs();
@@ -1890,18 +1890,10 @@ static void I_InitGammaTables(void)
 
 void I_SetGamma(float value)
 {
-    gammaindex = 0;
-
-    while (gammaindex < GAMMALEVELS && gammalevels[gammaindex] != value)
-        gammaindex++;
+    for (gammaindex = 0; gammaindex < GAMMALEVELS && gammalevels[gammaindex] != value; gammaindex++);
 
     if (gammaindex == GAMMALEVELS)
-    {
-        gammaindex = 0;
-
-        while (gammalevels[gammaindex] != r_gamma_default)
-            gammaindex++;
-    }
+        for (gammaindex = 0; gammalevels[gammaindex] != r_gamma_default; gammaindex++);
 }
 
 void I_InitKeyboard(void)

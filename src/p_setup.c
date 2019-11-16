@@ -248,14 +248,304 @@ dboolean        blockmaprebuilt;
 dboolean        nojump = false;
 dboolean        nomouselook = false;
 
-extern fixed_t  animatedliquiddiff;
-extern fixed_t  animatedliquidxdir;
-extern fixed_t  animatedliquidydir;
-extern fixed_t  animatedliquidxoffs;
-extern fixed_t  animatedliquidyoffs;
+static const char *linespecials[] =
+{
+    "",
+    "DR Door Open Wait Close (also monsters)",
+    "W1 Door Open Stay",
+    "W1 Door Close Stay",
+    "W1 Door Open Wait Close",
+    "W1 Floor Raise to Lowest Ceiling",
+    "W1 Crusher Start with Fast Damage",
+    "S1 Stairs Raise by 8",
+    "W1 Stairs Raise by 8",
+    "S1 Floor Raise Donut (changes texture)",
+    "W1 Lift Lower Wait Raise",
+    "S1 Exit Level",
+    "W1 Light Change to Brightest Adjacent",
+    "W1 Light Change to 255",
+    "S1 Floor Raise by 32 (changes texture)",
+    "S1 Floor Raise by 24 (changes texture)",
+    "W1 Door Close Wait Open",
+    "W1 Light Start Blinking",
+    "S1 Floor Raise to Next Highest Floor",
+    "W1 Floor Lower to Highest Floor",
+    "S1 Floor Raise to Next Highest Floor (changes texture)",
+    "S1 Lift Lower Wait Raise",
+    "W1 Floor Raise to Next Highest Floor (changes texture)",
+    "S1 Floor Lower to Lowest Floor",
+    "G1 Floor Raise to Lowest Ceiling",
+    "W1 Crusher Start with Slow Damage",
+    "DR Door (Blue) Open Wait Close",
+    "DR Door (Yellow) Open Wait Close",
+    "DR Door (Red) Open Wait Close",
+    "S1 Door Open Wait Close",
+    "W1 Floor Raise by Shortest Lower Texture",
+    "D1 Door Open Stay",
+    "D1 Door (Blue) Open Stay",
+    "D1 Door (Red) Open Stay",
+    "D1 Door (Yellow) Open Stay",
+    "W1 Light Change to 35",
+    "W1 Floor Lower to 8 above Highest Floor",
+    "W1 Floor Lower to Lowest Floor (changes texture)",
+    "W1 Floor Lower to Lowest Floor",
+    "W1 Teleport",
+    "W1 Ceiling Raise to Highest Ceiling",
+    "S1 Ceiling Lower to Floor",
+    "SR Door Close Stay",
+    "SR Ceiling Lower to Floor",
+    "W1 Ceiling Lower to 8 above Floor",
+    "SR Floor Lower to Highest Floor",
+    "G1 Door Open Stay",
+    "G1 Floor Raise to Next Highest Floor (changes texture)",
+    "Scroll Texture Left",
+    "S1 Ceiling Lower to 8 above Floor (perpetual slow crusher damage)",
+    "S1 Door Close Stay",
+    "S1 Exit Level (goes to secret level)",
+    "W1 Exit Level",
+    "W1 Floor Start Moving Up and Down",
+    "W1 Floor Stop Moving",
+    "S1 Floor Raise to 8 below Lowest Ceiling (crushes)",
+    "W1 Floor Raise to 8 below Lowest Ceiling (crushes)",
+    "W1 Crusher Stop",
+    "W1 Floor Raise by 24",
+    "W1 Floor Raise by 24 (changes texture)",
+    "SR Floor Lower to Lowest Floor",
+    "SR Door Open Stay",
+    "SR Lift Lower Wait Raise",
+    "SR Door Open Wait Close",
+    "SR Floor Raise to Lowest Ceiling",
+    "SR Floor Raise to 8 below Lowest Ceiling (crushes)",
+    "SR Floor Raise by 24 (changes texture)",
+    "SR Floor Raise by 32 (changes texture)",
+    "SR Floor Raise to Next Highest Floor (changes texture)",
+    "SR Floor Raise to Next Highest Floor",
+    "SR Floor Lower to 8 above Highest Floor",
+    "S1 Floor Lower to 8 above Highest Floor",
+    "WR Ceiling Lower to 8 above Floor",
+    "WR Crusher Start with Slow Damage",
+    "WR Crusher Stop",
+    "WR Door Close Stay",
+    "WR Door Close Stay Open",
+    "WR Crusher Start with Fast Damage",
+    "SR Change Texture and Effect to Nearest",
+    "WR Light Change to 35",
+    "WR Light Change to Brightest Adjacent",
+    "WR Light Change to 255",
+    "WR Floor Lower to Lowest Floor",
+    "WR Floor Lower to Highest Floor",
+    "WR Floor Lower to Lowest Floor (changes texture)",
+    "Scroll Texture Right",
+    "WR Door Open Stay",
+    "WR Floor Start Moving Up and Down",
+    "WR Lift Lower Wait Raise",
+    "WR Floor Stop Moving",
+    "WR Door Open Wait Close",
+    "WR Floor Raise to Lowest Ceiling",
+    "WR Floor Raise by 24",
+    "WR Floor Raise by 24 (changes texture)",
+    "WR Floor Raise to 8 below Lowest Ceiling (crushes)",
+    "WR Floor Raise to Next Highest Floor (changes texture)",
+    "WR Floor Raise by Shortest Lower Texture",
+    "WR Teleport",
+    "WR Floor Lower to 8 Above Highest Floor",
+    "SR Door (Blue) Open Stay (fast)",
+    "W1 Stairs Raise by 16 (fast)",
+    "S1 Floor Raise to Lowest Ceiling",
+    "S1 Floor Lower to Highest Floor",
+    "S1 Door Open Stay",
+    "W1 Light Change to Darkest Adjacent",
+    "WR Door Open Wait Close (fast)",
+    "WR Door Open Stay (fast)",
+    "WR Door Close Stay (fast)",
+    "W1 Door Open Wait Close (fast)",
+    "W1 Door Open Stay (fast)",
+    "W1 Door Close Stay (fast)",
+    "S1 Door Open Wait Close (fast)",
+    "S1 Door Open Stay (fast)",
+    "S1 Door Close Stay (fast)",
+    "SR Door Open Wait Close (fast)",
+    "SR Door Open Stay (fast)",
+    "SR Door Close Stay (fast)",
+    "DR Door Open Wait Close (fast)",
+    "D1 Door Open Stay (fast)",
+    "W1 Floor Raise to Next Highest Floor",
+    "WR Lift Lower Wait Raise (fast)",
+    "W1 Lift Lower Wait Raise (fast)",
+    "S1 Lift Lower Wait Raise (fast)",
+    "SR Lift Lower Wait Raise (fast)",
+    "W1 Exit Level (goes to secret level)",
+    "W1 Teleport (monsters only)",
+    "WR Teleport (monsters only)",
+    "S1 Stairs Raise by 16 (fast)",
+    "WR Floor Raise to Next Highest Floor",
+    "WR Floor Raise to Next Highest Floor (fast)",
+    "W1 Floor Raise to Next Highest Floor (fast)",
+    "S1 Floor Raise to Next Highest Floor (fast)",
+    "SR Floor Raise to Next Highest Floor (fast)",
+    "S1 Door (Blue) Open Stay (fast)",
+    "SR Door (Red) Open Stay (fast)",
+    "S1 Door (Red) Open Stay (fast)",
+    "SR Door (Yellow) Open Stay (fast)",
+    "S1 Door (Yellow) Open Stay (fast)",
+    "SR Light Change to 255",
+    "SR Light Change to 35",
+    "S1 Floor Raise by 512",
+    "W1 Crusher Start with Slow Damage (silent)",
+    "W1 Floor Raise by 512",
+    "W1 Lift Raise by 24 (changes texture)",
+    "W1 Lift Raise by 32 (changes texture)",
+    "W1 Ceiling Lower to Floor (fast)",
+    "W1 Floor Raise Donut (changes texture)",
+    "WR Floor Raise by 512",
+    "WR Lift Raise by 24 (changes texture)",
+    "WR Lift Raise by 32 (changes texture)",
+    "WR Crusher Start (silent)",
+    "WR Ceiling Raise to Highest Ceiling",
+    "WR Ceiling Lower to Floor (fast)",
+    "W1 Change Texture and Effect",
+    "WR Change Texture and Effect",
+    "WR Floor Raise Donut (changes texture)",
+    "WR Light Start Blinking",
+    "WR Light Change to Darkest Adjacent",
+    "S1 Floor Raise by Shortest Lower Texture",
+    "S1 Floor Lower to Lowest Floor (changes texture)",
+    "S1 Floor Raise by 24 (changes texture and effect)",
+    "S1 Floor Raise by 24",
+    "S1 Lift Perpetual Lowest and Highest Floors",
+    "S1 Lift Stop",
+    "S1 Crusher Start (fast)",
+    "S1 Crusher Start (silent)",
+    "S1 Ceiling Raise to Highest Ceiling",
+    "S1 Ceiling Lower to 8 Above Floor",
+    "S1 Crusher Stop",
+    "S1 Light Change to Brightest Adjacent",
+    "S1 Light Change to 35",
+    "S1 Light Change to 255",
+    "S1 Light Start Blinking",
+    "S1 Light Change to Darkest Adjacent",
+    "S1 Teleport (also monsters)",
+    "S1 Door Close Wait Open (30 seconds)",
+    "SR Floor Raise by Shortest Lower Texture",
+    "SR Floor Lower to Lowest Floor (changes texture)",
+    "SR Floor Raise by 512",
+    "SR Floor Raise by 24 (changes texture and effect)",
+    "SR Floor Raise by 24",
+    "SR Lift Perpetual Lowest and Highest Floors",
+    "SR Lift Stop",
+    "SR Crusher Start (fast)",
+    "SR Crusher Start",
+    "SR Crusher Start (silent)",
+    "SR Ceiling Raise to Highest Ceiling",
+    "SR Ceiling Lower to 8 Above Floor",
+    "SR Crusher Stop",
+    "S1 Change Texture and Effect",
+    "SR Change Texture and Effect",
+    "SR Floor Raise Donut (changes texture)",
+    "SR Light Change to Brightest Adjacent",
+    "SR Light Start Blinking",
+    "SR Light Change to Darkest Adjacent",
+    "SR Teleport (also monsters)",
+    "SR Door Close Wait Open (30 seconds)",
+    "G1 Exit Level",
+    "G1 Exit Level (goes to secret level)",
+    "W1 Ceiling Lower to Lowest Ceiling",
+    "W1 Ceiling Lower to Highest Floor",
+    "WR Ceiling Lower to Lowest Ceiling",
+    "WR Ceiling Lower to Highest Floor",
+    "S1 Ceiling Lower to Lowest Ceiling",
+    "S1 Ceiling Lower to Highest Floor",
+    "SR Ceiling Lower to Lowest Ceiling",
+    "SR Ceiling Lower to Highest Floor",
+    "W1 Teleport (also monsters, silent, same angle)",
+    "WR Teleport (also monsters, silent, same angle)",
+    "S1 Teleport (also monsters, silent, same angle)",
+    "SR Teleport (also monsters, silent, same angle)",
+    "SR Lift Raise to Ceiling (instantly)",
+    "WR Lift Raise to Ceiling (instantly)",
+    "Floor Change Brightness to this Brightness",
+    "Scroll Ceiling Accelerates when Sector Height Changes",
+    "Scroll Floor Accelerates when Sector Height Changes",
+    "Scroll Things Accelerate when Sector Height Changes",
+    "Scroll Floor and Things Accelerate when Sector Height Changes",
+    "Scroll Wall Accelerates when Sector Height Changes",
+    "W1 Floor Lower to Nearest Floor",
+    "WR Floor Lower to Nearest Floor",
+    "S1 Floor Lower to Nearest Floor",
+    "SR Floor Lower to Nearest Floor",
+    "Friction Tagged Sector",
+    "Wind according to Line Vector",
+    "Current according to Line Vector",
+    "Wind/Current by Push/Pull Thing in Sector",
+    "W1 Lift Raise to Next Highest Floor (fast)",
+    "WR Lift Raise to Next Highest Floor (fast)",
+    "S1 Lift Raise to Next Highest Floor (fast)",
+    "SR Lift Raise to Next Highest Floor (fast)",
+    "W1 Lift Lower to Next Lowest Floor (fast)",
+    "WR Lift Lower to Next Lowest Floor (fast)",
+    "S1 Lift Lower to Next Lowest Floor (fast)",
+    "SR Lift Lower to Next Lowest Floor (fast)",
+    "W1 Lift Move to Same Floor Height (fast)",
+    "WR Lift Move to Same Floor Height (fast)",
+    "S1 Lift Move to Same Floor Height (fast)",
+    "SR Lift Move to Same Floor Height (fast)",
+    "W1 Change Texture and Effect to Nearest",
+    "WR Change Texture and Effect to Nearest",
+    "S1 Change Texture and Effect to Nearest",
+    "Create Fake Ceiling and Floor",
+    "W1 Teleport to Line with Same Tag (silent, same angle)",
+    "WR Teleport to Line with Same Tag (silent, same angle)",
+    "Scroll Ceiling when Sector Changes Height",
+    "Scroll Floor when Sector Changes Height",
+    "Scroll Move Things when Sector Changes Height",
+    "Scroll Floor and Move Things when Sector Changes Height",
+    "Scroll Wall when Sector Changes Height",
+    "Scroll Ceiling according to Line Vector",
+    "Scroll Floor according to Line Vector",
+    "Scroll Move Things according to Line Vector",
+    "Scroll Floor, Move Things",
+    "Scroll Wall according to Line Vector",
+    "Scroll Wall using Sidedef Offsets",
+    "WR Stairs Raise by 8",
+    "WR Stairs Raise by 16 (fast)",
+    "SR Stairs Raise by 8",
+    "SR Stairs Raise by 16 (fast)",
+    "Translucent (middle texture)",
+    "Ceiling Change Brightness to this Brightness",
+    "W1 Teleport to Line with Same Tag (silent, reversed angle)",
+    "WR Teleport to Line with Same Tag (silent, reversed angle)",
+    "W1 Teleport to Line with Same Tag (monsters only, silent, reversed angle)",
+    "WR Teleport to Line with Same Tag (monsters only, silent, reversed angle)",
+    "W1 Teleport to Line with Same Tag (monsters only, silent)",
+    "WR Teleport to Line with Same Tag (monsters only, silent)",
+    "W1 Teleport (monsters only, silent)",
+    "WR Teleport (monsters only, silent)",
+    "",
+    "Transfer Sky Texture to Tagged Sectors",
+    "Transfer Sky Texture to Tagged Sectors (flipped)"
+};
 
-extern menu_t   MainDef;
-extern menu_t   NewDef;
+static const char *sectorspecials[] =
+{
+    "",
+    "Light Blinks (randomly)",
+    "Light Blinks (0.5 sec.)",
+    "Light Blinks (1 sec.)",
+    "Damage -10 or 20% health and Light Blinks (0.5 sec.)",
+    "Damage -5 or 10% health",
+    "",
+    "Damage -2 or 5% health",
+    "Light Glows (1+ sec.)",
+    "Secret",
+    "Door Close Stay (after 30 sec.)",
+    "Damage -10 or 20% health and End level",
+    "Light Blinks (0.5 sec. synchronized)",
+    "Light Blinks (1 sec. synchronized)",
+    "Door Open Close (opens after 5 min.)",
+    "",
+    "Damage -10 or 20% health",
+    "Light Flickers (randomly)"
+};
 
 static fixed_t GetOffset(vertex_t *v1, vertex_t *v2)
 {
@@ -499,13 +789,14 @@ static void P_LoadSegs(int lump)
                             C_Warning("The flags of linedef %s have been changed to %s.",
                                 commify(linedefnum), commify(li->linedef->flags));
                     }
+
                     if (linefix[j].special != DEFAULT)
                     {
                         li->linedef->special = linefix[j].special;
 
                         if (devparm)
-                            C_Warning("The special of linedef %s has been changed to %s.",
-                                commify(linedefnum), commify(linefix[j].special));
+                            C_Warning("The special of linedef %s has been changed to %i (\"%s\").",
+                                commify(linedefnum), linefix[j].special, linespecials[linefix[j].special]);
                     }
 
                     if (linefix[j].tag != DEFAULT)
@@ -752,8 +1043,8 @@ static void P_LoadSectors(int lump)
                         ss->special = SHORT(sectorfix[j].special);
 
                         if (devparm)
-                            C_Warning("The special of sector %s has been changed to %s.",
-                                commify(sectorfix[j].sector), commify(sectorfix[j].special));
+                            C_Warning("The special of sector %s has been changed to %i (\"%s\").",
+                                commify(sectorfix[j].sector), sectorfix[j].special, sectorspecials[sectorfix[j].special]);
                     }
 
                     if (sectorfix[j].newtag != DEFAULT && (sectorfix[j].oldtag == DEFAULT || sectorfix[j].oldtag == ss->tag))
@@ -1222,8 +1513,7 @@ static void P_LoadLineDefs(int lump)
 
         ld->tranlump = -1;   // killough 4/11/98: no translucency by default
 
-        ld->slopetype = (!ld->dx ? ST_VERTICAL : (!ld->dy ? ST_HORIZONTAL : (FixedDiv(ld->dy, ld->dx) > 0 ? ST_POSITIVE
-            : ST_NEGATIVE)));
+        ld->slopetype = (!ld->dx ? ST_VERTICAL : (!ld->dy ? ST_HORIZONTAL : (FixedDiv(ld->dy, ld->dx) > 0 ? ST_POSITIVE : ST_NEGATIVE)));
 
         if (v1->x < v2->x)
         {
@@ -1294,8 +1584,8 @@ static void P_LoadLineDefs2(void)
             C_Warning("Linedef %s has the two-sided flag set but no second sidedef.", commify(i));
         }
 
-        ld->frontsector = (ld->sidenum[0] != NO_INDEX ? sides[ld->sidenum[0]].sector : 0);
-        ld->backsector = (ld->sidenum[1] != NO_INDEX ? sides[ld->sidenum[1]].sector : 0);
+        ld->frontsector = (ld->sidenum[0] != NO_INDEX ? sides[ld->sidenum[0]].sector : NULL);
+        ld->backsector = (ld->sidenum[1] != NO_INDEX ? sides[ld->sidenum[1]].sector : NULL);
 
         // killough 4/11/98: handle special types
         switch (ld->special)
@@ -1304,10 +1594,10 @@ static void P_LoadLineDefs2(void)
             {
                 int lump = sides[*ld->sidenum].special; // translucency from sidedef
 
-                if (!ld->tag)                           // if tag==0,
+                if (!ld->tag)                           // if tag == 0,
                     ld->tranlump = lump;                // affect this linedef only
                 else
-                    for (int j = 0; j < numlines; j++)  // if tag!=0,
+                    for (int j = 0; j < numlines; j++)  // if tag != 0,
                         if (lines[j].tag == ld->tag)    // affect all matching linedefs
                             lines[j].tranlump = lump;
 
@@ -1319,6 +1609,9 @@ static void P_LoadLineDefs2(void)
                 transferredsky = true;
                 break;
         }
+
+        if (!P_CheckTag(ld) && ld->special > 0 && ld->special <= NUMLINESPECIALS)
+            C_Warning("Linedef %s has special %i (\"%s\") but no tag.", commify(i), ld->special, linespecials[ld->special]);
     }
 }
 
@@ -1472,7 +1765,7 @@ static dboolean P_VerifyBlockMap(int count)
 // New procedure uses Bresenham-like algorithm on the linedefs, adding the
 // linedef to each block visited from the beginning to the end of the linedef.
 //
-// The algorithm's complexity is on the order of nlines*total_linedef_length.
+// The algorithm's complexity is on the order of nlines * total_linedef_length.
 //
 // Please note: This section of code is not interchangeable with TeamTNT's
 // code which attempts to fix the same problem.
@@ -1555,8 +1848,8 @@ static void P_CreateBlockMap(void)
             // difference in preferring to move across y (> 0) instead of x (< 0)
             int diff = (!adx ? 1 : (!ady ? -1 : (((x >> MAPBTOFRAC) << MAPBTOFRAC)
                     + (dx > 0 ? MAPBLOCKUNITS - 1 : 0) - x) * (ady = ABS(ady)) * dx
-                    - (((y >> MAPBTOFRAC) << MAPBTOFRAC) + (dy > 0 ? MAPBLOCKUNITS - 1 : 0)
-                    - y) * (adx = ABS(adx)) * dy));
+                    - (((y >> MAPBTOFRAC) << MAPBTOFRAC) + (dy > 0 ? MAPBLOCKUNITS - 1 : 0) - y)
+                    * (adx = ABS(adx)) * dy));
 
             // starting block, and pointer to its blocklist structure
             int b = (y >> MAPBTOFRAC) * bmapwidth + (x >> MAPBTOFRAC);
@@ -1579,7 +1872,7 @@ static void P_CreateBlockMap(void)
 
                 // Increase size of allocated list if necessary
                 if (bp->n >= bp->nalloc)
-                    bp->list = I_Realloc(bp->list, (bp->nalloc = bp->nalloc ? bp->nalloc * 2 : 8) * sizeof(*bp->list));
+                    bp->list = I_Realloc(bp->list, (bp->nalloc = (bp->nalloc ? bp->nalloc * 2 : 8)) * sizeof(*bp->list));
 
                 // Add linedef to end of list
                 bp->list[bp->n++] = i;
@@ -1605,7 +1898,7 @@ static void P_CreateBlockMap(void)
         // Compute the total size of the blockmap.
         //
         // Compression of empty blocks is performed by reserving two offset words
-        // at tot and tot+1.
+        // at tot and tot + 1.
         //
         // 4 words, unused if this routine is called, are reserved at the start.
         {
@@ -2337,7 +2630,7 @@ void P_SetupLevel(int ep, int map)
 static int  liquidlumps;
 static int  noliquidlumps;
 
-static void InitMapInfo(void)
+static void P_InitMapInfo(void)
 {
     int         mapmax = 1;
     int         mcmdvalue;
@@ -2612,9 +2905,8 @@ static int QualifyMap(int map)
 
 char *P_GetMapAuthor(int map)
 {
-    return (MAPINFO >= 0 && mapinfo[QualifyMap(map)].author[0] ? mapinfo[QualifyMap(map)].author : (breach && map == 1 ?
-        s_AUTHOR_BESTOR : (((E1M4B || *speciallumpname) && map == 4) || ((E1M8B || *speciallumpname) && map == 8) ?
-        s_AUTHOR_ROMERO : "")));
+    return (MAPINFO >= 0 && mapinfo[QualifyMap(map)].author[0] ? mapinfo[QualifyMap(map)].author :
+        (((E1M4B || *speciallumpname) && map == 4) || ((E1M8B || *speciallumpname) && map == 8) ? s_AUTHOR_ROMERO : ""));
 }
 
 void P_GetMapLiquids(int map)
@@ -2702,6 +2994,8 @@ void P_Init(void)
 {
     P_InitSwitchList();
     P_InitPicAnims();
-    InitMapInfo();
+    P_InitMapInfo();
     R_InitSprites();
+    P_CheckSpechits();
+    P_CheckIntercepts();
 }

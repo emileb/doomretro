@@ -44,6 +44,7 @@
 #include "m_misc.h"
 #include "m_random.h"
 #include "p_local.h"
+#include "p_setup.h"
 #include "p_tick.h"
 #include "s_sound.h"
 #include "st_stuff.h"
@@ -79,7 +80,6 @@ extern fixed_t      animatedliquiddiffs[64];
 extern int          deadlookdir;
 extern int          deathcount;
 extern msecnode_t   *sector_list;   // phares 3/16/98
-extern dboolean     canmodify;
 extern dboolean     usemouselook;
 
 void A_Recoil(weapontype_t weapon);
@@ -586,7 +586,7 @@ void P_MobjThinker(mobj_t *mobj)
 
     // [BH] otherwise bob certain power-ups
     else if ((flags2 & MF2_FLOATBOB) && !(flags & MF_CORPSE) && r_floatbob)
-        mobj->z = BETWEEN(mobj->floorz, mobj->z + floatbobdiffs[(mobj->floatbob + leveltime) & 63], mobj->ceilingz);
+        mobj->z = BETWEEN(mobj->floorz - 1, mobj->z + floatbobdiffs[(mobj->floatbob + leveltime) & 63], mobj->ceilingz);
 
     else if (mobj->z != mobj->floorz || mobj->momz)
     {
@@ -742,7 +742,17 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
     prevx = x;
     prevy = y;
 
-    mobj->z = (z == ONFLOORZ ? mobj->floorz : (z == ONCEILINGZ ? mobj->ceilingz - mobj->height : z));
+    if (z == ONFLOORZ)
+    {
+        mobj->z = mobj->floorz;
+
+        if ((mobj->flags2 & MF2_FOOTCLIP) && !sector->heightsec && P_IsInLiquid(mobj))
+            mobj->flags2 |= MF2_FEETARECLIPPED;
+    }
+    else if (z == ONCEILINGZ)
+        mobj->z = mobj->ceilingz - mobj->height;
+    else
+        mobj->z = z;
 
     mobj->oldx = mobj->x;
     mobj->oldy = mobj->y;
@@ -751,9 +761,6 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 
     mobj->thinker.function = (type == MT_MUSICSOURCE ? MusInfoThinker : P_MobjThinker);
     P_AddThinker(&mobj->thinker);
-
-    if (!(mobj->flags & MF_SPAWNCEILING) && (mobj->flags2 & MF2_FOOTCLIP) && !sector->heightsec && P_IsInLiquid(mobj))
-        mobj->flags2 |= MF2_FEETARECLIPPED;
 
     return mobj;
 }
@@ -1441,7 +1448,7 @@ void P_SpawnPlayerMissile(mobj_t *source, mobjtype_t type)
 
     P_NoiseAlert(source);
 
-    if (type == MT_ROCKET && r_rockettrails && !hacx && viewplayer->readyweapon == wp_missile && !D4V)
+    if (type == MT_ROCKET && r_rockettrails && !hacx && viewplayer->readyweapon == wp_missile && !doom4vanilla)
     {
         th->flags2 |= MF2_SMOKETRAIL;
         puffcount = 0;

@@ -166,13 +166,13 @@ static fixed_t      mtof_zoommul;   // how far the window zooms in each tic (map
 static fixed_t      ftom_zoommul;   // how far the window zooms in each tic (fb coords)
 
 // LL x,y where the window is on the map (map coords)
-fixed_t             m_x = FIXED_MAX, m_y = FIXED_MAX;
+static fixed_t      m_x = FIXED_MAX, m_y = FIXED_MAX;
 
 // UR x,y where the window is on the map (map coords)
 static fixed_t      m_x2, m_y2;
 
 // width/height of window on map (map coords)
-fixed_t             m_w, m_h;
+static fixed_t      m_w, m_h;
 
 // based on level size
 static fixed_t      min_x, min_y;
@@ -216,7 +216,7 @@ static dboolean     movement;
 int                 keydown;
 int                 direction;
 
-static am_frame_t   am_frame;
+am_frame_t          am_frame;
 
 static dboolean     isteleportline[NUMLINESPECIALS];
 
@@ -411,14 +411,12 @@ void AM_SetAutomapSize(void)
 {
     if (vid_widescreen || !menuactive)
     {
-        mapwidth = SCREENWIDTH;
         mapheight = SCREENHEIGHT - SBARHEIGHT;
         maparea = SCREENWIDTH * (SCREENHEIGHT - SBARHEIGHT);
         mapbottom = SCREENWIDTH * (SCREENHEIGHT - SBARHEIGHT - 1);
     }
     else
     {
-        mapwidth = SCREENWIDTH;
         mapheight = SCREENHEIGHT;
         maparea = SCREENWIDTH * SCREENHEIGHT;
         mapbottom = SCREENWIDTH * (SCREENHEIGHT - 1);
@@ -1142,7 +1140,7 @@ dboolean AM_Responder(const event_t *ev)
                 if ((m_y == min_y - m_h / 2 && y < 0.0) || (m_y == max_y - m_h / 2 && y > 0.0))
                     y = 0.0;
 
-                if ((direction = (int)(atan2(y, x) * 180.0 / M_PI + 0.5)) < 0)
+                if ((direction = (int)(atan2(y, x) * 180.0 / M_PI)) < 0)
                     direction += 360;
             }
         }
@@ -1840,7 +1838,7 @@ static void AM_DrawThings(void)
                     mpoint_t    point;
                     angle_t     angle = thing->angle;
                     int         fx, fy;
-                    const int   lump = sprites[thing->sprite].spriteframes[0].lump[0];
+                    const short lump = sprites[thing->sprite].spriteframes[0].lump[0];
                     const int   w = (BETWEEN(24 << FRACBITS, MIN(spritewidth[lump], spriteheight[lump]),
                                     96 << FRACBITS) >> FRACTOMAPBITS) / 2;
 
@@ -1936,12 +1934,15 @@ static void AM_DrawMarks(void)
                     if ((unsigned int)fy < mapheight)
                     {
                         const char  src = marknums[digit][j];
-                        byte        *dest = &mapscreen[fy * mapwidth + fx];
 
                         if (src == '2')
-                            *dest = markcolor;
+                            mapscreen[fy * mapwidth + fx] = markcolor;
                         else if (src == '1')
+                        {
+                            byte    *dest = &mapscreen[fy * mapwidth + fx];
+
                             *dest = *(*dest + tinttab66);
+                        }
                     }
                 }
             }

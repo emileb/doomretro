@@ -49,7 +49,7 @@
 static void T_GradualLightingToDoor(vldoor_t *door)
 {
     sector_t    *sec = door->sector;
-    int         level = door->topheight - sec->floorheight;
+    fixed_t     level = door->topheight - sec->floorheight;
 
     if (level > 0)
     {
@@ -366,14 +366,30 @@ dboolean EV_DoDoor(line_t *line, vldoor_e type, fixed_t speed)
 {
     int         secnum = -1;
     dboolean    rtn = false;
+    sector_t    *sec;
+
+    if (P_ProcessNoTagLines(line, &sec, &secnum))
+    {
+        if (zerotag_manual)
+            goto manual_door;
+        else
+            return false;
+    }
 
     while ((secnum = P_FindSectorFromLineTag(line, secnum)) >= 0)
     {
-        sector_t    *sec = sectors + secnum;
         vldoor_t    *door;
 
+        sec = sectors + secnum;
+
+manual_door:
         if (P_SectorActive(ceiling_special, sec))
-            continue;
+        {
+            if (!zerotag_manual)
+                continue;
+            else
+                return rtn;
+        }
 
         // new door thinker
         rtn = true;

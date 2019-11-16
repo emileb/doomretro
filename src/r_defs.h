@@ -487,7 +487,7 @@ enum
     SR_Floor_RaiseByShortestLowerTexture                           = 176,
     SR_Floor_LowerToLowestFloor_ChangesTexture                     = 177,
     SR_Floor_RaiseBy512                                            = 178,
-    SR_Floor_RaiseBy512_ChangesTextureAndEffect                    = 179,
+    SR_Floor_RaiseBy24_ChangesTextureAndEffect                     = 179,
     SR_Floor_RaiseBy24                                             = 180,
     SR_Lift_PerpetualLowestAndHighestFloors                        = 181,
     SR_Lift_Stop                                                   = 182,
@@ -861,8 +861,7 @@ typedef struct
     int                 x1;
     int                 x2;
 
-    fixed_t             scale1;
-    fixed_t             scale2;
+    fixed_t             scale;
     fixed_t             scalestep;
 
     fixed_t             minscale;
