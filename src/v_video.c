@@ -459,13 +459,13 @@ void V_DrawBigPatch(int x, int y, patch_t *patch)
     }
 }
 
-void V_DrawConsoleTextPatch(int x, int y, patch_t *patch, int color, int backgroundcolor, dboolean italics, byte *translucency)
+void V_DrawConsoleTextPatch(int x, int y, patch_t *patch, int width, int color,
+    int backgroundcolor, dboolean italics, byte *translucency)
 {
     byte        *desttop = &screens[0][y * SCREENWIDTH + x];
-    int         w = SHORT(patch->width);
     const int   italicize[15] = { 0, 2, 2, 2, 1, 1, 1, 1, 0, 0, 0, 0, -1, -1, -1 };
 
-    for (int col = 0; col < w; col++, desttop++)
+    for (int col = 0; col < width; col++, desttop++)
     {
         column_t    *column = (column_t *)((byte *)patch + LONG(patch->columnofs[col]));
         byte        topdelta;
@@ -489,8 +489,8 @@ void V_DrawConsoleTextPatch(int x, int y, patch_t *patch, int color, int backgro
                         if (*source)
                         {
                             if (italics)
-                                *(dest + italicize[height]) = (!translucency ? color : translucency[(color << 8)
-                                    + *(dest + italicize[height])]);
+                                *(dest + italicize[height]) = (!translucency ? color :
+                                    translucency[(color << 8) + *(dest + italicize[height])]);
                             else
                                 *dest = (!translucency ? color : translucency[(color << 8) + *dest]);
                         }
@@ -1492,7 +1492,7 @@ void V_Init(void)
             SDL_IMAGE_FILENAME, PACKAGE_NAME, SDL_IMAGE_MAJOR_VERSION, SDL_IMAGE_MINOR_VERSION, SDL_IMAGE_PATCHLEVEL);
 
     if (linked->patch != SDL_IMAGE_PATCHLEVEL)
-        C_Warning("The wrong version of <b>%s</b> was found. <i>%s</i> requires v%i.%i.%i.",
+        C_Warning(1, "The wrong version of <b>%s</b> was found. <i>%s</i> requires v%i.%i.%i.",
             SDL_IMAGE_FILENAME, PACKAGE_NAME, SDL_IMAGE_MAJOR_VERSION, SDL_IMAGE_MINOR_VERSION, SDL_IMAGE_PATCHLEVEL);
 
     for (int i = 0; i < 4; i++)
@@ -1527,34 +1527,30 @@ extern char     maptitle[128];
 extern dboolean splashscreen;
 extern int      titlesequence;
 
-static dboolean V_SavePNG(SDL_Renderer *renderer, char *path)
+static dboolean V_SavePNG(SDL_Renderer *sdlrenderer, char *path)
 {
     dboolean    result = false;
+    int         rendererwidth;
+    int         rendererheight;
 
-    if (renderer)
+    if (!SDL_GetRendererOutputSize(sdlrenderer, &rendererwidth, &rendererheight))
     {
-        int rendererwidth;
-        int rendererheight;
+        int         width = (vid_widescreen ? rendererheight * 16 / 10 : rendererheight * 4 / 3);
+        int         height = rendererheight;
+        SDL_Surface *screenshot;
 
-        if (!SDL_GetRendererOutputSize(renderer, &rendererwidth, &rendererheight))
+        if (width > rendererwidth)
         {
-            int         width = (vid_widescreen ? rendererheight * 16 / 10 : rendererheight * 4 / 3);
-            int         height = rendererheight;
-            SDL_Surface *screenshot;
+            width = rendererwidth;
+            height = (vid_widescreen ? rendererwidth * 10 / 16 : rendererwidth * 3 / 4);
+        }
 
-            if (width > rendererwidth)
-            {
-                width = rendererwidth;
-                height = (vid_widescreen ? rendererwidth * 10 / 16 : rendererwidth * 3 / 4);
-            }
+        if ((screenshot = SDL_CreateRGBSurface(0, width, height, 32, 0, 0, 0, 0)))
+        {
+            if (!SDL_RenderReadPixels(sdlrenderer, NULL, 0, screenshot->pixels, screenshot->pitch))
+                result = !IMG_SavePNG(screenshot, path);
 
-            if ((screenshot = SDL_CreateRGBSurface(0, width, height, 32, 0, 0, 0, 0)))
-            {
-                if (!SDL_RenderReadPixels(renderer, NULL, 0, screenshot->pixels, screenshot->pitch))
-                    result = !IMG_SavePNG(screenshot, path);
-
-                SDL_FreeSurface(screenshot);
-            }
+            SDL_FreeSurface(screenshot);
         }
     }
 

@@ -674,7 +674,7 @@ dboolean wildcard(char *input, char *pattern)
             return false;
     }
 
-    return true;
+    return false;
 }
 
 int gcd(int a, int b)
@@ -800,6 +800,11 @@ char *removeext(const char *file)
 dboolean isvowel(const char ch)
 {
     return !!strchr("aeiouAEIOU", ch);
+}
+
+dboolean isbreak(const char ch)
+{
+    return !!strchr(" /\\-", ch);
 }
 
 char *striptrailingzero(float value, int precision)

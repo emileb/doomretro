@@ -908,7 +908,7 @@ int P_FindLineFromLineTag(const line_t *line, int start)
 }
 
 // Hash the sector tags across the sectors and linedefs.
-static void P_InitTagLists(void)
+void P_InitTagLists(void)
 {
     for (int i = numsectors; --i >= 0;)             // Initially make all slots empty.
         sectors[i].firsttag = -1;
@@ -2552,7 +2552,6 @@ void P_SpawnSpecials(void)
     // P_InitTagLists() must be called before P_FindSectorFromLineTag()
     // or P_FindLineFromLineTag() can be called.
 
-    P_InitTagLists();                   // killough 1/30/98: Create xref tables for tags
     P_SpawnScrollers();                 // killough 3/7/98: Add generalized scrollers
     P_SpawnFriction();                  // phares 3/12/98: New friction model using linedefs
     P_SpawnPushers();                   // phares 3/20/98: New pusher model using linedefs
@@ -2798,13 +2797,13 @@ static void P_SpawnScrollers(void)
         // killough 3/15/98: Add acceleration. Types 214-218 are the same but
         // are accelerative.
         if (special >= Scroll_ScrollCeilingWhenSectorChangesHeight
-            && special <= Scroll_ScrollWallWhenSectorChangesHeight)      // displacement scrollers
+            && special <= Scroll_ScrollWallWhenSectorChangesHeight)         // displacement scrollers
         {
             special += Scroll_ScrollCeilingAccordingToLineVector - Scroll_ScrollCeilingWhenSectorChangesHeight;
             control = sides[*l->sidenum].sector->id;
         }
         else if (special >= Scroll_CeilingAcceleratesWhenSectorHeightChanges
-            && special <= Scroll_WallAcceleratesWhenSectorHeightChanges) // accelerative scrollers
+            && special <= Scroll_WallAcceleratesWhenSectorHeightChanges)    // accelerative scrollers
         {
             accel = true;
             special += Scroll_ScrollCeilingAccordingToLineVector - Scroll_CeilingAcceleratesWhenSectorHeightChanges;
@@ -2933,9 +2932,9 @@ static void P_SpawnFriction(void)
             // the move distance is multiplied by 'friction/0x10000', so a
             // higher friction value actually means 'less friction'.
             if (friction > ORIG_FRICTION)       // ice
-                movefactor = MAX(32, ((0x10092 - friction) * 0x70) / 0x158);
+                movefactor = MAX(32, ((0x10092 - friction) * 0x70) / 0x0158);
             else
-                movefactor = MAX(32, ((friction - 0xDB34) * 0xA) / 0x80);
+                movefactor = MAX(32, ((friction - 0xDB34) * 0x0A) / 0x80);
 
             for (int s = -1; (s = P_FindSectorFromLineTag(l, s)) >= 0;)
             {

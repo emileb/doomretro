@@ -396,7 +396,7 @@ static void P_ZMovement(mobj_t *mo)
         // [BH] remove blood the moment it hits the ground and spawn blood splats in its place
         if (blood && (mo->flags2 & MF2_BLOOD))
         {
-            P_RemoveMobj(mo);
+            P_RemoveBloodMobj(mo);
 
             if (r_bloodsplats_max)
             {
@@ -813,6 +813,18 @@ void P_RemoveMobj(mobj_t *mobj)
 }
 
 //
+// P_RemoveBlood
+//
+void P_RemoveBloodMobj(mobj_t *mobj)
+{
+    // unlink from sector and block lists
+    P_UnsetThingPosition(mobj);
+
+    // free block
+    P_RemoveThinker((thinker_t *)mobj);
+}
+
+//
 // P_FindDoomedNum
 // Finds a mobj type with a matching doomednum
 // killough 8/24/98: rewrote to use hashing
@@ -902,8 +914,8 @@ void P_RespawnSpecials(void)
 // Most of the player structure stays unchanged
 //  between levels.
 //
-extern int lastlevel;
-extern int lastepisode;
+extern int  lastlevel;
+extern int  lastepisode;
 
 static void P_SpawnPlayer(const mapthing_t *mthing)
 {
@@ -1048,7 +1060,7 @@ mobj_t *P_SpawnMapThing(mapthing_t *mthing, dboolean spawnmonsters)
     {
         // [BH] make unknown thing type non-fatal and show console warning instead
         if (type != VisualModeCamera)
-            C_Warning("Thing %s at (%i,%i) didn't spawn because it has an unknown type.", commify(thingid), mthing->x, mthing->y);
+            C_Warning(1, "Thing %s at (%i,%i) didn't spawn because it has an unknown type.", commify(thingid), mthing->x, mthing->y);
 
         return NULL;
     }
@@ -1057,9 +1069,9 @@ mobj_t *P_SpawnMapThing(mapthing_t *mthing, dboolean spawnmonsters)
     if (!(options & (MTF_EASY | MTF_NORMAL | MTF_HARD)) && (!canmodify || !r_fixmaperrors) && type != VisualModeCamera)
     {
         if (*mobjinfo[i].name1)
-            C_Warning("The %s at (%i,%i) didn't spawn because it has no skill flags.", mobjinfo[i].name1, mthing->x, mthing->y);
+            C_Warning(1, "The %s at (%i,%i) didn't spawn because it has no skill flags.", mobjinfo[i].name1, mthing->x, mthing->y);
         else
-            C_Warning("Thing %s at (%i,%i) didn't spawn because it has no skill flags.", commify(thingid), mthing->x, mthing->y);
+            C_Warning(1, "Thing %s at (%i,%i) didn't spawn because it has no skill flags.", commify(thingid), mthing->x, mthing->y);
 
         return NULL;
     }
@@ -1340,6 +1352,11 @@ void P_CheckMissileSpawn(mobj_t *th)
     th->y += (th->momy >> 1);
     th->z += (th->momz >> 1);
 
+    // killough 8/12/98: for non-missile objects (e.g. grenades)
+    if (!(th->flags & MF_MISSILE))
+        return;
+
+    // killough 3/15/98: no dropoff (really = don't care for missiles)
     if (!P_TryMove(th, th->x, th->y, 0))
         P_ExplodeMissile(th);
 }

@@ -137,6 +137,7 @@ void P_SetShadowColumnFunction(mobj_t *mobj);
 mobjtype_t P_FindDoomedNum(unsigned int type);
 
 void P_RemoveMobj(mobj_t *mobj);
+void P_RemoveBloodMobj(mobj_t *mobj);
 dboolean P_SetMobjState(mobj_t *mobj, statenum_t state);
 void P_MobjThinker(mobj_t *mobj);
 
@@ -205,7 +206,7 @@ dboolean P_BlockThingsIterator(int x, int y, dboolean func(mobj_t *));
 
 extern divline_t    dltrace;
 
-dboolean P_PathTraverse(fixed_t x1, fixed_t y1, fixed_t x2, fixed_t y2, int flags, dboolean (*trav)(intercept_t *));
+dboolean P_PathTraverse(fixed_t x1, fixed_t y1, fixed_t x2, fixed_t y2, int flags, traverser_t trav);
 
 void P_UnsetThingPosition(mobj_t *thing);
 void P_UnsetBloodSplatPosition(bloodsplat_t *splat);
@@ -286,6 +287,8 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, dboolean message, dbo
 dboolean P_TakeSpecialThing(mobjtype_t type);
 
 void P_DamageMobj(mobj_t *target, mobj_t *inflicter, mobj_t *source, int damage, dboolean adjust);
+
+void P_ResurrectMobj(mobj_t *target);
 
 extern int      god_health;
 extern int      idfa_armor;

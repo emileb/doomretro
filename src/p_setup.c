@@ -251,301 +251,303 @@ dboolean        nomouselook = false;
 static const char *linespecials[] =
 {
     "",
-    "DR Door Open Wait Close (also monsters)",
-    "W1 Door Open Stay",
-    "W1 Door Close Stay",
-    "W1 Door Open Wait Close",
-    "W1 Floor Raise to Lowest Ceiling",
-    "W1 Crusher Start with Fast Damage",
-    "S1 Stairs Raise by 8",
-    "W1 Stairs Raise by 8",
-    "S1 Floor Raise Donut (changes texture)",
-    "W1 Lift Lower Wait Raise",
-    "S1 Exit Level",
-    "W1 Light Change to Brightest Adjacent",
-    "W1 Light Change to 255",
-    "S1 Floor Raise by 32 (changes texture)",
-    "S1 Floor Raise by 24 (changes texture)",
-    "W1 Door Close Wait Open",
-    "W1 Light Start Blinking",
-    "S1 Floor Raise to Next Highest Floor",
-    "W1 Floor Lower to Highest Floor",
-    "S1 Floor Raise to Next Highest Floor (changes texture)",
-    "S1 Lift Lower Wait Raise",
-    "W1 Floor Raise to Next Highest Floor (changes texture)",
-    "S1 Floor Lower to Lowest Floor",
-    "G1 Floor Raise to Lowest Ceiling",
-    "W1 Crusher Start with Slow Damage",
-    "DR Door (Blue) Open Wait Close",
-    "DR Door (Yellow) Open Wait Close",
-    "DR Door (Red) Open Wait Close",
-    "S1 Door Open Wait Close",
-    "W1 Floor Raise by Shortest Lower Texture",
-    "D1 Door Open Stay",
-    "D1 Door (Blue) Open Stay",
-    "D1 Door (Red) Open Stay",
-    "D1 Door (Yellow) Open Stay",
-    "W1 Light Change to 35",
-    "W1 Floor Lower to 8 above Highest Floor",
-    "W1 Floor Lower to Lowest Floor (changes texture)",
-    "W1 Floor Lower to Lowest Floor",
+    "DR Door open wait close (also monsters)",
+    "W1 Door open stay",
+    "W1 Door close stay",
+    "W1 Door open wait close",
+    "W1 Floor raise to lowest ceiling",
+    "W1 Crusher start with fast damage",
+    "S1 Stairs raise by 8",
+    "W1 Stairs raise by 8",
+    "S1 Floor raise donut (changes texture)",
+    "W1 Lift lower wait raise",
+    "S1 Exit level",
+    "W1 Light change to brightest adjacent",
+    "W1 Light change to 255",
+    "S1 Floor raise by 32 (changes texture)",
+    "S1 Floor raise by 24 (changes texture)",
+    "W1 Door close wait open",
+    "W1 Light start blinking",
+    "S1 Floor raise to next highest floor",
+    "W1 Floor lower to highest floor",
+    "S1 Floor raise to next highest floor (changes texture)",
+    "S1 Lift lower wait raise",
+    "W1 Floor raise to next highest floor (changes texture)",
+    "S1 Floor lower to lowest floor",
+    "G1 Floor raise to lowest ceiling",
+    "W1 Crusher start with slow damage",
+    "DR Door (blue) open wait close",
+    "DR Door (yellow) open wait close",
+    "DR Door (red) open wait close",
+    "S1 Door open wait close",
+    "W1 Floor raise by shortest lower texture",
+    "D1 Door open stay",
+    "D1 Door (blue) open stay",
+    "D1 Door (red) open stay",
+    "D1 Door (yellow) open stay",
+    "W1 Light change to 35",
+    "W1 Floor lower to 8 above highest floor",
+    "W1 Floor lower to lowest floor (changes texture)",
+    "W1 Floor lower to lowest floor",
     "W1 Teleport",
-    "W1 Ceiling Raise to Highest Ceiling",
-    "S1 Ceiling Lower to Floor",
-    "SR Door Close Stay",
-    "SR Ceiling Lower to Floor",
-    "W1 Ceiling Lower to 8 above Floor",
-    "SR Floor Lower to Highest Floor",
-    "G1 Door Open Stay",
-    "G1 Floor Raise to Next Highest Floor (changes texture)",
-    "Scroll Texture Left",
-    "S1 Ceiling Lower to 8 above Floor (perpetual slow crusher damage)",
-    "S1 Door Close Stay",
-    "S1 Exit Level (goes to secret level)",
-    "W1 Exit Level",
-    "W1 Floor Start Moving Up and Down",
-    "W1 Floor Stop Moving",
-    "S1 Floor Raise to 8 below Lowest Ceiling (crushes)",
-    "W1 Floor Raise to 8 below Lowest Ceiling (crushes)",
-    "W1 Crusher Stop",
-    "W1 Floor Raise by 24",
-    "W1 Floor Raise by 24 (changes texture)",
-    "SR Floor Lower to Lowest Floor",
-    "SR Door Open Stay",
-    "SR Lift Lower Wait Raise",
-    "SR Door Open Wait Close",
-    "SR Floor Raise to Lowest Ceiling",
-    "SR Floor Raise to 8 below Lowest Ceiling (crushes)",
-    "SR Floor Raise by 24 (changes texture)",
-    "SR Floor Raise by 32 (changes texture)",
-    "SR Floor Raise to Next Highest Floor (changes texture)",
-    "SR Floor Raise to Next Highest Floor",
-    "SR Floor Lower to 8 above Highest Floor",
-    "S1 Floor Lower to 8 above Highest Floor",
-    "WR Ceiling Lower to 8 above Floor",
-    "WR Crusher Start with Slow Damage",
-    "WR Crusher Stop",
-    "WR Door Close Stay",
-    "WR Door Close Stay Open",
-    "WR Crusher Start with Fast Damage",
-    "SR Change Texture and Effect to Nearest",
-    "WR Light Change to 35",
-    "WR Light Change to Brightest Adjacent",
-    "WR Light Change to 255",
-    "WR Floor Lower to Lowest Floor",
-    "WR Floor Lower to Highest Floor",
-    "WR Floor Lower to Lowest Floor (changes texture)",
-    "Scroll Texture Right",
-    "WR Door Open Stay",
-    "WR Floor Start Moving Up and Down",
-    "WR Lift Lower Wait Raise",
-    "WR Floor Stop Moving",
-    "WR Door Open Wait Close",
-    "WR Floor Raise to Lowest Ceiling",
-    "WR Floor Raise by 24",
-    "WR Floor Raise by 24 (changes texture)",
-    "WR Floor Raise to 8 below Lowest Ceiling (crushes)",
-    "WR Floor Raise to Next Highest Floor (changes texture)",
-    "WR Floor Raise by Shortest Lower Texture",
+    "W1 Ceiling raise to highest ceiling",
+    "S1 Ceiling lower to floor",
+    "SR Door close stay",
+    "SR Ceiling lower to floor",
+    "W1 Ceiling lower to 8 above floor",
+    "SR Floor lower to highest floor",
+    "G1 Door open stay",
+    "G1 Floor raise to next highest floor (changes texture)",
+    "Scroll texture left",
+    "S1 Ceiling lower to 8 above floor (perpetual slow crusher damage)",
+    "S1 Door close stay",
+    "S1 Exit level (goes to secret level)",
+    "W1 Exit level",
+    "W1 Floor start moving up and down",
+    "W1 Floor stop moving",
+    "S1 Floor raise to 8 below lowest ceiling (crushes)",
+    "W1 Floor raise to 8 below lowest ceiling (crushes)",
+    "W1 Crusher stop",
+    "W1 Floor raise by 24",
+    "W1 Floor raise by 24 (changes texture)",
+    "SR Floor lower to lowest floor",
+    "SR Door open stay",
+    "SR Lift lower wait raise",
+    "SR Door open wait close",
+    "SR Floor raise to lowest ceiling",
+    "SR Floor raise to 8 below lowest ceiling (crushes)",
+    "SR Floor raise by 24 (changes texture)",
+    "SR Floor raise by 32 (changes texture)",
+    "SR Floor raise to next highest floor (changes texture)",
+    "SR Floor raise to next highest floor",
+    "SR Floor lower to 8 above highest floor",
+    "S1 Floor lower to 8 above highest floor",
+    "WR Ceiling lower to 8 above floor",
+    "WR Crusher start with slow damage",
+    "WR Crusher stop",
+    "WR Door close stay",
+    "WR Door close stay open",
+    "WR Crusher start with fast damage",
+    "SR Change texture and effect to nearest",
+    "WR Light change to 35",
+    "WR Light change to brightest adjacent",
+    "WR Light change to 255",
+    "WR Floor lower to lowest floor",
+    "WR Floor lower to highest floor",
+    "WR Floor lower to lowest floor (changes texture)",
+    "Scroll texture right",
+    "WR Door open stay",
+    "WR Floor start moving up and down",
+    "WR Lift lower wait raise",
+    "WR Floor stop moving",
+    "WR Door open wait close",
+    "WR Floor raise to lowest ceiling",
+    "WR Floor raise by 24",
+    "WR Floor raise by 24 (changes texture)",
+    "WR Floor raise to 8 below lowest ceiling (crushes)",
+    "WR Floor raise to next highest floor (changes texture)",
+    "WR Floor raise by shortest lower texture",
     "WR Teleport",
-    "WR Floor Lower to 8 Above Highest Floor",
-    "SR Door (Blue) Open Stay (fast)",
-    "W1 Stairs Raise by 16 (fast)",
-    "S1 Floor Raise to Lowest Ceiling",
-    "S1 Floor Lower to Highest Floor",
-    "S1 Door Open Stay",
-    "W1 Light Change to Darkest Adjacent",
-    "WR Door Open Wait Close (fast)",
-    "WR Door Open Stay (fast)",
-    "WR Door Close Stay (fast)",
-    "W1 Door Open Wait Close (fast)",
-    "W1 Door Open Stay (fast)",
-    "W1 Door Close Stay (fast)",
-    "S1 Door Open Wait Close (fast)",
-    "S1 Door Open Stay (fast)",
-    "S1 Door Close Stay (fast)",
-    "SR Door Open Wait Close (fast)",
-    "SR Door Open Stay (fast)",
-    "SR Door Close Stay (fast)",
-    "DR Door Open Wait Close (fast)",
-    "D1 Door Open Stay (fast)",
-    "W1 Floor Raise to Next Highest Floor",
-    "WR Lift Lower Wait Raise (fast)",
-    "W1 Lift Lower Wait Raise (fast)",
-    "S1 Lift Lower Wait Raise (fast)",
-    "SR Lift Lower Wait Raise (fast)",
-    "W1 Exit Level (goes to secret level)",
+    "WR Floor lower to 8 above highest floor",
+    "SR Door (blue) open stay (fast)",
+    "W1 Stairs raise by 16 (fast)",
+    "S1 Floor raise to lowest ceiling",
+    "S1 Floor lower to highest floor",
+    "S1 Door open stay",
+    "W1 Light change to darkest adjacent",
+    "WR Door open wait close (fast)",
+    "WR Door open stay (fast)",
+    "WR Door close stay (fast)",
+    "W1 Door open wait close (fast)",
+    "W1 Door open stay (fast)",
+    "W1 Door close stay (fast)",
+    "S1 Door open wait close (fast)",
+    "S1 Door open stay (fast)",
+    "S1 Door close stay (fast)",
+    "SR Door open wait close (fast)",
+    "SR Door open stay (fast)",
+    "SR Door close stay (fast)",
+    "DR Door open wait close (fast)",
+    "D1 Door open stay (fast)",
+    "W1 Floor raise to next highest floor",
+    "WR Lift lower wait raise (fast)",
+    "W1 Lift lower wait raise (fast)",
+    "S1 Lift lower wait raise (fast)",
+    "SR Lift lower wait raise (fast)",
+    "W1 Exit level (goes to secret level)",
     "W1 Teleport (monsters only)",
     "WR Teleport (monsters only)",
-    "S1 Stairs Raise by 16 (fast)",
-    "WR Floor Raise to Next Highest Floor",
-    "WR Floor Raise to Next Highest Floor (fast)",
-    "W1 Floor Raise to Next Highest Floor (fast)",
-    "S1 Floor Raise to Next Highest Floor (fast)",
-    "SR Floor Raise to Next Highest Floor (fast)",
-    "S1 Door (Blue) Open Stay (fast)",
-    "SR Door (Red) Open Stay (fast)",
-    "S1 Door (Red) Open Stay (fast)",
-    "SR Door (Yellow) Open Stay (fast)",
-    "S1 Door (Yellow) Open Stay (fast)",
-    "SR Light Change to 255",
-    "SR Light Change to 35",
-    "S1 Floor Raise by 512",
-    "W1 Crusher Start with Slow Damage (silent)",
-    "W1 Floor Raise by 512",
-    "W1 Lift Raise by 24 (changes texture)",
-    "W1 Lift Raise by 32 (changes texture)",
-    "W1 Ceiling Lower to Floor (fast)",
-    "W1 Floor Raise Donut (changes texture)",
-    "WR Floor Raise by 512",
-    "WR Lift Raise by 24 (changes texture)",
-    "WR Lift Raise by 32 (changes texture)",
-    "WR Crusher Start (silent)",
-    "WR Ceiling Raise to Highest Ceiling",
-    "WR Ceiling Lower to Floor (fast)",
-    "W1 Change Texture and Effect",
-    "WR Change Texture and Effect",
-    "WR Floor Raise Donut (changes texture)",
-    "WR Light Start Blinking",
-    "WR Light Change to Darkest Adjacent",
-    "S1 Floor Raise by Shortest Lower Texture",
-    "S1 Floor Lower to Lowest Floor (changes texture)",
-    "S1 Floor Raise by 24 (changes texture and effect)",
-    "S1 Floor Raise by 24",
-    "S1 Lift Perpetual Lowest and Highest Floors",
-    "S1 Lift Stop",
-    "S1 Crusher Start (fast)",
-    "S1 Crusher Start (silent)",
-    "S1 Ceiling Raise to Highest Ceiling",
-    "S1 Ceiling Lower to 8 Above Floor",
-    "S1 Crusher Stop",
-    "S1 Light Change to Brightest Adjacent",
-    "S1 Light Change to 35",
-    "S1 Light Change to 255",
-    "S1 Light Start Blinking",
-    "S1 Light Change to Darkest Adjacent",
+    "S1 Stairs raise by 16 (fast)",
+    "WR Floor raise to next highest floor",
+    "WR Floor raise to next highest floor (fast)",
+    "W1 Floor raise to next highest floor (fast)",
+    "S1 Floor raise to next highest floor (fast)",
+    "SR Floor raise to next highest floor (fast)",
+    "S1 Door (blue) open stay (fast)",
+    "SR Door (red) open stay (fast)",
+    "S1 Door (red) open stay (fast)",
+    "SR Door (yellow) open stay (fast)",
+    "S1 Door (yellow) open stay (fast)",
+    "SR Light change to 255",
+    "SR Light change to 35",
+    "S1 Floor raise by 512",
+    "W1 Crusher start with slow damage (silent)",
+    "W1 Floor raise by 512",
+    "W1 Lift raise by 24 (changes texture)",
+    "W1 Lift raise by 32 (changes texture)",
+    "W1 Ceiling lower to floor (fast)",
+    "W1 Floor raise donut (changes texture)",
+    "WR Floor raise by 512",
+    "WR Lift raise by 24 (changes texture)",
+    "WR Lift raise by 32 (changes texture)",
+    "WR Crusher start (silent)",
+    "WR Ceiling raise to highest ceiling",
+    "WR Ceiling lower to floor (fast)",
+    "W1 Change texture and effect",
+    "WR Change texture and effect",
+    "WR Floor raise donut (changes texture)",
+    "WR Light start blinking",
+    "WR Light change to darkest adjacent",
+    "S1 Floor raise by shortest lower texture",
+    "S1 Floor lower to lowest floor (changes texture)",
+    "S1 Floor raise by 24 (changes texture and effect)",
+    "S1 Floor raise by 24",
+    "S1 Lift perpetual lowest and highest floors",
+    "S1 Lift stop",
+    "S1 Crusher start (fast)",
+    "S1 Crusher start (silent)",
+    "S1 Ceiling raise to highest ceiling",
+    "S1 Ceiling lower to 8 above floor",
+    "S1 Crusher stop",
+    "S1 Light change to brightest adjacent",
+    "S1 Light change to 35",
+    "S1 Light change to 255",
+    "S1 Light start blinking",
+    "S1 Light change to darkest adjacent",
     "S1 Teleport (also monsters)",
-    "S1 Door Close Wait Open (30 seconds)",
-    "SR Floor Raise by Shortest Lower Texture",
-    "SR Floor Lower to Lowest Floor (changes texture)",
-    "SR Floor Raise by 512",
-    "SR Floor Raise by 24 (changes texture and effect)",
-    "SR Floor Raise by 24",
-    "SR Lift Perpetual Lowest and Highest Floors",
-    "SR Lift Stop",
-    "SR Crusher Start (fast)",
-    "SR Crusher Start",
-    "SR Crusher Start (silent)",
-    "SR Ceiling Raise to Highest Ceiling",
-    "SR Ceiling Lower to 8 Above Floor",
-    "SR Crusher Stop",
-    "S1 Change Texture and Effect",
-    "SR Change Texture and Effect",
-    "SR Floor Raise Donut (changes texture)",
-    "SR Light Change to Brightest Adjacent",
-    "SR Light Start Blinking",
-    "SR Light Change to Darkest Adjacent",
+    "S1 Door close wait open (30 seconds)",
+    "SR Floor raise by shortest lower texture",
+    "SR Floor lower to lowest floor (changes texture)",
+    "SR Floor raise by 512",
+    "SR Floor raise by 24 (changes texture and effect)",
+    "SR Floor raise by 24",
+    "SR Lift perpetual lowest and highest floors",
+    "SR Lift stop",
+    "SR Crusher start (fast)",
+    "SR Crusher start",
+    "SR Crusher start (silent)",
+    "SR Ceiling raise to highest ceiling",
+    "SR Ceiling lower to 8 above floor",
+    "SR Crusher stop",
+    "S1 Change texture and effect",
+    "SR Change texture and effect",
+    "SR Floor raise donut (changes texture)",
+    "SR Light change to brightest adjacent",
+    "SR Light start blinking",
+    "SR Light change to darkest adjacent",
     "SR Teleport (also monsters)",
-    "SR Door Close Wait Open (30 seconds)",
-    "G1 Exit Level",
-    "G1 Exit Level (goes to secret level)",
-    "W1 Ceiling Lower to Lowest Ceiling",
-    "W1 Ceiling Lower to Highest Floor",
-    "WR Ceiling Lower to Lowest Ceiling",
-    "WR Ceiling Lower to Highest Floor",
-    "S1 Ceiling Lower to Lowest Ceiling",
-    "S1 Ceiling Lower to Highest Floor",
-    "SR Ceiling Lower to Lowest Ceiling",
-    "SR Ceiling Lower to Highest Floor",
+    "SR Door close wait open (30 seconds)",
+    "G1 Exit level",
+    "G1 Exit level (goes to secret level)",
+    "W1 Ceiling lower to lowest ceiling",
+    "W1 Ceiling lower to highest floor",
+    "WR Ceiling lower to lowest ceiling",
+    "WR Ceiling lower to highest floor",
+    "S1 Ceiling lower to lowest ceiling",
+    "S1 Ceiling lower to highest floor",
+    "SR Ceiling lower to lowest ceiling",
+    "SR Ceiling lower to highest floor",
     "W1 Teleport (also monsters, silent, same angle)",
     "WR Teleport (also monsters, silent, same angle)",
     "S1 Teleport (also monsters, silent, same angle)",
     "SR Teleport (also monsters, silent, same angle)",
-    "SR Lift Raise to Ceiling (instantly)",
-    "WR Lift Raise to Ceiling (instantly)",
-    "Floor Change Brightness to this Brightness",
-    "Scroll Ceiling Accelerates when Sector Height Changes",
-    "Scroll Floor Accelerates when Sector Height Changes",
-    "Scroll Things Accelerate when Sector Height Changes",
-    "Scroll Floor and Things Accelerate when Sector Height Changes",
-    "Scroll Wall Accelerates when Sector Height Changes",
-    "W1 Floor Lower to Nearest Floor",
-    "WR Floor Lower to Nearest Floor",
-    "S1 Floor Lower to Nearest Floor",
-    "SR Floor Lower to Nearest Floor",
-    "Friction Tagged Sector",
-    "Wind according to Line Vector",
-    "Current according to Line Vector",
-    "Wind/Current by Push/Pull Thing in Sector",
-    "W1 Lift Raise to Next Highest Floor (fast)",
-    "WR Lift Raise to Next Highest Floor (fast)",
-    "S1 Lift Raise to Next Highest Floor (fast)",
-    "SR Lift Raise to Next Highest Floor (fast)",
-    "W1 Lift Lower to Next Lowest Floor (fast)",
-    "WR Lift Lower to Next Lowest Floor (fast)",
-    "S1 Lift Lower to Next Lowest Floor (fast)",
-    "SR Lift Lower to Next Lowest Floor (fast)",
-    "W1 Lift Move to Same Floor Height (fast)",
-    "WR Lift Move to Same Floor Height (fast)",
-    "S1 Lift Move to Same Floor Height (fast)",
-    "SR Lift Move to Same Floor Height (fast)",
-    "W1 Change Texture and Effect to Nearest",
-    "WR Change Texture and Effect to Nearest",
-    "S1 Change Texture and Effect to Nearest",
-    "Create Fake Ceiling and Floor",
-    "W1 Teleport to Line with Same Tag (silent, same angle)",
-    "WR Teleport to Line with Same Tag (silent, same angle)",
-    "Scroll Ceiling when Sector Changes Height",
-    "Scroll Floor when Sector Changes Height",
-    "Scroll Move Things when Sector Changes Height",
-    "Scroll Floor and Move Things when Sector Changes Height",
-    "Scroll Wall when Sector Changes Height",
-    "Scroll Ceiling according to Line Vector",
-    "Scroll Floor according to Line Vector",
-    "Scroll Move Things according to Line Vector",
-    "Scroll Floor, Move Things",
-    "Scroll Wall according to Line Vector",
-    "Scroll Wall using Sidedef Offsets",
-    "WR Stairs Raise by 8",
-    "WR Stairs Raise by 16 (fast)",
-    "SR Stairs Raise by 8",
-    "SR Stairs Raise by 16 (fast)",
+    "SR Lift raise to ceiling (instantly)",
+    "WR Lift raise to ceiling (instantly)",
+    "Floor change brightness to this brightness",
+    "Scroll ceiling accelerates when sector height changes",
+    "Scroll floor accelerates when sector height changes",
+    "Scroll things accelerate when sector height changes",
+    "Scroll floor and things accelerate when sector height changes",
+    "Scroll wall accelerates when sector height changes",
+    "W1 Floor lower to nearest floor",
+    "WR Floor lower to nearest floor",
+    "S1 Floor lower to nearest floor",
+    "SR Floor lower to nearest floor",
+    "Friction tagged sector",
+    "Wind according to line vector",
+    "Current according to line vector",
+    "Wind/current by push/pull thing in sector",
+    "W1 Lift raise to next highest floor (fast)",
+    "WR Lift raise to next highest floor (fast)",
+    "S1 Lift raise to next highest floor (fast)",
+    "SR Lift raise to next highest floor (fast)",
+    "W1 Lift lower to next lowest floor (fast)",
+    "WR Lift lower to next lowest floor (fast)",
+    "S1 Lift lower to next lowest floor (fast)",
+    "SR Lift lower to next lowest floor (fast)",
+    "W1 Lift move to same floor height (fast)",
+    "WR Lift move to same floor height (fast)",
+    "S1 Lift move to same floor height (fast)",
+    "SR Lift move to same floor height (fast)",
+    "W1 Change texture and effect to nearest",
+    "WR Change texture and effect to nearest",
+    "S1 Change texture and effect to nearest",
+    "Create fake ceiling and floor",
+    "W1 Teleport to line with same tag (silent, same angle)",
+    "WR Teleport to line with same tag (silent, same angle)",
+    "Scroll ceiling when sector changes height",
+    "Scroll floor when sector changes height",
+    "Scroll move things when sector changes height",
+    "Scroll floor and move things when sector changes height",
+    "Scroll wall when sector changes height",
+    "Scroll ceiling according to line vector",
+    "Scroll floor according to line vector",
+    "Scroll move things according to line vector",
+    "Scroll floor, move things",
+    "Scroll wall according to line vector",
+    "Scroll wall using sidedef offsets",
+    "WR Stairs raise by 8",
+    "WR Stairs raise by 16 (fast)",
+    "SR Stairs raise by 8",
+    "SR Stairs raise by 16 (fast)",
     "Translucent (middle texture)",
-    "Ceiling Change Brightness to this Brightness",
-    "W1 Teleport to Line with Same Tag (silent, reversed angle)",
-    "WR Teleport to Line with Same Tag (silent, reversed angle)",
-    "W1 Teleport to Line with Same Tag (monsters only, silent, reversed angle)",
-    "WR Teleport to Line with Same Tag (monsters only, silent, reversed angle)",
-    "W1 Teleport to Line with Same Tag (monsters only, silent)",
-    "WR Teleport to Line with Same Tag (monsters only, silent)",
+    "Ceiling change brightness to this brightness",
+    "W1 Teleport to line with same tag (silent, reversed angle)",
+    "WR Teleport to line with same tag (silent, reversed angle)",
+    "W1 Teleport to line with same tag (monsters only, silent, reversed angle)",
+    "WR Teleport to line with same tag (monsters only, silent, reversed angle)",
+    "W1 Teleport to line with same tag (monsters only, silent)",
+    "WR Teleport to line with same tag (monsters only, silent)",
     "W1 Teleport (monsters only, silent)",
     "WR Teleport (monsters only, silent)",
     "",
-    "Transfer Sky Texture to Tagged Sectors",
-    "Transfer Sky Texture to Tagged Sectors (flipped)"
+    "Transfer sky texture to tagged sectors",
+    "Transfer sky texture to tagged sectors (flipped)"
 };
 
 static const char *sectorspecials[] =
 {
     "",
-    "Light Blinks (randomly)",
-    "Light Blinks (0.5 sec.)",
-    "Light Blinks (1 sec.)",
-    "Damage -10 or 20% health and Light Blinks (0.5 sec.)",
+    "Light blinks (randomly)",
+    "Light blinks (0.5 sec.)",
+    "Light blinks (1 sec.)",
+    "Damage -10 or 20% health and light blinks (0.5 sec.)",
     "Damage -5 or 10% health",
     "",
     "Damage -2 or 5% health",
-    "Light Glows (1+ sec.)",
+    "Light glows (1+ sec.)",
     "Secret",
-    "Door Close Stay (after 30 sec.)",
-    "Damage -10 or 20% health and End level",
-    "Light Blinks (0.5 sec. synchronized)",
-    "Light Blinks (1 sec. synchronized)",
-    "Door Open Close (opens after 5 min.)",
+    "Door close stay (after 30 sec.)",
+    "Damage -10 or 20% health and end level",
+    "Light blinks (0.5 sec. synchronized)",
+    "Light blinks (1 sec. synchronized)",
+    "Door open close (opens after 5 min.)",
     "",
     "Damage -10 or 20% health",
-    "Light Flickers (randomly)"
+    "Light flickers (randomly)"
 };
+
+extern texture_t    **textures;
 
 static fixed_t GetOffset(vertex_t *v1, vertex_t *v2)
 {
@@ -560,10 +562,7 @@ static fixed_t GetOffset(vertex_t *v1, vertex_t *v2)
 // Do nothing if level is the same
 static void *malloc_IfSameLevel(void *p, size_t size)
 {
-    if (!samelevel || !p)
-        return malloc(size);
-
-    return p;
+    return (!samelevel || !p ? malloc(size) : p);
 }
 
 // e6y: Smart calloc
@@ -604,17 +603,18 @@ static void P_LoadVertexes(int lump)
         if (canmodify && r_fixmaperrors)
             for (int j = 0; vertexfix[j].mission != -1; j++)
             {
-                if (i == vertexfix[j].vertex && gamemission == vertexfix[j].mission
-                    && gameepisode == vertexfix[j].epsiode && gamemap == vertexfix[j].map
+                if (i == vertexfix[j].vertex
+                    && gamemission == vertexfix[j].mission
+                    && gameepisode == vertexfix[j].epsiode
+                    && gamemap == vertexfix[j].map
                     && vertexes[i].x == SHORT(vertexfix[j].oldx) << FRACBITS
                     && vertexes[i].y == SHORT(vertexfix[j].oldy) << FRACBITS)
                 {
+                    C_Warning(2, "Vertex %s has been moved from (%i,%i) to (%i,%i).",
+                        commify(vertexfix[j].vertex), vertexfix[j].oldx, vertexfix[j].oldy, vertexfix[j].newx, vertexfix[j].newy);
+
                     vertexes[i].x = SHORT(vertexfix[j].newx) << FRACBITS;
                     vertexes[i].y = SHORT(vertexfix[j].newy) << FRACBITS;
-
-                    if (devparm)
-                        C_Warning("Vertex %s has been moved to (%i,%i).",
-                            commify(vertexfix[j].vertex), vertexfix[j].newx, vertexfix[j].newy);
 
                     break;
                 }
@@ -623,6 +623,31 @@ static void P_LoadVertexes(int lump)
 
     // Free buffer memory.
     W_ReleaseLumpNum(lump);
+}
+
+static void P_CheckLinedefs(void)
+{
+    line_t  *ld = lines;
+
+    for (int i = numlines; i--; ld++)
+        if (!ld->special)
+        {
+            if (ld->tag)
+            {
+                if (ld->tag < 0 || P_FindSectorFromLineTag(ld, -1) == -1)
+                    C_Warning(2, "Linedef %s has no special and an unknown tag of %s.", commify(ld->id), commify(ld->tag));
+                else
+                    C_Warning(2, "Linedef %s has no special but has tag %s.", commify(ld->id), commify(ld->tag));
+            }
+        }
+        else if (ld->special <= NUMLINESPECIALS)
+        {
+            if (!P_CheckTag(ld))
+                C_Warning(2, "Linedef %s has special %i (\"%s\") but no tag.", commify(ld->id), ld->special, linespecials[ld->special]);
+            else if (ld->tag < 0 || P_FindSectorFromLineTag(ld, -1) == -1)
+                C_Warning(2, "Linedef %s has special %i (\"%s\") but an unknown tag of %s.",
+                    commify(ld->id), ld->special, linespecials[ld->special], commify(ld->tag));
+        }
 }
 
 //
@@ -662,7 +687,7 @@ static void P_LoadSegs(int lump)
         // e6y: fix wrong side index
         if (side != 0 && side != 1)
         {
-            C_Warning("Seg %s has a wrong side index of %s. It has been changed to 1.", commify(i), commify(side));
+            C_Warning(2, "Seg %s has a wrong side index of %s. It has been changed to 1.", commify(i), commify(side));
             side = 1;
         }
 
@@ -680,7 +705,7 @@ static void P_LoadSegs(int lump)
             li->frontsector = sides[ldef->sidenum[side]].sector;
         else
         {
-            C_Warning("The %s of seg %s has no sidedef.", (side ? "back" : "front"), commify(i));
+            C_Warning(2, "The %s of seg %s has no sidedef.", (side ? "back" : "front"), commify(i));
             li->frontsector = NULL;
         }
 
@@ -700,10 +725,10 @@ static void P_LoadSegs(int lump)
         if (v1 >= numvertexes || v2 >= numvertexes)
         {
             if (v1 >= numvertexes)
-                C_Warning("Seg %s references an invalid vertex of %s.", commify(i), commify(v1));
+                C_Warning(2, "Seg %s references an invalid vertex of %s.", commify(i), commify(v1));
 
             if (v2 >= numvertexes)
-                C_Warning("Seg %s references an invalid vertex of %s.", commify(i), commify(v2));
+                C_Warning(2, "Seg %s references an invalid vertex of %s.", commify(i), commify(v2));
 
             if (li->sidedef == sides + li->linedef->sidenum[0])
             {
@@ -734,78 +759,112 @@ static void P_LoadSegs(int lump)
                 {
                     if (*linefix[j].toptexture)
                     {
-                        li->sidedef->toptexture = R_TextureNumForName(linefix[j].toptexture);
+                        int texture = R_TextureNumForName(linefix[j].toptexture);
 
-                        if (devparm)
-                            C_Warning("The top texture of linedef %s has been changed to <b>%s</b>.",
-                                commify(linedefnum), linefix[j].toptexture);
+                        if (!texture)
+                            C_Warning(2, "The unused top texture of linedef %s has been removed.", commify(linedefnum));
+                        else
+                        {
+                            if (!li->sidedef->toptexture)
+                                C_Warning(2, "The missing top texture of linedef %s has been changed to <b>%.8s</b>.",
+                                    commify(linedefnum), linefix[j].toptexture);
+                            else
+                                C_Warning(2, "The top texture of linedef %s has been changed from <b>%.8s</b> to <b>%.8s</b>.",
+                                    commify(linedefnum), textures[li->sidedef->toptexture]->name, linefix[j].toptexture);
+                        }
+
+                        li->sidedef->toptexture = texture;
                     }
 
                     if (*linefix[j].middletexture)
                     {
-                        li->sidedef->midtexture = R_TextureNumForName(linefix[j].middletexture);
+                        int texture = R_TextureNumForName(linefix[j].middletexture);
 
-                        if (devparm)
-                            C_Warning("The middle texture of linedef %s has been changed to <b>%s</b>.",
-                                commify(linedefnum), linefix[j].middletexture);
+                        if (!texture)
+                            C_Warning(2, "The unused middle texture of linedef %s has been removed.", commify(linedefnum));
+                        else
+                        {
+                            if (!li->sidedef->midtexture)
+                                C_Warning(2, "The missing middle texture of linedef %s has been changed to <b>%.8s</b>.",
+                                    commify(linedefnum), linefix[j].middletexture);
+                            else
+                                C_Warning(2, "The middle texture of linedef %s has been changed from <b>%.8s</b> to <b>%.8s</b>.",
+                                    commify(linedefnum), textures[li->sidedef->midtexture]->name, linefix[j].middletexture);
+                        }
+
+                        li->sidedef->midtexture = texture;
                     }
 
                     if (*linefix[j].bottomtexture)
                     {
-                        li->sidedef->bottomtexture = R_TextureNumForName(linefix[j].bottomtexture);
+                        int texture = R_TextureNumForName(linefix[j].bottomtexture);
 
-                        if (devparm)
-                            C_Warning("The bottom texture of linedef %s has been changed to <b>%s</b>.",
-                                commify(linedefnum), linefix[j].bottomtexture);
+                        if (!texture)
+                            C_Warning(2, "The unused bottom texture of linedef %s has been removed.", commify(linedefnum));
+                        else
+                        {
+                            if (!li->sidedef->bottomtexture)
+                                C_Warning(2, "The missing bottom texture of linedef %s has been changed to <b>%.8s</b>.",
+                                    commify(linedefnum), linefix[j].bottomtexture);
+                            else
+                                C_Warning(2, "The bottom texture of linedef %s has been changed from <b>%.8s</b> to <b>%.8s</b>.",
+                                    commify(linedefnum), textures[li->sidedef->bottomtexture]->name, linefix[j].bottomtexture);
+                        }
+
+                        li->sidedef->bottomtexture = texture;
                     }
 
                     if (linefix[j].offset != DEFAULT)
                     {
+                        C_Warning(2, "The horizontal texture offset of linedef %s has been changed from %s to %s.",
+                            commify(linedefnum), commify(li->offset >> FRACBITS), commify(linefix[j].offset));
+
                         li->offset = SHORT(linefix[j].offset) << FRACBITS;
                         li->sidedef->textureoffset = 0;
-
-                        if (devparm)
-                            C_Warning("The horizontal texture offset of linedef %s has been changed to %s.",
-                                commify(linedefnum), commify(linefix[j].offset));
                     }
 
                     if (linefix[j].rowoffset != DEFAULT)
                     {
-                        li->sidedef->rowoffset = SHORT(linefix[j].rowoffset) << FRACBITS;
+                        C_Warning(2, "The vertical texture offset of linedef %s has been changed from %s to %s.",
+                            commify(linedefnum), commify(li->sidedef->rowoffset >> FRACBITS), commify(linefix[j].rowoffset));
 
-                        if (devparm)
-                            C_Warning("The vertical texture offset of linedef %s has been changed to %s.",
-                                commify(linedefnum), commify(linefix[j].rowoffset));
+                        li->sidedef->rowoffset = SHORT(linefix[j].rowoffset) << FRACBITS;
                     }
 
                     if (linefix[j].flags != DEFAULT)
                     {
+
+                        C_Warning(2, "The flags of linedef %s have been changed from %s to %s.",
+                            commify(linedefnum), commify(li->linedef->flags), commify(linefix[j].flags));
+
                         if (li->linedef->flags & linefix[j].flags)
                             li->linedef->flags &= ~linefix[j].flags;
                         else
                             li->linedef->flags |= linefix[j].flags;
-
-                        if (devparm)
-                            C_Warning("The flags of linedef %s have been changed to %s.",
-                                commify(linedefnum), commify(li->linedef->flags));
                     }
 
                     if (linefix[j].special != DEFAULT)
                     {
+                        if (linefix[j].special)
+                            C_Warning(2, "The special of linedef %s has been changed from %i (\"%s\") to %i (\"%s\").",
+                                commify(linedefnum), li->linedef->special, linespecials[li->linedef->special],
+                                linefix[j].special, linespecials[linefix[j].special]);
+                        else
+                            C_Warning(2, "The special of linedef %s has been removed.", commify(linedefnum));
+
                         li->linedef->special = linefix[j].special;
 
-                        if (devparm)
-                            C_Warning("The special of linedef %s has been changed to %i (\"%s\").",
-                                commify(linedefnum), linefix[j].special, linespecials[linefix[j].special]);
                     }
 
                     if (linefix[j].tag != DEFAULT)
                     {
-                        li->linedef->tag = linefix[j].tag;
+                        if (linefix[j].tag)
+                            C_Warning(2, "The tag of linedef %s has been changed from %s to %s.",
+                                commify(linedefnum), commify(li->linedef->tag), commify(linefix[j].tag));
+                        else
+                            C_Warning(2, "The tag of linedef %s has been removed.", commify(linedefnum));
 
-                        if (devparm)
-                            C_Warning("The tag of linedef %s has been changed to %s.",
-                                commify(linedefnum), commify(linefix[j].tag));
+                        li->linedef->tag = linefix[j].tag;
                     }
 
                     break;
@@ -819,6 +878,8 @@ static void P_LoadSegs(int lump)
     }
 
     W_ReleaseLumpNum(lump);
+
+    P_CheckLinedefs();
 }
 
 static void P_LoadSegs_V4(int lump)
@@ -856,7 +917,7 @@ static void P_LoadSegs_V4(int lump)
         // e6y: fix wrong side index
         if (side != 0 && side != 1)
         {
-            C_Warning("Seg %s has a wrong side index of %s. It has been changed to 1.", commify(i), commify(side));
+            C_Warning(2, "Seg %s has a wrong side index of %s. It has been changed to 1.", commify(i), commify(side));
             side = 1;
         }
 
@@ -874,7 +935,7 @@ static void P_LoadSegs_V4(int lump)
             li->frontsector = sides[ldef->sidenum[side]].sector;
         else
         {
-            C_Warning("The %s of seg %s has no sidedef.", (side ? "back" : "front"), commify(i));
+            C_Warning(2, "The %s of seg %s has no sidedef.", (side ? "back" : "front"), commify(i));
             li->frontsector = NULL;
         }
 
@@ -894,10 +955,10 @@ static void P_LoadSegs_V4(int lump)
         if (v1 >= numvertexes || v2 >= numvertexes)
         {
             if (v1 >= numvertexes)
-                C_Warning("Seg %s references an invalid vertex of %s.", commify(i), commify(v1));
+                C_Warning(2, "Seg %s references an invalid vertex of %s.", commify(i), commify(v1));
 
             if (v2 >= numvertexes)
-                C_Warning("Seg %s references an invalid vertex of %s.", commify(i), commify(v2));
+                C_Warning(2, "Seg %s references an invalid vertex of %s.", commify(i), commify(v2));
 
             if (li->sidedef == sides + li->linedef->sidenum[0])
             {
@@ -925,6 +986,8 @@ static void P_LoadSegs_V4(int lump)
     }
 
     W_ReleaseLumpNum(lump);
+
+    P_CheckLinedefs();
 }
 
 //
@@ -1004,56 +1067,54 @@ static void P_LoadSectors(int lump)
                 {
                     if (*sectorfix[j].floorpic)
                     {
-                        ss->floorpic = R_FlatNumForName(sectorfix[j].floorpic);
+                        C_Warning(2, "The floor texture of sector %s has been changed from <b>%.8s</b> to <b>%.8s</b>.",
+                            commify(sectorfix[j].sector), lumpinfo[ss->floorpic + firstflat]->name, sectorfix[j].floorpic);
 
-                        if (devparm)
-                            C_Warning("The floor texture of sector %s has been changed to <b>%s</b>.",
-                                commify(sectorfix[j].sector), sectorfix[j].floorpic);
+                        ss->floorpic = R_FlatNumForName(sectorfix[j].floorpic);
                     }
 
                     if (*sectorfix[j].ceilingpic)
                     {
+                        C_Warning(2, "The ceiling texture of sector %s has been changed from <b>%.8s</b> to <b>%.8s</b>.",
+                            commify(sectorfix[j].sector), lumpinfo[ss->ceilingpic + firstflat]->name, sectorfix[j].ceilingpic);
+
                         ss->ceilingpic = R_FlatNumForName(sectorfix[j].ceilingpic);
 
-                        if (devparm)
-                            C_Warning("The ceiling texture of sector %s has been changed to <b>%s</b>.",
-                                commify(sectorfix[j].sector), sectorfix[j].ceilingpic);
                     }
 
                     if (sectorfix[j].floorheight != DEFAULT)
                     {
+                        C_Warning(2, "The floor height of sector %s has been changed from %s to %s.",
+                            commify(sectorfix[j].sector), commify(ss->floorheight), commify(sectorfix[j].floorheight));
+
                         ss->floorheight = SHORT(sectorfix[j].floorheight) << FRACBITS;
 
-                        if (devparm)
-                            C_Warning("The floor height of sector %s has been changed to %s.",
-                                commify(sectorfix[j].sector), commify(sectorfix[j].floorheight));
                     }
 
                     if (sectorfix[j].ceilingheight != DEFAULT)
                     {
-                        ss->ceilingheight = SHORT(sectorfix[j].ceilingheight) << FRACBITS;
+                        C_Warning(2, "The ceiling height of sector %s has been changed from %s to %s.",
+                            commify(sectorfix[j].sector), commify(ss->ceilingheight), commify(sectorfix[j].ceilingheight));
 
-                        if (devparm)
-                            C_Warning("The ceiling height of sector %s has been changed to %s.",
-                                commify(sectorfix[j].sector), commify(sectorfix[j].ceilingheight));
+                        ss->ceilingheight = SHORT(sectorfix[j].ceilingheight) << FRACBITS;
                     }
 
                     if (sectorfix[j].special != DEFAULT)
                     {
-                        ss->special = SHORT(sectorfix[j].special);
 
-                        if (devparm)
-                            C_Warning("The special of sector %s has been changed to %i (\"%s\").",
-                                commify(sectorfix[j].sector), sectorfix[j].special, sectorspecials[sectorfix[j].special]);
+                        C_Warning(2, "The special of sector %s has been changed from %i (\"%s\") to %i (\"%s\").",
+                            commify(sectorfix[j].sector), ss->special, sectorspecials[ss->special],
+                            sectorfix[j].special, sectorspecials[sectorfix[j].special]);
+
+                        ss->special = SHORT(sectorfix[j].special);
                     }
 
                     if (sectorfix[j].newtag != DEFAULT && (sectorfix[j].oldtag == DEFAULT || sectorfix[j].oldtag == ss->tag))
                     {
-                        ss->tag = SHORT(sectorfix[j].newtag) << FRACBITS;
+                        C_Warning(2, "The tag of sector %s has been changed from %s to %s.",
+                            commify(sectorfix[j].sector), commify(ss->tag), commify(sectorfix[j].newtag));
 
-                        if (devparm)
-                            C_Warning("The tag of sector %s has been changed to %s.",
-                                commify(sectorfix[j].sector), commify(sectorfix[j].newtag));
+                        ss->tag = SHORT(sectorfix[j].newtag) << FRACBITS;
                     }
 
                     break;
@@ -1101,7 +1162,7 @@ static void P_LoadNodes(int lump)
     if (!data || !numnodes)
     {
         if (numsubsectors == 1)
-            C_Warning("This map has no nodes and only one subsector.");
+            C_Warning(2, "This map has no nodes and only one subsector.");
         else
             I_Error("This map has no nodes.");
     }
@@ -1130,7 +1191,7 @@ static void P_LoadNodes(int lump)
                 // haleyjd 11/06/10: check for invalid subsector reference
                 if (no->children[j] >= numsubsectors)
                 {
-                    C_Warning("Node %s references an invalid subsector of %s.", commify(i), commify(no->children[j]));
+                    C_Warning(2, "Node %s references an invalid subsector of %s.", commify(i), commify(no->children[j]));
                     no->children[j] = 0;
                 }
 
@@ -1158,7 +1219,7 @@ static void P_LoadNodes_V4(int lump)
     if (!data || !numnodes)
     {
         if (numsubsectors == 1)
-            C_Warning("This map has no nodes and only one subsector.");
+            C_Warning(2, "This map has no nodes and only one subsector.");
         else
             I_Error("This map has no nodes.");
     }
@@ -1212,13 +1273,13 @@ static void P_LoadZSegs(const byte *data)
         // e6y: fix wrong side index
         if (side != 0 && side != 1)
         {
-            C_Warning("Seg %s has a wrong side index of %s. It has been changed to 1.", commify(i), commify(side));
+            C_Warning(2, "Seg %s has a wrong side index of %s. It has been changed to 1.", commify(i), commify(side));
             side = 1;
         }
 
         // e6y: check for wrong indexes
         if ((unsigned int)ldef->sidenum[side] >= (unsigned int)numsides)
-            C_Warning("Linedef %s for seg %s references an invalid sidedef of %s.",
+            C_Warning(2, "Linedef %s for seg %s references an invalid sidedef of %s.",
                 commify(linedefnum), commify(i), commify(ldef->sidenum[side]));
 
         li->sidedef = sides + ldef->sidenum[side];
@@ -1230,7 +1291,7 @@ static void P_LoadZSegs(const byte *data)
             li->frontsector = sides[ldef->sidenum[side]].sector;
         else
         {
-            C_Warning("The %s of seg %s has no sidedef.", (side ? "back" : "front"), commify(i));
+            C_Warning(2, "The %s of seg %s has no sidedef.", (side ? "back" : "front"), commify(i));
             li->frontsector = NULL;
         }
 
@@ -1376,6 +1437,8 @@ static void P_LoadZNodes(int lump)
     }
 
     W_ReleaseLumpNum(lump);
+
+    P_CheckLinedefs();
 }
 
 //
@@ -1408,7 +1471,7 @@ static void P_LoadThings(int lump)
                 M_snprintf(buffer, sizeof(buffer), "%ss", mobjinfo[doomednum].name1);
 
             buffer[0] = toupper(buffer[0]);
-            C_Warning("%s can't be spawned in <i><b>%s</b></i>.", buffer, gamedescription);
+            C_Warning(2, "%s can't be spawned in <i><b>%s</b></i>.", buffer, gamedescription);
             continue;
         }
 
@@ -1428,32 +1491,33 @@ static void P_LoadThings(int lump)
                 {
                     if (thingfix[j].newx == REMOVE && thingfix[j].newy == REMOVE)
                     {
+                        C_Warning(2, "Thing %s has been removed.", commify(thingid));
                         spawn = false;
                         break;
                     }
                     else
                     {
+                        C_Warning(2, "The position of thing %s has been changed from (%i,%i) to (%i,%i).",
+                            commify(thingid), mt.x, mt.y, thingfix[j].newx, thingfix[j].newy);
+
                         mt.x = SHORT(thingfix[j].newx);
                         mt.y = SHORT(thingfix[j].newy);
-
-                        if (devparm)
-                            C_Warning("The position of thing %s has been changed to (%i,%i).", commify(thingid), mt.x, mt.y);
                     }
 
                     if (thingfix[j].angle != DEFAULT)
                     {
-                        mt.angle = SHORT(thingfix[j].angle);
+                        C_Warning(2, "The angle of thing %s has been changed from %i\xB0 to %i\xB0.",
+                            commify(thingid), mt.angle, thingfix[j].angle);
 
-                        if (devparm)
-                            C_Warning("The angle of thing %s has been changed to %i.", commify(thingid), thingfix[j].angle);
+                        mt.angle = SHORT(thingfix[j].angle);
                     }
 
                     if (thingfix[j].options != DEFAULT)
                     {
-                        mt.options = thingfix[j].options;
+                        C_Warning(2, "The flags of thing %s have been changed from %i to %i.",
+                            commify(thingid), mt.options, thingfix[j].options);
 
-                        if (devparm)
-                            C_Warning("The flags of thing %s have been changed to %i.", commify(thingid), thingfix[j].options);
+                        mt.options = thingfix[j].options;
                     }
 
                     break;
@@ -1556,18 +1620,17 @@ static void P_LoadLineDefs(int lump)
 // killough 4/4/98: delay using sidedefs until they are loaded
 static void P_LoadLineDefs2(void)
 {
-    int     i = numlines;
     line_t  *ld = lines;
 
     transferredsky = false;
 
-    for (; i--; ld++)
+    for (int i = numlines; i--; ld++)
     {
         // cph 2006/09/30 - fix sidedef errors right away
         for (int j = 0; j < 2; j++)
             if (ld->sidenum[j] != NO_INDEX && ld->sidenum[j] >= numsides)
             {
-                C_Warning("Linedef %s references an invalid sidedef of %s.", commify(i), commify(ld->sidenum[j]));
+                C_Warning(2, "Linedef %s references an invalid sidedef of %s.", commify(ld->id), commify(ld->sidenum[j]));
                 ld->sidenum[j] = NO_INDEX;
             }
 
@@ -1575,13 +1638,13 @@ static void P_LoadLineDefs2(void)
         if (ld->sidenum[0] == NO_INDEX)
         {
             ld->sidenum[0] = 0;                         // Substitute dummy sidedef for missing right side
-            C_Warning("Linedef %s is missing its first sidedef.", commify(i));
+            C_Warning(2, "Linedef %s is missing its first sidedef.", commify(ld->id));
         }
 
         if (ld->sidenum[1] == NO_INDEX && (ld->flags & ML_TWOSIDED))
         {
             ld->flags &= ~ML_TWOSIDED;                  // Clear 2s flag for missing left side
-            C_Warning("Linedef %s has the two-sided flag set but no second sidedef.", commify(i));
+            C_Warning(2, "Linedef %s has the two-sided flag set but no second sidedef.", commify(ld->id));
         }
 
         ld->frontsector = (ld->sidenum[0] != NO_INDEX ? sides[ld->sidenum[0]].sector : NULL);
@@ -1609,9 +1672,6 @@ static void P_LoadLineDefs2(void)
                 transferredsky = true;
                 break;
         }
-
-        if (!P_CheckTag(ld) && ld->special > 0 && ld->special <= NUMLINESPECIALS)
-            C_Warning("Linedef %s has special %i (\"%s\") but no tag.", commify(i), ld->special, linespecials[ld->special]);
     }
 }
 
@@ -1643,7 +1703,7 @@ static void P_LoadSideDefs2(int lump)
         // cph 2006/09/30 - catch out-of-range sector numbers; use sector 0 instead
         if (sector_num >= numsectors)
         {
-            C_Warning("Sidedef %s references an invalid sector of %s.", commify(i), commify(sector_num));
+            C_Warning(2, "Sidedef %s references an invalid sector of %s.", commify(i), commify(sector_num));
             sector_num = 0;
         }
 
@@ -1734,7 +1794,7 @@ static dboolean P_VerifyBlockMap(int count)
                     break;
             }
 
-            if (!isvalid) // if the list is not terminated, break now
+            if (!isvalid)           // if the list is not terminated, break now
                 break;
 
             // scan the list for out-of-range linedef indicies in list
@@ -1745,7 +1805,7 @@ static dboolean P_VerifyBlockMap(int count)
                     break;
                 }
 
-            if (!isvalid) // if a list has a bad linedef index, break now
+            if (!isvalid)           // if a list has a bad linedef index, break now
                 break;
         }
 
@@ -1962,12 +2022,12 @@ static void P_LoadBlockMap(int lump)
     if (lump >= numlumps || (lumplen = W_LumpLength(lump)) < 8 || (count = lumplen / 2) >= 0x10000)
     {
         P_CreateBlockMap();
-        C_Warning("This map's <b>BLOCKMAP</b> lump was rebuilt.");
+        C_Warning(2, "This map's <b>BLOCKMAP</b> lump was rebuilt.");
     }
     else if (M_CheckParm("-blockmap"))
     {
         P_CreateBlockMap();
-        C_Warning("A <b>-blockmap</b> parameter was found on the command-line. This map's <b>BLOCKMAP</b> lump was rebuilt.");
+        C_Warning(2, "A <b>-blockmap</b> parameter was found on the command-line. This map's <b>BLOCKMAP</b> lump was rebuilt.");
     }
     else
     {
@@ -1989,7 +2049,7 @@ static void P_LoadBlockMap(int lump)
         {
             short   t = SHORT(wadblockmaplump[i]);
 
-            blockmaplump[i] = (t == -1 ? -1l : ((unsigned int)t & 0xFFFF));
+            blockmaplump[i] = (t == -1 ? -1L : ((unsigned int)t & 0xFFFF));
         }
 
         // Read the header
@@ -2000,9 +2060,8 @@ static void P_LoadBlockMap(int lump)
 
         if (!P_VerifyBlockMap(count))
         {
-            free(blockmaplump);
             P_CreateBlockMap();
-            C_Warning("This map's <b>BLOCKMAP</b> lump was rebuilt.");
+            C_Warning(2, "This map's <b>BLOCKMAP</b> lump was rebuilt.");
         }
     }
 
@@ -2202,6 +2261,9 @@ static void P_GroupLines(void)
 static void P_RemoveSlimeTrails(void)                   // killough 10/98
 {
     byte    *hit = calloc(1, numvertexes);              // Hitlist for vertices
+
+    if (!hit)
+        return;
 
     for (int i = 0; i < numsegs; i++)                   // Go through each seg
     {
@@ -2532,8 +2594,8 @@ void P_SetupLevel(int ep, int map)
 
     mapformat = P_CheckMapFormat(lumpnum);
 
-    canmodify = ((W_CheckMultipleLumps(lumpname) == 1 || gamemission == pack_nerve || (nerve && gamemission == doom2)) && !FREEDOOM
-        && !M_StringCompare(lumpname, "E1M4B") && !M_StringCompare(lumpname, "E1M8B"));
+    canmodify = ((W_CheckMultipleLumps(lumpname) == 1 || (sigil && gamemission == doom) || gamemission == pack_nerve
+        || (nerve && gamemission == doom2)) && !FREEDOOM);
 
     C_AddConsoleDivider();
     C_Output(mapnumandtitle);
@@ -2565,6 +2627,10 @@ void P_SetupLevel(int ep, int map)
     P_LoadSideDefs(lumpnum + ML_SIDEDEFS);
     P_LoadLineDefs(lumpnum + ML_LINEDEFS);
     P_LoadSideDefs2(lumpnum + ML_SIDEDEFS);
+
+    // killough 1/30/98: Create xref tables for tags
+    P_InitTagLists();
+
     P_LoadLineDefs2();
 
     if (!samelevel)
@@ -2689,7 +2755,7 @@ static void P_InitMapInfo(void)
             {
                 if (M_StringCompare(leafname(lumpinfo[MAPINFO]->wadfile->path), "NERVE.WAD"))
                 {
-                    C_Warning("The map markers in PWAD <b>%s</b> are invalid.", lumpinfo[MAPINFO]->wadfile->path);
+                    C_Warning(0, "The map markers in PWAD <b>%s</b> are invalid.", lumpinfo[MAPINFO]->wadfile->path);
                     nerve = false;
                     NewDef.prevMenu = &MainDef;
                     MAPINFO = -1;
@@ -2697,7 +2763,7 @@ static void P_InitMapInfo(void)
                 }
                 else
                 {
-                    C_Warning("The <b>MAPINFO</b> lump contains an invalid map marker.");
+                    C_Warning(0, "The <b>MAPINFO</b> lump contains an invalid map marker.");
                     continue;
                 }
             }
@@ -2892,10 +2958,10 @@ static void P_InitMapInfo(void)
         (RMAPINFO >= 0 ? "R" : ""), (lumpinfo[MAPINFO]->wadfile->type == IWAD ? "IWAD" : "PWAD"), lumpinfo[MAPINFO]->wadfile->path);
 
     if (nojump)
-        C_Warning("This PWAD has disabled use of the <b>+jump</b> action.");
+        C_Warning(0, "This PWAD has disabled use of the <b>+jump</b> action.");
 
     if (nomouselook)
-        C_Warning("This PWAD has disabled use of the <b>mouselook</b> CVAR and <b>+mouselook</b> action.");
+        C_Warning(0, "This PWAD has disabled use of the <b>mouselook</b> CVAR and <b>+mouselook</b> action.");
 }
 
 static int QualifyMap(int map)

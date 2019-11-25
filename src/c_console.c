@@ -120,13 +120,19 @@ static int              outputhistory = -1;
 
 int                     con_backcolor = con_backcolor_default;
 dboolean                con_timestamps = con_timestamps_default;
+int                     warninglevel = warninglevel_default;
 
-static int              timestampx;
+static int              timerx;
 static int              zerowidth;
+static int              warningwidth;
+static int              dotwidth;
+static int              dividerwidth;
+static int              caretwidth;
 
 static int              consolecaretcolor = 4;
 static int              consolelowfpscolor = 180;
 static int              consolehighfpscolor = 116;
+static int              consoletimercolor = 4;
 static int              consoleinputcolor = 4;
 static int              consoleselectedinputcolor = 4;
 static int              consoleselectedinputbackgroundcolor = 100;
@@ -147,6 +153,7 @@ static int              consolecolors[STRINGTYPES];
 
 dboolean                scrollbardrawn;
 
+extern int              countdown;
 extern int              framespersecond;
 extern int              refreshrate;
 extern dboolean         dowipe;
@@ -302,10 +309,13 @@ void C_Header(const headertype_t headertype)
     outputhistory = -1;
 }
 
-void C_Warning(const char *string, ...)
+void C_Warning(const int minwarninglevel, const char *string, ...)
 {
     va_list argptr;
     char    buffer[CONSOLETEXTMAXLENGTH];
+
+    if (warninglevel < minwarninglevel)
+        return;
 
     va_start(argptr, string);
     M_vsnprintf(buffer, CONSOLETEXTMAXLENGTH - 1, string, argptr);
@@ -313,11 +323,39 @@ void C_Warning(const char *string, ...)
 
     if (!consolestrings || !M_StringCompare(console[consolestrings - 1].string, buffer))
     {
+        int len = (int)strlen(buffer);
+
         if (consolestrings >= (int)consolestringsmax)
             console = I_Realloc(console, (consolestringsmax += CONSOLESTRINGSMAX) * sizeof(*console));
 
-        M_StringCopy(console[consolestrings].string, buffer, 1024);
-        console[consolestrings++].stringtype = warningstring;
+        if (len <= 100 || !warningwidth)
+        {
+            M_StringCopy(console[consolestrings].string, buffer, 1024);
+            console[consolestrings].line = 1;
+            console[consolestrings++].stringtype = warningstring;
+        }
+        else
+        {
+            int truncate = len;
+
+            while (C_TextWidth(M_SubString(buffer, 0, truncate), true, true) + warningwidth + 12 > CONSOLETEXTPIXELWIDTH)
+                truncate--;
+
+            while (truncate > 0 && !isbreak(buffer[truncate]))
+                truncate--;
+
+            M_StringCopy(console[consolestrings].string, M_SubString(buffer, 0, truncate), 1024);
+            console[consolestrings].line = 1;
+            console[consolestrings++].stringtype = warningstring;
+
+            if (consolestrings >= (int)consolestringsmax)
+                console = I_Realloc(console, (consolestringsmax += CONSOLESTRINGSMAX) * sizeof(*console));
+
+            M_StringCopy(console[consolestrings].string, M_SubString(buffer, truncate, (size_t)len - truncate), 1024);
+            console[consolestrings].line = 2;
+            console[consolestrings++].stringtype = warningstring;
+        }
+
         outputhistory = -1;
     }
 }
@@ -403,38 +441,38 @@ void C_AddConsoleDivider(void)
 
 const kern_t altkern[] =
 {
-    { ' ',  '(',  -1 }, { ' ',  'T',  -1 }, { '!',  ' ',   2 }, { '"',  '+',  -1 }, { '"',  ',',  -1 }, { '"',  '.',  -2 },
-    { '"',  'J',  -2 }, { '"',  'a',  -1 }, { '"',  'c',  -1 }, { '"',  'd',  -1 }, { '"',  'e',  -1 }, { '"',  'g',  -1 },
-    { '"',  'j',  -2 }, { '"',  'o',  -1 }, { '"',  'q',  -1 }, { '"',  's',  -1 }, { '\'', 's',  -1 }, { '(',  '(',  -1 },
-    { '(',  '-',  -1 }, { ')',  ')',  -1 }, { ')',  '.',  -1 }, { '+',  'j',  -2 }, { ',',  '4',  -1 }, { ',',  '7',  -1 },
-    { '.',  '"',  -1 }, { '.',  '4',  -1 }, { '.',  '7',  -1 }, { '.',  '\\', -1 }, { '/',  '/',  -2 }, { '/',  'a',  -1 },
-    { '/',  'd',  -1 }, { '/',  'o',  -1 }, { '0',  ',',  -1 }, { '0',  ';',  -1 }, { '0',  'j',  -2 }, { '1',  '"',  -1 },
-    { '1',  '\'', -1 }, { '1',  '\\', -1 }, { '1',  'j',  -2 }, { '2',  'j',  -2 }, { '3',  ',',  -1 }, { '3',  ';',  -1 },
-    { '3',  'j',  -2 }, { '4',  'j',  -2 }, { '5',  ',',  -1 }, { '5',  ';',  -1 }, { '5',  'j',  -2 }, { '6',  ',',  -1 },
-    { '6',  'j',  -2 }, { '7',  ',',  -2 }, { '7',  '.',  -2 }, { '7',  ';',  -1 }, { '7',  'j',  -2 }, { '8',  ',',  -1 },
-    { '8',  ';',  -1 }, { '8',  'j',  -2 }, { '9',  ',',  -1 }, { '9',  ';',  -1 }, { '9',  'j',  -2 }, { ':', '\\',  -1 },
-    { '?',  ' ',   2 }, { 'F',  ' ',  -1 }, { 'F',  ',',  -1 }, { 'F',  '.',  -1 }, { 'F',  ';',  -1 }, { 'L',  ' ',  -1 },
-    { 'L',  '"',  -1 }, { 'L',  'Y',  -1 }, { 'L',  '\'', -1 }, { 'L',  '\\', -2 }, { 'P',  ',',  -1 }, { 'P',  '.',  -1 },
-    { 'P',  ';',  -1 }, { 'P',  '_',  -1 }, { 'T',  ' ',  -1 }, { 'T',  ',',  -1 }, { 'T',  '.',  -1 }, { 'T',  ';',  -1 },
-    { 'T',  'a',  -1 }, { 'T',  'e',  -1 }, { 'T',  'o',  -1 }, { 'V',  ',',  -1 }, { 'V',  '.',  -1 }, { 'V',  ';',  -1 },
-    { 'V',  'a',  -1 }, { 'Y',  ',',  -1 }, { 'Y',  '.',  -1 }, { 'Y',  ';',  -1 }, { '\'', 'J',  -2 }, { '\'', 'a',  -1 },
-    { '\'', 'c',  -1 }, { '\'', 'd',  -1 }, { '\'', 'e',  -1 }, { '\'', 'g',  -1 }, { '\'', 'j',  -2 }, { '\'', 'o',  -1 },
-    { '\\', 'T',  -1 }, { '\\', 'V',  -1 }, { '\\', '\\', -2 }, { '\\', 't',  -1 }, { '_',  'f',  -1 }, { '_',  't',  -1 },
-    { '_',  'v',  -1 }, { 'a',  '"',  -1 }, { 'a',  '\'', -1 }, { 'a',  '\\', -1 }, { 'a',  'j',  -2 }, { 'b',  '"',  -1 },
-    { 'b',  ',',  -1 }, { 'b',  ';',  -1 }, { 'b',  '\'', -1 }, { 'b',  '\\', -1 }, { 'b',  'j',  -2 }, { 'c',  '"',  -1 },
-    { 'c',  ',',  -1 }, { 'c',  ';',  -1 }, { 'c',  '\'', -1 }, { 'c',  '\\', -1 }, { 'c',  'j',  -2 }, { 'd',  'j',  -2 },
-    { 'e',  '"',  -1 }, { 'e',  ',',  -1 }, { 'e',  ';',  -1 }, { 'e',  '\'', -1 }, { 'e',  '\\', -1 }, { 'e',  '_',  -1 },
-    { 'e',  'j',  -2 }, { 'f',  ' ',  -1 }, { 'f',  ',',  -2 }, { 'f',  ';',  -1 }, { 'f',  '_',  -1 }, { 'f',  'a',  -1 },
-    { 'f',  'j',  -2 }, { 'h',  '\\', -1 }, { 'h',  'j',  -2 }, { 'i',  'j',  -2 }, { 'k',  'j',  -2 }, { 'l',  'j',  -2 },
-    { 'm',  '"',  -1 }, { 'm',  '\'', -1 }, { 'm',  '\\', -1 }, { 'm',  'j',  -2 }, { 'n',  '"',  -1 }, { 'n',  '\'', -1 },
-    { 'n',  '\\', -1 }, { 'n',  'j',  -2 }, { 'o',  '"',  -1 }, { 'o',  ',',  -1 }, { 'o',  ';',  -1 }, { 'o',  '\'', -1 },
-    { 'o',  '\\', -1 }, { 'o',  'j',  -2 }, { 'p',  '"',  -1 }, { 'p',  ',',  -1 }, { 'p',  ';',  -1 }, { 'p',  '\'', -1 },
-    { 'p',  '\\', -1 }, { 'p',  'j',  -2 }, { 'r',  ' ',  -1 }, { 'r',  '"',  -1 }, { 'r',  ')',  -1 }, { 'r',  ',',  -2 },
-    { 'r',  '.',  -1 }, { 'r',  ';',  -1 }, { 'r',  '\'', -1 }, { 'r',  '\\', -1 }, { 'r',  '_',  -2 }, { 'r',  'a',  -1 },
-    { 'r',  'j',  -2 }, { 's',  ',',  -1 }, { 's',  ';',  -1 }, { 's',  '\\', -1 }, { 's',  'j',  -2 }, { 't',  '\\', -1 },
-    { 't',  'j',  -2 }, { 'u',  'j',  -2 }, { 'v',  ',',  -1 }, { 'v',  ';',  -1 }, { 'v',  '\\', -1 }, { 'v',  'a',  -1 },
-    { 'v',  'j',  -2 }, { 'w',  '\\', -1 }, { 'w',  'j',  -2 }, { 'x',  '\\', -1 }, { 'x',  'j',  -2 }, { 'y',  '\\', -1 },
-    { 'z',  '\\', -1 }, { 'z',  'j',  -2 }, { '\0', '\0',  0 }
+    { ' ',  'T',  -1 }, { '!',  ' ',   2 }, { '"',  '+',  -1 }, { '"',  ',',  -1 }, { '"',  '.',  -2 }, { '"',  'J',  -2 },
+    { '"',  'a',  -1 }, { '"',  'c',  -1 }, { '"',  'd',  -1 }, { '"',  'e',  -1 }, { '"',  'g',  -1 }, { '"',  'j',  -2 },
+    { '"',  'o',  -1 }, { '"',  'q',  -1 }, { '"',  's',  -1 }, { '\'', 's',  -1 }, { '(',  '(',  -1 }, { '(',  '-',  -1 },
+    { ')',  ')',  -1 }, { ')',  '.',  -1 }, { '+',  'j',  -2 }, { ',',  '4',  -1 }, { ',',  '7',  -1 }, { '.',  '"',  -1 },
+    { '.',  '4',  -1 }, { '.',  '7',  -1 }, { '.',  '\\', -1 }, { '/',  '/',  -2 }, { '/',  'a',  -1 }, { '/',  'd',  -1 },
+    { '/',  'o',  -1 }, { '0',  ',',  -1 }, { '0',  ';',  -1 }, { '0',  'j',  -2 }, { '1',  '"',  -1 }, { '1',  '\'', -1 },
+    { '1',  '\\', -1 }, { '1',  'j',  -2 }, { '2',  'j',  -2 }, { '3',  ',',  -1 }, { '3',  ';',  -1 }, { '3',  'j',  -2 },
+    { '4',  'j',  -2 }, { '5',  ',',  -1 }, { '5',  ';',  -1 }, { '5',  'j',  -2 }, { '6',  ',',  -1 }, { '6',  'j',  -2 },
+    { '7',  ',',  -2 }, { '7',  '.',  -2 }, { '7',  ';',  -1 }, { '7',  'j',  -2 }, { '8',  ',',  -1 }, { '8',  ';',  -1 },
+    { '8',  'j',  -2 }, { '9',  ',',  -1 }, { '9',  ';',  -1 }, { '9',  'j',  -2 }, { ':', '\\',  -1 }, { '?',  ' ',   2 },
+    { 'F',  ' ',  -1 }, { 'F',  ',',  -1 }, { 'F',  '.',  -1 }, { 'F',  ';',  -1 }, { 'L',  ' ',  -1 }, { 'L',  '"',  -1 },
+    { 'L',  'Y',  -1 }, { 'L',  '\'', -1 }, { 'L',  '\\', -2 }, { 'P',  ',',  -1 }, { 'P',  '.',  -1 }, { 'P',  ';',  -1 },
+    { 'P',  '_',  -1 }, { 'T',  ' ',  -1 }, { 'T',  ',',  -1 }, { 'T',  '.',  -1 }, { 'T',  ';',  -1 }, { 'T',  'a',  -1 },
+    { 'T',  'e',  -1 }, { 'T',  'o',  -1 }, { 'V',  ',',  -1 }, { 'V',  '.',  -1 }, { 'V',  ';',  -1 }, { 'V',  'a',  -1 },
+    { 'Y',  ',',  -1 }, { 'Y',  '.',  -1 }, { 'Y',  ';',  -1 }, { '\'', 'J',  -2 }, { '\'', 'a',  -1 }, { '\'', 'c',  -1 },
+    { '\'', 'd',  -1 }, { '\'', 'e',  -1 }, { '\'', 'g',  -1 }, { '\'', 'j',  -2 }, { '\'', 'o',  -1 }, { '\\', 'T',  -1 },
+    { '\\', 'V',  -1 }, { '\\', '\\', -2 }, { '\\', 't',  -1 }, { '_',  'f',  -1 }, { '_',  't',  -1 }, { '_',  'v',  -1 },
+    { 'a',  '"',  -1 }, { 'a',  '\'', -1 }, { 'a',  '\\', -1 }, { 'a',  'j',  -2 }, { 'b',  '"',  -1 }, { 'b',  ',',  -1 },
+    { 'b',  ';',  -1 }, { 'b',  '\'', -1 }, { 'b',  '\\', -1 }, { 'b',  'j',  -2 }, { 'c',  '"',  -1 }, { 'c',  ',',  -1 },
+    { 'c',  ';',  -1 }, { 'c',  '\'', -1 }, { 'c',  '\\', -1 }, { 'c',  'j',  -2 }, { 'd',  'j',  -2 }, { 'e',  '"',  -1 },
+    { 'e',  ',',  -1 }, { 'e',  ';',  -1 }, { 'e',  '\'', -1 }, { 'e',  '\\', -1 }, { 'e',  '_',  -1 }, { 'e',  'j',  -2 },
+    { 'f',  ' ',  -1 }, { 'f',  ',',  -2 }, { 'f',  ';',  -1 }, { 'f',  '_',  -1 }, { 'f',  'a',  -1 }, { 'f',  'j',  -2 },
+    { 'h',  '\\', -1 }, { 'h',  'j',  -2 }, { 'i',  'j',  -2 }, { 'k',  'j',  -2 }, { 'l',  'j',  -2 }, { 'm',  '"',  -1 },
+    { 'm',  '\'', -1 }, { 'm',  '\\', -1 }, { 'm',  'j',  -2 }, { 'n',  '"',  -1 }, { 'n',  '\'', -1 }, { 'n',  '\\', -1 },
+    { 'n',  'j',  -2 }, { 'o',  '"',  -1 }, { 'o',  ',',  -1 }, { 'o',  ';',  -1 }, { 'o',  '\'', -1 }, { 'o',  '\\', -1 },
+    { 'o',  'j',  -2 }, { 'p',  '"',  -1 }, { 'p',  ',',  -1 }, { 'p',  ';',  -1 }, { 'p',  '\'', -1 }, { 'p',  '\\', -1 },
+    { 'p',  'j',  -2 }, { 'r',  ' ',  -1 }, { 'r',  '"',  -1 }, { 'r',  ')',  -1 }, { 'r',  ',',  -2 }, { 'r',  '.',  -1 },
+    { 'r',  ';',  -1 }, { 'r',  '\'', -1 }, { 'r',  '\\', -1 }, { 'r',  '_',  -2 }, { 'r',  'a',  -1 }, { 'r',  'j',  -2 },
+    { 's',  ',',  -1 }, { 's',  ';',  -1 }, { 's',  '\\', -1 }, { 's',  'j',  -2 }, { 't',  '\\', -1 }, { 't',  'j',  -2 },
+    { 'u',  'j',  -2 }, { 'v',  ',',  -1 }, { 'v',  ';',  -1 }, { 'v',  '\\', -1 }, { 'v',  'a',  -1 }, { 'v',  'j',  -2 },
+    { 'w',  '\\', -1 }, { 'w',  'j',  -2 }, { 'x',  '\\', -1 }, { 'x',  'j',  -2 }, { 'y',  '\\', -1 }, { 'z',  '\\', -1 },
+    { 'z',  'j',  -2 }, { '\0', '\0',  0 }
 };
 
 int C_TextWidth(const char *text, const dboolean formatting, const dboolean kerning)
@@ -593,6 +631,7 @@ void C_Init(void)
     consolecaretcolor = nearestcolors[consolecaretcolor];
     consolelowfpscolor = nearestcolors[consolelowfpscolor];
     consolehighfpscolor = nearestcolors[consolehighfpscolor];
+    consoletimercolor = nearestcolors[consoletimercolor];
     consoleinputcolor = nearestcolors[consoleinputcolor];
     consoleselectedinputcolor = nearestcolors[consoleselectedinputcolor];
     consoleselectedinputbackgroundcolor = nearestcolors[consoleselectedinputbackgroundcolor];
@@ -643,8 +682,12 @@ void C_Init(void)
     brandwidth = SHORT(brand->width);
     brandheight = SHORT(brand->height);
     spacewidth = SHORT(consolefont[' ' - CONSOLEFONTSTART]->width);
-    timestampx = CONSOLEWIDTH - C_TextWidth("00:00:00", false, false) - CONSOLETEXTX * 2 - CONSOLESCROLLBARWIDTH + 1;
+    timerx = CONSOLEWIDTH - C_TextWidth("00:00:00", false, false) - CONSOLETEXTX + 1;
     zerowidth = SHORT(consolefont['0' - CONSOLEFONTSTART]->width);
+    warningwidth = SHORT(warning->width);
+    dotwidth = SHORT(dot->width);
+    dividerwidth = SHORT(divider->width);
+    caretwidth = SHORT(caret->width);
 
     while (*autocompletelist[++numautocomplete].text);
 }
@@ -657,7 +700,8 @@ void C_ShowConsole(void)
     showcaret = true;
     caretwait = 0;
 
-    viewplayer->damagecount = MIN(viewplayer->damagecount, (NUMREDPALS - 1) << 3);
+    if (viewplayer)
+        viewplayer->damagecount = MIN(viewplayer->damagecount, (NUMREDPALS - 1) << 3);
 
     for (int i = 0; i < MAX_MOUSE_BUTTONS; i++)
         mousebuttons[i] = false;
@@ -781,7 +825,7 @@ static void C_DrawBackground(int height)
 }
 
 static int C_DrawConsoleText(int x, int y, char *text, const int color1, const int color2, const int boldcolor,
-    byte *translucency, const int tabs[8], const dboolean formatting, const dboolean kerning)
+    byte *translucency, const int tabs[8], const dboolean formatting, const dboolean kerning, const int index)
 {
     int             bold = 0;
     dboolean        italics = false;
@@ -795,19 +839,30 @@ static int C_DrawConsoleText(int x, int y, char *text, const int color1, const i
 
     y -= CONSOLEHEIGHT - consoleheight;
 
-    if (color1 == consolewarningcolor)
+    if (console[index].stringtype == warningstring)
     {
-        V_DrawConsoleTextPatch(x, y, warning, color1, color2, false, translucency);
-        width += SHORT(warning->width) + 1;
+        if (console[index].line == 2)
+        {
+            if (text[0] == ' ')
+                width -= spacewidth;
+        }
+        else
+            V_DrawConsoleTextPatch(x, y, warning, warningwidth, color1, color2, false, translucency);
+
+        width += warningwidth + 1;
         x += width;
     }
-
-    if (len > 80)
+    else if (len > 100)
+    {
         while (C_TextWidth(M_SubString(text, 0, truncate), formatting, kerning) + width + 6 > CONSOLETEXTPIXELWIDTH)
             truncate--;
 
-    if (truncate == len - 1 && text[len - 1] == '.')
-        truncate++;
+        if (truncate == len - 1 && text[truncate] == '.')
+            truncate++;
+
+        if (text[truncate - 1] == ' ')
+            truncate--;
+    }
 
     for (int i = 0; i < truncate; i++)
     {
@@ -902,10 +957,12 @@ static int C_DrawConsoleText(int x, int y, char *text, const int color1, const i
 
             if (patch)
             {
-                V_DrawConsoleTextPatch(x, y, patch, (lastcolor1 = (bold == 1 ? boldcolor : (bold == 2 ? color1 : (italics ?
+                int patchwidth = SHORT(patch->width);
+
+                V_DrawConsoleTextPatch(x, y, patch, patchwidth, (lastcolor1 = (bold == 1 ? boldcolor : (bold == 2 ? color1 : (italics ?
                     (color1 == consolewarningcolor ? color1 : consoleitalicscolor) : color1)))), color2,
-                    (italics && letter != '_' && letter != '-' && letter != ',' && letter != '/'), translucency);
-                x += SHORT(patch->width);
+                    (italics && letter != '_' && letter != '-' && letter != '+' && letter != ',' && letter != '/'), translucency);
+                x += patchwidth;
             }
 
             prevletter = letter;
@@ -922,21 +979,21 @@ static int C_DrawConsoleText(int x, int y, char *text, const int color1, const i
                     break;
                 }
 
-        V_DrawConsoleTextPatch(x, y, dot, lastcolor1, color2, false, translucency);
-        x += SHORT(dot->width);
-        V_DrawConsoleTextPatch(x, y, dot, lastcolor1, color2, false, translucency);
+        V_DrawConsoleTextPatch(x, y, dot, dotwidth, lastcolor1, color2, false, translucency);
+        x += dotwidth;
+        V_DrawConsoleTextPatch(x, y, dot, dotwidth, lastcolor1, color2, false, translucency);
 
         if (text[truncate - 1] != '.')
         {
-            x += SHORT(dot->width);
-            V_DrawConsoleTextPatch(x, y, dot, lastcolor1, color2, false, translucency);
+            x += dotwidth;
+            V_DrawConsoleTextPatch(x, y, dot, dotwidth, lastcolor1, color2, false, translucency);
         }
     }
 
     return (x - startx);
 }
 
-static void C_DrawOverlayText(int x, int y, const char *text, const int color)
+static void C_DrawOverlayText(int x, int y, const char *text, const int color, dboolean monospaced)
 {
     const int   len = (int)strlen(text);
 
@@ -949,9 +1006,18 @@ static void C_DrawOverlayText(int x, int y, const char *text, const int color)
         else
         {
             patch_t *patch = consolefont[letter - CONSOLEFONTSTART];
+            int     width = SHORT(patch->width);
 
-            V_DrawConsoleTextPatch(x, y, patch, color, NOBACKGROUNDCOLOR, false, (r_hud_translucency ? tinttab75 : NULL));
-            x += SHORT(patch->width);
+            if (monospaced && letter == '1')
+            {
+                V_DrawConsoleTextPatch(x + 1, y, patch, width, color, NOBACKGROUNDCOLOR, false, (r_hud_translucency ? tinttab75 : NULL));
+                x += width + 2;
+            }
+            else
+            {
+                V_DrawConsoleTextPatch(x, y, patch, width, color, NOBACKGROUNDCOLOR, false, (r_hud_translucency ? tinttab75 : NULL));
+                x += width;
+            }
         }
     }
 }
@@ -975,41 +1041,33 @@ char *C_GetTimeStamp(unsigned int tics)
         minutes %= 60;
     }
 
-    if ((hours += tics / 3600) >= 12)
+    if ((hours += tics / 3600) > 12)
         hours %= 12;
 
-    M_snprintf(buffer, 9, "%s%i:%02i:%02i", (hours < 10 ? " " : ""), hours, minutes, seconds);
+    M_snprintf(buffer, 9, "%i:%02i:%02i", hours, minutes, seconds);
     return buffer;
 }
 
 static void C_DrawTimeStamp(int x, int y, unsigned int tics)
 {
     char    buffer[9];
-    int     i = 0;
 
     M_StringCopy(buffer, C_GetTimeStamp(tics), 9);
     y -= CONSOLEHEIGHT - consoleheight;
 
-    if (buffer[0] == ' ')
+    for (int i = (int)strlen(buffer) - 1; i >= 0; i--)
     {
-        x += zerowidth;
-        i++;
-    }
+        patch_t *patch = consolefont[buffer[i] - CONSOLEFONTSTART];
+        int     width = SHORT(patch->width);
 
-    while (i < 8)
-    {
-        patch_t     *patch = consolefont[buffer[i] - CONSOLEFONTSTART];
-        const int   width = SHORT(patch->width);
-
-        V_DrawConsoleTextPatch(x + (buffer[i] == '1' ? (zerowidth - width) / 2 : 0),
-            y, patch, consoletimestampcolor, NOBACKGROUNDCOLOR, false, tinttab25);
-        x += (isdigit((int)buffer[i++]) ? zerowidth : width);
+        x -= (i && isdigit((int)buffer[i]) ? zerowidth : width);
+        V_DrawConsoleTextPatch(x + (i && buffer[i] == '1'), y, patch, width, consoletimestampcolor, NOBACKGROUNDCOLOR, false, tinttab25);
     }
 }
 
 void C_UpdateFPS(void)
 {
-    if (framespersecond && !dowipe && !paused && !menuactive)
+    if (!dowipe && !paused && !menuactive)
     {
         char    buffer[32];
 
@@ -1017,7 +1075,40 @@ void C_UpdateFPS(void)
 
         C_DrawOverlayText(CONSOLEWIDTH - C_TextWidth(buffer, false, false) - CONSOLETEXTX + 1, CONSOLETEXTY, buffer,
             (framespersecond < (refreshrate && vid_capfps != TICRATE ? refreshrate : TICRATE) ? consolelowfpscolor :
-            consolehighfpscolor));
+            consolehighfpscolor), false);
+    }
+}
+
+void C_UpdateTimer(void)
+{
+    if (!paused && !menuactive)
+    {
+        static char buffer[9];
+        int         tics = countdown;
+        static int  prevtics;
+
+        if (tics != prevtics)
+        {
+            int     hours = (tics = (prevtics = tics) / TICRATE) / 3600;
+            int     minutes = ((tics %= 3600)) / 60;
+            int     seconds = tics % 60;
+
+            if (seconds >= 60)
+            {
+                minutes += seconds / 60;
+                seconds %= 60;
+            }
+
+            if (minutes >= 60)
+            {
+                hours += minutes / 60;
+                minutes %= 60;
+            }
+
+            M_snprintf(buffer, 9, "%02i:%02i:%02i", hours, minutes, seconds);
+        }
+
+        C_DrawOverlayText(timerx, CONSOLETEXTY, buffer, consoletimercolor, true);
     }
 }
 
@@ -1128,7 +1219,7 @@ void C_Drawer(void)
             if (stringtype == playermessagestring || stringtype == obituarystring)
             {
                 int width = C_DrawConsoleText(CONSOLETEXTX, y, console[i].string, consoleplayermessagecolor,
-                                NOBACKGROUNDCOLOR, consoleplayermessagecolor, tinttab66, notabs, true, true);
+                                NOBACKGROUNDCOLOR, consoleplayermessagecolor, tinttab66, notabs, true, true, i);
 
                 if (console[i].count > 1)
                 {
@@ -1136,18 +1227,18 @@ void C_Drawer(void)
 
                     M_snprintf(buffer, sizeof(buffer), "(%s)", commify(console[i].count));
                     C_DrawConsoleText(CONSOLETEXTX + width + 2, y, buffer, consoleplayermessagecolor,
-                        NOBACKGROUNDCOLOR, consoleplayermessagecolor, tinttab66, notabs, false, false);
+                        NOBACKGROUNDCOLOR, consoleplayermessagecolor, tinttab66, notabs, false, false, i);
                 }
 
                 if (con_timestamps)
-                    C_DrawTimeStamp(timestampx, y, console[i].tics);
+                    C_DrawTimeStamp(CONSOLEWIDTH - CONSOLETEXTX * 2 - CONSOLESCROLLBARWIDTH + 2, y, console[i].tics);
             }
             else if (stringtype == outputstring)
                 C_DrawConsoleText(CONSOLETEXTX, y, console[i].string, consolecolors[stringtype],
-                    NOBACKGROUNDCOLOR, consoleboldcolor, tinttab66, console[i].tabs, true, true);
+                    NOBACKGROUNDCOLOR, consoleboldcolor, tinttab66, console[i].tabs, true, true, i);
             else if (stringtype == dividerstring)
                 V_DrawConsoleTextPatch(CONSOLETEXTX, y + 5 - (CONSOLEHEIGHT - consoleheight),
-                    divider, consoledividercolor, NOBACKGROUNDCOLOR, false, tinttab50);
+                    divider, dividerwidth, consoledividercolor, NOBACKGROUNDCOLOR, false, tinttab50);
             else if (stringtype == headerstring)
             {
                 const headertype_t  headertype = console[i].headertype;
@@ -1167,9 +1258,12 @@ void C_Drawer(void)
                 else if (headertype == thinglistheader)
                     V_DrawBigTranslucentPatch(CONSOLETEXTX, y + 4 - (CONSOLEHEIGHT - consoleheight), thinglist);
             }
+            else if (stringtype == warningstring)
+                C_DrawConsoleText(CONSOLETEXTX, y, console[i].string, consolecolors[stringtype], NOBACKGROUNDCOLOR,
+                    consolewarningboldcolor, tinttab66, notabs, true, true, i);
             else
                 C_DrawConsoleText(CONSOLETEXTX, y, console[i].string, consolecolors[stringtype], NOBACKGROUNDCOLOR,
-                    (stringtype == warningstring ? consolewarningboldcolor : consoleboldcolor), tinttab66, notabs, true, true);
+                    consoleboldcolor, tinttab66, notabs, true, true, i);
         }
 
         if (quitcmd)
@@ -1185,7 +1279,7 @@ void C_Drawer(void)
 
             lefttext[i] = '\0';
             x += C_DrawConsoleText(x, CONSOLEHEIGHT - 17, lefttext, consoleinputcolor,
-                NOBACKGROUNDCOLOR, NOBOLDCOLOR, NULL, notabs, false, true);
+                NOBACKGROUNDCOLOR, NOBOLDCOLOR, NULL, notabs, false, true, 0);
 
             // draw any selected text to left of caret
             if (selectstart < caretpos)
@@ -1201,7 +1295,7 @@ void C_Drawer(void)
                         screens[0][(CONSOLEHEIGHT - 17 + i) * SCREENWIDTH + x - 1] = consoleselectedinputbackgroundcolor;
 
                     x += C_DrawConsoleText(x, CONSOLEHEIGHT - 17, middletext, consoleselectedinputcolor,
-                        consoleselectedinputbackgroundcolor, NOBOLDCOLOR, NULL, notabs, false, true);
+                        consoleselectedinputbackgroundcolor, NOBOLDCOLOR, NULL, notabs, false, true, 0);
 
                     for (i = 1; i < CONSOLELINEHEIGHT - 1; i++)
                         screens[0][(CONSOLEHEIGHT - 17 + i) * SCREENWIDTH + x] = consoleselectedinputbackgroundcolor;
@@ -1219,7 +1313,7 @@ void C_Drawer(void)
             }
 
             if (showcaret)
-                V_DrawConsoleTextPatch(x, consoleheight - 17, caret, consolecaretcolor, NOBACKGROUNDCOLOR, false, NULL);
+                V_DrawConsoleTextPatch(x, consoleheight - 17, caret, caretwidth, consolecaretcolor, NOBACKGROUNDCOLOR, false, NULL);
         }
         else
         {
@@ -1243,7 +1337,7 @@ void C_Drawer(void)
                     screens[0][(CONSOLEHEIGHT - 17 + i) * SCREENWIDTH + x - 1] = consoleselectedinputbackgroundcolor;
 
                 x += C_DrawConsoleText(x, CONSOLEHEIGHT - 17, middletext, consoleselectedinputcolor,
-                    consoleselectedinputbackgroundcolor, NOBOLDCOLOR, NULL, notabs, false, true);
+                    consoleselectedinputbackgroundcolor, NOBOLDCOLOR, NULL, notabs, false, true, i);
 
                 for (i = 1; i < CONSOLELINEHEIGHT - 1; i++)
                     screens[0][(CONSOLEHEIGHT - 17 + i) * SCREENWIDTH + x] = consoleselectedinputbackgroundcolor;
@@ -1264,7 +1358,7 @@ void C_Drawer(void)
 
             if (*righttext)
                 C_DrawConsoleText(x, CONSOLEHEIGHT - 17, righttext, consoleinputcolor,
-                    NOBACKGROUNDCOLOR, NOBOLDCOLOR, NULL, notabs, false, true);
+                    NOBACKGROUNDCOLOR, NOBOLDCOLOR, NULL, notabs, false, true, i);
         }
     }
     else
@@ -1944,10 +2038,9 @@ static const char *dayofweek(int d, int m, int y)
 
 void C_PrintCompileDate(void)
 {
-    int     day, month, year, hour, minute;
-    char    mth[4] = "";
-
-    const char mths[] = "JanFebMarAprMayJunJulAugSepOctNovDec";
+    int         day, month, year, hour, minute;
+    char        mth[4] = "";
+    const char  mths[] = "JanFebMarAprMayJunJulAugSepOctNovDec";
 
     const char *months[] =
     {
@@ -1961,8 +2054,8 @@ void C_PrintCompileDate(void)
     month = (int)(strstr(mths, mth) - mths) / 3 + 1;
 
     C_Output("This %i-bit <i><b>%s</b></i> binary of <i><b>%s</b></i> was built at %i:%02i%s on %s, %s %i, %i.",
-        (int)sizeof(intptr_t) * 8, SDL_GetPlatform(), PACKAGE_NAMEANDVERSIONSTRING, hour - 12 * (hour > 12),
-        minute, (hour < 12 ? "am" : "pm"), dayofweek(day, month, year), months[month], day, year);
+        (int)sizeof(intptr_t) * 8, OPERATINGSYSTEM, PACKAGE_NAMEANDVERSIONSTRING, hour - 12 * (hour > 12), minute,
+        (hour < 12 ? "am" : "pm"), dayofweek(day, month, year), months[month], day, year);
 
 #if defined(_MSC_FULL_VER)
     if (_MSC_BUILD)

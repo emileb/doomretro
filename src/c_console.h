@@ -72,8 +72,6 @@
 
 #define CONSOLETOP              0
 
-#define DIVIDERSTRING           "==================================================================================================="
-
 #define EMPTYVALUE              "\"\""
 
 #define stringize(x)            #x
@@ -115,6 +113,7 @@ typedef struct
 {
     char                string[1024];
     unsigned int        count;
+    unsigned int        line;
     stringtype_t        stringtype;
     headertype_t        headertype;
     int                 tabs[8];
@@ -173,7 +172,7 @@ void C_Output(const char *string, ...);
 void C_OutputNoRepeat(const char *string, ...);
 void C_TabbedOutput(const int tabs[8], const char *string, ...);
 void C_Header(const headertype_t headertype);
-void C_Warning(const char *string, ...);
+void C_Warning(const int minwarninglevel, const char *string, ...);
 void C_PlayerMessage(const char *string, ...);
 void C_Obituary(const char *string, ...);
 void C_AddConsoleDivider(void);
@@ -189,6 +188,7 @@ dboolean C_Responder(event_t *ev);
 void C_PrintCompileDate(void);
 void C_PrintSDLVersions(void);
 void C_UpdateFPS(void);
+void C_UpdateTimer(void);
 char *C_GetTimeStamp(unsigned int tics);
 
 #endif

@@ -56,6 +56,8 @@ extern char     *packageconfig;
 extern dboolean vanilla;
 extern dboolean togglingvanilla;
 
+#define NUMCVARS                                    179
+
 #define CONFIG_VARIABLE_INT(name, set)              { #name, &name, DEFAULT_INT,           set          }
 #define CONFIG_VARIABLE_INT_UNSIGNED(name, set)     { #name, &name, DEFAULT_INT_UNSIGNED,  set          }
 #define CONFIG_VARIABLE_INT_PERCENT(name, set)      { #name, &name, DEFAULT_INT_PERCENT,   set          }
@@ -66,7 +68,7 @@ extern dboolean togglingvanilla;
 #define BLANKLINE                                   { "",    "",    DEFAULT_OTHER,         NOVALUEALIAS }
 #define COMMENT(text)                               { text,  "",    DEFAULT_OTHER,         NOVALUEALIAS }
 
-static default_t cvars[] =
+static default_t cvars[NUMCVARS] =
 {
     COMMENT("; CVARs\n"),
     CONFIG_VARIABLE_INT          (alwaysrun,                                         BOOLVALUEALIAS     ),
@@ -78,6 +80,7 @@ static default_t cvars[] =
     CONFIG_VARIABLE_INT          (am_crosshaircolor,                                 NOVALUEALIAS       ),
     CONFIG_VARIABLE_INT          (am_external,                                       BOOLVALUEALIAS     ),
     CONFIG_VARIABLE_INT          (am_fdwallcolor,                                    NOVALUEALIAS       ),
+    CONFIG_VARIABLE_INT          (am_followmode,                                     BOOLVALUEALIAS     ),
     CONFIG_VARIABLE_INT          (am_grid,                                           BOOLVALUEALIAS     ),
     CONFIG_VARIABLE_INT          (am_gridcolor,                                      NOVALUEALIAS       ),
     CONFIG_VARIABLE_OTHER        (am_gridsize,                                       NOVALUEALIAS       ),
@@ -181,6 +184,7 @@ static default_t cvars[] =
     CONFIG_VARIABLE_INT_PERCENT  (turbo,                                             NOVALUEALIAS       ),
     CONFIG_VARIABLE_INT          (units,                                             UNITSVALUEALIAS    ),
     CONFIG_VARIABLE_STRING       (version,                                           NOVALUEALIAS       ),
+    CONFIG_VARIABLE_INT          (vid_borderlesswindow,                              BOOLVALUEALIAS     ),
     CONFIG_VARIABLE_INT          (vid_capfps,                                        CAPVALUEALIAS      ),
     CONFIG_VARIABLE_INT          (vid_display,                                       NOVALUEALIAS       ),
 #if !defined(_WIN32)
@@ -199,6 +203,7 @@ static default_t cvars[] =
 #if defined(_WIN32)
     CONFIG_VARIABLE_STRING       (wad,                                               NOVALUEALIAS       ),
 #endif
+    CONFIG_VARIABLE_INT          (warninglevel,                                      NOVALUEALIAS       ),
     CONFIG_VARIABLE_INT_PERCENT  (weaponbob,                                         NOVALUEALIAS       ),
     CONFIG_VARIABLE_INT          (weaponbounce,                                      BOOLVALUEALIAS     ),
     CONFIG_VARIABLE_INT          (weaponrecoil,                                      BOOLVALUEALIAS     ),
@@ -220,6 +225,7 @@ static default_t cvars[] =
     CONFIG_VARIABLE_INT_UNSIGNED (stat_itemspickedup_armor,                          NOVALUEALIAS       ),
     CONFIG_VARIABLE_INT_UNSIGNED (stat_itemspickedup_health,                         NOVALUEALIAS       ),
     CONFIG_VARIABLE_INT_UNSIGNED (stat_mapscompleted,                                NOVALUEALIAS       ),
+    CONFIG_VARIABLE_INT_UNSIGNED (stat_mapsstarted,                                  NOVALUEALIAS       ),
     CONFIG_VARIABLE_INT_UNSIGNED (stat_monsterskilled,                               NOVALUEALIAS       ),
     CONFIG_VARIABLE_INT_UNSIGNED (stat_monsterskilled_arachnotrons,                  NOVALUEALIAS       ),
     CONFIG_VARIABLE_INT_UNSIGNED (stat_monsterskilled_archviles,                     NOVALUEALIAS       ),
@@ -293,21 +299,28 @@ static void SaveBindByValue(FILE *file, char *action, int value, controltype_t t
 void M_SaveCVARs(void)
 {
     int     numaliases = 0;
-    int     p;
     FILE    *file;
 
     if (!cvarsloaded || vanilla || togglingvanilla)
         return;
 
-    p = M_CheckParmWithArgs("-config", 1, 1);
+    if (!(file = fopen(packageconfig, "w")))
+    {
+        static dboolean warning;
 
-    if (!(file = fopen((p ? myargv[p + 1] : packageconfig), "w")))
-        return; // can't write the file, but don't complain
+        if (!warning)
+        {
+            warning = true;
+            C_Warning(1, "<b>%s</b> couldn't be saved.", packageconfig);
+        }
+
+        return;
+    }
 
     if (returntowidescreen)
         vid_widescreen = true;
 
-    for (int i = 0; i < arrlen(cvars); i++)
+    for (int i = 0; i < NUMCVARS; i++)
     {
         if (!*cvars[i].name)
         {
@@ -357,8 +370,8 @@ void M_SaveCVARs(void)
 
                 fputs(cvars_location_free, file);
                 free(cvars_location_free);
-            }
                 break;
+            }
 
             case DEFAULT_INT_PERCENT:
             {
@@ -551,6 +564,9 @@ static void M_CheckCVARs(void)
 
     if (am_fdwallcolor < am_fdwallcolor_min || am_fdwallcolor > am_fdwallcolor_max)
         am_fdwallcolor = am_fdwallcolor_default;
+
+    if (am_followmode != false && am_followmode != true)
+        am_followmode = am_followmode_default;
 
     if (am_grid != false && am_grid != true)
         am_grid = am_grid_default;
@@ -836,6 +852,9 @@ static void M_CheckCVARs(void)
 
     version = version_default;
 
+    if (vid_borderlesswindow != false && vid_borderlesswindow != true)
+        vid_borderlesswindow = vid_borderlesswindow_default;
+
     vid_capfps = BETWEEN(vid_capfps_min, vid_capfps, vid_capfps_max);
 
     vid_display = MAX(vid_display_min, vid_display);
@@ -879,6 +898,8 @@ static void M_CheckCVARs(void)
     }
     else
         r_hud = true;
+
+    warninglevel = BETWEEN(warninglevel_min, warninglevel, warninglevel_max);
 
     weaponbob = BETWEEN(weaponbob_min, weaponbob, weaponbob_max);
 

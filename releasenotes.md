@@ -1,3 +1,32 @@
+### DOOM Retro v3.2
+
+* Optimizations have been made to further improve the overall performance and stability of *DOOM Retro*.
+* Minor changes have been made to the character set used in the console.
+* Minor changes have been made to text that is output to the console.
+* Long warnings in the console now wrap over two lines.
+* A new `warninglevel` CVAR has been implemented to control the type of warnings displayed. It can be `0` (minimal warnings), `1` (no warnings about the current map) or `2` (all warnings), and is `1` by default.
+* The following changes have been made to warnings in the console when the `warninglevel` CVAR is `2`:
+  * Warnings will now be displayed for every linedef in the current map that has either an unknown tag, a tag but no special, or a special but no tag.
+  * Warnings describing any fixes made to the current map are now displayed when the `r_fixmaperrors` CVAR is `on`.
+* Further improvements have been made to the console’s autocomplete feature.
+* The `resurrect` CCMD has been enhanced to allow not only the resurrection of the player, but also all monsters or a type of monster.
+* To accommodate for when the player is in liquid and needs to shoot a switch, now only their view will be lowered, and not their gunshot, if the `r_liquid_lowerview` CVAR is `on` and `mouselook` CVAR is `off`.
+* The `-nodeh` command-line parameter now works as intended.
+* Minor improvements have been made to the menu’s background.
+* A crash will no longer occur when trying to autoload a savegame that was previously deleted using the <kbd>DEL</kbd> key in the save or load game menu.
+* The vertical direction the player is looking is now centered when they teleport with the `mouselook` CVAR `on`.
+* Further improvements have been made to the support for Noiser’s [*DOOM 4 VANILLA*](https://www.doomworld.com/forum/topic/108725).
+* Timestamps between `12:00:00` and `12:59:59` in the console are now displayed correctly.
+* The text on the help screen displayed using the <kbd>F1</kbd> key now has drop shadows.
+* A new `vid_borderlesswindow` CVAR has been implemented that toggles the use of a borderless window rather than true fullscreen when the `vid_fullscreen` CVAR is `on`. It is `off` by default.
+* A bug has been fixed whereby the player wouldn’t be able to telefrag a monster in some instances.
+* A countdown will now be displayed in the top right of the screen if a timer is set using the `timer` CCMD.
+* The number of maps started now appears alongside the number of maps completed in the `playerstats` CCMD.
+
+---
+
+###### Saturday, November 2, 2019
+
 ### DOOM Retro v3.1
 
 * Optimizations have been made to further improve the overall performance and stability of *DOOM Retro*.
@@ -16,8 +45,8 @@
 * A bug has been fixed whereby a flying monster could fall out of the air if over a moving, liquid sector in some instances.
 * The horizontal and vertical sensitivity of a gamepad’s thumbsticks can now both be adjusted individually. The `gp_sensitivity` CVAR has been replaced by the new `gp_sensitivity_horizontal` and `gp_sensitivity_vertical` CVARs. Each CVAR is a value between `0` and `128`, and `64` by default.
 * If a friendly dog is returning to the player, they will now drop from any height regardless of how far they are away.
-* Monsters can no longer be spawned outside of the map if the player is too close to a wall when using the `spawn` CCMD.
-* A bug has been fixed whereby bobbing pick-ups wouldn’t move on *BOOM*-compatible scrolling sectors in some instances if the `r_floatbob` CVAR was `on`.
+* Monsters and items can no longer be spawned outside of the map if the player is too close to a wall when using the `spawn` CCMD.
+* A bug has been fixed whereby bobbing power-ups wouldn’t move on *BOOM*-compatible scrolling sectors in some instances if the `r_floatbob` CVAR was `on`.
 * The correct sound is now played when a *BOOM*-compatible generalized door opens or closes at normal speed.
 * Linedefs with specials but no sectors tagged are now handled better.
 

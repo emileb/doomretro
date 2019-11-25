@@ -115,6 +115,8 @@ sector_t *P_FindModelCeilingSector(fixed_t ceildestheight, int secnum); // jff 0
 int P_FindSectorFromLineTag(const line_t *line, int start);
 int P_FindLineFromLineTag(const line_t *line, int start);
 
+void P_InitTagLists(void);
+
 int P_FindMinSurroundingLight(sector_t *sec, int min);
 
 dboolean P_CanUnlockGenDoor(line_t *line);
@@ -181,7 +183,7 @@ void T_LightFlash(lightflash_t *flash);
 void P_SpawnLightFlash(sector_t *sector);
 void T_StrobeFlash(strobe_t *flash);
 
-void P_SpawnStrobeFlash(sector_t *sector, int fastOrSlow, dboolean inSync);
+void P_SpawnStrobeFlash(sector_t *sector, int fastorslow, dboolean insync);
 
 dboolean EV_StartLightStrobing(line_t *line);
 dboolean EV_TurnTagLightsOff(line_t *line);
@@ -191,7 +193,7 @@ dboolean EV_LightTurnOn(line_t *line, int bright);
 void EV_LightTurnOnPartway(line_t *line, fixed_t level);        // killough 10/10/98
 void EV_LightByAdjacentSectors(sector_t *sector, fixed_t level);
 
-void T_Glow(glow_t *g);
+void T_Glow(glow_t *glow);
 void P_SpawnGlowingLight(sector_t *sector);
 
 void T_FireFlicker(fireflicker_t *flick);
@@ -555,7 +557,7 @@ typedef enum
     pastdest
 } result_e;
 
-result_e T_MovePlane(sector_t *sector, fixed_t speed, fixed_t dest, dboolean crush, int floorOrCeiling,
+result_e T_MovePlane(sector_t *sector, fixed_t speed, fixed_t dest, dboolean crush, int floororceiling,
     int direction, dboolean elevator);
 dboolean EV_BuildStairs(line_t *line, fixed_t speed, fixed_t stairsize, dboolean crushing);
 dboolean EV_DoFloor(line_t *line, floor_e floortype);

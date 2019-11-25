@@ -88,7 +88,7 @@ void I_InitGamepad(void)
 #endif
 
     if (SDL_InitSubSystem(SDL_INIT_GAMECONTROLLER | SDL_INIT_HAPTIC) < 0)
-        C_Warning("Gamepad support couldn't be initialized.");
+        C_Warning(1, "Gamepad support couldn't be initialized.");
     else
     {
         int numjoysticks = SDL_NumJoysticks();
@@ -118,7 +118,7 @@ void I_InitGamepad(void)
                 C_OutputNoRepeat("A gamepad is connected.");
 
             if (!(haptic = SDL_HapticOpenFromJoystick(joystick)) || SDL_HapticRumbleInit(haptic) < 0)
-                C_Warning("This gamepad doesn't support vibration.");
+                C_Warning(1, "This gamepad doesn't support vibration.");
         }
     }
 

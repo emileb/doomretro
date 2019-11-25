@@ -42,6 +42,12 @@
 #include <unistd.h>
 #endif
 
+#if defined(__APPLE__)
+#define PC  "Mac"
+#else
+#define PC  "PC"
+#endif
+
 #include "c_console.h"
 #include "d_main.h"
 #include "i_gamepad.h"
@@ -192,7 +198,7 @@ void I_PrintWindowsVersion(void)
         }
 
         if (bits == 64 && sizeof(intptr_t) == 4)
-            C_Warning("The 64-bit version of <i>" PACKAGE_NAME "</i> is recommended on this system.");
+            C_Warning(1, "The 64-bit version of <i>" PACKAGE_NAME "</i> is recommended on this system.");
     }
 }
 #endif
@@ -200,11 +206,11 @@ void I_PrintWindowsVersion(void)
 void I_PrintSystemInfo(void)
 {
     int     cores = SDL_GetCPUCount();
-    char    *ram = commify(SDL_GetSystemRAM() / 1000);
+    char    *RAM = commify(SDL_GetSystemRAM() / 1000);
 
-    C_Output("There %s %i logical core%s and %sGB of system RAM on this PC.",
-        (cores > 1 ? "are" : "is"), cores, (cores > 1 ? "s" : ""), ram);
-    free(ram);
+    C_Output("There %s %i core%s and %sGB of RAM on this " PC ".",
+        (cores > 1 ? "are" : "is"), cores, (cores > 1 ? "s" : ""), RAM);
+    free(RAM);
 }
 
 //

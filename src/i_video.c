@@ -80,6 +80,7 @@
 dboolean            m_acceleration = m_acceleration_default;
 int                 r_color = r_color_default;
 float               r_gamma = r_gamma_default;
+dboolean            vid_borderlesswindow = vid_borderlesswindow_default;
 int                 vid_capfps = vid_capfps_default;
 int                 vid_display = vid_display_default;
 #if !defined(_WIN32)
@@ -940,7 +941,7 @@ static void I_Blit_NearestLinear_ShowFPS_Shake(void)
     SDL_RenderPresent(renderer);
 }
 
-void I_Blit_Automap(void)
+static void I_Blit_Automap(void)
 {
     SDL_LowerBlit(mapsurface, &map_rect, mapbuffer, &map_rect);
     SDL_UpdateTexture(maptexture, &map_rect, mapbuffer->pixels, SCREENWIDTH * 4);
@@ -949,7 +950,7 @@ void I_Blit_Automap(void)
     SDL_RenderPresent(maprenderer);
 }
 
-void I_Blit_Automap_NearestLinear(void)
+static void I_Blit_Automap_NearestLinear(void)
 {
     SDL_LowerBlit(mapsurface, &map_rect, mapbuffer, &map_rect);
     SDL_UpdateTexture(maptexture, &map_rect, mapbuffer->pixels, SCREENWIDTH * 4);
@@ -1104,7 +1105,7 @@ void I_CreateExternalAutomap(int outputlevel)
     if (numdisplays == 1)
     {
         if (outputlevel >= 1)
-            C_Warning("An external automap couldn't be created. Only one display was found.");
+            C_Warning(1, "An external automap couldn't be created. Only one display was found.");
 
         return;
     }
@@ -1112,7 +1113,8 @@ void I_CreateExternalAutomap(int outputlevel)
     SDL_SetHintWithPriority(SDL_HINT_VIDEO_MINIMIZE_ON_FOCUS_LOSS, "0", SDL_HINT_OVERRIDE);
 
     mapwindow = SDL_CreateWindow("Automap", SDL_WINDOWPOS_UNDEFINED_DISPLAY(am_displayindex),
-        SDL_WINDOWPOS_UNDEFINED_DISPLAY(am_displayindex), 0, 0, SDL_WINDOW_FULLSCREEN);
+        SDL_WINDOWPOS_UNDEFINED_DISPLAY(am_displayindex), 0, 0,
+        (vid_borderlesswindow ? SDL_WINDOW_FULLSCREEN_DESKTOP : SDL_WINDOW_FULLSCREEN));
 
 
     maprenderer = SDL_CreateRenderer(mapwindow, -1, SDL_RENDERER_TARGETTEXTURE);
@@ -1353,7 +1355,7 @@ static void SetVideoMode(dboolean output)
     if (displayindex < 0 || displayindex >= numdisplays || !displayname)
     {
         if (output)
-            C_Warning("Unable to find display %i.", vid_display);
+            C_Warning(1, "Unable to find display %i.", vid_display);
 
         displayname = SDL_GetDisplayName((displayindex = vid_display_default - 1));
     }
@@ -1410,7 +1412,8 @@ static void SetVideoMode(dboolean output)
             SDL_GL_SetAttribute( SDL_GL_DEPTH_SIZE, 16 ); // Defaults to 24 which is not needed and fails on old Tegras
 #endif
             window = SDL_CreateWindow(PACKAGE_NAME, SDL_WINDOWPOS_UNDEFINED_DISPLAY(displayindex),
-                SDL_WINDOWPOS_UNDEFINED_DISPLAY(displayindex), width, height, (windowflags | SDL_WINDOW_FULLSCREEN));
+                SDL_WINDOWPOS_UNDEFINED_DISPLAY(displayindex), width, height,
+                (windowflags | (vid_borderlesswindow ? SDL_WINDOW_FULLSCREEN_DESKTOP : SDL_WINDOW_FULLSCREEN)));
 
 
             if (output)
@@ -1431,7 +1434,8 @@ static void SetVideoMode(dboolean output)
             height = screenheight;
 
             window = SDL_CreateWindow(PACKAGE_NAME, SDL_WINDOWPOS_UNDEFINED_DISPLAY(displayindex),
-                SDL_WINDOWPOS_UNDEFINED_DISPLAY(displayindex), width, height, (windowflags | SDL_WINDOW_FULLSCREEN));
+                SDL_WINDOWPOS_UNDEFINED_DISPLAY(displayindex), width, height,
+                (windowflags | (vid_borderlesswindow ? SDL_WINDOW_FULLSCREEN_DESKTOP : SDL_WINDOW_FULLSCREEN)));
 
             if (output)
             {
@@ -1511,19 +1515,32 @@ static void SetVideoMode(dboolean output)
 
     if (output)
     {
-        typedef const GLubyte *(APIENTRY *glStringFn_t)(GLenum);
+        char *width_str = commify(height * 4 / 3);
+        char *height_str = commify(height);
 
-        glStringFn_t    pglGetString = (glStringFn_t)SDL_GL_GetProcAddress("glGetString");
+        C_Output("<i><b>" PACKAGE_NAME "</b></i> is using a software renderer.");
 
-        if (pglGetString)
+        if (nearestlinear)
         {
-            const char  *graphicscard = (const char *)pglGetString(GL_RENDERER);
-            const char  *vendor = (const char *)pglGetString(GL_VENDOR);
+            char *upscaledwidth_str = commify((int64_t)upscaledwidth * SCREENWIDTH);
+            char *upscaledheight_str = commify((int64_t)upscaledheight * SCREENHEIGHT);
 
-            if (graphicscard && vendor)
-                C_Output("Using %s <i><b>%s</b></i> graphics card by <i><b>%s</b></i>.",
-                    (isvowel(graphicscard[0]) ? "an" : "a"), graphicscard, vendor);
+            C_Output("Each frame is scaled from %ix%i to %sx%s using nearest-neighbor interpolation.",
+                SCREENWIDTH, SCREENHEIGHT, upscaledwidth_str, upscaledheight_str);
+            C_Output("They are then scaled down to %sx%s using linear filtering.", width_str, height_str);
+
+            free(upscaledwidth_str);
+            free(upscaledheight_str);
         }
+        else if (M_StringCompare(vid_scalefilter, vid_scalefilter_linear) && !software)
+            C_Output("Each frame is scaled from %ix%i to %sx%s using linear filtering.",
+                SCREENWIDTH, SCREENHEIGHT, width_str, height_str);
+        else
+            C_Output("Each frame is scaled from %ix%i to %sx%s using nearest-neighbor interpolation.",
+                SCREENWIDTH, SCREENHEIGHT, width_str, height_str);
+
+        free(width_str);
+        free(height_str);
     }
 
 
@@ -1539,21 +1556,20 @@ static void SetVideoMode(dboolean output)
 
             if (major * 10 + minor < 21)
             {
-                C_Warning("<i>" PACKAGE_NAME "</i> requires at least <i>OpenGL v2.1</i>.");
+                C_Warning(1, "<i>" PACKAGE_NAME "</i> requires at least <i>OpenGL v2.1</i>.");
 
                 vid_scaleapi = vid_scaleapi_direct3d;
                 M_SaveCVARs();
                 SDL_SetHintWithPriority(SDL_HINT_RENDER_DRIVER, vid_scaleapi, SDL_HINT_OVERRIDE);
 
                 if (output)
-                    C_Output("The screen is now rendered using hardware acceleration with %s of the "
-                        "<i><b>Direct3D</b></i> API instead.", (SDL_VIDEO_RENDER_D3D11 ? "v11.0" : "v9.0"));
+                    C_Output("This is now done in hardware using <i><b>Direct3D %s</b></i>.",
+                        (SDL_VIDEO_RENDER_D3D11 ? "v11.0" : "v9.0"));
             }
             else
             {
                 if (output)
-                    C_Output("The screen is rendered using hardware acceleration with v%i.%i of the <i><b>OpenGL</b></i> API.",
-                        major, minor);
+                    C_Output("This is done in hardware using <i><b>OpenGL v%i.%i</b></i>.", major, minor);
 
                 if (!M_StringCompare(vid_scaleapi, vid_scaleapi_opengl))
                 {
@@ -1566,24 +1582,24 @@ static void SetVideoMode(dboolean output)
         else if (M_StringCompare(rendererinfo.name, vid_scaleapi_opengles))
         {
             if (output)
-                C_Output("The screen is rendered using hardware acceleration with the <i><b>OpenGL ES</b></i> API.");
+                C_Output("This is done in hardware using <i><b>OpenGL ES</b></i>.");
         }
         else if (M_StringCompare(rendererinfo.name, vid_scaleapi_opengles2))
         {
             if (output)
-                C_Output("The screen is rendered using hardware acceleration with the <i><b>OpenGL ES 2</b></i> API.");
+                C_Output("This is done in hardware using <i><b>OpenGL ES 2</b></i>.");
         }
 #elif defined(__APPLE__)
         else if (M_StringCompare(rendererinfo.name, vid_scaleapi_metal))
         {
             if (output)
-                C_Output("The screen is rendered using hardware acceleration with the <i><b>Metal</b></i> API.");
+                C_Output("This is done in hardware using <i><b>Metal</b></i>.");
         }
 #endif
         else if (M_StringCompare(rendererinfo.name, vid_scaleapi_direct3d))
         {
             if (output)
-                C_Output("The screen is rendered using hardware acceleration with %s of the <i><b>Direct3D</b></i> API.",
+                C_Output("This is done in hardware using <i><b>Direct3D %s</b></i>.",
                     (SDL_VIDEO_RENDER_D3D11 ? "v11.0" : "v9.0"));
 
             if (!M_StringCompare(vid_scaleapi, vid_scaleapi_direct3d))
@@ -1599,7 +1615,7 @@ static void SetVideoMode(dboolean output)
             SDL_SetHintWithPriority(SDL_HINT_RENDER_SCALE_QUALITY, vid_scalefilter_nearest, SDL_HINT_OVERRIDE);
 
             if (output)
-                C_Output("The screen is rendered in software.");
+                C_Output("This is also done in software.");
 
             if (!M_StringCompare(vid_scaleapi, vid_scaleapi_software))
             {
@@ -1609,35 +1625,24 @@ static void SetVideoMode(dboolean output)
 
             if (output && (M_StringCompare(vid_scalefilter, vid_scalefilter_linear)
                 || M_StringCompare(vid_scalefilter, vid_scalefilter_nearest_linear)))
-                C_Warning("Linear filtering can't be used in software.");
+                C_Warning(1, "Linear filtering can't be used in software.");
         }
 
         if (output)
         {
-            char    *width_str = commify(height * 4 / 3);
-            char    *height_str = commify(height);
+            typedef const GLubyte *(APIENTRY *glStringFn_t)(GLenum);
 
-            if (nearestlinear)
+            glStringFn_t    pglGetString = (glStringFn_t)SDL_GL_GetProcAddress("glGetString");
+
+            if (pglGetString)
             {
-                char    *upscaledwidth_str = commify((int64_t)upscaledwidth * SCREENWIDTH);
-                char    *upscaledheight_str = commify((int64_t)upscaledheight * SCREENHEIGHT);
+                const char *graphicscard = (const char *)pglGetString(GL_RENDERER);
+                const char *vendor = (const char *)pglGetString(GL_VENDOR);
 
-                C_Output("The %ix%i screen is scaled up to %sx%s using nearest-neighbor interpolation.",
-                    SCREENWIDTH, SCREENHEIGHT, upscaledwidth_str, upscaledheight_str);
-                C_Output("It is then scaled down to %sx%s using linear filtering.", width_str, height_str);
-
-                free(upscaledwidth_str);
-                free(upscaledheight_str);
+                if (graphicscard && vendor)
+                    C_Output("Using %s <i><b>%s</b></i> graphics card by <i><b>%s</b></i>.",
+                        (isvowel(graphicscard[0]) ? "an" : "a"), graphicscard, vendor);
             }
-            else if (M_StringCompare(vid_scalefilter, vid_scalefilter_linear) && !software)
-                C_Output("The %ix%i screen is scaled up to %sx%s using linear filtering.",
-                    SCREENWIDTH, SCREENHEIGHT, width_str, height_str);
-            else
-                C_Output("The %ix%i screen is scaled up to %sx%s using nearest-neighbor interpolation.",
-                    SCREENWIDTH, SCREENHEIGHT, width_str, height_str);
-
-            free(width_str);
-            free(height_str);
         }
 
         I_CapFPS(0);
@@ -1681,9 +1686,9 @@ static void SetVideoMode(dboolean output)
                 if (vid_vsync)
                 {
                     if (M_StringCompare(rendererinfo.name, vid_scaleapi_software))
-                        C_Warning("Vertical sync can't be enabled in software.");
+                        C_Warning(1, "Vertical sync can't be enabled in software.");
                     else
-                        C_Warning("Vertical sync can't be enabled on this video card.");
+                        C_Warning(1, "Vertical sync can't be enabled on this video card.");
                 }
 
                 if (vid_capfps)
@@ -1839,11 +1844,12 @@ void I_RestartGraphics(void)
 
 void I_ToggleFullscreen(void)
 {
-    if (SDL_SetWindowFullscreen(window, (vid_fullscreen ? 0 : SDL_WINDOW_FULLSCREEN_DESKTOP)) < 0)
+    if (SDL_SetWindowFullscreen(window, (vid_fullscreen ? 0 :
+        (vid_borderlesswindow ? SDL_WINDOW_FULLSCREEN_DESKTOP : SDL_WINDOW_FULLSCREEN))) < 0)
     {
         menuactive = false;
         C_ShowConsole();
-        C_Warning("Unable to switch to %s.", (!vid_fullscreen ? "fullscreen" : "a window"));
+        C_Warning(1, "Unable to switch to %s.", (!vid_fullscreen ? "fullscreen" : "a window"));
         return;
     }
 
@@ -1928,7 +1934,7 @@ void I_InitGraphics(void)
             SDL_FILENAME, PACKAGE_NAME, compiled.major, compiled.minor, compiled.patch);
 
     if (linked.patch != compiled.patch)
-        C_Warning("The wrong version of <b>%s</b> was found. <i>%s</i> requires v%i.%i.%i.",
+        C_Warning(1, "The wrong version of <b>%s</b> was found. <i>%s</i> requires v%i.%i.%i.",
             SDL_FILENAME, PACKAGE_NAME, compiled.major, compiled.minor, compiled.patch);
 
     performancefrequency = SDL_GetPerformanceFrequency();

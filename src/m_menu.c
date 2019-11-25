@@ -120,7 +120,6 @@ static dboolean usinggamepad;
 // current menudef
 static menu_t   *currentMenu;
 
-static angle_t  playerangle;
 int             spindirection;
 
 extern patch_t  *hu_font[HU_FONTSIZE];
@@ -1020,9 +1019,9 @@ static void M_LoadSelect(int choice)
     }
     else
     {
-        menuactive = false;
+        M_ClearMenus();
         C_ShowConsole();
-        C_Warning("This savegame requires a different WAD.");
+        C_Warning(1, "This savegame requires a different WAD.");
     }
 }
 
@@ -1338,8 +1337,6 @@ static void M_QuickLoadResponse(int key)
     }
 }
 
-static char tempstring[160];
-
 static void M_QuickLoad(void)
 {
     if (quickSaveSlot < 0)
@@ -1354,10 +1351,12 @@ static void M_QuickLoad(void)
         M_StartMessage(s_QLPROMPT, M_QuickLoadResponse, true);
     else
     {
-        M_snprintf(tempstring, sizeof(tempstring), s_QLPROMPT, savegamestrings[quickSaveSlot]);
-        M_SplitString(tempstring);
-        M_snprintf(tempstring, sizeof(tempstring), "%s\n\n%s", tempstring, (usinggamepad ? s_PRESSA : s_PRESSYN));
-        M_StartMessage(tempstring, M_QuickLoadResponse, true);
+        static char buffer[160];
+
+        M_snprintf(buffer, sizeof(buffer), s_QLPROMPT, savegamestrings[quickSaveSlot]);
+        M_SplitString(buffer);
+        M_snprintf(buffer, sizeof(buffer), "%s\n\n%s", buffer, (usinggamepad ? s_PRESSA : s_PRESSYN));
+        M_StartMessage(buffer, M_QuickLoadResponse, true);
     }
 }
 
@@ -1381,6 +1380,9 @@ static void M_DeleteSavegameResponse(int key)
         message_dontfuckwithme = true;
         M_ReadSaveStrings();
 
+        if (itemOn == quickSaveSlot)
+            quickSaveSlot = -1;
+
         if (currentMenu == &LoadDef)
         {
             if (savegames)
@@ -1399,11 +1401,13 @@ static void M_DeleteSavegameResponse(int key)
 
 static void M_DeleteSavegame(void)
 {
+    static char buffer[160];
+
     S_StartSound(NULL, sfx_swtchn);
-    M_snprintf(tempstring, sizeof(tempstring), s_DELPROMPT, savegamestrings[saveSlot]);
-    M_SplitString(tempstring);
-    M_snprintf(tempstring, sizeof(tempstring), "%s\n\n%s", tempstring, (usinggamepad ? s_PRESSA : s_PRESSYN));
-    M_StartMessage(tempstring, M_DeleteSavegameResponse, true);
+    M_snprintf(buffer, sizeof(buffer), s_DELPROMPT, savegamestrings[saveSlot]);
+    M_SplitString(buffer);
+    M_snprintf(buffer, sizeof(buffer), "%s\n\n%s", buffer, (usinggamepad ? s_PRESSA : s_PRESSYN));
+    M_StartMessage(buffer, M_DeleteSavegameResponse, true);
 }
 
 //
@@ -1444,11 +1448,11 @@ static void M_DrawReadThis(void)
         if (hacx)
             V_DrawPatch(0, 0, 0, W_CacheLumpName("HELP"));
         else if (autosigil)
-            M_DrawPatchWithShadow(0, 0, W_CacheLumpNum(W_GetSecondNumForName(lumpname)));
+            V_DrawPatchWithShadow(0, 0, W_CacheLumpNum(W_GetSecondNumForName(lumpname)), false);
         else if (W_CheckMultipleLumps(lumpname) > 2)
             V_DrawPatch(0, 0, 0, W_CacheLumpName(lumpname));
         else
-            M_DrawPatchWithShadow(0, 0, W_CacheLumpName(lumpname));
+            V_DrawPatchWithShadow(0, 0, W_CacheLumpName(lumpname), false);
     }
 }
 
@@ -1719,9 +1723,10 @@ static void M_ChooseSkill(int choice)
             M_StartMessage(s_NIGHTMARE, M_VerifyNightmare, true);
         else
         {
-            M_snprintf(tempstring, sizeof(tempstring), "%s\n\n%s",
-                s_NIGHTMARE, (usinggamepad ? s_PRESSA : s_PRESSYN));
-            M_StartMessage(tempstring, M_VerifyNightmare, true);
+            static char buffer[160];
+
+            M_snprintf(buffer, sizeof(buffer), "%s\n\n%s", s_NIGHTMARE, (usinggamepad ? s_PRESSA : s_PRESSYN));
+            M_StartMessage(buffer, M_VerifyNightmare, true);
         }
 
         return;
@@ -1743,9 +1748,10 @@ static void M_Episode(int choice)
             M_StartMessage(s_SWSTRING, NULL, false);
         else
         {
-            M_snprintf(tempstring, sizeof(tempstring), "%s\n\n%s",
-                s_SWSTRING, (usinggamepad ? s_PRESSA : s_PRESSKEY));
-            M_StartMessage(tempstring, NULL, false);
+            static char buffer[160];
+
+            M_snprintf(buffer, sizeof(buffer), "%s\n\n%s", s_SWSTRING, (usinggamepad ? s_PRESSA : s_PRESSKEY));
+            M_StartMessage(buffer, NULL, false);
         }
 
         M_SetupNextMenu(&EpiDef);
@@ -1823,6 +1829,9 @@ static void M_DrawOptions(void)
 
 static void M_Options(int choice)
 {
+    if (!OptionsDef.change)
+        OptionsDef.lastOn = (gamestate == GS_LEVEL ? endgame : msgs);
+
     M_SetupNextMenu(&OptionsDef);
 }
 
@@ -1911,8 +1920,10 @@ static void M_EndGame(int choice)
         M_StartMessage(s_ENDGAME, M_EndGameResponse, true);
     else
     {
-        M_snprintf(tempstring, sizeof(tempstring), "%s\n\n%s", s_ENDGAME, (usinggamepad ? s_PRESSA : s_PRESSYN));
-        M_StartMessage(tempstring, M_EndGameResponse, true);
+        static char buffer[160];
+
+        M_snprintf(buffer, sizeof(buffer), "%s\n\n%s", s_ENDGAME, (usinggamepad ? s_PRESSA : s_PRESSYN));
+        M_StartMessage(buffer, M_EndGameResponse, true);
     }
 }
 
@@ -1996,14 +2007,6 @@ static void M_QuitResponse(int key)
 
 void M_QuitDOOM(int choice)
 {
-#if defined(_WIN32)
-    char        *OS = "Windows";
-#elif defined(__APPLE__)
-    char        *OS = "macOS";
-#else
-    char        *OS = "Linux";
-#endif
-
     static char endstring[320];
     static char line1[160];
     static char line2[160];
@@ -2013,9 +2016,10 @@ void M_QuitDOOM(int choice)
     if (deh_strlookup[p_QUITMSG].assigned == 2)
         M_StringCopy(line1, s_QUITMSG, sizeof(line1));
     else
-        M_snprintf(line1, sizeof(line1), *endmsg[M_Random() % NUM_QUITMESSAGES + (gamemission != doom) * NUM_QUITMESSAGES], OS);
+        M_snprintf(line1, sizeof(line1), *endmsg[M_Random() % NUM_QUITMESSAGES + (gamemission != doom) * NUM_QUITMESSAGES],
+            OPERATINGSYSTEM);
 
-    M_snprintf(line2, sizeof(line2), (usinggamepad ? s_DOSA : s_DOSY), OS);
+    M_snprintf(line2, sizeof(line2), (usinggamepad ? s_DOSA : s_DOSY), OPERATINGSYSTEM);
     M_snprintf(endstring, sizeof(endstring), "%s\n\n%s", line1, line2);
 #ifndef __ANDROID__
     M_StartMessage(endstring, M_QuitResponse, true);
@@ -3125,6 +3129,8 @@ dboolean M_Responder(event_t *ev)
                 } while (currentMenu->menuitems[itemOn].status == -1);
             }
 
+            currentMenu->change = true;
+
             if (currentMenu == &EpiDef && gamemode != shareware)
             {
                 episode = itemOn + 1;
@@ -3200,6 +3206,8 @@ dboolean M_Responder(event_t *ev)
                         S_StartSound(NULL, sfx_pstop);
                 } while (currentMenu->menuitems[itemOn].status == -1);
             }
+
+            currentMenu->change = true;
 
             if (currentMenu == &EpiDef && gamemode != shareware)
             {
@@ -3390,6 +3398,7 @@ dboolean M_Responder(event_t *ev)
                         S_StartSound(NULL, sfx_pstop);
 
                     itemOn = i;
+                    currentMenu->change = true;
 
                     if (currentMenu == &EpiDef && gamemode != shareware)
                     {
@@ -3450,6 +3459,7 @@ dboolean M_Responder(event_t *ev)
                         S_StartSound(NULL, sfx_pstop);
 
                     itemOn = i;
+                    currentMenu->change = true;
 
                     if (currentMenu == &EpiDef && gamemode != shareware)
                     {
@@ -3505,6 +3515,7 @@ void M_StartControlPanel(void)
 
     menuactive = true;
     currentMenu = &MainDef;
+
     itemOn = currentMenu->lastOn;
 
     S_StopSounds();
@@ -3523,13 +3534,8 @@ void M_StartControlPanel(void)
     if (vid_motionblur)
         I_SetMotionBlur(0);
 
-    if (gamestate == GS_LEVEL)
-    {
-        playerangle = viewplayer->mo->angle;
-
-        if (!vid_widescreen && !automapactive && !inhelpscreens)
-            R_SetViewSize(8);
-    }
+    if (gamestate == GS_LEVEL && !vid_widescreen && !automapactive && !inhelpscreens)
+        R_SetViewSize(8);
 
     if (automapactive)
         AM_SetAutomapSize();
@@ -3655,7 +3661,7 @@ void M_Drawer(void)
             if (currentMenu == &OptionsDef && !itemOn && gamestate != GS_LEVEL)
                 itemOn++;
 
-            if (currentMenu == &MainDef && SHORT(((patch_t *)W_CacheLumpName("M_DOOM"))->height) >= ORIGINALHEIGHT)
+            if (currentMenu == &MainDef && SHORT(((patch_t *)W_CacheLumpName("M_DOOM"))->height) >= ORIGINALHEIGHT && !remnant)
                 yy -= OFFSET;
 
             if (M_SKULL1)
@@ -3712,8 +3718,6 @@ void M_ClearMenus(void)
     if (gamestate == GS_LEVEL)
     {
         I_SetPalette(&PLAYPAL[st_palette * 768]);
-
-        viewplayer->mo->angle = playerangle;
 
         if (!vid_widescreen && !automapactive && !inhelpscreens)
             R_SetViewSize(r_screensize);
@@ -3792,8 +3796,8 @@ void M_Init(void)
 
     if (EpiDef.lastOn > EpiDef.numitems)
     {
-        EpiDef.lastOn = EpiDef.numitems;
-        episode = EpiDef.numitems + 1;
+        EpiDef.lastOn = 0;
+        episode = 1;
         M_SaveCVARs();
     }
 

@@ -132,12 +132,12 @@ static void InitSfxModule(void)
 {
     if (I_InitSound())
     {
-        C_Output("Sound effects will play at a sample rate of %.1fkHz over %i channels%s.", SAMPLERATE / 1000.0f, s_channels,
+        C_Output("Sound effects are playing at a sample rate of %.1fkHz over %i channels%s.", SAMPLERATE / 1000.0f, s_channels,
             (M_StringCompare(SDL_GetCurrentAudioDriver(), "directsound") ? " using the <i><b>DirectSound</b></i> API" : ""));
         return;
     }
 
-    C_Warning("Sound effects couldn't be initialized.");
+    C_Warning(1, "Sound effects couldn't be initialized.");
     nosfx = true;
 }
 
@@ -147,7 +147,7 @@ static void InitMusicModule(void)
     if (I_InitMusic())
         return;
 
-    C_Warning("Music couldn't be initialized.");
+    C_Warning(1, "Music couldn't be initialized.");
     nomusic = true;
 }
 
@@ -182,7 +182,7 @@ void S_Init(void)
         char    *audiobuffer = SDL_getenv("SDL_AUDIODRIVER");
 
         if (audiobuffer)
-            C_Warning("The <b>SDL_AUDIODRIVER</b> environment variable has been set to <b>\"%s\"</b>.", audiobuffer);
+            C_Warning(1, "The <b>SDL_AUDIODRIVER</b> environment variable has been set to <b>\"%s\"</b>.", audiobuffer);
 
         SDL_setenv("SDL_AUDIODRIVER", "DirectSound", false);
         free(audiobuffer);
@@ -216,11 +216,11 @@ void S_Init(void)
                         if (!CacheSFX(sfx))
                             sfx->lumpnum = -1;
                         else
-                            C_Warning("The <b>%s</b> sound lump is in an unrecognized format.", uppercase(namebuf));
+                            C_Warning(1, "The <b>%s</b> sound lump is in an unknown format.", uppercase(namebuf));
                     }
 
                 if (sfx->lumpnum == -1)
-                    C_Warning("The <b>%s</b> sound lump is in an unrecognized format and won't be played.", uppercase(namebuf));
+                    C_Warning(1, "The <b>%s</b> sound lump is in an unknown format and won't be played.", uppercase(namebuf));
             }
         }
     }
@@ -350,7 +350,7 @@ void S_Start(void)
 // original implementation idea: <https://www.doomworld.com/forum/topic/1585325>
 void S_UnlinkSound(mobj_t *origin)
 {
-    if (nosfx || !origin)
+    if (!origin->madesound)
         return;
 
     for (int cnum = 0; cnum < s_channels; cnum++)
@@ -516,7 +516,13 @@ static void S_StartSoundAtVolume(mobj_t *origin, int sfx_id, int pitch)
 
 void S_StartSound(mobj_t *mobj, int sfx_id)
 {
-    S_StartSoundAtVolume(mobj, sfx_id, (mobj ? mobj->pitch : NORM_PITCH));
+    if (mobj)
+    {
+        mobj->madesound = true;
+        S_StartSoundAtVolume(mobj, sfx_id, mobj->pitch);
+    }
+    else
+        S_StartSoundAtVolume(NULL, sfx_id, NORM_PITCH);
 }
 
 void S_StartSectorSound(degenmobj_t *degenmobj, int sfx_id)
@@ -659,7 +665,7 @@ void S_ChangeMusic(int music_id, dboolean looping, dboolean allowrestart, dboole
 
     if (music->lumpnum == -1)
     {
-        C_Warning("The <b>%s</b> music lump can't be found.", uppercase(namebuf));
+        C_Warning(1, "The <b>%s</b> music lump can't be found.", uppercase(namebuf));
         return;
     }
 
@@ -680,7 +686,7 @@ void S_ChangeMusic(int music_id, dboolean looping, dboolean allowrestart, dboole
 
             if (!handle)
             {
-                C_Warning("The <b>%s</b> music lump can't be played.", uppercase(namebuf));
+                C_Warning(1, "The <b>%s</b> music lump can't be played.", uppercase(namebuf));
                 return;
             }
         }

@@ -269,7 +269,8 @@ static void saveg_read_mobj_t(mobj_t *str)
         for (int i = 0; i < 100; i++)
             str->name[i] = saveg_read8();
 
-    saveg_read32();
+    str->madesound = saveg_read32();
+
     saveg_read32();
     saveg_read32();
     saveg_read32();
@@ -337,7 +338,8 @@ static void saveg_write_mobj_t(mobj_t *str)
             saveg_write8(0);
     }
 
-    saveg_write32(0);
+    saveg_write32(str->madesound);
+
     saveg_write32(0);
     saveg_write32(0);
     saveg_write32(0);
@@ -410,8 +412,8 @@ static void saveg_write_pspdef_t(pspdef_t *str)
     saveg_write32(str->sy);
 }
 
-extern int oldhealth;
-extern int cardsfound;
+extern int  oldhealth;
+extern int  cardsfound;
 
 //
 // player_t
@@ -981,7 +983,7 @@ dboolean P_ReadSaveGameHeader(char *description)
     {
         menuactive = false;
         C_ShowConsole();
-        C_Warning("This savegame requires <i>%s</i>.", read_vcheck);
+        C_Warning(1, "This savegame requires <i>%s</i>.", read_vcheck);
         return false;   // bad version
     }
 

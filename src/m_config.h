@@ -163,6 +163,7 @@ extern unsigned int stat_itemspickedup_ammo_shells;
 extern unsigned int stat_itemspickedup_armor;
 extern unsigned int stat_itemspickedup_health;
 extern unsigned int stat_mapscompleted;
+extern unsigned int stat_mapsstarted;
 extern unsigned int stat_monsterskilled;
 extern unsigned int stat_monsterskilled_arachnotrons;
 extern unsigned int stat_monsterskilled_archviles;
@@ -196,6 +197,7 @@ extern dboolean     tossdrop;
 extern int          turbo;
 extern int          units;
 extern char         *version;
+extern dboolean     vid_borderlesswindow;
 extern int          vid_capfps;
 extern int          vid_display;
 #if !defined(_WIN32)
@@ -215,6 +217,7 @@ extern char         *vid_windowsize;
 #if defined(_WIN32)
 extern char         *wad;
 #endif
+extern int          warninglevel;
 extern int          weaponbob;
 extern dboolean     weaponbounce;
 extern dboolean     weaponrecoil;
@@ -282,11 +285,11 @@ enum
 
 #define am_grid_default                         false
 
-#define am_gridsize_default                     "128x128"
-
 #define am_gridcolor_min                        0
 #define am_gridcolor_default                    111
 #define am_gridcolor_max                        255
+
+#define am_gridsize_default                     "128x128"
 
 #define am_markcolor_min                        0
 #define am_markcolor_default                    95
@@ -592,6 +595,8 @@ enum
 
 #define version_default                         PACKAGE_VERSIONSTRING
 
+#define vid_borderlesswindow_default            false
+
 #define vid_capfps_min                          0
 #define vid_capfps_default                      200
 #define vid_capfps_max                          1000
@@ -647,6 +652,10 @@ enum
 #if defined(_WIN32)
 #define wad_default                             ""
 #endif
+
+#define warninglevel_min                        0
+#define warninglevel_default                    1
+#define warninglevel_max                        2
 
 #define weaponbob_min                           0
 #define weaponbob_default                       75

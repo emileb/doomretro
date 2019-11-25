@@ -123,7 +123,7 @@ static dboolean PIT_StompThing(mobj_t *thing)
     if (!telefrag)          // killough 8/9/98: make consistent across all levels
         return false;
 
-    if ((tmthing->flags2 & MF2_PASSMOBJ) && !infiniteheight)
+    if ((thing->flags2 & MF2_PASSMOBJ) && !infiniteheight)
     {
         if (tmz > thing->z + thing->height)
             return true;    // overhead
@@ -1474,7 +1474,7 @@ static fixed_t  bottomslope;
 
 //
 // PTR_AimTraverse
-// Sets linetaget and aimslope when a target is aimed at.
+// Sets linetarget and aimslope when a target is aimed at.
 //
 static dboolean PTR_AimTraverse(intercept_t *in)
 {
@@ -1685,6 +1685,9 @@ static dboolean PTR_ShootTraverse(intercept_t *in)
     y = dltrace.y + FixedMul(dltrace.dy, frac);
     z = shootz + FixedMul(aimslope, FixedMul(frac, attackrange));
 
+    if ((shootthing->flags2 & MF2_FEETARECLIPPED) && (shootthing->player && r_liquid_lowerview))
+        z -= FOOTCLIPSIZE;
+
     // Spawn bullet puffs or blood spots,
     // depending on target type.
     if (th->flags & MF_NOBLOOD)
@@ -1766,9 +1769,8 @@ void P_LineAttack(mobj_t *t1, angle_t angle, fixed_t distance, fixed_t slope, in
     y2 = t1->y + (distance >> FRACBITS) * finesine[angle];
     shootz = t1->z + (t1->height >> 1) + 8 * FRACUNIT;
 
-    if (t1->flags2 & MF2_FEETARECLIPPED)
-        if ((t1->player && r_liquid_lowerview) || (!t1->player && r_liquid_clipsprites))
-            shootz -= FOOTCLIPSIZE;
+    if ((t1->flags2 & MF2_FEETARECLIPPED) && !t1->player && r_liquid_clipsprites)
+        shootz -= FOOTCLIPSIZE;
 
     attackrange = distance;
     aimslope = slope;
