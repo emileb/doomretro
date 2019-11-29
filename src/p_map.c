@@ -663,9 +663,9 @@ dboolean P_CheckLineSide(mobj_t *actor, fixed_t x, fixed_t y)
 }
 
 //
-// PIT_CheckOnmobjZ
+// PIT_CheckOnMobjZ
 //
-static dboolean PIT_CheckOnmobjZ(mobj_t * thing)
+static dboolean PIT_CheckOnMobjZ(mobj_t *thing)
 {
     fixed_t blockdist;
 
@@ -800,10 +800,10 @@ dboolean P_CheckPosition(mobj_t *thing, fixed_t x, fixed_t y)
 }
 
 //
-// P_CheckOnmobj
+// P_CheckOnMobj
 // Checks if the new Z position is legal
 //
-mobj_t *P_CheckOnmobj(mobj_t * thing)
+mobj_t *P_CheckOnMobj(mobj_t *thing)
 {
     int         xl;
     int         xh;
@@ -853,7 +853,7 @@ mobj_t *P_CheckOnmobj(mobj_t * thing)
 
     for (int bx = xl; bx <= xh; bx++)
         for (int by = yl; by <= yh; by++)
-            if (!P_BlockThingsIterator(bx, by, PIT_CheckOnmobjZ))
+            if (!P_BlockThingsIterator(bx, by, PIT_CheckOnMobjZ))
             {
                 *tmthing = oldmo;
                 return onmobj;
@@ -2007,20 +2007,24 @@ static void PIT_ChangeSector(mobj_t *thing)
 
             if (!(flags & MF_FUZZ))
             {
-                int radius = ((spritewidth[sprites[thing->sprite].spriteframes[0].lump[0]] >> FRACBITS) >> 1) + 12;
-                int max = M_RandomInt(50, 100) + radius;
-                int x = thing->x;
-                int y = thing->y;
                 int blood = mobjinfo[thing->blood].blood;
-                int floorz = thing->floorz;
 
-                for (int i = 0; i < max; i++)
+                if (blood)
                 {
-                    int angle = M_RandomInt(0, FINEANGLES - 1);
-                    int fx = x + FixedMul(M_RandomInt(0, radius) << FRACBITS, finecosine[angle]);
-                    int fy = y + FixedMul(M_RandomInt(0, radius) << FRACBITS, finesine[angle]);
+                    int radius = ((spritewidth[sprites[thing->sprite].spriteframes[0].lump[0]] >> FRACBITS) >> 1) + 12;
+                    int max = M_RandomInt(50, 100) + radius;
+                    int x = thing->x;
+                    int y = thing->y;
+                    int floorz = thing->floorz;
 
-                    P_SpawnBloodSplat(fx, fy, blood, floorz, NULL);
+                    for (int i = 0; i < max; i++)
+                    {
+                        int angle = M_RandomInt(0, FINEANGLES - 1);
+                        int fx = x + FixedMul(M_RandomInt(0, radius) << FRACBITS, finecosine[angle]);
+                        int fy = y + FixedMul(M_RandomInt(0, radius) << FRACBITS, finesine[angle]);
+
+                        P_SpawnBloodSplat(fx, fy, blood, floorz, NULL);
+                    }
                 }
             }
 

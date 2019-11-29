@@ -288,12 +288,14 @@ static void P_XYMovement(mobj_t *mo)
 
         if (blood)
         {
-            int radius = (spritewidth[sprites[mo->sprite].spriteframes[mo->frame & FF_FRAMEMASK].lump[0]] >> FRACBITS) >> 1;
-            int max = MIN((ABS(mo->momx) + ABS(mo->momy)) >> (FRACBITS - 2), 8);
-            int floorz = mo->floorz;
+            int     radius = (spritewidth[sprites[mo->sprite].spriteframes[mo->frame & FF_FRAMEMASK].lump[0]] >> FRACBITS) >> 1;
+            int     max = MIN((ABS(mo->momx) + ABS(mo->momy)) >> (FRACBITS - 2), 8);
+            fixed_t floorz = mo->floorz;
 
-            for (int i = 0, x, y; i < max; i++)
+            for (int i = 0; i < max; i++)
             {
+                fixed_t x, y;
+
                 if (!mo->bloodsplats)
                     break;
 
@@ -400,15 +402,15 @@ static void P_ZMovement(mobj_t *mo)
 
             if (r_bloodsplats_max)
             {
-                int x = mo->x;
-                int y = mo->y;
+                fixed_t x = mo->x;
+                fixed_t y = mo->y;
 
                 P_SpawnBloodSplat(x, y, blood, floorz, NULL);
 
                 if (blood != FUZZYBLOOD)
                 {
-                    int r1 = M_RandomInt(-3, 3) << FRACBITS;
-                    int r2 = M_RandomInt(-3, 3) << FRACBITS;
+                    fixed_t r1 = M_RandomInt(-3, 3) << FRACBITS;
+                    fixed_t r2 = M_RandomInt(-3, 3) << FRACBITS;
 
                     P_SpawnBloodSplat(x + r1, y + r2, blood, floorz, NULL);
                     P_SpawnBloodSplat(x - r1, y - r2, blood, floorz, NULL);
@@ -592,7 +594,7 @@ void P_MobjThinker(mobj_t *mobj)
     {
         if ((flags2 & MF2_PASSMOBJ) && !infiniteheight)
         {
-            mobj_t  *onmo = P_CheckOnmobj(mobj);
+            mobj_t  *onmo = P_CheckOnMobj(mobj);
 
             if (!onmo)
             {
@@ -802,11 +804,12 @@ void P_RemoveMobj(mobj_t *mobj)
         sector_list = NULL;
     }
 
-    mobj->flags |= (MF_NOSECTOR | MF_NOBLOCKMAP);
-
-    P_SetTarget(&mobj->target, NULL);
-    P_SetTarget(&mobj->tracer, NULL);
-    P_SetTarget(&mobj->lastenemy, NULL);
+    if (flags & MF_SHOOTABLE)
+    {
+        P_SetTarget(&mobj->target, NULL);
+        P_SetTarget(&mobj->tracer, NULL);
+        P_SetTarget(&mobj->lastenemy, NULL);
+    }
 
     // free block
     P_RemoveThinker((thinker_t *)mobj);
@@ -982,11 +985,11 @@ static void P_SpawnMoreBlood(mobj_t *mobj)
 
     if (blood)
     {
-        int radius = ((spritewidth[sprites[mobj->sprite].spriteframes[0].lump[0]] >> FRACBITS) >> 1) + 12;
-        int max = M_RandomInt(50, 100) + radius;
-        int x = mobj->x;
-        int y = mobj->y;
-        int floorz = mobj->floorz;
+        int     radius = ((spritewidth[sprites[mobj->sprite].spriteframes[0].lump[0]] >> FRACBITS) >> 1) + 12;
+        int     max = M_RandomInt(50, 100) + radius;
+        fixed_t x = mobj->x;
+        fixed_t y = mobj->y;
+        fixed_t floorz = mobj->floorz;
 
         if (!(mobj->flags & MF_SPAWNCEILING))
         {
@@ -996,8 +999,8 @@ static void P_SpawnMoreBlood(mobj_t *mobj)
 
         for (int i = 0; i < max; i++)
         {
-            int angle;
-            int fx, fy;
+            angle_t angle;
+            fixed_t fx, fy;
 
             if (!mobj->bloodsplats)
                 break;
@@ -1054,13 +1057,11 @@ mobj_t *P_SpawnMapThing(mapthing_t *mthing, dboolean spawnmonsters)
     }
 
     // killough 8/23/98: use table for faster lookup
-    i = P_FindDoomedNum(type);
-
-    if (i == NUMMOBJTYPES)
+    if ((i = P_FindDoomedNum(type)) == NUMMOBJTYPES)
     {
         // [BH] make unknown thing type non-fatal and show console warning instead
         if (type != VisualModeCamera)
-            C_Warning(1, "Thing %s at (%i,%i) didn't spawn because it has an unknown type.", commify(thingid), mthing->x, mthing->y);
+            C_Warning(2, "Thing %s at (%i,%i) didn't spawn because it has an unknown type.", commify(thingid), mthing->x, mthing->y);
 
         return NULL;
     }
@@ -1069,9 +1070,9 @@ mobj_t *P_SpawnMapThing(mapthing_t *mthing, dboolean spawnmonsters)
     if (!(options & (MTF_EASY | MTF_NORMAL | MTF_HARD)) && (!canmodify || !r_fixmaperrors) && type != VisualModeCamera)
     {
         if (*mobjinfo[i].name1)
-            C_Warning(1, "The %s at (%i,%i) didn't spawn because it has no skill flags.", mobjinfo[i].name1, mthing->x, mthing->y);
+            C_Warning(2, "The %s at (%i,%i) didn't spawn because it has no skill flags.", mobjinfo[i].name1, mthing->x, mthing->y);
         else
-            C_Warning(1, "Thing %s at (%i,%i) didn't spawn because it has no skill flags.", commify(thingid), mthing->x, mthing->y);
+            C_Warning(2, "Thing %s at (%i,%i) didn't spawn because it has no skill flags.", commify(thingid), mthing->x, mthing->y);
 
         return NULL;
     }
@@ -1307,7 +1308,7 @@ void P_SpawnBlood(fixed_t x, fixed_t y, fixed_t z, angle_t angle, int damage, mo
 //
 // P_SpawnBloodSplat
 //
-void P_SpawnBloodSplat(fixed_t x, fixed_t y, int blood, int maxheight, mobj_t *target)
+void P_SpawnBloodSplat(fixed_t x, fixed_t y, int blood, fixed_t maxheight, mobj_t *target)
 {
     if (r_bloodsplats_total >= r_bloodsplats_max)
         return;

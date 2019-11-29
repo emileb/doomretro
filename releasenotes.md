@@ -1,10 +1,24 @@
+### DOOM Retro v3.2.1
+
+* Optimizations have been made to further improve the overall performance and stability of *DOOM Retro*.
+* *DOOM Retro* will now attempt to use [*Adaptive VSync*](https://www.geforce.com/hardware/technology/adaptive-vsync) if the `vid_vsync` CVAR is `on` and the `vid_scaleapi` CVAR is `“opengl”`.
+* A bug has been fixed whereby monsters wouldn’t attack the player as often as they should if another monster was in the way.
+* Further improvements have been made to the console’s autocomplete feature.
+* Minor changes have been made to text that is output to the console.
+* Minor improvements have been made to the menu’s background.
+* A bug has been fixed whereby blood splats around crushed corpses could appear black in some rare instances.
+
+---
+
+###### Monday, November 25, 2019
+
 ### DOOM Retro v3.2
 
 * Optimizations have been made to further improve the overall performance and stability of *DOOM Retro*.
 * Minor changes have been made to the character set used in the console.
 * Minor changes have been made to text that is output to the console.
 * Long warnings in the console now wrap over two lines.
-* A new `warninglevel` CVAR has been implemented to control the type of warnings displayed. It can be `0` (minimal warnings), `1` (no warnings about the current map) or `2` (all warnings), and is `1` by default.
+* A new `warninglevel` CVAR has been implemented to control the type of warnings displayed in the console. It can be `0` (minimal warnings), `1` (no warnings about the current map) or `2` (all warnings), and is `1` by default.
 * The following changes have been made to warnings in the console when the `warninglevel` CVAR is `2`:
   * Warnings will now be displayed for every linedef in the current map that has either an unknown tag, a tag but no special, or a special but no tag.
   * Warnings describing any fixes made to the current map are now displayed when the `r_fixmaperrors` CVAR is `on`.

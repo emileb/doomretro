@@ -125,17 +125,13 @@ dboolean M_FolderExists(const char *folder)
 }
 
 // Safe string copy function that works like OpenBSD's strlcpy().
-// Returns true if the string was not truncated.
-dboolean M_StringCopy(char *dest, const char *src, const size_t dest_size)
+void M_StringCopy(char *dest, const char *src, const size_t dest_size)
 {
     if (dest_size >= 1)
     {
         dest[dest_size - 1] = '\0';
         strncpy(dest, src, dest_size - 1);
-        return (src[strlen(dest)] == '\0');
     }
-
-    return false;
 }
 
 char *M_ExtractFolder(char *path)
@@ -655,7 +651,7 @@ char *uncommify(const char *input)
 
 dboolean wildcard(char *input, char *pattern)
 {
-    if (pattern[0] == '\0')
+    if (!*pattern)
         return true;
 
     for (int i = 0; pattern[i] != '\0'; i++)
