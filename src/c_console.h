@@ -7,7 +7,7 @@
 ========================================================================
 
   Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2019 by Brad Harding.
+  Copyright © 2013-2020 by Brad Harding.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
@@ -98,6 +98,14 @@ typedef enum
     STRINGTYPES
 } stringtype_t;
 
+#define BINDLISTHEADER    "\tCONTROL\t+ACTION/COMMAND(S)"
+#define CMDLISTHEADER     "\tCCMD\tDESCRIPTION"
+#define CVARLISTHEADER    "\tCVAR\tVALUE\tDESCRIPTION"
+#define MAPLISTHEADER     "\tMAP\tNAME\tWAD"
+#define MAPSTATSHEADER    "STAT\tVALUE"
+#define PLAYERSTATSHEADER "STAT\tCURRENT MAP\tTOTAL"
+#define THINGLISTHEADER   "\tTHING\tPOSITION"
+
 typedef enum
 {
     bindlistheader,
@@ -171,7 +179,7 @@ void C_StrCVAROutput(char *cvar, char *string);
 void C_Output(const char *string, ...);
 void C_OutputNoRepeat(const char *string, ...);
 void C_TabbedOutput(const int tabs[8], const char *string, ...);
-void C_Header(const headertype_t headertype);
+void C_Header(const int tabs[8], const headertype_t headertype, const char *string);
 void C_Warning(const int minwarninglevel, const char *string, ...);
 void C_PlayerMessage(const char *string, ...);
 void C_Obituary(const char *string, ...);

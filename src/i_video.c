@@ -7,7 +7,7 @@
 ========================================================================
 
   Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2019 by Brad Harding.
+  Copyright © 2013-2020 by Brad Harding.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
@@ -49,6 +49,7 @@
 #include "SDL_opengl.h"
 
 #include "c_console.h"
+#include "d_deh.h"
 #include "d_main.h"
 #include "doomstat.h"
 #include "hu_stuff.h"
@@ -56,6 +57,7 @@
 #include "i_gamepad.h"
 #include "i_system.h"
 #include "i_timer.h"
+#include "m_cheat.h"
 #include "m_config.h"
 #include "m_menu.h"
 #include "m_misc.h"
@@ -93,7 +95,7 @@ char                *vid_scaleapi = vid_scaleapi_default;
 char                *vid_scalefilter = vid_scalefilter_default;
 char                *vid_screenresolution = vid_screenresolution_default;
 dboolean            vid_showfps = vid_showfps_default;
-dboolean            vid_vsync = vid_vsync_default;
+int                 vid_vsync = vid_vsync_default;
 dboolean            vid_widescreen = vid_widescreen_default;
 char                *vid_windowpos = vid_windowpos_default;
 char                *vid_windowsize = vid_windowsize_default;
@@ -479,6 +481,8 @@ static void I_GetEvent(void)
                     {
                         idbehold = false;
                         HU_ClearMessages();
+                        C_Input(cheat_powerup[6].sequence);
+                        C_Output(s_STSTR_BEHOLD);
                     }
 
 #if !defined(_WIN32)
@@ -521,6 +525,8 @@ static void I_GetEvent(void)
                 {
                     HU_ClearMessages();
                     idbehold = false;
+                    C_Input(cheat_powerup[6].sequence);
+                    C_Output(s_STSTR_BEHOLD);
                 }
 
                 mousebuttonstate |= buttons[Event->button.button];
@@ -672,11 +678,11 @@ static void I_GetEvent(void)
                         case SDL_WINDOWEVENT_SIZE_CHANGED:
                             if (!vid_fullscreen)
                             {
+                                char    *temp1 = commify((windowwidth = Event->window.data1));
+                                char    *temp2 = commify((windowheight = Event->window.data2));
                                 char    size[16];
 
-                                windowwidth = Event->window.data1;
-                                windowheight = Event->window.data2;
-                                M_snprintf(size, sizeof(size), "%sx%s", commify(windowwidth), commify(windowheight));
+                                M_snprintf(size, sizeof(size), "%sx%s", temp1, temp2);
                                 vid_windowsize = M_StringDuplicate(size);
                                 M_SaveCVARs();
 
@@ -684,6 +690,9 @@ static void I_GetEvent(void)
                                 displayheight = windowheight;
                                 displaycenterx = displaywidth / 2;
                                 displaycentery = displayheight / 2;
+
+                                free(temp1);
+                                free(temp2);
                             }
 
                             break;
@@ -790,7 +799,7 @@ static void GetUpscaledTextureSize(int width, int height)
 void (*blitfunc)(void);
 void (*mapblitfunc)(void);
 
-void nullfunc(void) {}
+static void nullfunc(void) {}
 
 static uint64_t performancefrequency;
 uint64_t        starttime;
@@ -1226,23 +1235,23 @@ void GetWindowSize(void)
     }
     else
     {
-        char    *width_str = uncommify(width);
-        char    *height_str = uncommify(height);
-        int     w = atoi(width_str);
-        int     h = atoi(height_str);
+        char    *temp1 = uncommify(width);
+        char    *temp2 = uncommify(height);
+        int     w = atoi(temp1);
+        int     h = atoi(temp2);
 
         if (w < ORIGINALWIDTH + windowborderwidth || h < ORIGINALWIDTH * 3 / 4 + windowborderheight)
         {
             char    size[16];
-            char    *windowwidth_str = commify((windowwidth = ORIGINALWIDTH + windowborderwidth));
-            char    *windowheight_str = commify((windowheight = ORIGINALWIDTH * 3 / 4 + windowborderheight));
+            char    *temp3 = commify((windowwidth = ORIGINALWIDTH + windowborderwidth));
+            char    *temp4 = commify((windowheight = ORIGINALWIDTH * 3 / 4 + windowborderheight));
 
-            M_snprintf(size, sizeof(size), "%sx%s", windowwidth_str, windowheight_str);
+            M_snprintf(size, sizeof(size), "%sx%s", temp3, temp4);
             vid_windowsize = M_StringDuplicate(size);
             M_SaveCVARs();
 
-            free(windowwidth_str);
-            free(windowheight_str);
+            free(temp3);
+            free(temp4);
         }
         else
         {
@@ -1250,8 +1259,8 @@ void GetWindowSize(void)
             windowheight = h;
         }
 
-        free(width_str);
-        free(height_str);
+        free(temp1);
+        free(temp2);
     }
 }
 
@@ -1394,7 +1403,7 @@ static void SetVideoMode(dboolean output)
     GetWindowSize();
     GetScreenResolution();
 
-    if (M_StringCompare(vid_scaleapi, vid_scaleapi_opengl))
+    if (M_StringStartsWith(vid_scaleapi, "opengl"))
         windowflags |= SDL_WINDOW_OPENGL;
 
     if (vid_fullscreen)
@@ -1418,14 +1427,14 @@ static void SetVideoMode(dboolean output)
 
             if (output)
             {
-                char    *width_str = commify(width);
-                char    *height_str = commify(height);
+                char    *temp1 = commify(width);
+                char    *temp2 = commify(height);
 
                 C_Output("Staying at the native desktop resolution of %sx%s with a %s aspect ratio.",
-                    width_str, height_str, getaspectratio(width, height));
+                    temp1, temp2, getaspectratio(width, height));
 
-                free(width_str);
-                free(height_str);
+                free(temp1);
+                free(temp2);
             }
         }
         else
@@ -1439,14 +1448,13 @@ static void SetVideoMode(dboolean output)
 
             if (output)
             {
-                char    *width_str = commify(width);
-                char    *height_str = commify(height);
+                char    *temp1 = commify(width);
+                char    *temp2 = commify(height);
 
-                C_Output("Switched to a resolution of %sx%s with a %s aspect ratio.",
-                    width_str, height_str, getaspectratio(width, height));
+                C_Output("Switched to a resolution of %sx%s with a %s aspect ratio.", temp1, temp2, getaspectratio(width, height));
 
-                free(width_str);
-                free(height_str);
+                free(temp1);
+                free(temp2);
             }
         }
     }
@@ -1469,13 +1477,13 @@ static void SetVideoMode(dboolean output)
 
             if (output)
             {
-                char    *width_str = commify(width);
-                char    *height_str = commify(height);
+                char    *temp1 = commify(width);
+                char    *temp2 = commify(height);
 
-                C_Output("Created a resizable window with dimensions %sx%s centered on the screen.", width_str, height_str);
+                C_Output("Created a resizable window with dimensions %sx%s centered on the screen.", temp1, temp2);
 
-                free(width_str);
-                free(height_str);
+                free(temp1);
+                free(temp2);
             }
         }
         else
@@ -1484,13 +1492,13 @@ static void SetVideoMode(dboolean output)
 
             if (output)
             {
-                char    *width_str = commify(width);
-                char    *height_str = commify(height);
+                char    *temp1 = commify(width);
+                char    *temp2 = commify(height);
 
-                C_Output("Created a resizable window with dimensions %sx%s at (%i,%i).", width_str, height_str, windowx, windowy);
+                C_Output("Created a resizable window with dimensions %sx%s at (%i,%i).", temp1, temp2, windowx, windowy);
 
-                free(width_str);
-                free(height_str);
+                free(temp1);
+                free(temp2);
             }
         }
     }
@@ -1503,10 +1511,17 @@ static void SetVideoMode(dboolean output)
     displaycenterx = displaywidth / 2;
     displaycentery = displayheight / 2;
 
+
 #ifdef __ANDROID__
     rendererflags  = SDL_RENDERER_ACCELERATED;
 #endif
-    renderer = SDL_CreateRenderer(window, -1, rendererflags);
+    if (!(renderer = SDL_CreateRenderer(window, -1, rendererflags)) && !software)
+        if ((renderer = SDL_CreateRenderer(window, -1, (SDL_RENDERER_SOFTWARE | SDL_RENDERER_TARGETTEXTURE))))
+        {
+            vid_scaleapi = vid_scaleapi_software;
+            M_SaveCVARs();
+        }
+
 #ifdef __ANDROID__
     if( M_CheckParm("-android_aspect") )
 #endif
@@ -1515,32 +1530,32 @@ static void SetVideoMode(dboolean output)
 
     if (output)
     {
-        char *width_str = commify(height * 4 / 3);
-        char *height_str = commify(height);
+        char *temp1 = commify(height * 4 / 3);
+        char *temp2 = commify(height);
 
         C_Output("<i><b>" PACKAGE_NAME "</b></i> is using a software renderer.");
 
         if (nearestlinear)
         {
-            char *upscaledwidth_str = commify((int64_t)upscaledwidth * SCREENWIDTH);
-            char *upscaledheight_str = commify((int64_t)upscaledheight * SCREENHEIGHT);
+            char *temp3 = commify((int64_t)upscaledwidth * SCREENWIDTH);
+            char *temp4 = commify((int64_t)upscaledheight * SCREENHEIGHT);
 
             C_Output("Each frame is scaled from %ix%i to %sx%s using nearest-neighbor interpolation.",
-                SCREENWIDTH, SCREENHEIGHT, upscaledwidth_str, upscaledheight_str);
-            C_Output("They are then scaled down to %sx%s using linear filtering.", width_str, height_str);
+                SCREENWIDTH, SCREENHEIGHT, temp3, temp4);
+            C_Output("They are then scaled down to %sx%s using linear filtering.", temp1, temp2);
 
-            free(upscaledwidth_str);
-            free(upscaledheight_str);
+            free(temp3);
+            free(temp4);
         }
         else if (M_StringCompare(vid_scalefilter, vid_scalefilter_linear) && !software)
             C_Output("Each frame is scaled from %ix%i to %sx%s using linear filtering.",
-                SCREENWIDTH, SCREENHEIGHT, width_str, height_str);
+                SCREENWIDTH, SCREENHEIGHT, temp1, temp2);
         else
             C_Output("Each frame is scaled from %ix%i to %sx%s using nearest-neighbor interpolation.",
-                SCREENWIDTH, SCREENHEIGHT, width_str, height_str);
+                SCREENWIDTH, SCREENHEIGHT, temp1, temp2);
 
-        free(width_str);
-        free(height_str);
+        free(temp1);
+        free(temp2);
     }
 
 
@@ -1558,18 +1573,20 @@ static void SetVideoMode(dboolean output)
             {
                 C_Warning(1, "<i>" PACKAGE_NAME "</i> requires at least <i>OpenGL v2.1</i>.");
 
+#if defined(_WIN32)
                 vid_scaleapi = vid_scaleapi_direct3d;
                 M_SaveCVARs();
                 SDL_SetHintWithPriority(SDL_HINT_RENDER_DRIVER, vid_scaleapi, SDL_HINT_OVERRIDE);
 
                 if (output)
-                    C_Output("This is now done in hardware using <i><b>Direct3D %s</b></i>.",
+                    C_Output("This is now done in hardware using <i><b>Direct3D %s.</b></i>",
                         (SDL_VIDEO_RENDER_D3D11 ? "v11.0" : "v9.0"));
+#endif
             }
             else
             {
                 if (output)
-                    C_Output("This is done in hardware using <i><b>OpenGL v%i.%i</b></i>.", major, minor);
+                    C_Output("This is done in hardware using <i><b>OpenGL v%i.%i.</b></i>", major, minor);
 
                 if (!M_StringCompare(vid_scaleapi, vid_scaleapi_opengl))
                 {
@@ -1578,28 +1595,11 @@ static void SetVideoMode(dboolean output)
                 }
             }
         }
-#if !defined(_WIN32)
-        else if (M_StringCompare(rendererinfo.name, vid_scaleapi_opengles))
-        {
-            if (output)
-                C_Output("This is done in hardware using <i><b>OpenGL ES</b></i>.");
-        }
-        else if (M_StringCompare(rendererinfo.name, vid_scaleapi_opengles2))
-        {
-            if (output)
-                C_Output("This is done in hardware using <i><b>OpenGL ES 2</b></i>.");
-        }
-#elif defined(__APPLE__)
-        else if (M_StringCompare(rendererinfo.name, vid_scaleapi_metal))
-        {
-            if (output)
-                C_Output("This is done in hardware using <i><b>Metal</b></i>.");
-        }
-#endif
+#if defined(_WIN32)
         else if (M_StringCompare(rendererinfo.name, vid_scaleapi_direct3d))
         {
             if (output)
-                C_Output("This is done in hardware using <i><b>Direct3D %s</b></i>.",
+                C_Output("This is done in hardware using <i><b>Direct3D %s.</b></i>",
                     (SDL_VIDEO_RENDER_D3D11 ? "v11.0" : "v9.0"));
 
             if (!M_StringCompare(vid_scaleapi, vid_scaleapi_direct3d))
@@ -1608,6 +1608,25 @@ static void SetVideoMode(dboolean output)
                 M_SaveCVARs();
             }
         }
+#elif defined(__APPLE__)
+        else if (M_StringCompare(rendererinfo.name, vid_scaleapi_metal))
+        {
+            if (output)
+                C_Output("This is done in hardware using <i><b>Metal.</b></i>");
+        }
+#endif
+#if !defined(_WIN32)
+        else if (M_StringCompare(rendererinfo.name, vid_scaleapi_opengles))
+        {
+            if (output)
+                C_Output("This is done in hardware using <i><b>OpenGL ES.</b></i>");
+        }
+        else if (M_StringCompare(rendererinfo.name, vid_scaleapi_opengles2))
+        {
+            if (output)
+                C_Output("This is done in hardware using <i><b>OpenGL ES 2.</b></i>");
+        }
+#endif
         else if (M_StringCompare(rendererinfo.name, vid_scaleapi_software))
         {
             software = true;
@@ -1640,7 +1659,7 @@ static void SetVideoMode(dboolean output)
                 const char *vendor = (const char *)pglGetString(GL_VENDOR);
 
                 if (graphicscard && vendor)
-                    C_Output("Using %s <i><b>%s</b></i> graphics card by <i><b>%s</b></i>.",
+                    C_Output("Using %s <i><b>%s</b></i> graphics card by <i><b>%s.</b></i>",
                         (isvowel(graphicscard[0]) ? "an" : "a"), graphicscard, vendor);
             }
         }
@@ -1657,7 +1676,7 @@ static void SetVideoMode(dboolean output)
             {
                 refreshrate = displaymode.refresh_rate;
 
-                if (M_StringCompare(vid_scaleapi, vid_scaleapi_opengl))
+                if (vid_vsync == vid_vsync_adaptive && M_StringStartsWith(vid_scaleapi, "opengl"))
                     SDL_GL_SetSwapInterval(-1);
 
                 if (refreshrate < vid_capfps || !vid_capfps)
@@ -1671,10 +1690,10 @@ static void SetVideoMode(dboolean output)
 
                     if (output)
                     {
-                        char    *vid_capfps_str = commify(vid_capfps);
+                        char    *temp = commify(vid_capfps);
 
-                        C_Output("The framerate is capped at %s FPS.", vid_capfps_str);
-                        free(vid_capfps_str);
+                        C_Output("The framerate is capped at %s FPS.", temp);
+                        free(temp);
                     }
                 }
             }
@@ -1696,10 +1715,10 @@ static void SetVideoMode(dboolean output)
 
                 if (vid_capfps)
                 {
-                    char    *vid_capfps_str = commify(vid_capfps);
+                    char    *temp = commify(vid_capfps);
 
-                    C_Output("The framerate is capped at %s FPS.", vid_capfps_str);
-                    free(vid_capfps_str);
+                    C_Output("The framerate is capped at %s FPS.", temp);
+                    free(temp);
                 }
                 else
                     C_Output("The framerate is uncapped.");
@@ -1847,16 +1866,20 @@ void I_RestartGraphics(void)
 
 void I_ToggleFullscreen(void)
 {
-    if (SDL_SetWindowFullscreen(window, (vid_fullscreen ? 0 :
-        (vid_borderlesswindow ? SDL_WINDOW_FULLSCREEN_DESKTOP : SDL_WINDOW_FULLSCREEN))) < 0)
+    if (SDL_SetWindowFullscreen(window,
+        (vid_fullscreen ? 0 : (vid_borderlesswindow ? SDL_WINDOW_FULLSCREEN_DESKTOP : SDL_WINDOW_FULLSCREEN))) < 0)
     {
         menuactive = false;
         C_ShowConsole();
-        C_Warning(1, "Unable to switch to %s.", (!vid_fullscreen ? "fullscreen" : "a window"));
+        C_Warning(1, "Unable to switch to %s.", (vid_fullscreen ? "a window" : "fullscreen"));
         return;
     }
 
     vid_fullscreen = !vid_fullscreen;
+
+    if (!vid_borderlesswindow)
+        I_RestartGraphics();
+
     M_SaveCVARs();
 
     if (nearestlinear)

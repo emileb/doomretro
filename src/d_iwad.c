@@ -7,7 +7,7 @@
 ========================================================================
 
   Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2019 by Brad Harding.
+  Copyright © 2013-2020 by Brad Harding.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
@@ -233,17 +233,15 @@ static void CheckUninstallStrings(void)
         if (!val)
             continue;
 
-        unstr = strstr(val, UNINSTALLER_STRING);
-
-        if (!unstr)
-            free(val);
-        else
+        if ((unstr = strstr(val, UNINSTALLER_STRING)))
         {
             char    *path = unstr + len;
 
             AddIWADDir(path);
             free(path);
         }
+
+        free(val);
     }
 }
 
@@ -258,7 +256,12 @@ static void CheckInstallRootPaths(void)
             continue;
 
         for (size_t j = 0; j < arrlen(root_path_subdirs); j++)
-            AddIWADDir(M_StringJoin(install_path, DIR_SEPARATOR_S, root_path_subdirs[j], NULL));
+        {
+            char    *path = M_StringJoin(install_path, DIR_SEPARATOR_S, root_path_subdirs[j], NULL);
+
+            AddIWADDir(path);
+            free(path);
+        }
 
         free(install_path);
     }
@@ -273,7 +276,12 @@ static void CheckSteamEdition(void)
         return;
 
     for (size_t i = 0; i < arrlen(steam_install_subdirs); i++)
-        AddIWADDir(M_StringJoin(install_path, DIR_SEPARATOR_S, steam_install_subdirs[i], NULL));
+    {
+        char    *path = M_StringJoin(install_path, DIR_SEPARATOR_S, steam_install_subdirs[i], NULL);
+
+        AddIWADDir(path);
+        free(path);
+    }
 
     free(install_path);
 }
@@ -429,6 +437,7 @@ char *D_FindWADByName(char *filename)
             return M_StringDuplicate(iwad_dirs[i]);
 
         // Construct a string for the full path
+        free(path);
         path = M_StringJoin(iwad_dirs[i], DIR_SEPARATOR_S, filename, NULL);
 
         if (M_FileExists(path))
@@ -532,7 +541,7 @@ static char *SaveGameIWADName(void)
         if (gamemission == iwads[i].mission)
             return iwads[i].name;
 
-    return NULL;
+    return "unknown";
 }
 
 //
@@ -551,22 +560,28 @@ void D_SetSaveGameFolder(dboolean output)
     }
     else
     {
-        char    *iwad_name = SaveGameIWADName();
         char    *appdatafolder = M_GetAppDataFolder();
         char    *savegamefolder_free;
-
-        if (!iwad_name)
-            iwad_name = "unknown";
 
         M_MakeDirectory(appdatafolder);
         savegamefolder = M_StringJoin(appdatafolder, DIR_SEPARATOR_S, "savegames", DIR_SEPARATOR_S, NULL);
         M_MakeDirectory(savegamefolder);
         savegamefolder_free = savegamefolder;
-        savegamefolder = M_StringJoin(savegamefolder, (*pwadfile ? pwadfile : iwad_name), DIR_SEPARATOR_S, NULL);
+
+        if (*pwadfile)
+        {
+            char    *temp = removeext(pwadfile);
+
+            savegamefolder = M_StringJoin(savegamefolder, temp, DIR_SEPARATOR_S, NULL);
+            free(temp);
+        }
+        else
+            savegamefolder = M_StringJoin(savegamefolder, SaveGameIWADName(), DIR_SEPARATOR_S, NULL);
 
 #if !defined(__APPLE__)
         free(appdatafolder);
 #endif
+
         free(savegamefolder_free);
     }
 
@@ -590,9 +605,9 @@ void D_SetSaveGameFolder(dboolean output)
 //
 void D_IdentifyVersion(void)
 {
-    // gamemission is set up by the D_FindIWAD function. But if
+    // gamemission is set up by the D_FindIWAD() function. But if
     // we specify '-iwad', we have to identify using
-    // D_IdentifyIWADByName. However, if the iwad does not match
+    // D_IdentifyIWADByName(). However, if the iwad does not match
     // any known IWAD name, we may have a dilemma. Try to
     // identify by its contents.
     if (gamemission == none)
@@ -618,10 +633,10 @@ void D_IdentifyVersion(void)
     if (gamemission == doom)
     {
         // DOOM 1. But which version?
-        if (W_CheckNumForName("E4M1") > 0)
+        if (W_CheckNumForName("E4M1") >= 0)
             // Ultimate DOOM
             gamemode = retail;
-        else if (W_CheckNumForName("E3M1") > 0)
+        else if (W_CheckNumForName("E3M1") >= 0)
             gamemode = registered;
         else
             gamemode = shareware;
@@ -634,63 +649,63 @@ void D_IdentifyVersion(void)
 // Set the gamedescription string
 void D_SetGameDescription(void)
 {
-    gamedescription = PACKAGE_NAME;
+    M_StringCopy(gamedescription, PACKAGE_NAME, sizeof(gamedescription));
 
     if (chex1)
-        gamedescription = s_CAPTION_CHEX;
+        M_StringCopy(gamedescription, s_CAPTION_CHEX, sizeof(gamedescription));
     else if (chex2)
-        gamedescription = s_CAPTION_CHEX2;
+        M_StringCopy(gamedescription, s_CAPTION_CHEX2, sizeof(gamedescription));
     else if (hacx)
-        gamedescription = s_CAPTION_HACX;
+        M_StringCopy(gamedescription, s_CAPTION_HACX, sizeof(gamedescription));
     else if (BTSXE1)
-        gamedescription = s_CAPTION_BTSXE1;
+        M_StringCopy(gamedescription, s_CAPTION_BTSXE1, sizeof(gamedescription));
     else if (BTSXE2)
-        gamedescription = s_CAPTION_BTSXE2;
+        M_StringCopy(gamedescription, s_CAPTION_BTSXE2, sizeof(gamedescription));
     else if (BTSXE3)
-        gamedescription = s_CAPTION_BTSXE3;
+        M_StringCopy(gamedescription, s_CAPTION_BTSXE3, sizeof(gamedescription));
     else if (gamemission == doom)
     {
         // DOOM 1. But which version?
         if (modifiedgame && *pwadfile)
-            gamedescription = M_StringJoin(pwadfile, (strcmp(pwadfile, uppercase(pwadfile)) ? ".wad" : ".WAD"), NULL);
+            M_StringCopy(gamedescription, pwadfile, sizeof(gamedescription));
         else if (FREEDOOM)
-            gamedescription = s_CAPTION_FREEDOOM1;
+            M_StringCopy(gamedescription, s_CAPTION_FREEDOOM1, sizeof(gamedescription));
         else if (gamemode == retail)
-            gamedescription = s_CAPTION_ULTIMATE;
+            M_StringCopy(gamedescription, s_CAPTION_ULTIMATE, sizeof(gamedescription));
         else if (gamemode == registered)
-            gamedescription = s_CAPTION_REGISTERED;
+            M_StringCopy(gamedescription, s_CAPTION_REGISTERED, sizeof(gamedescription));
         else if (gamemode == shareware)
-            gamedescription = s_CAPTION_SHAREWARE;
+            M_StringCopy(gamedescription, s_CAPTION_SHAREWARE, sizeof(gamedescription));
     }
     else
     {
         // DOOM 2 of some kind. But which mission?
         if (modifiedgame && *pwadfile)
         {
-            if (M_StringCompare(pwadfile, "nerve"))
-                gamedescription = s_CAPTION_DOOM2;
+            if (M_StringCompare(pwadfile, "nerve.wad"))
+                M_StringCopy(gamedescription, s_CAPTION_DOOM2, sizeof(gamedescription));
             else
-                gamedescription = M_StringJoin(pwadfile, (strcmp(pwadfile, uppercase(pwadfile)) ? ".wad" : ".WAD"), NULL);
+                M_StringCopy(gamedescription, pwadfile, sizeof(gamedescription));
         }
         else if (FREEDOOM)
-            gamedescription = (FREEDM ? s_CAPTION_FREEDM : s_CAPTION_FREEDOOM2);
+            M_StringCopy(gamedescription, (FREEDM ? s_CAPTION_FREEDM : s_CAPTION_FREEDOOM2), sizeof(gamedescription));
         else if (nerve)
-            gamedescription = s_CAPTION_DOOM2;
+            M_StringCopy(gamedescription, s_CAPTION_DOOM2, sizeof(gamedescription));
         else if (gamemission == doom2)
-            gamedescription = M_StringJoin(s_CAPTION_DOOM2, ": ", s_CAPTION_HELLONEARTH, NULL);
+            M_snprintf(gamedescription, sizeof(gamedescription), "%s: %s", s_CAPTION_DOOM2, s_CAPTION_HELLONEARTH);
         else if (gamemission == pack_plut)
-            gamedescription = s_CAPTION_PLUTONIA;
+            M_StringCopy(gamedescription, s_CAPTION_PLUTONIA, sizeof(gamedescription));
         else if (gamemission == pack_tnt)
-            gamedescription = s_CAPTION_TNT;
+            M_StringCopy(gamedescription, s_CAPTION_TNT, sizeof(gamedescription));
     }
 
     if (nerve)
     {
         if (bfgedition)
-            C_Output("Playing <i><b>%s: %s (%s)</b></i> and <i><b>%s: %s (%s)</b></i>.", s_CAPTION_DOOM2, s_CAPTION_HELLONEARTH,
+            C_Output("Playing <i><b>%s: %s (%s)</b></i> and <i><b>%s: %s (%s).</b></i>", s_CAPTION_DOOM2, s_CAPTION_HELLONEARTH,
                 s_CAPTION_BFGEDITION, s_CAPTION_DOOM2, s_CAPTION_NERVE, s_CAPTION_BFGEDITION);
         else
-            C_Output("Playing <i><b>%s: %s</b></i> and <i><b>%s: %s</b></i>.", s_CAPTION_DOOM2, s_CAPTION_HELLONEARTH,
+            C_Output("Playing <i><b>%s: %s</b></i> and <i><b>%s: %s.</b></i>", s_CAPTION_DOOM2, s_CAPTION_HELLONEARTH,
                 s_CAPTION_DOOM2, s_CAPTION_NERVE);
     }
     else if (modifiedgame && !sigil && !chex)
@@ -698,8 +713,8 @@ void D_SetGameDescription(void)
     else
     {
         if (bfgedition)
-            C_Output("Playing <i><b>%s (%s)</b></i>.", gamedescription, s_CAPTION_BFGEDITION);
+            C_Output("Playing <i><b>%s (%s).</b></i>", gamedescription, s_CAPTION_BFGEDITION);
         else
-            C_Output("Playing <i><b>%s</b></i>.", gamedescription);
+            C_Output("Playing <i><b>%s.</b></i>", gamedescription);
     }
 }

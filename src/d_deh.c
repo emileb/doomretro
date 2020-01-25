@@ -7,7 +7,7 @@
 ========================================================================
 
   Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2019 by Brad Harding.
+  Copyright © 2013-2020 by Brad Harding.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
@@ -217,6 +217,8 @@ char    *s_PD_YELLOWS = "";
 char    *s_PD_ANY = "";
 char    *s_PD_ALL3 = "";
 char    *s_PD_ALL6 = "";
+char    *s_KEYCARD = "";
+char    *s_SKULLKEY = "";
 
 char    *s_SECRET = "";
 
@@ -784,6 +786,8 @@ deh_strs deh_strlookup[] =
     { &s_PD_ANY,                     "PD_ANY"                     },
     { &s_PD_ALL3,                    "PD_ALL3"                    },
     { &s_PD_ALL6,                    "PD_ALL6"                    },
+    { &s_KEYCARD,                    "KEYCARD"                    },
+    { &s_SKULLKEY,                   "SKULLKEY"                   },
 
     { &s_SECRET,                     "SECRET"                     },
 
@@ -2123,25 +2127,23 @@ void ProcessDehFile(char *filename, int lumpnum)
 
     if (infile.lump)
     {
-        char    *linecount_str = commify(linecount);
-        char    *lumpname = uppercase(lumpinfo[lumpnum]->name);
+        char    *temp1 = commify(linecount);
+        char    *temp2 = uppercase(lumpinfo[lumpnum]->name);
 
         C_Output("Parsed %s line%s from the <b>%s</b> lump in %s <b>%s</b>.",
-            linecount_str, (linecount > 1 ? "s" : ""), lumpname, (W_WadType(filename) == IWAD ? "IWAD" : "PWAD"), filename);
+            temp1, (linecount > 1 ? "s" : ""), temp2, (W_WadType(filename) == IWAD ? "IWAD" : "PWAD"), filename);
 
-        free(linecount_str);
-        free(lumpname);
+        free(temp1);
+        free(temp2);
     }
     else
     {
-        char    *linecount_str = commify(linecount);
-        char    *filename_free = uppercase(filename);
+        char    *temp = commify(linecount);
 
-        C_Output("Parsed %s line%s from the <i><b>DeHackEd</b></i>%s file <b>%s</b>.", linecount_str, (linecount > 1 ? "s" : ""),
-            (M_StringEndsWith(filename_free, "BEX") ? " with <i><b>BOOM</b></i> extensions" : ""), GetCorrectCase(filename));
+        C_Output("Parsed %s line%s from the <i><b>DeHackEd</b></i>%s file <b>%s</b>.", temp, (linecount > 1 ? "s" : ""),
+            (M_StringEndsWith(filename, "BEX") ? " with <i><b>BOOM</b></i> extensions" : ""), GetCorrectCase(filename));
 
-        free(linecount_str);
-        free(filename_free);
+        free(temp);
     }
 }
 
@@ -2380,6 +2382,11 @@ static void deh_procThing(DEHFILE *fpin, char *line)
                             if (devparm)
                                 C_Output("ORed value 0x%08lX %s.", deh_mobjflags2[iy].value, strval);
 
+                            if (M_StringCompare(key, "TRANSLUCENT"))
+                                boomcompatible = true;
+                            else if (M_StringCompare(key, "TOUCHY") || M_StringCompare(key, "BOUNCES") || M_StringCompare(key, "FRIEND"))
+                                mbfcompatible = true;
+
                             value |= deh_mobjflags[iy].value;
                             break;
                         }
@@ -2532,7 +2539,7 @@ static void deh_procFrame(DEHFILE *fpin, char *line)
             if (devparm)
                 C_Output(" - translucent = %ld", value);
 
-            states[indexnum].translucent = value;               // bool
+            states[indexnum].translucent = !!value;             // bool
             states[indexnum].dehacked = dehacked = !BTSX;
         }
         else
@@ -3437,8 +3444,7 @@ static void deh_procStrings(DEHFILE *fpin, char *line)
         C_Output("Processing extended string substitution");
 
     if (!holdstring)
-        if (!(holdstring = malloc(maxstrlen * sizeof(*holdstring))))
-            return;
+        holdstring = malloc(maxstrlen * sizeof(*holdstring));
 
     *holdstring = '\0';                 // empty string to start with
     strncpy(inbuffer, line, DEH_BUFFERMAX);

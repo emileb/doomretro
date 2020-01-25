@@ -7,7 +7,7 @@
 ========================================================================
 
   Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2019 by Brad Harding.
+  Copyright © 2013-2020 by Brad Harding.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
@@ -75,6 +75,8 @@ void G_SaveGame(int slot, char *description, char *name);
 void G_ExitLevel(void);
 void G_SecretExitLevel(void);
 
+int G_GetParTime(void);
+
 void G_WorldDone(void);
 
 // Read current data from inputs and build a player movement command.
@@ -93,6 +95,7 @@ void G_ToggleAlwaysRun(evtype_t type);
 
 void G_NextWeapon(void);
 void G_PrevWeapon(void);
+void G_RemoveChoppers(void);
 
 void G_LoadedGameMessage(void);
 

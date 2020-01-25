@@ -7,7 +7,7 @@
 ========================================================================
 
   Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2019 by Brad Harding.
+  Copyright © 2013-2020 by Brad Harding.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
@@ -341,9 +341,6 @@ dboolean EV_StopPlat(line_t *line)
 void P_AddActivePlat(plat_t *plat)
 {
     platlist_t  *list = malloc(sizeof(*list));
-
-    if (!list)
-        return;
 
     list->plat = plat;
     plat->list = list;

@@ -7,7 +7,7 @@
 ========================================================================
 
   Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2019 by Brad Harding.
+  Copyright © 2013-2020 by Brad Harding.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
@@ -39,8 +39,9 @@
 #if !defined(__P_SETUP_H__)
 #define __P_SETUP_H__
 
-extern dboolean canmodify;
-extern dboolean skipblstart;    // MaxW: Skip initial blocklist short
+extern dboolean     canmodify;
+extern dboolean     skipblstart;    // MaxW: Skip initial blocklist short
+extern const char   *linespecials[];
 
 void P_SetupLevel(int ep, int map);
 void P_MapName(int ep, int map);

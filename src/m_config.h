@@ -7,7 +7,7 @@
 ========================================================================
 
   Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2019 by Brad Harding.
+  Copyright © 2013-2020 by Brad Harding.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
@@ -120,6 +120,7 @@ extern dboolean     r_fixspriteoffsets;
 extern dboolean     r_floatbob;
 extern int          r_fov;
 extern float        r_gamma;
+extern dboolean     r_graduallighting;
 extern dboolean     r_homindicator;
 extern dboolean     r_hud;
 extern dboolean     r_hud_translucency;
@@ -210,7 +211,7 @@ extern char         *vid_scaleapi;
 extern char         *vid_scalefilter;
 extern char         *vid_screenresolution;
 extern dboolean     vid_showfps;
-extern dboolean     vid_vsync;
+extern int          vid_vsync;
 extern dboolean     vid_widescreen;
 extern char         *vid_windowpos;
 extern char         *vid_windowsize;
@@ -234,7 +235,8 @@ enum
 {
     r_blood_none,
     r_blood_red,
-    r_blood_all
+    r_blood_all,
+    r_blood_green
 };
 
 enum
@@ -247,6 +249,13 @@ enum
 {
     units_imperial,
     units_metric
+};
+
+enum
+{
+    vid_vsync_adaptive = -1,
+    vid_vsync_off,
+    vid_vsync_on
 };
 
 #define alwaysrun_default                       false
@@ -458,7 +467,7 @@ enum
 
 #define r_blood_min                             r_blood_none
 #define r_blood_default                         r_blood_all
-#define r_blood_max                             r_blood_all
+#define r_blood_max                             r_blood_green
 
 #define r_bloodsplats_max_min                   0
 #define r_bloodsplats_max_default               65536
@@ -507,6 +516,8 @@ enum
 #define r_gamma_min                             gammalevels[0]
 #define r_gamma_default                         0.90f
 #define r_gamma_max                             gammalevels[GAMMALEVELS - 1]
+
+#define r_graduallighting_default               true
 
 #define r_homindicator_default                  false
 
@@ -595,7 +606,7 @@ enum
 
 #define version_default                         PACKAGE_VERSIONSTRING
 
-#define vid_borderlesswindow_default            false
+#define vid_borderlesswindow_default            true
 
 #define vid_capfps_min                          0
 #define vid_capfps_default                      200
@@ -617,8 +628,9 @@ enum
 
 #define vid_pillarboxes_default                 false
 
+#if defined(_WIN32)
 #define vid_scaleapi_direct3d                   "direct3d"
-#if defined(__APPLE__)
+#elif defined(__APPLE__)
 #define vid_scaleapi_metal                      "metal"
 #endif
 #define vid_scaleapi_opengl                     "opengl"
@@ -632,14 +644,16 @@ enum
 #define vid_scalefilter_linear                  "linear"
 #define vid_scalefilter_nearest                 "nearest"
 #define vid_scalefilter_nearest_linear          "nearest_linear"
-#define vid_scalefilter_default                 vid_scalefilter_nearest
+#define vid_scalefilter_default                 vid_scalefilter_nearest_linear
 
 #define vid_screenresolution_desktop            "desktop"
 #define vid_screenresolution_default            vid_screenresolution_desktop
 
 #define vid_showfps_default                     false
 
-#define vid_vsync_default                       true
+#define vid_vsync_min                           vid_vsync_adaptive
+#define vid_vsync_default                       vid_vsync_on
+#define vid_vsync_max                           vid_vsync_on
 
 #define vid_widescreen_default                  false
 
@@ -778,7 +792,8 @@ typedef enum
     SCALEVALUEALIAS,
     FACEBACKVALUEALIAS,
     ARMORTYPEVALUEALIAS,
-    CROSSHAIRVALUEALIAS
+    CROSSHAIRVALUEALIAS,
+    VSYNCVALUEALIAS
 } valuealias_type_t;
 
 typedef struct

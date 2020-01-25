@@ -7,7 +7,7 @@
 ========================================================================
 
   Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2019 by Brad Harding.
+  Copyright © 2013-2020 by Brad Harding.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
@@ -336,7 +336,7 @@ static vissprite_t *R_NewVisSprite(void)
         vissprites = I_Realloc(vissprites, num_vissprite_alloc * sizeof(*vissprites));
     }
 
-    return vissprites + num_vissprite++;
+    return (vissprites + num_vissprite++);
 }
 
 int             *mfloorclip;
@@ -842,6 +842,11 @@ static void R_ProjectBloodSplat(const bloodsplat_t *splat)
         vis->blood = MT_BLOOD;
         vis->colfunc = (r_bloodsplats_translucency ? R_DrawBloodSplatColumn : R_DrawSolidBloodSplatColumn);
     }
+    else if (r_blood == r_blood_green)
+    {
+        vis->blood = GREENBLOOD;
+        vis->colfunc = (r_bloodsplats_translucency ? R_DrawBloodSplatColumn : R_DrawSolidBloodSplatColumn);
+    }
     else
     {
         vis->blood = splat->blood;
@@ -1089,9 +1094,7 @@ void R_DrawPlayerSprites(void)
     if ((invisibility > STARTFLASHING || (invisibility & 8)) && r_textures)
     {
         V_FillRect(1, viewwindowx, viewwindowy, viewwidth, viewheight, 251, false);
-
-        if (weapon->state)
-            R_DrawPlayerSprite(weapon, true, (weapon->state->dehacked || altered));
+        R_DrawPlayerSprite(weapon, true, (weapon->state->dehacked || altered));
 
         if (flash->state)
             R_DrawPlayerSprite(flash, true, (flash->state->dehacked || altered));
@@ -1103,15 +1106,8 @@ void R_DrawPlayerSprites(void)
     }
     else
     {
-        muzzleflash = false;
-
-        if (weapon->state && (weapon->state->frame & FF_FULLBRIGHT))
-            muzzleflash = true;
-        else if (flash->state && (flash->state->frame & FF_FULLBRIGHT))
-            muzzleflash = true;
-
-        if (weapon->state)
-            R_DrawPlayerSprite(weapon, false, (weapon->state->dehacked || altered));
+        muzzleflash = ((weapon->state->frame & FF_FULLBRIGHT) || (flash->state && (flash->state->frame & FF_FULLBRIGHT)));
+        R_DrawPlayerSprite(weapon, false, (weapon->state->dehacked || altered));
 
         if (flash->state)
             R_DrawPlayerSprite(flash, false, (flash->state->dehacked || altered));
@@ -1203,7 +1199,7 @@ static void msort(vissprite_t **s, vissprite_t **t, unsigned int n)
 
             if (s[i - 1]->scale < temp->scale)
             {
-                int j = i;
+                unsigned int    j = i;
 
                 while ((s[j] = s[j - 1])->scale < temp->scale && --j);
 
@@ -1216,17 +1212,12 @@ static void R_SortVisSprites(void)
 {
     if (num_vissprite)
     {
-        int                 i = num_vissprite;
         static unsigned int num_vissprite_ptrs;
 
         if (num_vissprite_ptrs < num_vissprite * 2)
-        {
-            free(vissprite_ptrs);
-            num_vissprite_ptrs = num_vissprite_alloc * 2;
-            vissprite_ptrs = malloc(num_vissprite_ptrs * sizeof(*vissprite_ptrs));
-        }
+            vissprite_ptrs = I_Realloc(vissprite_ptrs, (num_vissprite_ptrs = num_vissprite_alloc * 2) * sizeof(*vissprite_ptrs));
 
-        while (--i >= 0)
+        for (int i = num_vissprite - 1; i >= 0; i--)
             vissprite_ptrs[i] = vissprites + i;
 
         msort(vissprite_ptrs, vissprite_ptrs + num_vissprite, num_vissprite);
@@ -1375,6 +1366,6 @@ void R_DrawMasked(void)
             R_RenderMaskedSegRange(ds, ds->x1, ds->x2);
 
     // draw the psprites on top of everything
-    if (r_playersprites && !inhelpscreens && !menuactive)
+    if (r_playersprites && !inhelpscreens && (!menuactive || consoleactive))
         R_DrawPlayerSprites();
 }

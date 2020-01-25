@@ -7,7 +7,7 @@
 ========================================================================
 
   Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2019 by Brad Harding.
+  Copyright © 2013-2020 by Brad Harding.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
@@ -58,6 +58,7 @@
 #include "p_local.h"
 #include "p_saveg.h"
 #include "s_sound.h"
+#include "st_lib.h"
 #include "v_data.h"
 #include "v_video.h"
 #include "w_wad.h"
@@ -461,42 +462,42 @@ menu_t SaveDef =
 
 static int blurheight;
 
-static void BlurScreen(byte *screen, byte *blurscreen)
+static void BlurScreen(byte *screen, byte *blurscreen, int height)
 {
-    for (int i = 0; i < blurheight; i++)
+    for (int i = 0; i < height; i++)
         blurscreen[i] = grays[screen[i]];
 
-    for (int y = 0; y <= blurheight - SCREENWIDTH; y += SCREENWIDTH)
+    for (int y = 0; y <= height - SCREENWIDTH; y += SCREENWIDTH)
         for (int x = y; x <= y + SCREENWIDTH - 2; x++)
-            blurscreen[x] = tinttab50[blurscreen[x] + (blurscreen[x + 1] << 8)];
+            blurscreen[x] = tinttab50[(blurscreen[x + 1] << 8) + blurscreen[x]];
 
-    for (int y = 0; y <= blurheight - SCREENWIDTH; y += SCREENWIDTH)
+    for (int y = 0; y <= height - SCREENWIDTH; y += SCREENWIDTH)
         for (int x = y + SCREENWIDTH - 2; x >= y; x--)
-            blurscreen[x] = tinttab50[blurscreen[x] + (blurscreen[x - 1] << 8)];
+            blurscreen[x] = tinttab50[(blurscreen[x - 1] << 8) + blurscreen[x]];
 
-    for (int y = 0; y <= blurheight - SCREENWIDTH * 2; y += SCREENWIDTH)
+    for (int y = 0; y <= height - SCREENWIDTH * 2; y += SCREENWIDTH)
         for (int x = y; x <= y + SCREENWIDTH - 2; x++)
-            blurscreen[x] = tinttab50[blurscreen[x] + (blurscreen[x + SCREENWIDTH + 1] << 8)];
+            blurscreen[x] = tinttab50[(blurscreen[x + SCREENWIDTH + 1] << 8) + blurscreen[x]];
 
-    for (int y = blurheight - SCREENWIDTH; y >= SCREENWIDTH; y -= SCREENWIDTH)
+    for (int y = height - SCREENWIDTH; y >= SCREENWIDTH; y -= SCREENWIDTH)
         for (int x = y + SCREENWIDTH - 1; x >= y + 1; x--)
-            blurscreen[x] = tinttab50[blurscreen[x] + (blurscreen[x - SCREENWIDTH - 1] << 8)];
+            blurscreen[x] = tinttab50[(blurscreen[x - SCREENWIDTH - 1] << 8) + blurscreen[x]];
 
-    for (int y = 0; y <= blurheight - SCREENWIDTH * 2; y += SCREENWIDTH)
+    for (int y = 0; y <= height - SCREENWIDTH * 2; y += SCREENWIDTH)
         for (int x = y; x <= y + SCREENWIDTH - 1; x++)
-            blurscreen[x] = tinttab50[blurscreen[x] + (blurscreen[x + SCREENWIDTH] << 8)];
+            blurscreen[x] = tinttab50[(blurscreen[x + SCREENWIDTH] << 8) + blurscreen[x]];
 
-    for (int y = blurheight - SCREENWIDTH; y >= SCREENWIDTH; y -= SCREENWIDTH)
+    for (int y = height - SCREENWIDTH; y >= SCREENWIDTH; y -= SCREENWIDTH)
         for (int x = y; x <= y + SCREENWIDTH - 1; x++)
-            blurscreen[x] = tinttab50[blurscreen[x] + (blurscreen[x - SCREENWIDTH] << 8)];
+            blurscreen[x] = tinttab50[(blurscreen[x - SCREENWIDTH] << 8) + blurscreen[x]];
 
-    for (int y = 0; y <= blurheight - SCREENWIDTH * 2; y += SCREENWIDTH)
+    for (int y = 0; y <= height - SCREENWIDTH * 2; y += SCREENWIDTH)
         for (int x = y + SCREENWIDTH - 1; x >= y + 1; x--)
-            blurscreen[x] = tinttab50[blurscreen[x] + (blurscreen[x + SCREENWIDTH - 1] << 8)];
+            blurscreen[x] = tinttab50[(blurscreen[x + SCREENWIDTH - 1] << 8) + blurscreen[x]];
 
-    for (int y = blurheight - SCREENWIDTH; y >= SCREENWIDTH; y -= SCREENWIDTH)
+    for (int y = height - SCREENWIDTH; y >= SCREENWIDTH; y -= SCREENWIDTH)
         for (int x = y; x <= y + SCREENWIDTH - 2; x++)
-            blurscreen[x] = tinttab50[blurscreen[x] + (blurscreen[x - SCREENWIDTH + 1] << 8)];
+            blurscreen[x] = tinttab50[(blurscreen[x - SCREENWIDTH + 1] << 8) + blurscreen[x]];
 }
 
 //
@@ -522,9 +523,9 @@ void M_DarkBackground(void)
         }
 
         for (int i = 0; i < blurheight; i++)
-            screens[0][i] = colormaps[0][((M_Random() & 7) << 8) + screens[0][i]];
+            screens[0][i] = colormaps[0][(M_Random() & 7) * 256 + screens[0][i]];
 
-        BlurScreen(screens[0], blurscreen1);
+        BlurScreen(screens[0], blurscreen1, blurheight);
 
         for (int i = 0; i < blurheight; i++)
             blurscreen1[i] = tinttab33[blurscreen1[i]];
@@ -540,9 +541,9 @@ void M_DarkBackground(void)
             }
 
             for (int i = 0; i < (SCREENHEIGHT - SBARHEIGHT) * SCREENWIDTH; i++)
-                mapscreen[i] = colormaps[0][((M_Random() & 7) << 8) + mapscreen[i]];
+                mapscreen[i] = colormaps[0][(M_Random() & 7) * 256 + mapscreen[i]];
 
-            BlurScreen(mapscreen, blurscreen2);
+            BlurScreen(mapscreen, blurscreen2, (SCREENHEIGHT - SBARHEIGHT) * SCREENWIDTH);
 
             for (int i = 0; i < (SCREENHEIGHT - SBARHEIGHT) * SCREENWIDTH; i++)
                 blurscreen2[i] = tinttab33[blurscreen2[i]];
@@ -946,7 +947,12 @@ static void M_DrawLoad(void)
     if (M_LOADG)
         M_DrawCenteredPatchWithShadow(23 + OFFSET, W_CacheLumpName("M_LOADG"));
     else
-        M_DrawCenteredString(23 + OFFSET, uppercase(s_M_LOADGAME));
+    {
+        char    *temp = uppercase(s_M_LOADGAME);
+
+        M_DrawCenteredString(23 + OFFSET, temp);
+        free(temp);
+    }
 
     for (int i = 0; i < load_end; i++)
     {
@@ -1053,7 +1059,12 @@ static void M_DrawSave(void)
     if (M_SAVEG)
         M_DrawCenteredPatchWithShadow(23 + OFFSET, W_CacheLumpName("M_SAVEG"));
     else
-        M_DrawCenteredString(23 + OFFSET, uppercase(s_M_SAVEGAME));
+    {
+        char    *temp = uppercase(s_M_SAVEGAME);
+
+        M_DrawCenteredString(23 + OFFSET, temp);
+        free(temp);
+    }
 
     // draw each save game slot
     for (int i = 0; i < load_end; i++)
@@ -1068,6 +1079,7 @@ static void M_DrawSave(void)
         {
             int j;
             int len = (int)strlen(savegamestrings[i]);
+            int x;
 
             // draw text to left of text caret
             for (j = 0; j < saveCharIndex; j++)
@@ -1075,45 +1087,41 @@ static void M_DrawSave(void)
 
             left[j] = '\0';
             M_WriteText(LoadDef.x - 2, y - !M_LSCNTR, left, false);
+            x = LoadDef.x - 2 + M_StringWidth(left);
 
             // draw text to right of text caret
             for (j = 0; j < len - saveCharIndex; j++)
                 right[j] = savegamestrings[i][j + saveCharIndex];
 
             right[j] = '\0';
-            M_WriteText(LoadDef.x - 2 + M_StringWidth(left) + 1, y - !M_LSCNTR, right, false);
+            M_WriteText(x + 1, y - !M_LSCNTR, right, false);
+
+            // draw text caret
+            if (windowfocused)
+            {
+                if (caretwait < I_GetTimeMS())
+                {
+                    showcaret = !showcaret;
+                    caretwait = I_GetTimeMS() + CARETBLINKTIME;
+                }
+
+                if (showcaret)
+                {
+                    int h = --y + 9;
+
+                    while (y < h)
+                        V_DrawPixel(x, y++, caretcolor, false);
+                }
+            }
+            else
+            {
+                showcaret = false;
+                caretwait = 0;
+            }
         }
         else
             M_WriteText(LoadDef.x - 2 + (M_StringCompare(savegamestrings[i], s_EMPTYSTRING) && s_EMPTYSTRING[0] == '-'
                 && s_EMPTYSTRING[1] == '\0') * 6, y - !M_LSCNTR, savegamestrings[i], false);
-    }
-
-    // draw text caret
-    if (saveStringEnter)
-    {
-        if (windowfocused)
-        {
-            if (caretwait < I_GetTimeMS())
-            {
-                showcaret = !showcaret;
-                caretwait = I_GetTimeMS() + CARETBLINKTIME;
-            }
-
-            if (showcaret)
-            {
-                int x = LoadDef.x - 2 + M_StringWidth(left);
-                int y = LoadDef.y + saveSlot * LINEHEIGHT + OFFSET - 1;
-                int h = y + 9;
-
-                while (y < h)
-                    V_DrawPixel(x, y++, caretcolor, false);
-            }
-        }
-        else
-        {
-            showcaret = false;
-            caretwait = 0;
-        }
     }
 }
 
@@ -1365,6 +1373,7 @@ static void M_DeleteSavegameResponse(int key)
     if (key == 'y')
     {
         static char buffer[1024];
+        char        *temp;
 
         M_StringCopy(buffer, P_SaveGameFile(itemOn), sizeof(buffer));
 
@@ -1374,11 +1383,13 @@ static void M_DeleteSavegameResponse(int key)
             return;
         }
 
-        M_snprintf(buffer, sizeof(buffer), s_GGDELETED, titlecase(savegamestrings[itemOn]));
+        temp = titlecase(savegamestrings[itemOn]);
+        M_snprintf(buffer, sizeof(buffer), s_GGDELETED, temp);
         C_Output(buffer);
         HU_SetPlayerMessage(buffer, false, false);
         message_dontfuckwithme = true;
         M_ReadSaveStrings();
+        free(temp);
 
         if (itemOn == quickSaveSlot)
             quickSaveSlot = -1;
@@ -1415,25 +1426,16 @@ static void M_DeleteSavegame(void)
 //
 static void M_DrawReadThis(void)
 {
-    char    *lumpname = "HELP1";
+    char    lumpname[6];
 
-    switch (gameversion)
-    {
-        case exe_doom_1_9:
-            if (gamemode == shareware && W_CheckNumForName("HELP3") >= 0)
-                lumpname = "HELP3";
-            else
-                lumpname = (gamemode == commercial ? "HELP" : "HELP2");
-
-            break;
-
-        case exe_final:
-            lumpname = "HELP";
-            break;
-
-        default:
-            break;
-    }
+    if (gamemode == shareware)
+        M_StringCopy(lumpname, (W_CheckNumForName("HELP3") >= 0 ? "HELP3" : "HELP2"), sizeof(lumpname));
+    else if (gamemode == registered)
+        M_StringCopy(lumpname, "HELP2", sizeof(lumpname));
+    else if (gamemode == commercial)
+        M_StringCopy(lumpname, "HELP", sizeof(lumpname));
+    else
+        M_StringCopy(lumpname, "HELP1", sizeof(lumpname));
 
     if (W_CheckNumForName(lumpname) >= 0)
     {
@@ -1470,7 +1472,12 @@ static void M_DrawSound(void)
         SoundDef.y = 64;
     }
     else
-        M_DrawCenteredString(38 + OFFSET, uppercase(s_M_SOUNDVOLUME));
+    {
+        char    *temp = uppercase(s_M_SOUNDVOLUME);
+
+        M_DrawCenteredString(38 + OFFSET, temp);
+        free(temp);
+    }
 
     M_DrawThermo(SoundDef.x - 1, SoundDef.y + 16 * (sfx_vol + 1) + OFFSET + !hacx, 16, (float)(sfxVolume * !nosfx), 4.0f, 6);
     M_DrawThermo(SoundDef.x - 1, SoundDef.y + 16 * (music_vol + 1) + OFFSET + !hacx, 16, (float)(musicVolume * !nomusic), 4.0f, 6);
@@ -1598,7 +1605,12 @@ static void M_DrawNewGame(void)
         NewDef.y = 63;
     }
     else
-        M_DrawCenteredString(19 + OFFSET, uppercase(s_M_NEWGAME));
+    {
+        char    *temp = uppercase(s_M_NEWGAME);
+
+        M_DrawCenteredString(19 + OFFSET, temp);
+        free(temp);
+    }
 
     if (M_SKILL)
     {
@@ -1637,7 +1649,12 @@ static void M_DrawEpisode(void)
         EpiDef.y = 63;
     }
     else
-        M_DrawCenteredString(19 + OFFSET, uppercase(s_M_NEWGAME));
+    {
+        char    *temp = uppercase(s_M_NEWGAME);
+
+        M_DrawCenteredString(19 + OFFSET, temp);
+        free(temp);
+    }
 
     if (M_EPISOD)
     {
@@ -1687,7 +1704,12 @@ static void M_DrawExpansion(void)
         EpiDef.y = 63;
     }
     else
-        M_DrawCenteredString(19 + OFFSET, uppercase(s_M_NEWGAME));
+    {
+        char    *temp = uppercase(s_M_NEWGAME);
+
+        M_DrawCenteredString(19 + OFFSET, temp);
+        free(temp);
+    }
 
     if (M_EPISOD)
     {
@@ -1784,7 +1806,12 @@ static void M_DrawOptions(void)
         OptionsDef.y = 37;
     }
     else
-        M_DrawCenteredString(8 + OFFSET, uppercase(s_M_OPTIONS));
+    {
+        char    *temp = uppercase(s_M_OPTIONS);
+
+        M_DrawCenteredString(8 + OFFSET, temp);
+        free(temp);
+    }
 
     if (messages)
     {
@@ -2134,6 +2161,7 @@ static void M_ChangeDetail(int choice)
     else
         C_Output(r_detail == r_detail_low ? s_DETAILLO : s_DETAILHI);
 
+    STLib_Init();
     M_SaveCVARs();
 }
 

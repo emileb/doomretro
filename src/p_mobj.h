@@ -7,7 +7,7 @@
 ========================================================================
 
   Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2019 by Brad Harding.
+  Copyright © 2013-2020 by Brad Harding.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
@@ -305,6 +305,12 @@ enum
     MF2_BOSS                      = 0x80000000
 };
 
+enum
+{
+    // Object is armed (for MF_TOUCHY objects)
+    MF3_ARMED                     = 0x00000001
+};
+
 typedef enum
 {
     DI_EAST,
@@ -365,6 +371,7 @@ typedef struct mobj_s
     state_t             *state;
     int                 flags;
     int                 flags2;
+    int                 flags3;
 
     int                 health;
 

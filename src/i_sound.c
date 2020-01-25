@@ -7,7 +7,7 @@
 ========================================================================
 
   Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2019 by Brad Harding.
+  Copyright © 2013-2020 by Brad Harding.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
@@ -294,7 +294,7 @@ dboolean CacheSFX(sfxinfo_t *sfxinfo)
     return ExpandSoundData(sfxinfo, data + 24, ((data[3] << 8) | data[2]), length - 32);
 }
 
-void I_UpdateSoundParams(int channel, int vol, int sep)
+void I_UpdateSoundParms(int channel, int vol, int sep)
 {
     Mix_SetPanning(channel, (254 - sep) * vol / 128, sep * vol / 128);
 }
@@ -339,7 +339,7 @@ int I_StartSound(sfxinfo_t *sfxinfo, int channel, int vol, int sep, int pitch)
     channels_playing[channel] = snd;
 
     // set separation, etc.
-    I_UpdateSoundParams(channel, vol, sep);
+    I_UpdateSoundParms(channel, vol, sep);
 
     return channel;
 }

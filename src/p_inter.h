@@ -7,7 +7,7 @@
 ========================================================================
 
   Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2019 by Brad Harding.
+  Copyright © 2013-2020 by Brad Harding.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
@@ -51,7 +51,6 @@ dboolean P_GiveAllWeapons(void);
 dboolean P_GiveBackpack(dboolean giveammo, dboolean stat);
 dboolean P_GiveFullAmmo(void);
 void P_AddBonus(void);
-void G_RemoveChoppers(void);
 void P_UpdateAmmoStat(ammotype_t ammotype, int num);
 void P_UpdateArmorStat(int num);
 void P_UpdateHealthStat(int num);

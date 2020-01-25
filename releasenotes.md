@@ -1,8 +1,59 @@
+### DOOM Retro v3.4
+
+* Optimizations have been made to further improve the overall performance and stability of *DOOM Retro*.
+* *DOOM Retro* will now only attempt to use [*Adaptive VSync*](https://www.geforce.com/hardware/technology/adaptive-vsync) if the `vid_vsync` CVAR is set to `adaptive`.
+* The following changes have been made to the `mapstats` CCMD:
+  * The episode or expansion, as well as the map number, of the current map will now be displayed.
+  * Whether or not the current map is secret will now be displayed.
+  * Whether or not the current IWAD is the *BFG Edition* will now be displayed.
+  * The par time of the current map will now be displayed.
+  * Improvements have been made to how *BOOM* and *MBF*-compatible maps are detected.
+  * Whether or not a music lump has been modified in a PWAD will now be displayed.
+* Minor changes have been made to the character set used in the console.
+* Minor changes have been made to text that is output to the console.
+* A bug has been fixed whereby widescreen mode wouldn’t be displayed correctly after pressing <kbd>ALT</kbd> + <kbd>ENTER</kbd> to toggle between fullscreen and a window, and if the `vid_borderlesswindow` CVAR was `off`.
+* The default of the `vid_borderlesswindow` CVAR is now `on`.
+* The default of the `vid_scalefilter` CVAR has been changed from `“nearest”` to `“nearest_linear”`.
+* A new `r_graduallighting` CVAR has been implemented to allow the player to toggle the gradual lighting under doors and crushing sectors. It is `on` by default and `off` when vanilla mode is on.
+* The player’s view will no longer shift slightly when exiting a map by using a switch.
+* Par times are no longer displayed on the intermission screen for maps that don’t have one.
+* A crash will no longer occur when using the `kill` or `resurrect` CCMDs with a monster’s name previously set by the `name` CCMD as the parameter.
+* `SIGIL_SHREDS.wad` will no longer be automatically loaded if music has been disabled by specifying `-nomusic` or `-nosound` on the command-line.
+* The background will now always be displayed correctly when confirming use of the `resetall` CCMD.
+* The background will now continue to rotate when confirming if the player wants to end a game or quit.
+* The title of MAP05 in *Final DOOM: TNT - Evilution* has been corrected.
+* The amount of friction applied to the player’s corpse has been increased, matching the corpses of monsters, when in a liquid sector.
+
+---
+
+###### Saturday, December 21, 2019
+
+### DOOM Retro v3.3
+
+* Optimizations have been made to further improve the overall performance and stability of *DOOM Retro*.
+* If a mistyped filename is entered in the WAD launcher (for example, `doot.wad` instead of `doom.wad`), *DOOM Retro* will now try to find the closest match.
+* If hardware acceleration is unavailable, *DOOM Retro* will now change the `vid_scaleapi` CVAR to `software` and scale each frame accordingly, rather than simply crashing during startup.
+* *DOOM Retro* is now fully [*MBF*](https://doomwiki.org/wiki/MBF)-compatible, as support has now been added to `BOUNCES` and `TOUCHY` flags in *DeHackEd* lumps.
+* Further improvements have been made to the console’s autocomplete feature.
+* Minor changes have been made to the character set used in the console.
+* Minor changes have been made to text that is output to the console.
+* A level 2 warning will now be displayed in the console if there’s a locked door with no keycard or skull key provided in the map to open it.
+* The visual glitch displayed when input is selected in the console while it is opening or closing is now fixed.
+* Once the `condump` CCMD is used to dump the current contents of the console to a file, every line of text that is output to the console thereafter will continue to be dumped to that same file automatically.
+* The `r_blood` CVAR can now be `green`, causing all blood spilled to be green.
+* The `episode` CVAR will now be updated if the player finishes episode 4 and [*SIGIL*](https://www.romerogames.ie/si6il) is loaded.
+* The `thinglist` CCMD now indicates if a thing has been dropped by a monster.
+* A crash will no longer occur when a monster tries to make a noise and the `-nosfx` or `-nosound` parameters are specified on the command-line.
+
+---
+
+###### Wednesday, November 27, 2019
+
 ### DOOM Retro v3.2.1
 
 * Optimizations have been made to further improve the overall performance and stability of *DOOM Retro*.
 * *DOOM Retro* will now attempt to use [*Adaptive VSync*](https://www.geforce.com/hardware/technology/adaptive-vsync) if the `vid_vsync` CVAR is `on` and the `vid_scaleapi` CVAR is `“opengl”`.
-* A bug has been fixed whereby monsters wouldn’t attack the player as often as they should if another monster was in the way.
+* A bug has been fixed whereby some monsters wouldn’t attempt to fire at the player as often as they should if another monster was in the way.
 * Further improvements have been made to the console’s autocomplete feature.
 * Minor changes have been made to text that is output to the console.
 * Minor improvements have been made to the menu’s background.

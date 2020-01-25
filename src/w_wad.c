@@ -7,7 +7,7 @@
 ========================================================================
 
   Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2019 by Brad Harding.
+  Copyright © 2013-2020 by Brad Harding.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
@@ -194,6 +194,78 @@ char *GetCorrectCase(char *path)
     return path;
 }
 
+#if defined(_WIN32)
+static int LevenshteinDistance(char *string1, char *string2)
+{
+    size_t  length1 = strlen(string1);
+    size_t  length2 = strlen(string2);
+    int     result = INT_MAX;
+
+    if (length1 > 0 && length2 > 0)
+    {
+        int *column = malloc((length1 + 1) * sizeof(int));
+
+        for (int y = 1; (size_t)y <= length1; y++)
+            column[y] = y;
+
+        for (int x = 1; (size_t)x <= length2; x++)
+        {
+            column[0] = x;
+
+            for (int y = 1, lastdiagonal = x - 1, olddiagonal; (size_t)y <= length1; y++)
+            {
+                olddiagonal = column[y];
+                column[y] = MIN(MIN(column[y], column[y - 1]) + 1, lastdiagonal + (string1[y - 1] != string2[x - 1]));
+                lastdiagonal = olddiagonal;
+            }
+        }
+
+        result = column[length1];
+        free(column);
+    }
+
+    return result;
+}
+
+char *W_NearestFilename(char *path, char *string)
+{
+    WIN32_FIND_DATA FindFileData;
+    char            *file = M_StringJoin(path, DIR_SEPARATOR_S "*.wad", NULL);
+    HANDLE          hFile = FindFirstFile(file, &FindFileData);
+    int             bestdistance = INT_MAX;
+    char            filename[MAX_PATH];
+    char            *string1;
+
+    if (hFile == INVALID_HANDLE_VALUE)
+        return path;
+
+    M_StringCopy(filename, string, sizeof(filename));
+    string1 = removeext(string);
+
+    do
+    {
+        if (!(FindFileData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY))
+        {
+            char    *string2 = removeext(FindFileData.cFileName);
+            int     distance = LevenshteinDistance(string1, string2);
+
+            if (distance <= 2 && distance < bestdistance)
+            {
+                M_StringCopy(filename, FindFileData.cFileName, sizeof(filename));
+                bestdistance = distance;
+            }
+
+            free(string2);
+        }
+    } while (FindNextFile(hFile, &FindFileData));
+
+    FindClose(hFile);
+    free(file);
+    free(string1);
+    return M_StringJoin(path, DIR_SEPARATOR_S, filename, NULL);
+}
+#endif
+
 //
 // LUMP BASED ROUTINES.
 //
@@ -204,6 +276,7 @@ char *GetCorrectCase(char *path)
 //  found (PWAD, if all required lumps are present).
 // Files with a .wad extension are wadlink files
 //  with multiple lumps.
+//
 dboolean W_AddFile(char *filename, dboolean automatic)
 {
     static dboolean packagewadadded;
@@ -213,7 +286,7 @@ dboolean W_AddFile(char *filename, dboolean automatic)
     filelump_t      *fileinfo;
     filelump_t      *filerover;
     lumpinfo_t      *filelumps;
-    char            *lumps_str;
+    char            *temp;
 
     // open the file and add to directory
     wadfile_t       *wadfile = W_OpenFile(filename);
@@ -239,6 +312,7 @@ dboolean W_AddFile(char *filename, dboolean automatic)
         bfgedition = IsBFGEdition(filename);
     else if ((M_StringCompare(leafname(filename), "SIGIL_v1_21.wad")
         || M_StringCompare(leafname(filename), "SIGIL_v1_2.wad")
+        || M_StringCompare(leafname(filename), "SIGIL_v1_1.wad")
         || M_StringCompare(leafname(filename), "SIGIL.wad")) && automatic)
         autosigil = true;
     else if (M_StringCompare(leafname(filename), "SIGIL_SHREDS.wad")
@@ -275,14 +349,18 @@ dboolean W_AddFile(char *filename, dboolean automatic)
         filerover++;
     }
 
-    lumps_str = commify((int64_t)numlumps - startlump);
-    C_Output("%s %s lump%s from %s <b>%s</b>.", (automatic ? "Automatically added" : "Added"), lumps_str,
+    temp = commify((int64_t)numlumps - startlump);
+    C_Output("%s %s lump%s from %s <b>%s</b>.", (automatic ? "Automatically added" : "Added"), temp,
         (numlumps - startlump == 1 ? "" : "s"), (wadfile->type == IWAD ? "IWAD" : "PWAD"), wadfile->path);
 
     if (M_StringCompare(leafname(filename), "SIGIL_v1_21.wad")
         || M_StringCompare(leafname(filename), "SIGIL_v1_2.wad")
+        || M_StringCompare(leafname(filename), "SIGIL_v1_1.wad")
         || M_StringCompare(leafname(filename), "SIGIL.wad"))
         C_Output("<i><b>SIGIL</b></i> is now available to play from the episode menu.");
+    else if (M_StringCompare(leafname(filename), "SIGIL_SHREDS.WAD")
+        || M_StringCompare(leafname(filename), "SIGIL_SHREDS_COMPAT.wad"))
+        C_Output("Buckethead's soundtrack will now be used when playing <i><b>SIGIL.</b></i>");
     else if (M_StringCompare(leafname(filename), "DOOM.WAD"))
         C_Output("<i><b>E1M4B: Phobos Mission Control</b></i> and <i><b>E1M8B: Tech Gone Bad</b></i> "
             "are now available to play using the <b>map</b> CCMD.");
@@ -290,7 +368,7 @@ dboolean W_AddFile(char *filename, dboolean automatic)
         C_Output("<i><b>No Rest For The Living</b></i> is now available to play from the expansion menu.");
 
     free(fileinfo);
-    free(lumps_str);
+    free(temp);
 
     if (!packagewadadded)
     {
@@ -304,7 +382,7 @@ dboolean W_AddFile(char *filename, dboolean automatic)
 }
 
 // Hash function used for lump names.
-// Must be mod'ed with table size.
+// Must be modded with table size.
 // Can be used for any 8-character names.
 // by Lee Killough
 unsigned int W_LumpNameHash(const char *s)

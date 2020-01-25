@@ -7,7 +7,7 @@
 ========================================================================
 
   Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2019 by Brad Harding.
+  Copyright © 2013-2020 by Brad Harding.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
@@ -221,8 +221,10 @@ dboolean I_MidiRPCResumeSong(void)
 dboolean I_MidiRPCInitServer(void)
 {
     dboolean    result;
+    char        *temp = M_GetExecutableFolder();
 
-    M_snprintf(module, sizeof(module), "%s" DIR_SEPARATOR_S "midiproc.exe", M_GetExecutableFolder());
+    M_snprintf(module, sizeof(module), "%s" DIR_SEPARATOR_S "midiproc.exe", temp);
+    free(temp);
 
     // Look for executable file
     if (!M_FileExists(module))

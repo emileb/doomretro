@@ -7,7 +7,7 @@
 ========================================================================
 
   Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2019 by Brad Harding.
+  Copyright © 2013-2020 by Brad Harding.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
@@ -265,7 +265,7 @@ static void R_InitTextures(void)
         char            *name_p;
     } pnameslump_t;
 
-    pnameslump_t        *pnameslumps = malloc(sizeof(*pnameslumps));
+    pnameslump_t        *pnameslumps = malloc(sizeof(pnameslump_t));
     int                 maxpnameslumps = 1;
     int                 numpnameslumps = 0;
     const maptexture_t  *mtexture;
@@ -288,7 +288,7 @@ static void R_InitTextures(void)
             if (numpnameslumps == maxpnameslumps)
             {
                 maxpnameslumps++;
-                pnameslumps = I_Realloc(pnameslumps, maxpnameslumps * sizeof(*pnameslumps));
+                pnameslumps = I_Realloc(pnameslumps, maxpnameslumps * sizeof(pnameslump_t));
             }
 
             pnameslumps[numpnameslumps].names = W_CacheLumpNum(i);
@@ -318,7 +318,7 @@ static void R_InitTextures(void)
             while (p2 >= firstflat && p2 <= lastflat)
                 p2 = W_RangeCheckNumForName(0, p2 - 1, name);
 
-            patchlookup[patch++] = (p2 != -1 ? p2 : p1);
+            patchlookup[patch++] = (p2 >= 0 ? p2 : p1);
         }
 
     // Load the map texture definitions from textures.lmp.
@@ -330,7 +330,7 @@ static void R_InitTextures(void)
     maxoff = W_LumpLength(maptex_lump[0]);
     directory = maptex1 + 1;
 
-    if (W_CheckNumForName("TEXTURE2") != -1)
+    if (W_CheckNumForName("TEXTURE2") >= 0)
     {
         maptex_lump[1] = W_GetNumForName("TEXTURE2");
         maptex2 = W_CacheLumpNum(maptex_lump[1]);
@@ -387,7 +387,12 @@ static void R_InitTextures(void)
             patch->patch = patchlookup[SHORT(mpatch->patch)];
 
             if (patch->patch == -1)
-                C_Warning(1, "Patch %i is missing in the <b>%.8s</b> texture.", SHORT(mpatch->patch), uppercase(texture->name));
+            {
+                char    *temp = uppercase(texture->name);
+
+                C_Warning(1, "Patch %i is missing in the <b>%.8s</b> texture.", SHORT(mpatch->patch), temp);
+                free(temp);
+            }
         }
 
         for (mask = 1; mask * 2 <= texture->width; mask <<= 1);
@@ -484,42 +489,37 @@ static void R_InitSpriteLumps(void)
     {
         if (M_StringCompare(sc_String, "FIXSPRITEOFFSETS"))
         {
-            char    *sc_String_free;
-
             SC_MustGetString();
-            sc_String_free = removeext(sc_String);
 
-            if (M_StringCompare(pwadfile, sc_String_free))
+            if (M_StringCompare(pwadfile, sc_String))
             {
                 fixspriteoffsets = true;
                 M_SKULL1 = false;
             }
-
-            free(sc_String_free);
         }
         else if (M_StringCompare(sc_String, "NOTRANSLUCENCY"))
         {
-            char    *sc_String_free;
+            char    *temp;
 
             SC_MustGetString();
-            sc_String_free = removeext(sc_String);
+            temp = removeext(sc_String);
 
-            if (M_StringCompare(pwadfile, sc_String_free))
+            if (M_StringCompare(pwadfile, temp))
                 notranslucency = true;
 
-            free(sc_String_free);
+            free(temp);
         }
         else if (M_StringCompare(sc_String, "TELEFRAGONMAP30"))
         {
-            char    *sc_String_free;
+            char    *temp;
 
             SC_MustGetString();
-            sc_String_free = removeext(sc_String);
+            temp = removeext(sc_String);
 
-            if (M_StringCompare(pwadfile, sc_String_free))
+            if (M_StringCompare(pwadfile, temp))
                 telefragonmap30 = true;
 
-            free(sc_String_free);
+            free(temp);
         }
     }
 
@@ -685,8 +685,8 @@ static void R_InitColormaps(void)
     if (numcolormaps == 1)
         C_Output("Using the <b>COLORMAP</b> lump in %s <b>%s</b>.", (colormapwad->type == IWAD ? "IWAD" : "PWAD"), colormapwad->path);
     else
-        C_Output("Using %s colormaps from the <b>COLORMAP</b> lump in %s <b>%s</b>.",
-            commify(numcolormaps), (colormapwad->type == IWAD ? "IWAD" : "PWAD"), colormapwad->path);
+        C_Output("Using %i colormaps from the <b>COLORMAP</b> lump in %s <b>%s</b>.",
+            numcolormaps, (colormapwad->type == IWAD ? "IWAD" : "PWAD"), colormapwad->path);
 
     palsrc = palette = PLAYPAL;
 
@@ -718,7 +718,7 @@ int R_ColormapNumForName(char *name)
         return -1;
 
     if (strncasecmp(name, "COLORMAP", 8))     // COLORMAP predefined to return 0
-        if ((i = W_CheckNumForName(name)) != -1)
+        if ((i = W_CheckNumForName(name)) >= 0)
             i -= firstcolormaplump;
 
     return (i > numcolormaps ? -1 : i);
@@ -750,7 +750,12 @@ int R_FlatNumForName(char *name)
     if (i == -1)
     {
         if (*name != '-')
-            C_Warning(1, "The <b>%.8s</b> flat texture can't be found.", uppercase(name));
+        {
+            char    *temp = uppercase(name);
+
+            C_Warning(1, "The <b>%.8s</b> flat texture can't be found.", temp);
+            free(temp);
+        }
 
         return missingflatnum;
     }
@@ -803,7 +808,12 @@ int R_TextureNumForName(char *name)
     if (i == -1)
     {
         if (*name != '-')
-            C_Warning(1, "The <b>%.8s</b> texture can't be found.", uppercase(name));
+        {
+            char    *temp = uppercase(name);
+
+            C_Warning(1, "The <b>%.8s</b> texture can't be found.", temp);
+            free(temp);
+        }
 
         return 0;
     }

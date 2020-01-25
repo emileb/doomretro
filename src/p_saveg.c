@@ -7,7 +7,7 @@
 ========================================================================
 
   Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2019 by Brad Harding.
+  Copyright © 2013-2020 by Brad Harding.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
@@ -214,6 +214,8 @@ static mobj_t *P_IndexToThing(int index)
 //
 static void saveg_read_mobj_t(mobj_t *str)
 {
+    int state;
+
     str->x = saveg_read32();
     str->y = saveg_read32();
     str->z = saveg_read32();
@@ -230,7 +232,7 @@ static void saveg_read_mobj_t(mobj_t *str)
     str->momz = saveg_read32();
     str->type = (mobjtype_t)saveg_read_enum();
     str->tics = saveg_read32();
-    str->state = &states[saveg_read32()];
+    str->state = ((state = saveg_read32()) > 0 && state < NUMSTATES ? &states[state] : NULL);
     str->flags = saveg_read32();
     str->flags2 = saveg_read32();
     str->health = saveg_read32();
@@ -270,8 +272,8 @@ static void saveg_read_mobj_t(mobj_t *str)
             str->name[i] = saveg_read8();
 
     str->madesound = saveg_read32();
+    str->flags3 = saveg_read32();
 
-    saveg_read32();
     saveg_read32();
     saveg_read32();
     saveg_read32();
@@ -339,8 +341,8 @@ static void saveg_write_mobj_t(mobj_t *str)
     }
 
     saveg_write32(str->madesound);
+    saveg_write32(str->flags3);
 
-    saveg_write32(0);
     saveg_write32(0);
     saveg_write32(0);
     saveg_write32(0);
@@ -398,7 +400,7 @@ static void saveg_read_pspdef_t(pspdef_t *str)
 {
     int state;
 
-    str->state = ((state = saveg_read32()) > 0 ? &states[state] : NULL);
+    str->state = ((state = saveg_read32()) > 0 && state < NUMSTATES ? &states[state] : NULL);
     str->tics = saveg_read32();
     str->sx = saveg_read32();
     str->sy = saveg_read32();
@@ -1054,46 +1056,46 @@ void P_UnArchivePlayer(void)
 //
 void P_ArchiveWorld(void)
 {
-    sector_t    *sec = sectors;
-    line_t      *li = lines;
+    sector_t    *sector = sectors;
+    line_t      *line = lines;
 
     // do sectors
-    for (int i = 0; i < numsectors; i++, sec++)
+    for (int i = 0; i < numsectors; i++, sector++)
     {
-        saveg_write16(sec->floorheight >> FRACBITS);
-        saveg_write16(sec->ceilingheight >> FRACBITS);
-        saveg_write16(sec->floorpic);
-        saveg_write16(sec->ceilingpic);
-        saveg_write16(sec->lightlevel);
-        saveg_write16(sec->special);
-        saveg_write16(sec->tag);
-        saveg_write32(P_ThingToIndex(sec->soundtarget));
+        saveg_write16(sector->floorheight >> FRACBITS);
+        saveg_write16(sector->ceilingheight >> FRACBITS);
+        saveg_write16(sector->floorpic);
+        saveg_write16(sector->ceilingpic);
+        saveg_write16(sector->lightlevel);
+        saveg_write16(sector->special);
+        saveg_write16(sector->tag);
+        saveg_write32(P_ThingToIndex(sector->soundtarget));
     }
 
     // do lines
-    for (int i = 0; i < numlines; i++, li++)
+    for (int i = 0; i < numlines; i++, line++)
     {
-        saveg_write16(li->flags);
-        saveg_write16(li->special);
-        saveg_write16(li->tag);
+        saveg_write16(line->flags);
+        saveg_write16(line->special);
+        saveg_write16(line->tag);
 
         for (int j = 0; j < 2; j++)
         {
-            side_t  *si;
+            side_t  *side;
 
-            if (li->sidenum[j] == NO_INDEX)
+            if (line->sidenum[j] == NO_INDEX)
                 continue;
 
-            si = sides + li->sidenum[j];
+            side = sides + line->sidenum[j];
 
-            saveg_write16(si->textureoffset >> FRACBITS);
-            saveg_write16(si->rowoffset >> FRACBITS);
-            saveg_write16(si->toptexture);
-            saveg_write16(si->bottomtexture);
-            saveg_write16(si->midtexture);
-            saveg_write_bool(si->missingtoptexture);
-            saveg_write_bool(si->missingbottomtexture);
-            saveg_write_bool(si->missingmidtexture);
+            saveg_write16(side->textureoffset >> FRACBITS);
+            saveg_write16(side->rowoffset >> FRACBITS);
+            saveg_write16(side->toptexture);
+            saveg_write16(side->bottomtexture);
+            saveg_write16(side->midtexture);
+            saveg_write_bool(side->missingtoptexture);
+            saveg_write_bool(side->missingbottomtexture);
+            saveg_write_bool(side->missingmidtexture);
         }
     }
 }
@@ -1103,50 +1105,50 @@ void P_ArchiveWorld(void)
 //
 void P_UnArchiveWorld(void)
 {
-    sector_t    *sec = sectors;
-    line_t      *li = lines;
+    sector_t    *sector = sectors;
+    line_t      *line = lines;
 
     // do sectors
-    for (int i = 0; i < numsectors; i++, sec++)
+    for (int i = 0; i < numsectors; i++, sector++)
     {
-        sec->floorheight = saveg_read16() << FRACBITS;
-        sec->ceilingheight = saveg_read16() << FRACBITS;
-        sec->floorpic = saveg_read16();
-        sec->terraintype = terraintypes[sec->floorpic];
-        sec->ceilingpic = saveg_read16();
-        sec->lightlevel = saveg_read16();
-        sec->special = saveg_read16();
-        sec->tag = saveg_read16();
-        sec->ceilingdata = NULL;
-        sec->floordata = NULL;
-        sec->lightingdata = NULL;
+        sector->floorheight = saveg_read16() << FRACBITS;
+        sector->ceilingheight = saveg_read16() << FRACBITS;
+        sector->floorpic = saveg_read16();
+        sector->terraintype = terraintypes[sector->floorpic];
+        sector->ceilingpic = saveg_read16();
+        sector->lightlevel = saveg_read16();
+        sector->special = saveg_read16();
+        sector->tag = saveg_read16();
+        sector->ceilingdata = NULL;
+        sector->floordata = NULL;
+        sector->lightingdata = NULL;
         soundtargets[MIN(i, TARGETLIMIT - 1)] = saveg_read32();
     }
 
     // do lines
-    for (int i = 0; i < numlines; i++, li++)
+    for (int i = 0; i < numlines; i++, line++)
     {
-        li->flags = saveg_read16();
-        li->special = saveg_read16();
-        li->tag = saveg_read16();
+        line->flags = saveg_read16();
+        line->special = saveg_read16();
+        line->tag = saveg_read16();
 
         for (int j = 0; j < 2; j++)
         {
-            side_t  *si;
+            side_t  *side;
 
-            if (li->sidenum[j] == NO_INDEX)
+            if (line->sidenum[j] == NO_INDEX)
                 continue;
 
-            si = sides + li->sidenum[j];
+            side = sides + line->sidenum[j];
 
-            si->textureoffset = saveg_read16() << FRACBITS;
-            si->rowoffset = saveg_read16() << FRACBITS;
-            si->toptexture = saveg_read16();
-            si->bottomtexture = saveg_read16();
-            si->midtexture = saveg_read16();
-            si->missingtoptexture = saveg_read_bool();
-            si->missingbottomtexture = saveg_read_bool();
-            si->missingmidtexture = saveg_read_bool();
+            side->textureoffset = saveg_read16() << FRACBITS;
+            side->rowoffset = saveg_read16() << FRACBITS;
+            side->toptexture = saveg_read16();
+            side->bottomtexture = saveg_read16();
+            side->midtexture = saveg_read16();
+            side->missingtoptexture = saveg_read_bool();
+            side->missingbottomtexture = saveg_read_bool();
+            side->missingmidtexture = saveg_read_bool();
         }
     }
 }
@@ -1315,7 +1317,7 @@ void P_RestoreTargets(void)
 void P_ArchiveSpecials(void)
 {
     int         i = maxbuttons;
-    button_t    *button_ptr = buttonlist;
+    button_t    *button = buttonlist;
 
     // save off the current thinkers
     for (thinker_t *th = thinkers[th_misc].cnext; th != &thinkers[th_misc]; th = th->cnext)
@@ -1427,13 +1429,13 @@ void P_ArchiveSpecials(void)
 
     do
     {
-        if (button_ptr->btimer)
+        if (button->btimer)
         {
             saveg_write8(tc_button);
-            saveg_write_button_t(button_ptr);
+            saveg_write_button_t(button);
         }
 
-        button_ptr++;
+        button++;
     } while (--i);
 
     // add a terminating marker

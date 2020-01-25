@@ -7,7 +7,7 @@
 ========================================================================
 
   Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2019 by Brad Harding.
+  Copyright © 2013-2020 by Brad Harding.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
@@ -56,7 +56,7 @@ extern char     *packageconfig;
 extern dboolean vanilla;
 extern dboolean togglingvanilla;
 
-#define NUMCVARS                                    179
+#define NUMCVARS                                    180
 
 #define CONFIG_VARIABLE_INT(name, set)              { #name, &name, DEFAULT_INT,           set          }
 #define CONFIG_VARIABLE_INT_UNSIGNED(name, set)     { #name, &name, DEFAULT_INT_UNSIGNED,  set          }
@@ -151,6 +151,7 @@ static default_t cvars[NUMCVARS] =
     CONFIG_VARIABLE_INT          (r_floatbob,                                        BOOLVALUEALIAS     ),
     CONFIG_VARIABLE_INT          (r_fov,                                             NOVALUEALIAS       ),
     CONFIG_VARIABLE_FLOAT        (r_gamma,                                           GAMMAVALUEALIAS    ),
+    CONFIG_VARIABLE_INT          (r_graduallighting,                                 BOOLVALUEALIAS     ),
     CONFIG_VARIABLE_INT          (r_homindicator,                                    BOOLVALUEALIAS     ),
     CONFIG_VARIABLE_INT          (r_hud,                                             BOOLVALUEALIAS     ),
     CONFIG_VARIABLE_INT          (r_hud_translucency,                                BOOLVALUEALIAS     ),
@@ -196,7 +197,7 @@ static default_t cvars[NUMCVARS] =
     CONFIG_VARIABLE_STRING       (vid_scaleapi,                                      NOVALUEALIAS       ),
     CONFIG_VARIABLE_STRING       (vid_scalefilter,                                   NOVALUEALIAS       ),
     CONFIG_VARIABLE_OTHER        (vid_screenresolution,                              NOVALUEALIAS       ),
-    CONFIG_VARIABLE_INT          (vid_vsync,                                         BOOLVALUEALIAS     ),
+    CONFIG_VARIABLE_INT          (vid_vsync,                                         VSYNCVALUEALIAS    ),
     CONFIG_VARIABLE_INT          (vid_widescreen,                                    BOOLVALUEALIAS     ),
     CONFIG_VARIABLE_OTHER        (vid_windowpos,                                     NOVALUEALIAS       ),
     CONFIG_VARIABLE_OTHER        (vid_windowsize,                                    NOVALUEALIAS       ),
@@ -258,21 +259,23 @@ static default_t cvars[NUMCVARS] =
 
 valuealias_t valuealiases[] =
 {
-    { "off",       0, BOOLVALUEALIAS      }, { "on",      1, BOOLVALUEALIAS      },
-    { "0",         0, BOOLVALUEALIAS      }, { "1",       1, BOOLVALUEALIAS      },
-    { "no",        0, BOOLVALUEALIAS      }, { "yes",     1, BOOLVALUEALIAS      },
-    { "false",     0, BOOLVALUEALIAS      }, { "true",    1, BOOLVALUEALIAS      },
-    { "low",       0, DETAILVALUEALIAS    }, { "high",    1, DETAILVALUEALIAS    },
-    { "off",       1, GAMMAVALUEALIAS     }, { "none",    0, BLOODVALUEALIAS     },
-    { "red",       1, BLOODVALUEALIAS     }, { "all",     2, BLOODVALUEALIAS     },
-    { "imperial",  0, UNITSVALUEALIAS     }, { "metric",  1, UNITSVALUEALIAS     },
-    { "off",       0, CAPVALUEALIAS       }, { "none",   -1, SKYVALUEALIAS       },
-    { "off",      -1, SKYVALUEALIAS       }, { "none",    5, FACEBACKVALUEALIAS  },
-    { "off",       5, FACEBACKVALUEALIAS  }, { "none",    0, ARMORTYPEVALUEALIAS },
-    { "green",     1, ARMORTYPEVALUEALIAS }, { "blue",    2, ARMORTYPEVALUEALIAS },
-    { "none",      0, CROSSHAIRVALUEALIAS }, { "off",     0, CROSSHAIRVALUEALIAS },
-    { "cross",     1, CROSSHAIRVALUEALIAS }, { "dot",     2, CROSSHAIRVALUEALIAS },
-    { "",          0, NOVALUEALIAS        }
+    { "off",     0, BOOLVALUEALIAS      }, { "on",        1, BOOLVALUEALIAS      },
+    { "0",       0, BOOLVALUEALIAS      }, { "1",         1, BOOLVALUEALIAS      },
+    { "no",      0, BOOLVALUEALIAS      }, { "yes",       1, BOOLVALUEALIAS      },
+    { "false",   0, BOOLVALUEALIAS      }, { "true",      1, BOOLVALUEALIAS      },
+    { "low",     0, DETAILVALUEALIAS    }, { "high",      1, DETAILVALUEALIAS    },
+    { "off",     1, GAMMAVALUEALIAS     }, { "none",      0, BLOODVALUEALIAS     },
+    { "red",     1, BLOODVALUEALIAS     }, { "all",       2, BLOODVALUEALIAS     },
+    { "green",   3, BLOODVALUEALIAS     }, { "imperial",  0, UNITSVALUEALIAS     },
+    { "metric",  1, UNITSVALUEALIAS     }, { "off",       0, CAPVALUEALIAS       },
+    { "none",   -1, SKYVALUEALIAS       }, { "off",      -1, SKYVALUEALIAS       },
+    { "none",    5, FACEBACKVALUEALIAS  }, { "off",       5, FACEBACKVALUEALIAS  },
+    { "none",    0, ARMORTYPEVALUEALIAS }, { "green",     1, ARMORTYPEVALUEALIAS },
+    { "blue",    2, ARMORTYPEVALUEALIAS }, { "none",      0, CROSSHAIRVALUEALIAS },
+    { "off",     0, CROSSHAIRVALUEALIAS }, { "cross",     1, CROSSHAIRVALUEALIAS },
+    { "dot",     2, CROSSHAIRVALUEALIAS }, { "adaptive", -1, VSYNCVALUEALIAS     },
+    { "off",     0, VSYNCVALUEALIAS     }, { "on",        1, VSYNCVALUEALIAS     },
+    { "",        0, NOVALUEALIAS        }
 };
 
 static void SaveBind(FILE *file, char *control, char *string)
@@ -355,10 +358,10 @@ void M_SaveCVARs(void)
 
                 if (!flag)
                 {
-                    char    *v_str = commify(v);
+                    char    *temp = commify(v);
 
-                    fputs(v_str, file);
-                    free(v_str);
+                    fputs(temp, file);
+                    free(temp);
                 }
 
                 break;
@@ -366,10 +369,10 @@ void M_SaveCVARs(void)
 
             case DEFAULT_INT_UNSIGNED:
             {
-                char    *cvars_location_free = commify(*(unsigned int *)cvars[i].location);
+                char    *temp = commify(*(unsigned int *)cvars[i].location);
 
-                fputs(cvars_location_free, file);
-                free(cvars_location_free);
+                fputs(temp, file);
+                free(temp);
                 break;
             }
 
@@ -388,10 +391,10 @@ void M_SaveCVARs(void)
 
                 if (!flag)
                 {
-                    char    *v_str = commify(v);
+                    char    *temp = commify(v);
 
-                    fprintf(file, "%s%%", v_str);
-                    free(v_str);
+                    fprintf(file, "%s%%", temp);
+                    free(temp);
                 }
 
                 break;
@@ -442,10 +445,10 @@ void M_SaveCVARs(void)
 
                 if (!flag)
                 {
-                    char    *v_str = striptrailingzero(v, 1);
+                    char    *temp = striptrailingzero(v, 1);
 
-                    fprintf(file, "%s%%", v_str);
-                    free(v_str);
+                    fprintf(file, "%s%%", temp);
+                    free(temp);
                 }
 
                 break;
@@ -710,7 +713,7 @@ static void M_CheckCVARs(void)
 
     r_berserkintensity = BETWEEN(r_berserkintensity_min, r_berserkintensity, r_berserkintensity_max);
 
-    if (r_blood != r_blood_none && r_blood != r_blood_red && r_blood != r_blood_all)
+    if (r_blood != r_blood_none && r_blood != r_blood_red && r_blood != r_blood_all && r_blood != r_blood_green)
         r_blood = r_blood_default;
 
     r_bloodsplats_max = BETWEEN(r_bloodsplats_max_min, r_bloodsplats_max, r_bloodsplats_max_max);
@@ -763,6 +766,9 @@ static void M_CheckCVARs(void)
 
     r_gamma = BETWEENF(r_gamma_min, r_gamma, r_gamma_max);
     I_SetGamma(r_gamma);
+
+    if (r_graduallighting != false && r_graduallighting != true)
+        r_graduallighting = r_graduallighting_default;
 
     if (r_homindicator != false && r_homindicator != true)
         r_homindicator = r_homindicator_default;
@@ -867,16 +873,18 @@ static void M_CheckCVARs(void)
     if (vid_pillarboxes != false && vid_pillarboxes != true)
         vid_pillarboxes = vid_pillarboxes_default;
 
-    if (!M_StringCompare(vid_scaleapi, vid_scaleapi_direct3d)
+    if (!M_StringCompare(vid_scaleapi, vid_scaleapi_software)
+#if defined(_WIN32)
+        && !M_StringCompare(vid_scaleapi, vid_scaleapi_direct3d)
+#endif
 #if defined(__APPLE__)
         && !M_StringCompare(vid_scaleapi, vid_scaleapi_metal)
 #endif
-        && !M_StringCompare(vid_scaleapi, vid_scaleapi_opengl)
 #if !defined(_WIN32)
         && !M_StringCompare(vid_scaleapi, vid_scaleapi_opengles)
         && !M_StringCompare(vid_scaleapi, vid_scaleapi_opengles2)
 #endif
-        && !M_StringCompare(vid_scaleapi, vid_scaleapi_software))
+        && !M_StringCompare(vid_scaleapi, vid_scaleapi_opengl))
         vid_scaleapi = vid_scaleapi_default;
 
     if (!M_StringCompare(vid_scalefilter, vid_scalefilter_linear)
@@ -884,7 +892,7 @@ static void M_CheckCVARs(void)
         && !M_StringCompare(vid_scalefilter, vid_scalefilter_nearest_linear))
         vid_scalefilter = vid_scalefilter_default;
 
-    if (vid_vsync != false && vid_vsync != true)
+    if (vid_vsync != vid_vsync_adaptive && vid_vsync != vid_vsync_off && vid_vsync != vid_vsync_on)
         vid_vsync = vid_vsync_default;
 
     if (vid_widescreen != false && vid_widescreen != true)
@@ -963,6 +971,9 @@ void M_LoadCVARs(char *filename)
 
         for (int i = 0; i < NUMKEYS; i++)
             keyactionlist[i][0] = '\0';
+
+        for (int i = 0; i < MAX_MOUSE_BUTTONS + 2; i++)
+            mouseactionlist[i][0] = '\0';
     }
 
     while (!feof(file))
@@ -996,10 +1007,10 @@ void M_LoadCVARs(char *filename)
 
         if (togglingvanilla)
         {
-            char    *value_free = uncommify(value);
+            char    *temp = uncommify(value);
 
-            C_ValidateInput(M_StringJoin(cvar, " ", value_free, NULL));
-            free(value_free);
+            C_ValidateInput(M_StringJoin(cvar, " ", temp, NULL));
+            free(temp);
             continue;
         }
 
@@ -1027,61 +1038,59 @@ void M_LoadCVARs(char *filename)
 
                 case DEFAULT_INT:
                 {
-                    char    *value_free = uncommify(value);
+                    char    *temp = uncommify(value);
 
-                    M_StringCopy(value, value_free, sizeof(value));
+                    M_StringCopy(value, temp, sizeof(value));
                     *(int *)cvars[i].location = ParseIntParameter(value, cvars[i].valuealiastype);
-                    free(value_free);
+                    free(temp);
                     break;
                 }
 
                 case DEFAULT_INT_UNSIGNED:
                 {
-                    char    *value_free = uncommify(value);
+                    char    *temp = uncommify(value);
 
-                    M_StringCopy(value, value_free, sizeof(value));
+                    M_StringCopy(value, temp, sizeof(value));
                     sscanf(value, "%10u", (unsigned int *)cvars[i].location);
-                    free(value_free);
+                    free(temp);
                     break;
                 }
 
                 case DEFAULT_INT_PERCENT:
                 {
-                    char    *value_free = uncommify(value);
+                    char    *temp = uncommify(value);
 
-                    M_StringCopy(value, value_free, sizeof(value));
-                    s = M_StringDuplicate(value);
+                    M_StringCopy(value, temp, sizeof(value));
 
-                    if (*s && s[strlen(s) - 1] == '%')
-                        s[strlen(s) - 1] = '\0';
+                    if (value[strlen(value) - 1] == '%')
+                        value[strlen(value) - 1] = '\0';
 
-                    *(int *)cvars[i].location = ParseIntParameter(s, cvars[i].valuealiastype);
-                    free(value_free);
+                    *(int *)cvars[i].location = ParseIntParameter(value, cvars[i].valuealiastype);
+                    free(temp);
                     break;
                 }
 
                 case DEFAULT_FLOAT:
                 {
-                    char    *value_free = uncommify(value);
+                    char    *temp = uncommify(value);
 
-                    M_StringCopy(value, value_free, sizeof(value));
+                    M_StringCopy(value, temp, sizeof(value));
                     *(float *)cvars[i].location = ParseFloatParameter(value, cvars[i].valuealiastype);
-                    free(value_free);
+                    free(temp);
                     break;
                 }
 
                 case DEFAULT_FLOAT_PERCENT:
                 {
-                    char    *value_free = uncommify(value);
+                    char    *temp = uncommify(value);
 
-                    M_StringCopy(value, value_free, sizeof(value));
-                    s = M_StringDuplicate(value);
+                    M_StringCopy(value, temp, sizeof(value));
 
-                    if (*s && s[strlen(s) - 1] == '%')
-                        s[strlen(s) - 1] = '\0';
+                    if (value[strlen(value) - 1] == '%')
+                        value[strlen(value) - 1] = '\0';
 
-                    *(float *)cvars[i].location = ParseFloatParameter(s, cvars[i].valuealiastype);
-                    free(value_free);
+                    *(float *)cvars[i].location = ParseFloatParameter(value, cvars[i].valuealiastype);
+                    free(temp);
                     break;
                 }
 
@@ -1099,17 +1108,17 @@ void M_LoadCVARs(char *filename)
 
     if (!togglingvanilla)
     {
-        char    *cvarcount_str = commify(cvarcount);
-        char    *statcount_str = commify(statcount);
-        char    *bindcount_str = commify(bindcount);
+        char    *temp1 = commify(cvarcount);
+        char    *temp2 = commify(statcount);
+        char    *temp3 = commify(bindcount);
 
-        C_Output("Loaded %s CVARs and %s player stats from <b>%s</b>.", cvarcount_str, statcount_str, filename);
-        C_Output("Bound %s actions to the keyboard, mouse and gamepad.", bindcount_str);
+        C_Output("Loaded %s CVARs and %s player stats from <b>%s</b>.", temp1, temp2, filename);
+        C_Output("Bound %s actions to the keyboard, mouse and gamepad.", temp3);
         M_CheckCVARs();
         cvarsloaded = true;
 
-        free(cvarcount_str);
-        free(statcount_str);
-        free(bindcount_str);
+        free(temp1);
+        free(temp2);
+        free(temp3);
     }
 }

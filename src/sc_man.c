@@ -7,7 +7,7 @@
 ========================================================================
 
   Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2019 by Brad Harding.
+  Copyright © 2013-2020 by Brad Harding.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
@@ -215,5 +215,8 @@ dboolean SC_Compare(char *text)
 
 static void SC_ScriptError(void)
 {
-    C_Warning(1, "Line %s in the <b>MAPINFO</b> lump is invalid.", commify(sc_Line));
+    char    *temp = commify(sc_Line);
+
+    C_Warning(1, "Line %s in the <b>MAPINFO</b> lump is invalid.", temp);
+    free(temp);
 }

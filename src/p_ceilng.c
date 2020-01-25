@@ -7,7 +7,7 @@
 ========================================================================
 
   Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2019 by Brad Harding.
+  Copyright © 2013-2020 by Brad Harding.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
@@ -37,6 +37,7 @@
 */
 
 #include "doomstat.h"
+#include "m_config.h"
 #include "p_local.h"
 #include "p_setup.h"
 #include "p_tick.h"
@@ -46,7 +47,7 @@
 // the list of ceilings moving currently, including crushers
 ceilinglist_t   *activeceilings;
 
-static void T_GradualLightingToCeiling(ceiling_t *ceiling)
+static void P_GradualLightingToCeiling(ceiling_t *ceiling)
 {
     sector_t    *sector = ceiling->sector;
     fixed_t     level = ceiling->topheight - sector->floorheight;
@@ -86,7 +87,8 @@ void T_MoveCeiling(ceiling_t *ceiling)
                         break;
                 }
 
-            T_GradualLightingToCeiling(ceiling);
+            if (r_graduallighting)
+                P_GradualLightingToCeiling(ceiling);
 
             if (res == pastdest)
             {
@@ -141,7 +143,8 @@ void T_MoveCeiling(ceiling_t *ceiling)
                         S_StartSectorSound(&ceiling->sector->soundorg, sfx_stnmov);
                 }
 
-            T_GradualLightingToCeiling(ceiling);
+            if (r_graduallighting)
+                P_GradualLightingToCeiling(ceiling);
 
             if (res == pastdest)
             {
@@ -235,7 +238,7 @@ dboolean EV_DoCeiling(line_t *line, ceiling_e type)
             return false;
     }
 
-    // Reactivate in-stasis ceilings...for certain types.
+    // Reactivate in-stasis ceilings... for certain types.
     switch (type)
     {
         case fastCrushAndRaise:

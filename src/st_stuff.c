@@ -7,7 +7,7 @@
 ========================================================================
 
   Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2019 by Brad Harding.
+  Copyright © 2013-2020 by Brad Harding.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
@@ -291,7 +291,7 @@ static dboolean movekey(char key)
         || key == keyboardback || key == keyboardback2 || key == keyboardstrafeleft || key == keyboardstraferight);
 }
 
-static void ST_initCheats(void)
+static void ST_InitCheats(void)
 {
     cheat_mus.movekey = movekey(cheat_mus.sequence[0]);
     cheat_mus_xy.movekey = movekey(cheat_mus_xy.sequence[0]);
@@ -458,7 +458,7 @@ dboolean ST_Responder(event_t *ev)
                     oldhealth = viewplayer->health;
                     P_GiveBody(god_health, false);
 
-                    if (oldhealth < 100)
+                    if (oldhealth < initial_health)
                         P_AddBonus();
 
                     C_Output(s_STSTR_DQDON);
@@ -624,13 +624,15 @@ dboolean ST_Responder(event_t *ev)
                         if (musnum != NONE)
                         {
                             static char msg[80];
+                            char        *temp = uppercase(S_music[musnum].name);
 
                             S_ChangeMusic(musnum, 1, true, false);
 
-                            M_snprintf(msg, sizeof(msg), s_STSTR_MUS, uppercase(S_music[musnum].name));
+                            M_snprintf(msg, sizeof(msg), s_STSTR_MUS, temp);
                             C_Output(msg);
                             HU_SetPlayerMessage(msg, false, false);
                             message_dontfuckwithme = true;
+                            free(temp);
                         }
                         else
                             idmus = false;
@@ -681,6 +683,7 @@ dboolean ST_Responder(event_t *ev)
                 {
                     S_StartSound(NULL, sfx_getpow);
                     C_Input(cheat_powerup[i - 1].sequence);
+                    C_Output(s_STSTR_BEHOLD);
 
                     if ((i != pw_strength && viewplayer->powers[i] >= 0 && viewplayer->powers[i] <= STARTFLASHING)
                         || (i == pw_strength && !viewplayer->powers[i]))
@@ -781,7 +784,7 @@ dboolean ST_Responder(event_t *ev)
                     cheat_noclip.chars_read = 0;
                     cheat_commercial_noclip.chars_read = 0;
 
-                    for (int j = 0; j < 7; j++)
+                    for (int j = 0; j < 6; j++)
                         cheat_powerup[j].chars_read = 0;
 
                     cheat_choppers.chars_read = 0;
@@ -809,7 +812,6 @@ dboolean ST_Responder(event_t *ev)
             {
                 idbehold = true;
 
-                C_Output(s_STSTR_BEHOLD);
                 HU_SetPlayerMessage(s_STSTR_BEHOLD, false, false);
                 message_dontfuckwithme = true;
             }
@@ -936,7 +938,7 @@ dboolean ST_Responder(event_t *ev)
             }
 
             // 'clev' change-level cheat
-            if (!consolecheat[0] && cht_CheckCheat(&cheat_clev, ev->data2))
+            if (!*consolecheat && cht_CheckCheat(&cheat_clev, ev->data2))
                 idclev = true;
 
             if (cht_CheckCheat(&cheat_clev_xy, ev->data2))
@@ -1220,7 +1222,7 @@ static void ST_UpdateWidgets(void)
 
 void ST_Ticker(void)
 {
-    if (!freeze)
+    if (!freeze && !paused && !menuactive && !consoleactive)
     {
         if (!vid_widescreen)
         {
@@ -1228,7 +1230,7 @@ void ST_Ticker(void)
             ST_UpdateWidgets();
             st_oldhealth = viewplayer->health;
         }
-        else if (r_hud && !paused && !menuactive && !consoleactive)
+        else if (r_hud)
         {
             st_randomnumber = M_Random();
             ST_UpdateFaceWidget();
@@ -1340,7 +1342,7 @@ void ST_Drawer(dboolean fullscreen, dboolean refresh)
     // Do red-/gold-shifts from damage/items
     ST_DoPaletteStuff();
 
-    if (vid_widescreen || menuactive || messagetoprint || inhelpscreens)
+    if (vid_widescreen || (menuactive && !consoleactive) || inhelpscreens)
         return;
 
     st_statusbaron = (!fullscreen || automapactive);
@@ -1536,12 +1538,6 @@ static void ST_CreateWidgets(void)
     STlib_InitMultIcon(&w_keyboxes[1], ST_KEY1X + (STBAR >= 3), ST_KEY1Y, keys, &keyboxes[1]);
     STlib_InitMultIcon(&w_keyboxes[2], ST_KEY2X + (STBAR >= 3), ST_KEY2Y, keys, &keyboxes[2]);
 
-#if SCREENSCALE == 1
-    usesmallnums = false;
-#else
-    usesmallnums = ((!STYSNUM0 && STBAR == 2) || gamemode == shareware);
-#endif
-
     // ammo count (all four kinds)
     STlib_InitNum(&w_ammo[am_clip], ST_AMMO0X, ST_AMMO0Y, shortnum, &viewplayer->ammo[am_clip], ST_AMMO0WIDTH);
     STlib_InitNum(&w_ammo[am_shell], ST_AMMO1X, ST_AMMO1Y, shortnum, &viewplayer->ammo[am_shell], ST_AMMO1WIDTH);
@@ -1590,5 +1586,12 @@ void ST_Init(void)
     if (gamemode == shareware)
         maxammo[am_cell] = 0;
 
-    ST_initCheats();
+#if SCREENSCALE == 1
+    usesmallnums = false;
+#else
+    usesmallnums = ((!STYSNUM0 && STBAR == 2) || gamemode == shareware);
+#endif
+
+    STLib_Init();
+    ST_InitCheats();
 }

@@ -7,7 +7,7 @@
 ========================================================================
 
   Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2019 by Brad Harding.
+  Copyright © 2013-2020 by Brad Harding.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
@@ -50,6 +50,7 @@
 #include "i_gamepad.h"
 #include "i_system.h"
 #include "i_timer.h"
+#include "m_cheat.h"
 #include "m_config.h"
 #include "m_menu.h"
 #include "m_misc.h"
@@ -132,13 +133,13 @@ static int *gamepadweapons[] =
 
 #define SLOWTURNTICS    6
 
-dboolean        gamekeydown[NUMKEYS];
-char            keyactionlist[NUMKEYS][255];
+dboolean        gamekeydown[NUMKEYS] = { 0 };
+char            keyactionlist[NUMKEYS][255] = { "" };
 static int      turnheld;                       // for accelerative turning
 
 static dboolean mousearray[MAX_MOUSE_BUTTONS + 1];
 dboolean        *mousebuttons = &mousearray[1]; // allow [-1]
-char            mouseactionlist[MAX_MOUSE_BUTTONS + 2][255];
+char            mouseactionlist[MAX_MOUSE_BUTTONS + 2][255] = { "" };
 
 dboolean        skipaction = false;
 
@@ -880,7 +881,6 @@ void G_Ticker(void)
 
     // do things to change the game state
     while (gameaction != ga_nothing)
-    {
         switch (gameaction)
         {
             case ga_loadlevel:
@@ -918,22 +918,12 @@ void G_Ticker(void)
                 break;
 
             case ga_screenshot:
-                if (gamestate == GS_LEVEL && !idbehold && !(viewplayer->cheats & CF_MYPOS))
-                {
-                    HU_ClearMessages();
-                    D_Display();
-                    D_Display();
-                }
-
-                idbehold = false;
                 G_DoScreenShot();
-                gameaction = ga_nothing;
                 break;
 
             default:
                 break;
         }
-    }
 
     // get commands, check consistency,
     // and build new consistency check
@@ -1085,6 +1075,19 @@ void G_ScreenShot(void)
 
 void G_DoScreenShot(void)
 {
+    if (idbehold)
+    {
+        idbehold = false;
+        C_Input(cheat_powerup[6].sequence);
+        C_Output(s_STSTR_BEHOLD);
+    }
+    else if (gamestate == GS_LEVEL && !(viewplayer->cheats & CF_MYPOS))
+    {
+        HU_ClearMessages();
+        D_Display();
+        D_Display();
+    }
+
     if (V_ScreenShot())
     {
         static char buffer[512];
@@ -1101,7 +1104,9 @@ void G_DoScreenShot(void)
             C_Output("<b>%s</b> saved.", lbmpath2);
     }
     else
-        C_Warning(1, "A screenshot couldn't be taken.");
+        C_Warning(0, "A screenshot couldn't be taken.");
+
+    gameaction = ga_nothing;
 }
 
 // DOOM Par Times
@@ -1151,13 +1156,39 @@ void G_SecretExitLevel(void)
     gameaction = ga_completed;
 }
 
+int G_GetParTime(void)
+{
+    int par = P_GetMapPar((gameepisode - 1) * 10 + gamemap);
+
+    if (par)
+        return par;
+    else
+    {
+        // [BH] have no par time if this level is from a PWAD
+        if (BTSX || (!canmodify && (!nerve || gamemap > 9) && !FREEDOOM))
+            return 0;
+        else if (gamemode == commercial)
+        {
+            // [BH] get correct par time for No Rest For The Living
+            //  and have no par time for TNT and Plutonia
+            if (gamemission == pack_nerve && gamemap <= 9)
+                return npars[gamemap - 1];
+            else if (gamemission == pack_tnt || gamemission == pack_plut)
+                return 0;
+            else
+                return cpars[gamemap - 1];
+        }
+        else
+            return pars[gameepisode][gamemap];
+    }
+}
+
 extern int  episode;
 
 static void G_DoCompleted(void)
 {
     int map = (gameepisode - 1) * 10 + gamemap;
     int nextmap = P_GetMapNext(map);
-    int par = P_GetMapPar(map);
     int secretnextmap = P_GetMapSecretNext(map);
 
     gameaction = ga_nothing;
@@ -1171,11 +1202,6 @@ static void G_DoCompleted(void)
         ST_Drawer(false, true);
     }
 
-    // [BH] allow the exit switch to turn on before the screen wipes
-    viewplayer->mo->momx = 0;
-    viewplayer->mo->momy = 0;
-    viewplayer->mo->momz = 0;
-    R_RenderPlayerView();
     I_Sleep(700);
 
     G_PlayerFinishLevel();      // take away cards and stuff
@@ -1196,7 +1222,7 @@ static void G_DoCompleted(void)
         {
             case 8:
                 // [BH] this episode is complete, so select the next episode in the menu
-                if ((gamemode == registered && gameepisode < 3) || (gamemode == retail && gameepisode < 4))
+                if ((gamemode == registered && gameepisode < 3) || (gamemode == retail && gameepisode < 4 + sigil))
                 {
                     episode++;
                     EpiDef.lastOn++;
@@ -1313,36 +1339,7 @@ static void G_DoCompleted(void)
     wminfo.maxkills = totalkills;
     wminfo.maxitems = totalitems;
     wminfo.maxsecret = totalsecret;
-
-    if (par)
-        wminfo.partime = TICRATE * par;
-    else
-    {
-        char    lump[5];
-
-        // [BH] have no par time if this level is from a PWAD
-        if (gamemode == commercial)
-            M_snprintf(lump, sizeof(lump), "MAP%02i", gamemap);
-        else
-            M_snprintf(lump, sizeof(lump), "E%iM%i", gameepisode, gamemap);
-
-        if (BTSX || (W_CheckMultipleLumps(lump) > 1 && (!nerve || gamemap > 9) && !FREEDOOM))
-            wminfo.partime = 0;
-        else if (gamemode == commercial)
-        {
-            // [BH] get correct par time for No Rest For The Living
-            //  and have no par time for TNT and Plutonia
-            if (gamemission == pack_nerve && gamemap <= 9)
-                wminfo.partime = TICRATE * npars[gamemap - 1];
-            else if (gamemission == pack_tnt || gamemission == pack_plut)
-                wminfo.partime = 0;
-            else
-                wminfo.partime = TICRATE * cpars[gamemap - 1];
-        }
-        else
-            wminfo.partime = TICRATE * pars[gameepisode][gamemap];
-    }
-
+    wminfo.partime = G_GetParTime() * TICRATE;
     wminfo.skills = (totalkills ? viewplayer->killcount : 1);
     wminfo.sitems = (totalitems ? viewplayer->itemcount : 1);
     wminfo.ssecret = viewplayer->secretcount;
@@ -1493,11 +1490,13 @@ void G_LoadedGameMessage(void)
     if (*savedescription)
     {
         static char buffer[1024];
+        char        *temp = titlecase(savedescription);
 
-        M_snprintf(buffer, sizeof(buffer), (loadaction == ga_autoloadgame ? s_GGAUTOLOADED : s_GGLOADED), titlecase(savedescription));
+        M_snprintf(buffer, sizeof(buffer), (loadaction == ga_autoloadgame ? s_GGAUTOLOADED : s_GGLOADED), temp);
         C_Output(buffer);
         HU_SetPlayerMessage(buffer, false, false);
         message_dontfuckwithme = true;
+        free(temp);
     }
 
     loadaction = ga_nothing;
@@ -1571,11 +1570,13 @@ static void G_DoSaveGame(void)
         else
         {
             static char buffer[1024];
+            char        *temp = titlecase(savedescription);
 
-            M_snprintf(buffer, sizeof(buffer), (gameaction == ga_autosavegame ? s_GGAUTOSAVED : s_GGSAVED), titlecase(savedescription));
+            M_snprintf(buffer, sizeof(buffer), (gameaction == ga_autosavegame ? s_GGAUTOSAVED : s_GGSAVED), temp);
             C_Output(buffer);
             HU_SetPlayerMessage(buffer, false, false);
             message_dontfuckwithme = true;
+            free(temp);
 
             if (gameaction != ga_autosavegame)
                 S_StartSound(NULL, sfx_swtchx);

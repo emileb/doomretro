@@ -7,7 +7,7 @@
 ========================================================================
 
   Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2019 by Brad Harding.
+  Copyright © 2013-2020 by Brad Harding.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
@@ -1463,7 +1463,7 @@ static void AM_DrawFline(int x0, int y0, int x1, int y1, byte *color,
 
                 while (x0 != x1)
                 {
-                    int mask = ~(error >> 31);
+                    int mask = ~(error >> (sizeof(int) * CHARBIT - 1));
 
                     putdot((x0 += sx), (y0 += (sy & mask)), color);
                     error += dy - (dx & mask);
@@ -1479,7 +1479,7 @@ static void AM_DrawFline(int x0, int y0, int x1, int y1, byte *color,
 
                 while (y0 != y1)
                 {
-                    int mask = ~(error >> 31);
+                    int mask = ~(error >> (sizeof(int) * CHARBIT - 1));
 
                     putdot((x0 += (sx & mask)), (y0 += sy), color);
                     error += dx - (dy & mask);
@@ -1885,8 +1885,8 @@ static void AM_DrawMarks(void)
         "122222211111122112211221122222211122221101111110",
         "011111101122221112222221122112211221111112222211"
         "122222211221122112211221122222211122221101111110",
-        "111111111222222112222221111112210001122100012211"
-        "001122100012211001122100012211000122100001111000",
+        "111111111222222112222221111112210001221100112210"
+        "001221100112210001221100012210000122100001111000",
         "011111101122221112222221122112211221122111222211"
         "122222211221122112211221122222211122221101111110",
         "011111101122221112222221122112211221122112222221"

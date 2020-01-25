@@ -7,7 +7,7 @@
 ========================================================================
 
   Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2019 by Brad Harding.
+  Copyright © 2013-2020 by Brad Harding.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
@@ -104,6 +104,8 @@ void P_SetPsprite(size_t position, statenum_t stnum);
 #define MAXBOB              0x100000
 #define MLOOKUNIT           8
 #define PLAYERSLOPE(a)      ((((a)->lookdir / MLOOKUNIT) << FRACBITS) / 153)
+
+extern dboolean autousing;
 
 void P_CalcHeight(void);
 void P_MovePlayer(void);

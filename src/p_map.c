@@ -7,7 +7,7 @@
 ========================================================================
 
   Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2019 by Brad Harding.
+  Copyright © 2013-2020 by Brad Harding.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
@@ -89,7 +89,6 @@ dboolean        infiniteheight = infiniteheight_default;
 
 unsigned int    stat_distancetraveled = 0;
 
-extern dboolean autousing;
 extern dboolean successfulshot;
 extern dboolean telefragonmap30;
 
@@ -376,14 +375,15 @@ static dboolean PIT_CheckLine(line_t *ld)
         return (tmunstuck && !untouched(ld) && FixedMul(tmx - tmthing->x, ld->dy) > FixedMul(tmy - tmthing->y, ld->dx));
     }
 
-    if (!(tmthing->flags & MF_MISSILE))
+    // killough 8/10/98: allow bouncing objects to pass through as missiles
+    if (!(tmthing->flags & (MF_MISSILE | MF_BOUNCES)))
     {
         if (ld->flags & ML_BLOCKING)                    // explicitly blocking everything
             return (tmunstuck && !untouched(ld));       // killough 8/1/98: allow escape
 
         // killough 8/9/98: monster-blockers don't affect friends
         // [BH] monster-blockers don't affect corpses
-        if (!tmthing->player && !(tmthing->flags & MF_CORPSE) && !(tmthing->flags & MF_FRIEND) && (ld->flags & ML_BLOCKMONSTERS))
+        if (!(tmthing->flags & MF_FRIEND || tmthing->player) && (ld->flags & ML_BLOCKMONSTERS) && !(tmthing->flags & MF_CORPSE))
             return false;                               // block monsters only
     }
 
@@ -431,10 +431,6 @@ static dboolean PIT_CheckThing(mobj_t *thing)
     dboolean    corpse;
     int         type;
 
-    // don't clip against self
-    if (thing == tmthing)
-        return true;
-
     flags = thing->flags;
     tmflags = tmthing->flags;
     corpse = flags & MF_CORPSE;
@@ -457,7 +453,8 @@ static dboolean PIT_CheckThing(mobj_t *thing)
             }
         }
 
-    if (!(flags & (MF_SOLID | MF_SPECIAL | MF_SHOOTABLE)))
+    // killough 11/98: add touchy things
+    if (!(flags & (MF_SOLID | MF_SPECIAL | MF_SHOOTABLE | MF_TOUCHY)))
         return true;
 
     // [BH] specify standard radius of 20 for pickups here as thing->radius
@@ -466,6 +463,36 @@ static dboolean PIT_CheckThing(mobj_t *thing)
 
     if (ABS(thing->x - tmx) >= blockdist || ABS(thing->y - tmy) >= blockdist)
         return true;                    // didn't hit it
+
+    // killough 11/98:
+    //
+    // This test has less information content (it's almost always false), so it
+    // should not be moved up to first, as it adds more overhead than it removes.
+
+    // don't clip against self
+    if (thing == tmthing)
+        return true;
+
+    // killough 11/98:
+    // TOUCHY flag, for mines or other objects which die on contact with solids.
+    // If a solid object of a different type comes in contact with a touchy
+    // thing, and the touchy thing is not the sole one moving relative to fixed
+    // surroundings such as walls, then the touchy thing dies immediately.
+    if ((flags & MF_TOUCHY)                                     // touchy object
+        && (tmflags & MF_SOLID)                                 // solid object touches it
+        && thing->health > 0                                    // touchy object is alive
+        && ((thing->flags3 & MF3_ARMED)                         // Thing is an armed mine
+            || sentient(thing))                                 // ...or a sentient thing
+        && (thing->type != tmthing->type                        // only different species
+            || thing->type == MT_PLAYER)                        // ...or different players
+        && thing->z + thing->height >= tmthing->z               // touches vertically
+        && tmthing->z + tmthing->height >= thing->z
+        && ((type ^ MT_PAIN) | (tmthing->type ^ MT_SKULL))      // PEs and lost souls are considered same
+        && ((type ^ MT_SKULL) | (tmthing->type ^ MT_PAIN)))     // (but Barons & Knights are intentionally not)
+    {
+        P_DamageMobj(thing, NULL, NULL, thing->health, true);   // kill object
+        return true;
+    }
 
     // [BH] check if things are stuck and allow move if it makes them further apart
     if (!thing->player && !corpse)
@@ -501,7 +528,8 @@ static dboolean PIT_CheckThing(mobj_t *thing)
     }
 
     // missiles can hit other things
-    if (tmflags & MF_MISSILE)
+    // killough 8/10/98: bouncing non-solid things can hit other things too
+    if ((tmflags & MF_MISSILE) || ((tmflags & MF_BOUNCES) && !(tmflags & MF_SOLID)))
     {
         int height = thing->info->projectilepassheight;
 
@@ -969,6 +997,9 @@ dboolean P_TryMove(mobj_t *thing, fixed_t x, fixed_t y, int dropoff)
                 felldown = (!(flags & MF_NOGRAVITY) && thing->z - tmfloorz > 24 * FRACUNIT);
         }
 
+        if ((flags & MF_BOUNCES) && !(flags & (MF_MISSILE | MF_NOGRAVITY)) && !sentient(thing) && tmfloorz - thing->z > 16 * FRACUNIT)
+            return false;   // too big a step up for bouncers under gravity
+
         // killough 11/98: prevent falling objects from going up too many steps
         if ((thing->flags2 & MF2_FALLING)
             && tmfloorz - thing->z > FixedMul(thing->momx, thing->momx) + FixedMul(thing->momy, thing->momy))
@@ -1233,7 +1264,7 @@ static void P_HitSlideLine(line_t *ld)
     {
         if (icyfloor && ABS(tmymove) > ABS(tmxmove))
         {
-            if (slidemo->player && slidemo->health > 0)
+            if (slidemo->health > 0)
                 S_StartSound(slidemo, sfx_oof);             // oooff!
 
             tmxmove /= 2;                                   // absorb half the momentum
@@ -1249,7 +1280,7 @@ static void P_HitSlideLine(line_t *ld)
     {
         if (icyfloor && ABS(tmxmove) > ABS(tmymove))
         {
-            if (slidemo->player && slidemo->health > 0)
+            if (slidemo->health > 0)
                 S_StartSound(slidemo, sfx_oof);             // oooff!
 
             tmxmove = -tmxmove / 2;                         // absorb half the momentum
@@ -1279,7 +1310,7 @@ static void P_HitSlideLine(line_t *ld)
         tmxmove = FixedMul(movelen, finecosine[moveangle]);
         tmymove = FixedMul(movelen, finesine[moveangle]);
 
-        if (slidemo->player && slidemo->health > 0)
+        if (slidemo->health > 0)
             S_StartSound(slidemo, sfx_oof);                 // oooff!
     }
     else
@@ -1402,7 +1433,7 @@ void P_SlideMove(mobj_t *mo)
         {
             // the move must have hit the middle, so stairstep
 
-        stairstep:
+stairstep:
             // killough 3/15/98: Allow objects to drop off ledges
             // phares 5/4/98: kill momentum if you can't move at all
             if (!P_TryMove(mo, mo->x, mo->y + mo->momy, 1))
@@ -1887,14 +1918,18 @@ static dboolean PIT_RadiusAttack(mobj_t *thing)
     fixed_t     dist;
     mobjtype_t  type;
 
-    if (!(thing->flags & MF_SHOOTABLE)
+    // killough 8/20/98: allow bouncers to take damage
+    // (missile bouncers are already excluded with MF_NOBLOCKMAP)
+    if (!(thing->flags & (MF_SHOOTABLE | MF_BOUNCES))
         // [BH] allow corpses to react to blast damage
         && !(thing->flags & MF_CORPSE))
         return true;
 
     type = thing->type;
 
-    if (type == MT_CYBORG || type == MT_SPIDER)
+    // killough 8/10/98: allow grenades to hurt anyone, unless
+    // fired by Cyberdemons, in which case it won't hurt Cybers.
+    if ((bombspot->flags & MF_BOUNCES) ? (type == MT_CYBORG && bombsource->type == MT_CYBORG) : (type == MT_CYBORG || type == MT_SPIDER))
         return true;
 
     dist = MAX(ABS(thing->x - bombspot->x), ABS(thing->y - bombspot->y)) - thing->radius;
@@ -2055,8 +2090,15 @@ static void PIT_ChangeSector(mobj_t *thing)
         return;
     }
 
+    // killough 11/98: kill touchy things immediately
+    if ((flags & MF_TOUCHY) && ((thing->flags3 & MF3_ARMED) || sentient(thing)))
+    {
+        P_DamageMobj(thing, NULL, NULL, thing->health, true);   // kill object
+        return;
+    }
+
     if (!(flags & MF_SHOOTABLE))
-        return;         // assume it is bloody gibs or something
+        return;                                                 // assume it is bloody gibs or something
 
     nofit = true;
 
@@ -2105,11 +2147,11 @@ dboolean P_ChangeSector(sector_t *sector, dboolean crunch)
         for (n = sector->touching_thinglist; n; n = n->m_snext)     // go through list
             if (!n->visited)                                        // unprocessed thing found
             {
-                mobj_t  *mobj;
+                mobj_t  *mobj = n->m_thing;
 
                 n->visited = true;                                  // mark thing as processed
 
-                if ((mobj = n->m_thing) && !(mobj->flags & MF_NOBLOCKMAP))
+                if (mobj && !(mobj->flags & MF_NOBLOCKMAP))
                     PIT_ChangeSector(mobj);                         // process it
 
                 break;                                              // exit and start over

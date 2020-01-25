@@ -7,7 +7,7 @@
 ========================================================================
 
   Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2019 by Brad Harding.
+  Copyright © 2013-2020 by Brad Harding.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
@@ -404,7 +404,7 @@ void HUlib_DrawTextLine(hu_textline_t *l, dboolean external)
             byte    *dest2 = &fb2[dot];
 
             if (!*source)
-                *dest1 = tinttab50[*dest2 + (nearestblack << 8)];
+                *dest1 = tinttab50[(nearestblack << 8) + *dest2];
             else if (*source != 251)
             {
                 byte color = *source;

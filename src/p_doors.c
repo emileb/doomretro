@@ -7,7 +7,7 @@
 ========================================================================
 
   Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2019 by Brad Harding.
+  Copyright © 2013-2020 by Brad Harding.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
@@ -45,6 +45,8 @@
 #include "p_tick.h"
 #include "s_sound.h"
 #include "z_zone.h"
+
+dboolean    r_graduallighting = r_graduallighting_default;
 
 static void T_GradualLightingToDoor(vldoor_t *door)
 {
@@ -130,7 +132,8 @@ void T_VerticalDoor(vldoor_t *door)
 
             // killough 10/98: implement gradual lighting effects
             // [BH] enhanced to apply effects to all doors
-            T_GradualLightingToDoor(door);
+            if (r_graduallighting)
+                T_GradualLightingToDoor(door);
 
             if (res == pastdest)
             {
@@ -199,7 +202,8 @@ void T_VerticalDoor(vldoor_t *door)
 
             // killough 10/98: implement gradual lighting effects
             // [BH] enhanced to apply effects to all doors
-            T_GradualLightingToDoor(door);
+            if (r_graduallighting)
+                T_GradualLightingToDoor(door);
 
             if (res == pastdest)
             {
@@ -262,7 +266,7 @@ dboolean EV_DoLockedDoor(line_t *line, vldoor_e type, mobj_t *thing, fixed_t spe
                     }
 
                     M_snprintf(buffer, sizeof(buffer), s_PD_BLUEO, playername,
-                        (M_StringCompare(playername, playername_default) ? "" : "s"), "keycard");
+                        (M_StringCompare(playername, playername_default) ? "" : "s"), s_KEYCARD);
                     HU_PlayerMessage(buffer, false, false);
                 }
                 else if (player->cards[it_blueskull] == CARDNOTFOUNDYET)
@@ -274,7 +278,7 @@ dboolean EV_DoLockedDoor(line_t *line, vldoor_e type, mobj_t *thing, fixed_t spe
                     }
 
                     M_snprintf(buffer, sizeof(buffer), s_PD_BLUEO, playername,
-                        (M_StringCompare(playername, playername_default) ? "" : "s"), "skull key");
+                        (M_StringCompare(playername, playername_default) ? "" : "s"), s_SKULLKEY);
                     HU_PlayerMessage(buffer, false, false);
                 }
 
@@ -299,7 +303,7 @@ dboolean EV_DoLockedDoor(line_t *line, vldoor_e type, mobj_t *thing, fixed_t spe
                     }
 
                     M_snprintf(buffer, sizeof(buffer), s_PD_REDO, playername,
-                        (M_StringCompare(playername, playername_default) ? "" : "s"), "keycard");
+                        (M_StringCompare(playername, playername_default) ? "" : "s"), s_KEYCARD);
                     HU_PlayerMessage(buffer, false, false);
                 }
                 else if (player->cards[it_redskull] == CARDNOTFOUNDYET)
@@ -311,7 +315,7 @@ dboolean EV_DoLockedDoor(line_t *line, vldoor_e type, mobj_t *thing, fixed_t spe
                     }
 
                     M_snprintf(buffer, sizeof(buffer), s_PD_REDO, playername,
-                        (M_StringCompare(playername, playername_default) ? "" : "s"), "skull key");
+                        (M_StringCompare(playername, playername_default) ? "" : "s"), s_SKULLKEY);
                     HU_PlayerMessage(buffer, false, false);
                 }
 
@@ -336,7 +340,7 @@ dboolean EV_DoLockedDoor(line_t *line, vldoor_e type, mobj_t *thing, fixed_t spe
                     }
 
                     M_snprintf(buffer, sizeof(buffer), s_PD_YELLOWO, playername,
-                        (M_StringCompare(playername, playername_default) ? "" : "s"), "keycard");
+                        (M_StringCompare(playername, playername_default) ? "" : "s"), s_KEYCARD);
                     HU_PlayerMessage(buffer, false, false);
                 }
                 else if (player->cards[it_yellowskull] == CARDNOTFOUNDYET)
@@ -348,7 +352,7 @@ dboolean EV_DoLockedDoor(line_t *line, vldoor_e type, mobj_t *thing, fixed_t spe
                     }
 
                     M_snprintf(buffer, sizeof(buffer), s_PD_YELLOWO, playername,
-                        (M_StringCompare(playername, playername_default) ? "" : "s"), "skull key");
+                        (M_StringCompare(playername, playername_default) ? "" : "s"), s_SKULLKEY);
                     HU_PlayerMessage(buffer, false, false);
                 }
 
@@ -511,7 +515,7 @@ void EV_VerticalDoor(line_t *line, mobj_t *thing)
                     }
 
                     M_snprintf(buffer, sizeof(buffer), s_PD_BLUEK, playername,
-                        (M_StringCompare(playername, playername_default) ? "" : "s"), "keycard");
+                        (M_StringCompare(playername, playername_default) ? "" : "s"), s_KEYCARD);
                     HU_PlayerMessage(buffer, false, false);
                 }
                 else if (player->cards[it_blueskull] == CARDNOTFOUNDYET)
@@ -523,7 +527,7 @@ void EV_VerticalDoor(line_t *line, mobj_t *thing)
                     }
 
                     M_snprintf(buffer, sizeof(buffer), s_PD_BLUEK, playername,
-                        (M_StringCompare(playername, playername_default) ? "" : "s"), "skull key");
+                        (M_StringCompare(playername, playername_default) ? "" : "s"), s_SKULLKEY);
                     HU_PlayerMessage(buffer, false, false);
                 }
 
@@ -551,7 +555,7 @@ void EV_VerticalDoor(line_t *line, mobj_t *thing)
                     }
 
                     M_snprintf(buffer, sizeof(buffer), s_PD_YELLOWK, playername,
-                        (M_StringCompare(playername, playername_default) ? "" : "s"), "keycard");
+                        (M_StringCompare(playername, playername_default) ? "" : "s"), s_KEYCARD);
                     HU_PlayerMessage(buffer, false, false);
                 }
                 else if (player->cards[it_yellowskull] == CARDNOTFOUNDYET)
@@ -563,7 +567,7 @@ void EV_VerticalDoor(line_t *line, mobj_t *thing)
                     }
 
                     M_snprintf(buffer, sizeof(buffer), s_PD_YELLOWK, playername,
-                        (M_StringCompare(playername, playername_default) ? "" : "s"), "skull key");
+                        (M_StringCompare(playername, playername_default) ? "" : "s"), s_SKULLKEY);
                     HU_PlayerMessage(buffer, false, false);
                 }
 
@@ -591,7 +595,7 @@ void EV_VerticalDoor(line_t *line, mobj_t *thing)
                     }
 
                     M_snprintf(buffer, sizeof(buffer), s_PD_REDK, playername,
-                        (M_StringCompare(playername, playername_default) ? "" : "s"), "keycard");
+                        (M_StringCompare(playername, playername_default) ? "" : "s"), s_KEYCARD);
                     HU_PlayerMessage(buffer, false, false);
                 }
                 else if (player->cards[it_redskull] == CARDNOTFOUNDYET)
@@ -603,7 +607,7 @@ void EV_VerticalDoor(line_t *line, mobj_t *thing)
                     }
 
                     M_snprintf(buffer, sizeof(buffer), s_PD_REDK, playername,
-                        (M_StringCompare(playername, playername_default) ? "" : "s"), "skull key");
+                        (M_StringCompare(playername, playername_default) ? "" : "s"), s_SKULLKEY);
                     HU_PlayerMessage(buffer, false, false);
                 }
 

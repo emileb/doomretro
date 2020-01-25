@@ -7,7 +7,7 @@
 ========================================================================
 
   Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2019 by Brad Harding.
+  Copyright © 2013-2020 by Brad Harding.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
@@ -849,7 +849,7 @@ dboolean EV_DoGenCrusher(line_t *line)
             return false;
     }
 
-    // jff 2/22/98  Reactivate in-stasis ceilings...for certain types.
+    // jff 2/22/98  Reactivate in-stasis ceilings... for certain types.
     // jff 4/5/98 return if activated
     rtn = P_ActivateInStasisCeiling(line);
 

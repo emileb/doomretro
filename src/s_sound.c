@@ -7,7 +7,7 @@
 ========================================================================
 
   Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2019 by Brad Harding.
+  Copyright © 2013-2020 by Brad Harding.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
@@ -46,9 +46,9 @@
 #include "m_random.h"
 #include "p_local.h"
 #include "p_setup.h"
-#include "w_wad.h"
 #include "s_sound.h"
 #include "sc_man.h"
+#include "w_wad.h"
 #include "z_zone.h"
 
 // when to clip out sounds
@@ -216,11 +216,21 @@ void S_Init(void)
                         if (!CacheSFX(sfx))
                             sfx->lumpnum = -1;
                         else
-                            C_Warning(1, "The <b>%s</b> sound lump is in an unknown format.", uppercase(namebuf));
+                        {
+                            char    *temp = uppercase(namebuf);
+
+                            C_Warning(1, "The <b>%s</b> sound lump is in an unknown format.", temp);
+                            free(temp);
+                        }
                     }
 
                 if (sfx->lumpnum == -1)
-                    C_Warning(1, "The <b>%s</b> sound lump is in an unknown format and won't be played.", uppercase(namebuf));
+                        {
+                            char    *temp = uppercase(namebuf);
+
+                            C_Warning(1, "The <b>%s</b> sound lump is in an unknown format and won't be played.", temp);
+                            free(temp);
+                        }
             }
         }
     }
@@ -350,7 +360,7 @@ void S_Start(void)
 // original implementation idea: <https://www.doomworld.com/forum/topic/1585325>
 void S_UnlinkSound(mobj_t *origin)
 {
-    if (!origin->madesound)
+    if (!origin->madesound || nosfx)
         return;
 
     for (int cnum = 0; cnum < s_channels; cnum++)
@@ -412,7 +422,7 @@ static int S_GetChannel(mobj_t *origin, sfxinfo_t *sfxinfo)
 // Changes volume and stereo-separation variables from the norm of a sound
 // effect to be played. If the sound is not audible, returns false. Otherwise,
 // modifies parameters and returns true.
-static dboolean S_AdjustSoundParams(mobj_t *origin, int *vol, int *sep)
+static dboolean S_AdjustSoundParms(mobj_t *origin, int *vol, int *sep)
 {
     fixed_t     dist = 0;
     fixed_t     adx, ady;
@@ -490,7 +500,7 @@ static void S_StartSoundAtVolume(mobj_t *origin, int sfx_id, int pitch)
 
     // Check to see if it is audible, and if not, modify the parms
     if (origin && origin != viewplayer->mo)
-        if (!S_AdjustSoundParams(origin, &volume, &sep))
+        if (!S_AdjustSoundParms(origin, &volume, &sep))
             return;
 
     // kill old sound
@@ -605,10 +615,10 @@ void S_UpdateSounds(void)
                         volume = snd_SfxVolume;
                 }
 
-                if (!S_AdjustSoundParams(origin, &volume, &sep))
+                if (!S_AdjustSoundParms(origin, &volume, &sep))
                     S_StopChannel(cnum);
                 else
-                    I_UpdateSoundParams(c->handle, volume, sep);
+                    I_UpdateSoundParms(c->handle, volume, sep);
             }
         }
         else
@@ -665,7 +675,10 @@ void S_ChangeMusic(int music_id, dboolean looping, dboolean allowrestart, dboole
 
     if (music->lumpnum == -1)
     {
-        C_Warning(1, "The <b>%s</b> music lump can't be found.", uppercase(namebuf));
+        char    *temp = uppercase(namebuf);
+
+        C_Warning(1, "The <b>%s</b> music lump can't be found.", temp);
+        free(temp);
         return;
     }
 
@@ -677,16 +690,21 @@ void S_ChangeMusic(int music_id, dboolean looping, dboolean allowrestart, dboole
         if (!serverMidiPlaying)
 #endif
         {
-            char    *filename = M_TempFile(M_StringJoin(namebuf, ".mp3", NULL));
+            char    *filename = M_StringJoin(namebuf, ".mp3", NULL);
+            char    *path = M_TempFile(filename);
 
-            if (M_WriteFile(filename, music->data, W_LumpLength(music->lumpnum)))
-                handle = Mix_LoadMUS(filename);
+            if (M_WriteFile(path, music->data, W_LumpLength(music->lumpnum)))
+                handle = Mix_LoadMUS(path);
 
             free(filename);
+            free(path);
 
             if (!handle)
             {
-                C_Warning(1, "The <b>%s</b> music lump can't be played.", uppercase(namebuf));
+                char    *temp = uppercase(namebuf);
+
+                C_Warning(1, "The <b>%s</b> music lump can't be played.", temp);
+                free(temp);
                 return;
             }
         }
@@ -765,7 +783,7 @@ void S_ParseMusInfo(char *mapid)
 
     S_music[NUMMUSIC].lumpnum = -1;
 
-    if (W_CheckNumForName("MUSINFO") != -1)
+    if (W_CheckNumForName("MUSINFO") >= 0)
     {
         int inMap = false;
 

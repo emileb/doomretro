@@ -7,7 +7,7 @@
 ========================================================================
 
   Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2019 by Brad Harding.
+  Copyright © 2013-2020 by Brad Harding.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
@@ -48,6 +48,7 @@
 #include "m_random.h"
 #include "p_inter.h"
 #include "p_local.h"
+#include "p_setup.h"
 #include "p_tick.h"
 #include "s_sound.h"
 
@@ -150,6 +151,8 @@ void P_UpdateAmmoStat(ammotype_t ammotype, int num)
 //
 static dboolean P_TakeAmmo(ammotype_t ammotype, int num)
 {
+    weapontype_t    readyweapon;
+
     if (ammotype == am_noammo)
         return false;
 
@@ -165,11 +168,34 @@ static dboolean P_TakeAmmo(ammotype_t ammotype, int num)
         return false;
 
     viewplayer->ammo[ammotype] -= num;
+    readyweapon = viewplayer->readyweapon;
 
-    if (ammotype == weaponinfo[viewplayer->readyweapon].ammotype)
+    if (ammotype == weaponinfo[readyweapon].ammotype)
         ammohighlight = I_GetTimeMS() + HUD_AMMO_HIGHLIGHT_WAIT;
 
-    P_CheckAmmo(viewplayer->readyweapon);
+    P_CheckAmmo(readyweapon);
+
+    if (viewplayer->pendingweapon != readyweapon)
+        C_HideConsole();
+
+    return true;
+}
+
+static dboolean P_TakeWeapon(weapontype_t weapon)
+{
+    weapontype_t    readyweapon;
+
+    if (!viewplayer->weaponowned[weapon])
+        return false;
+
+    viewplayer->weaponowned[weapon] = false;
+    oldweaponsowned[weapon] = false;
+    readyweapon = viewplayer->readyweapon;
+    P_CheckAmmo(readyweapon);
+
+    if (viewplayer->pendingweapon != readyweapon)
+        C_HideConsole();
+
     return true;
 }
 
@@ -517,28 +543,46 @@ void P_InitCards(void)
             case D1_Door_Blue_OpenStay:
             case SR_Door_Blue_OpenStay_Fast:
             case S1_Door_Blue_OpenStay_Fast:
-                if (viewplayer->cards[it_blueskull] == CARDNOTINMAP)
-                    viewplayer->cards[it_bluecard] = CARDNOTFOUNDYET;
+            {
+                char    *temp = commify(i);
 
+                if (viewplayer->cards[it_bluecard] == CARDNOTINMAP && viewplayer->cards[it_blueskull] == CARDNOTINMAP)
+                    C_Warning(2, "Linedef %s has special %i (\"%s\") but there are no <b>BlueKeycard</b> or <b>BlueSkullKey</b> "
+                        "things in map.", temp, line->special, linespecials[line->special]);
+
+                free(temp);
                 break;
+            }
 
             case DR_Door_Red_OpenWaitClose:
             case D1_Door_Red_OpenStay:
             case SR_Door_Red_OpenStay_Fast:
             case S1_Door_Red_OpenStay_Fast:
-                if (viewplayer->cards[it_redskull] == CARDNOTINMAP)
-                    viewplayer->cards[it_redcard] = CARDNOTFOUNDYET;
+            {
+                char    *temp = commify(i);
 
+                if (viewplayer->cards[it_redcard] == CARDNOTINMAP && viewplayer->cards[it_redskull] == CARDNOTINMAP)
+                    C_Warning(2, "Linedef %s has special %i (\"%s\") but there are no <b>RedKeycard</b> or <b>RedSkullKey</b> "
+                        "things in map.", temp, line->special, linespecials[line->special]);
+
+                free(temp);
                 break;
+            }
 
             case DR_Door_Yellow_OpenWaitClose:
             case D1_Door_Yellow_OpenStay:
             case SR_Door_Yellow_OpenStay_Fast:
             case S1_Door_Yellow_OpenStay_Fast:
-                if (viewplayer->cards[it_yellowskull] == CARDNOTINMAP)
-                    viewplayer->cards[it_yellowcard] = CARDNOTFOUNDYET;
+            {
+                char    *temp = commify(i);
 
+                if (viewplayer->cards[it_yellowcard] == CARDNOTINMAP && viewplayer->cards[it_yellowskull] == CARDNOTINMAP)
+                    C_Warning(2, "Linedef %s has special %i (\"%s\") but there are no <b>YellowKeycard</b> or <b>YellowSkullKey</b> "
+                        "things in map.", temp, line->special, linespecials[line->special]);
+
+                free(temp);
                 break;
+            }
         }
     }
 }
@@ -1501,66 +1545,31 @@ dboolean P_TakeSpecialThing(mobjtype_t type)
 
         // BFG-9000
         case MT_MISC25:
-            if (!viewplayer->weaponowned[wp_bfg])
-                return false;
-
-            viewplayer->weaponowned[wp_bfg] = oldweaponsowned[wp_bfg] = false;
-            P_CheckAmmo(viewplayer->readyweapon);
-            return true;
+            return P_TakeWeapon(wp_bfg);
 
         // chaingun
         case MT_CHAINGUN:
-            if (!viewplayer->weaponowned[wp_chaingun])
-                return false;
-
-            viewplayer->weaponowned[wp_chaingun] = oldweaponsowned[wp_chaingun] = false;
-            P_CheckAmmo(viewplayer->readyweapon);
-            return true;
+            return P_TakeWeapon(wp_chaingun);
 
         // chainsaw
         case MT_MISC26:
-            if (!viewplayer->weaponowned[wp_chainsaw])
-                return false;
-
-            viewplayer->weaponowned[wp_chainsaw] = oldweaponsowned[wp_chainsaw] = false;
-            P_CheckAmmo(viewplayer->readyweapon);
-            return true;
+            return P_TakeWeapon(wp_chainsaw);
 
         // rocket launcher
         case MT_MISC27:
-            if (!viewplayer->weaponowned[wp_missile])
-                return false;
-
-            viewplayer->weaponowned[wp_missile] = oldweaponsowned[wp_missile] = false;
-            P_CheckAmmo(viewplayer->readyweapon);
-            return true;
+            return P_TakeWeapon(wp_missile);
 
         // plasma rifle
         case MT_MISC28:
-            if (!viewplayer->weaponowned[wp_plasma])
-                return false;
-
-            viewplayer->weaponowned[wp_plasma] = oldweaponsowned[wp_plasma] = false;
-            P_CheckAmmo(viewplayer->readyweapon);
-            return true;
+            return P_TakeWeapon(wp_plasma);
 
         // shotgun
         case MT_SHOTGUN:
-            if (!viewplayer->weaponowned[wp_shotgun])
-                return false;
-
-            viewplayer->weaponowned[wp_shotgun] = oldweaponsowned[wp_shotgun] = false;
-            P_CheckAmmo(viewplayer->readyweapon);
-            return true;
+            return P_TakeWeapon(wp_shotgun);
 
         // super shotgun
         case MT_SUPERSHOTGUN:
-            if (!viewplayer->weaponowned[wp_supershotgun])
-                return false;
-
-            viewplayer->weaponowned[wp_supershotgun] = oldweaponsowned[wp_supershotgun] = false;
-            P_CheckAmmo(viewplayer->readyweapon);
-            return true;
+            return P_TakeWeapon(wp_supershotgun);
 
         default:
             return false;
@@ -1654,14 +1663,20 @@ static void P_WriteObituary(mobj_t *target, mobj_t *inflicter, mobj_t *source, d
         if (inflicter && inflicter->type == MT_BARREL && target->type != MT_BARREL)
         {
             if (target->player)
+            {
+                char    *temp = titlecase(playername);
+
                 C_Obituary("%s %s %s by an exploding %s.",
-                    sentencecase(playername),
+                    temp,
                     (M_StringCompare(playername, playername_default) ? "were" : "was"),
                     (gibbed ? "gibbed" : "killed"),
                     inflicter->info->name1);
+                free(temp);
+            }
             else
             {
                 char    targetname[100];
+                char    *temp;
 
                 if (*target->name)
                     M_StringCopy(targetname, target->name, sizeof(targetname));
@@ -1672,10 +1687,12 @@ static void P_WriteObituary(mobj_t *target, mobj_t *inflicter, mobj_t *source, d
                         ((target->flags & MF_FRIEND) ? "friendly " : ""),
                         (*target->info->name1 ? target->info->name1 : "monster"));
 
+                temp = sentencecase(targetname);
                 C_Obituary("%s was %s by an exploding %s.",
-                    sentencecase(targetname),
+                    temp,
                     (gibbed ? "gibbed" : "killed"),
                     inflicter->info->name1);
+                free(temp);
             }
         }
         else if (source->player)
@@ -1712,11 +1729,15 @@ static void P_WriteObituary(mobj_t *target, mobj_t *inflicter, mobj_t *source, d
                 }
                 else
                 {
+                    char    *temp = titlecase(playername);
+
                     if (target->player)
+                    {
                         C_Obituary("%s %s themselves with their own %s.",
-                            titlecase(playername),
+                            temp,
                             (gibbed ? "gibbed" : "killed"),
                             weaponinfo[readyweapon].description);
+                    }
                     else
                     {
                         char    targetname[100];
@@ -1731,14 +1752,14 @@ static void P_WriteObituary(mobj_t *target, mobj_t *inflicter, mobj_t *source, d
                                 (*target->info->name1 ? target->info->name1 : "monster"));
 
                         C_Obituary("%s %s %s with their %s%s.",
-                            titlecase(playername),
-                            (target->type == MT_BARREL ? "exploded" : (gibbed ? "gibbed" :
-                                (M_StringCompare(targetname, "\x44\x6F\x6E\x61\x6C\x64\x20\x54\x72\x75\x6D\x70") ?
-                                "\x69\x6D\x70\x65\x61\x63\x68\x65\x64" : "killed"))),
+                            temp,
+                            (target->type == MT_BARREL ? "exploded" : (gibbed ? "gibbed" : "killed")),
                             targetname,
                             weaponinfo[readyweapon].description,
                             (readyweapon == wp_fist && viewplayer->powers[pw_strength] ? " while they went berserk" : ""));
                     }
+
+                    free(temp);
                 }
             }
         }
@@ -1747,9 +1768,14 @@ static void P_WriteObituary(mobj_t *target, mobj_t *inflicter, mobj_t *source, d
             if (source->type == MT_TFOG)
             {
                 if (target->player)
+                {
+                    char    *temp = titlecase(playername);
+
                     C_Obituary("%s %s telefragged.",
-                        titlecase(playername),
+                        temp,
                         (M_StringCompare(playername, playername_default) ? "were" : "was"));
+                    free(temp);
+                }
                 else
                 {
                     char    targetname[100];
@@ -1769,6 +1795,7 @@ static void P_WriteObituary(mobj_t *target, mobj_t *inflicter, mobj_t *source, d
             else
             {
                 char    sourcename[100];
+                char    *temp1;
 
                 if (*source->name)
                     M_StringCopy(sourcename, source->name, sizeof(sourcename));
@@ -1779,11 +1806,18 @@ static void P_WriteObituary(mobj_t *target, mobj_t *inflicter, mobj_t *source, d
                         ((source->flags & MF_FRIEND) ? "friendly " : ""),
                         (*source->info->name1 ? source->info->name1 : "monster"));
 
+                temp1 = sentencecase(sourcename);
+
                 if (target->player)
+                {
+                    char    *temp2 = titlecase(playername);
+
                     C_Obituary("%s %s %s.",
-                        sentencecase(sourcename),
+                        temp1,
                         (gibbed ? "gibbed" : "killed"),
-                        (M_StringCompare(playername, playername_default) ? playername : titlecase(playername)));
+                        (M_StringCompare(playername, playername_default) ? playername : temp2));
+                    free(temp2);
+                }
                 else
                 {
                     char    targetname[100];
@@ -1799,20 +1833,23 @@ static void P_WriteObituary(mobj_t *target, mobj_t *inflicter, mobj_t *source, d
                             (*target->info->name1 ? target->info->name1 : "monster"));
 
                     C_Obituary("%s %s %s.",
-                        sentencecase(sourcename),
+                        temp1,
                         (target->type == MT_BARREL ? "exploded" : (gibbed ? "gibbed" : "killed")),
                         targetname);
                 }
+
+                free(temp1);
             }
         }
     }
     else if (target->player && target->player->mo == target)
     {
         sector_t    *sector = viewplayer->mo->subsector->sector;
+        char        *temp = titlecase(playername);
 
         if (sector->ceilingdata && sector->ceilingheight - sector->floorheight < VIEWHEIGHT)
             C_Obituary("%s %s crushed to death.",
-                titlecase(playername),
+                temp,
                 (M_StringCompare(playername, playername_default) ? "were" : "was"));
         else
         {
@@ -1824,24 +1861,26 @@ static void P_WriteObituary(mobj_t *target, mobj_t *inflicter, mobj_t *source, d
                     "slime", "gray slime", "goop",   "icy water", "tar",  "sludge"
                 };
 
-                C_Obituary("%s died in %s.", titlecase(playername), liquids[sector->terraintype]);
+                C_Obituary("%s died in %s.", temp, liquids[sector->terraintype]);
             }
             else
             {
                 short   floorpic = sector->floorpic;
 
                 if ((floorpic >= RROCK05 && floorpic <= RROCK08) || (floorpic >= SLIME09 && floorpic <= SLIME12))
-                    C_Obituary("%s died on molten rock.", titlecase(playername));
+                    C_Obituary("%s died on molten rock.", temp);
                 else if (healthcvar)
                     C_Obituary("%s killed %s.",
-                        titlecase(playername),
+                        temp,
                         (M_StringCompare(playername, playername_default) ? "yourself" : "themselves"));
                 else
                     C_Obituary("%s blew %s up.",
-                        titlecase(playername),
+                        temp,
                         (M_StringCompare(playername, playername_default) ? "yourself" : "themselves"));
             }
         }
+
+        free(temp);
     }
 }
 
@@ -2182,7 +2221,7 @@ void P_ResurrectMobj(mobj_t *target)
 
     target->height = info->height;
     target->radius = info->radius;
-    target->flags = info->flags | (target->flags & MF_FRIEND);
+    target->flags = (info->flags | (target->flags & MF_FRIEND));
     target->flags2 = info->flags2;
     target->health = info->spawnhealth;
     target->shadowoffset = info->shadowoffset;

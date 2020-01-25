@@ -7,7 +7,7 @@
 ========================================================================
 
   Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2019 by Brad Harding.
+  Copyright © 2013-2020 by Brad Harding.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
@@ -6332,6 +6332,8 @@ autocomplete_t autocompletelist[] =
     { "if r_blood ",                                 DOOM1AND2 },
     { "if r_blood all ",                             DOOM1AND2 },
     { "if r_blood all then ",                        DOOM1AND2 },
+    { "if r_blood green ",                           DOOM1AND2 },
+    { "if r_blood green then ",                      DOOM1AND2 },
     { "if r_blood none ",                            DOOM1AND2 },
     { "if r_blood none then ",                       DOOM1AND2 },
     { "if r_blood red ",                             DOOM1AND2 },
@@ -6489,6 +6491,11 @@ autocomplete_t autocompletelist[] =
     { "if r_gamma 2.0 then ",                        DOOM1AND2 },
     { "if r_gamma off ",                             DOOM1AND2 },
     { "if r_gamma off then ",                        DOOM1AND2 },
+    { "if r_graduallighting ",                       DOOM1AND2 },
+    { "if r_graduallighting off ",                   DOOM1AND2 },
+    { "if r_graduallighting off then ",              DOOM1AND2 },
+    { "if r_graduallighting on ",                    DOOM1AND2 },
+    { "if r_graduallighting on then ",               DOOM1AND2 },
     { "if r_homindicator ",                          DOOM1AND2 },
     { "if r_homindicator off ",                      DOOM1AND2 },
     { "if r_homindicator off then ",                 DOOM1AND2 },
@@ -6532,6 +6539,8 @@ autocomplete_t autocompletelist[] =
     { "if r_lowpixelsize ",                          DOOM1AND2 },
     { "if r_lowpixelsize 2x2 ",                      DOOM1AND2 },
     { "if r_lowpixelsize 2x2 then ",                 DOOM1AND2 },
+    { "if r_lowpixelsize 4x2 ",                      DOOM1AND2 },
+    { "if r_lowpixelsize 4x2 then ",                 DOOM1AND2 },
     { "if r_mirroredweapons ",                       DOOM1AND2 },
     { "if r_mirroredweapons off ",                   DOOM1AND2 },
     { "if r_mirroredweapons off then ",              DOOM1AND2 },
@@ -6799,6 +6808,9 @@ autocomplete_t autocompletelist[] =
     { "if vid_showfps off then ",                    DOOM1AND2 },
     { "if vid_showfps on ",                          DOOM1AND2 },
     { "if vid_showfps on then ",                     DOOM1AND2 },
+    { "if vid_vsync ",                               DOOM1AND2 },
+    { "if vid_vsync adaptive ",                      DOOM1AND2 },
+    { "if vid_vsync adaptive then ",                 DOOM1AND2 },
     { "if vid_vsync ",                               DOOM1AND2 },
     { "if vid_vsync off ",                           DOOM1AND2 },
     { "if vid_vsync off then ",                      DOOM1AND2 },
@@ -7257,6 +7269,7 @@ autocomplete_t autocompletelist[] =
     { "r_berserkintensity ",                         DOOM1AND2 },
     { "r_blood ",                                    DOOM1AND2 },
     { "r_blood all",                                 DOOM1AND2 },
+    { "r_blood green",                               DOOM1AND2 },
     { "r_blood none",                                DOOM1AND2 },
     { "r_blood red",                                 DOOM1AND2 },
     { "r_bloodsplats_max ",                          DOOM1AND2 },
@@ -7343,6 +7356,9 @@ autocomplete_t autocompletelist[] =
     { "r_gamma 1.90",                                DOOM1AND2 },
     { "r_gamma 2.0",                                 DOOM1AND2 },
     { "r_gamma off",                                 DOOM1AND2 },
+    { "r_graduallighting ",                          DOOM1AND2 },
+    { "r_graduallighting off",                       DOOM1AND2 },
+    { "r_graduallighting on",                        DOOM1AND2 },
     { "r_homindicator ",                             DOOM1AND2 },
     { "r_homindicator off",                          DOOM1AND2 },
     { "r_homindicator on",                           DOOM1AND2 },
@@ -7369,6 +7385,7 @@ autocomplete_t autocompletelist[] =
     { "r_liquid_swirl on",                           DOOM1AND2 },
     { "r_lowpixelsize ",                             DOOM1AND2 },
     { "r_lowpixelsize 2x2",                          DOOM1AND2 },
+    { "r_lowpixelsize 4x2",                          DOOM1AND2 },
     { "r_mirroredweapons ",                          DOOM1AND2 },
     { "r_mirroredweapons off",                       DOOM1AND2 },
     { "r_mirroredweapons on",                        DOOM1AND2 },
@@ -7504,6 +7521,7 @@ autocomplete_t autocompletelist[] =
     { "reset r_floatbob",                            DOOM1AND2 },
     { "reset r_fov",                                 DOOM1AND2 },
     { "reset r_gamma",                               DOOM1AND2 },
+    { "reset r_graduallighting",                     DOOM1AND2 },
     { "reset r_homindicator",                        DOOM1AND2 },
     { "reset r_hud",                                 DOOM1AND2 },
     { "reset r_hud_translucency",                    DOOM1AND2 },
@@ -8016,6 +8034,7 @@ autocomplete_t autocompletelist[] =
     { "vid_showfps off",                             DOOM1AND2 },
     { "vid_showfps on",                              DOOM1AND2 },
     { "vid_vsync ",                                  DOOM1AND2 },
+    { "vid_vsync adaptive",                          DOOM1AND2 },
     { "vid_vsync off",                               DOOM1AND2 },
     { "vid_vsync on",                                DOOM1AND2 },
     { "vid_widescreen ",                             DOOM1AND2 },

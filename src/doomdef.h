@@ -7,7 +7,7 @@
 ========================================================================
 
   Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2019 by Brad Harding.
+  Copyright © 2013-2020 by Brad Harding.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
@@ -100,14 +100,6 @@ typedef enum
 
     none
 } GameMission_t;
-
-// What version are we emulating?
-typedef enum
-{
-    exe_doom_1_9,       // DOOM 1.9: used for shareware, registered and commercial
-    exe_ultimate,       // Ultimate DOOM (retail)
-    exe_final           // Final DOOM
-} GameVersion_t;
 
 // Screen width and height.
 #define ORIGINALWIDTH       320

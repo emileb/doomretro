@@ -7,7 +7,7 @@
 ========================================================================
 
   Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2019 by Brad Harding.
+  Copyright © 2013-2020 by Brad Harding.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
@@ -176,6 +176,7 @@ void C_Input(const char *string, ...)
         console = I_Realloc(console, (consolestringsmax += CONSOLESTRINGSMAX) * sizeof(*console));
 
     M_StringCopy(console[consolestrings].string, buffer, 1024);
+    C_DumpConsoleStringToFile(consolestrings);
     console[consolestrings++].stringtype = inputstring;
     outputhistory = -1;
 }
@@ -198,6 +199,7 @@ void C_InputNoRepeat(const char *string, ...)
             console = I_Realloc(console, (consolestringsmax += CONSOLESTRINGSMAX) * sizeof(*console));
 
         M_StringCopy(console[consolestrings].string, buffer, 1024);
+        C_DumpConsoleStringToFile(consolestrings);
         console[consolestrings++].stringtype = inputstring;
         outputhistory = -1;
     }
@@ -205,35 +207,35 @@ void C_InputNoRepeat(const char *string, ...)
 
 void C_IntCVAROutput(char *cvar, int value)
 {
-    char    *cvar_free = M_StringJoin(cvar, " ", NULL);
+    char    *temp = M_StringJoin(cvar, " ", NULL);
 
-    if (consolestrings && M_StringStartsWith(console[consolestrings - 1].string, cvar_free))
+    if (consolestrings && M_StringStartsWith(console[consolestrings - 1].string, temp))
         consolestrings--;
 
     C_Input("%s %i", cvar, value);
-    free(cvar_free);
+    free(temp);
 }
 
 void C_PctCVAROutput(char *cvar, int value)
 {
-    char    *cvar_free = M_StringJoin(cvar, " ", NULL);
+    char    *temp = M_StringJoin(cvar, " ", NULL);
 
-    if (consolestrings && M_StringStartsWith(console[consolestrings - 1].string, cvar_free))
+    if (consolestrings && M_StringStartsWith(console[consolestrings - 1].string, temp))
         consolestrings--;
 
     C_Input("%s %i%%", cvar, value);
-    free(cvar_free);
+    free(temp);
 }
 
 void C_StrCVAROutput(char *cvar, char *string)
 {
-    char    *cvar_free = M_StringJoin(cvar, " ", NULL);
+    char    *temp = M_StringJoin(cvar, " ", NULL);
 
-    if (consolestrings && M_StringStartsWith(console[consolestrings - 1].string, cvar_free))
+    if (consolestrings && M_StringStartsWith(console[consolestrings - 1].string, temp))
         consolestrings--;
 
     C_Input("%s %s", cvar, string);
-    free(cvar_free);
+    free(temp);
 }
 
 
@@ -255,6 +257,7 @@ void C_Output(const char *string, ...)
 
 
     M_StringCopy(console[consolestrings].string, buffer, 1024);
+    C_DumpConsoleStringToFile(consolestrings);
     console[consolestrings++].stringtype = outputstring;
     outputhistory = -1;
 }
@@ -274,6 +277,7 @@ void C_OutputNoRepeat(const char *string, ...)
             console = I_Realloc(console, (consolestringsmax += CONSOLESTRINGSMAX) * sizeof(*console));
 
         M_StringCopy(console[consolestrings].string, buffer, 1024);
+        C_DumpConsoleStringToFile(consolestrings);
         console[consolestrings++].stringtype = outputstring;
         outputhistory = -1;
     }
@@ -294,17 +298,21 @@ void C_TabbedOutput(const int tabs[8], const char *string, ...)
     M_StringCopy(console[consolestrings].string, buffer, 1024);
     console[consolestrings].stringtype = outputstring;
     memcpy(console[consolestrings].tabs, tabs, sizeof(console[consolestrings].tabs));
+    C_DumpConsoleStringToFile(consolestrings);
     consolestrings++;
     outputhistory = -1;
 }
 
-void C_Header(const headertype_t headertype)
+void C_Header(const int tabs[8], const headertype_t headertype, const char *string)
 {
     if (consolestrings >= (int)consolestringsmax)
         console = I_Realloc(console, (consolestringsmax += CONSOLESTRINGSMAX) * sizeof(*console));
 
     console[consolestrings].stringtype = headerstring;
+    memcpy(console[consolestrings].tabs, tabs, sizeof(console[consolestrings].tabs));
     console[consolestrings].headertype = headertype;
+    M_StringCopy(console[consolestrings].string, string, 1024);
+    C_DumpConsoleStringToFile(consolestrings);
     consolestrings++;
     outputhistory = -1;
 }
@@ -332,27 +340,44 @@ void C_Warning(const int minwarninglevel, const char *string, ...)
         {
             M_StringCopy(console[consolestrings].string, buffer, 1024);
             console[consolestrings].line = 1;
+            C_DumpConsoleStringToFile(consolestrings);
             console[consolestrings++].stringtype = warningstring;
         }
         else
         {
-            int truncate = len;
+            int     truncate = len;
+            char    *temp;
 
-            while (C_TextWidth(M_SubString(buffer, 0, truncate), true, true) + warningwidth + 12 > CONSOLETEXTPIXELWIDTH)
-                truncate--;
+            do
+            {
+                int width;
+
+                temp = M_SubString(buffer, 0, truncate);
+                width = C_TextWidth(temp, true, true) + warningwidth + 12;
+                free(temp);
+
+                if (width <= CONSOLETEXTPIXELWIDTH)
+                    break;
+            } while (truncate-- > 0);
 
             while (truncate > 0 && !isbreak(buffer[truncate]))
                 truncate--;
 
-            M_StringCopy(console[consolestrings].string, M_SubString(buffer, 0, truncate), 1024);
+            temp = M_SubString(buffer, 0, truncate);
+            M_StringCopy(console[consolestrings].string, temp, 1024);
+            free(temp);
             console[consolestrings].line = 1;
+            C_DumpConsoleStringToFile(consolestrings);
             console[consolestrings++].stringtype = warningstring;
 
             if (consolestrings >= (int)consolestringsmax)
                 console = I_Realloc(console, (consolestringsmax += CONSOLESTRINGSMAX) * sizeof(*console));
 
-            M_StringCopy(console[consolestrings].string, M_SubString(buffer, truncate, (size_t)len - truncate), 1024);
+            temp = M_SubString(buffer, truncate, (size_t)len - truncate);
+            M_StringCopy(console[consolestrings].string, temp, 1024);
+            free(temp);
             console[consolestrings].line = 2;
+            C_DumpConsoleStringToFile(consolestrings);
             console[consolestrings++].stringtype = warningstring;
         }
 
@@ -383,6 +408,7 @@ void C_PlayerMessage(const char *string, ...)
         M_StringCopy(console[consolestrings].string, buffer, 1024);
         console[consolestrings].stringtype = playermessagestring;
         console[consolestrings].tics = gametime;
+        C_DumpConsoleStringToFile(consolestrings);
         console[consolestrings++].count = 1;
     }
 
@@ -412,6 +438,7 @@ void C_Obituary(const char *string, ...)
         M_StringCopy(console[consolestrings].string, buffer, 1024);
         console[consolestrings].stringtype = obituarystring;
         console[consolestrings].tics = gametime;
+        C_DumpConsoleStringToFile(consolestrings);
         console[consolestrings++].count = 1;
     }
 
@@ -435,44 +462,45 @@ void C_AddConsoleDivider(void)
         if (consolestrings >= (int)consolestringsmax)
             console = I_Realloc(console, (consolestringsmax += CONSOLESTRINGSMAX) * sizeof(*console));
 
+        C_DumpConsoleStringToFile(consolestrings);
         console[consolestrings++].stringtype = dividerstring;
     }
 }
 
 const kern_t altkern[] =
 {
-    { ' ',  'T',  -1 }, { '!',  ' ',   2 }, { '"',  '+',  -1 }, { '"',  ',',  -1 }, { '"',  '.',  -2 }, { '"',  'J',  -2 },
+    { ' ',  'T',  -1 }, { '!',  ' ',   2 }, { '"',  '+',  -1 }, { '"',  ',',  -2 }, { '"',  '.',  -2 }, { '"',  'J',  -2 },
     { '"',  'a',  -1 }, { '"',  'c',  -1 }, { '"',  'd',  -1 }, { '"',  'e',  -1 }, { '"',  'g',  -1 }, { '"',  'j',  -2 },
     { '"',  'o',  -1 }, { '"',  'q',  -1 }, { '"',  's',  -1 }, { '\'', 's',  -1 }, { '(',  '(',  -1 }, { '(',  '-',  -1 },
-    { ')',  ')',  -1 }, { ')',  '.',  -1 }, { '+',  'j',  -2 }, { ',',  '4',  -1 }, { ',',  '7',  -1 }, { '.',  '"',  -1 },
-    { '.',  '4',  -1 }, { '.',  '7',  -1 }, { '.',  '\\', -1 }, { '/',  '/',  -2 }, { '/',  'a',  -1 }, { '/',  'd',  -1 },
-    { '/',  'o',  -1 }, { '0',  ',',  -1 }, { '0',  ';',  -1 }, { '0',  'j',  -2 }, { '1',  '"',  -1 }, { '1',  '\'', -1 },
-    { '1',  '\\', -1 }, { '1',  'j',  -2 }, { '2',  'j',  -2 }, { '3',  ',',  -1 }, { '3',  ';',  -1 }, { '3',  'j',  -2 },
-    { '4',  'j',  -2 }, { '5',  ',',  -1 }, { '5',  ';',  -1 }, { '5',  'j',  -2 }, { '6',  ',',  -1 }, { '6',  'j',  -2 },
-    { '7',  ',',  -2 }, { '7',  '.',  -2 }, { '7',  ';',  -1 }, { '7',  'j',  -2 }, { '8',  ',',  -1 }, { '8',  ';',  -1 },
-    { '8',  'j',  -2 }, { '9',  ',',  -1 }, { '9',  ';',  -1 }, { '9',  'j',  -2 }, { ':', '\\',  -1 }, { '?',  ' ',   2 },
-    { 'F',  ' ',  -1 }, { 'F',  ',',  -1 }, { 'F',  '.',  -1 }, { 'F',  ';',  -1 }, { 'L',  ' ',  -1 }, { 'L',  '"',  -1 },
-    { 'L',  'Y',  -1 }, { 'L',  '\'', -1 }, { 'L',  '\\', -2 }, { 'P',  ',',  -1 }, { 'P',  '.',  -1 }, { 'P',  ';',  -1 },
-    { 'P',  '_',  -1 }, { 'T',  ' ',  -1 }, { 'T',  ',',  -1 }, { 'T',  '.',  -1 }, { 'T',  ';',  -1 }, { 'T',  'a',  -1 },
-    { 'T',  'e',  -1 }, { 'T',  'o',  -1 }, { 'V',  ',',  -1 }, { 'V',  '.',  -1 }, { 'V',  ';',  -1 }, { 'V',  'a',  -1 },
-    { 'Y',  ',',  -1 }, { 'Y',  '.',  -1 }, { 'Y',  ';',  -1 }, { '\'', 'J',  -2 }, { '\'', 'a',  -1 }, { '\'', 'c',  -1 },
-    { '\'', 'd',  -1 }, { '\'', 'e',  -1 }, { '\'', 'g',  -1 }, { '\'', 'j',  -2 }, { '\'', 'o',  -1 }, { '\\', 'T',  -1 },
-    { '\\', 'V',  -1 }, { '\\', '\\', -2 }, { '\\', 't',  -1 }, { '_',  'f',  -1 }, { '_',  't',  -1 }, { '_',  'v',  -1 },
-    { 'a',  '"',  -1 }, { 'a',  '\'', -1 }, { 'a',  '\\', -1 }, { 'a',  'j',  -2 }, { 'b',  '"',  -1 }, { 'b',  ',',  -1 },
-    { 'b',  ';',  -1 }, { 'b',  '\'', -1 }, { 'b',  '\\', -1 }, { 'b',  'j',  -2 }, { 'c',  '"',  -1 }, { 'c',  ',',  -1 },
-    { 'c',  ';',  -1 }, { 'c',  '\'', -1 }, { 'c',  '\\', -1 }, { 'c',  'j',  -2 }, { 'd',  'j',  -2 }, { 'e',  '"',  -1 },
-    { 'e',  ',',  -1 }, { 'e',  ';',  -1 }, { 'e',  '\'', -1 }, { 'e',  '\\', -1 }, { 'e',  '_',  -1 }, { 'e',  'j',  -2 },
-    { 'f',  ' ',  -1 }, { 'f',  ',',  -2 }, { 'f',  ';',  -1 }, { 'f',  '_',  -1 }, { 'f',  'a',  -1 }, { 'f',  'j',  -2 },
-    { 'h',  '\\', -1 }, { 'h',  'j',  -2 }, { 'i',  'j',  -2 }, { 'k',  'j',  -2 }, { 'l',  'j',  -2 }, { 'm',  '"',  -1 },
-    { 'm',  '\'', -1 }, { 'm',  '\\', -1 }, { 'm',  'j',  -2 }, { 'n',  '"',  -1 }, { 'n',  '\'', -1 }, { 'n',  '\\', -1 },
-    { 'n',  'j',  -2 }, { 'o',  '"',  -1 }, { 'o',  ',',  -1 }, { 'o',  ';',  -1 }, { 'o',  '\'', -1 }, { 'o',  '\\', -1 },
-    { 'o',  'j',  -2 }, { 'p',  '"',  -1 }, { 'p',  ',',  -1 }, { 'p',  ';',  -1 }, { 'p',  '\'', -1 }, { 'p',  '\\', -1 },
-    { 'p',  'j',  -2 }, { 'r',  ' ',  -1 }, { 'r',  '"',  -1 }, { 'r',  ')',  -1 }, { 'r',  ',',  -2 }, { 'r',  '.',  -1 },
-    { 'r',  ';',  -1 }, { 'r',  '\'', -1 }, { 'r',  '\\', -1 }, { 'r',  '_',  -2 }, { 'r',  'a',  -1 }, { 'r',  'j',  -2 },
-    { 's',  ',',  -1 }, { 's',  ';',  -1 }, { 's',  '\\', -1 }, { 's',  'j',  -2 }, { 't',  '\\', -1 }, { 't',  'j',  -2 },
-    { 'u',  'j',  -2 }, { 'v',  ',',  -1 }, { 'v',  ';',  -1 }, { 'v',  '\\', -1 }, { 'v',  'a',  -1 }, { 'v',  'j',  -2 },
-    { 'w',  '\\', -1 }, { 'w',  'j',  -2 }, { 'x',  '\\', -1 }, { 'x',  'j',  -2 }, { 'y',  '\\', -1 }, { 'z',  '\\', -1 },
-    { 'z',  'j',  -2 }, { '\0', '\0',  0 }
+    { ')',  ')',  -1 }, { '+',  'j',  -2 }, { ',',  '4',  -1 }, { ',',  '7',  -1 }, { '.',  '"',  -1 }, { '.',  '4',  -1 },
+    { '.',  '7',  -1 }, { '.',  '\\', -1 }, { '/',  '/',  -2 }, { '/',  'a',  -1 }, { '/',  'd',  -1 }, { '/',  'o',  -1 },
+    { '0',  ',',  -1 }, { '0',  ';',  -1 }, { '0',  'j',  -2 }, { '1',  '"',  -1 }, { '1',  '\'', -1 }, { '1',  '\\', -1 },
+    { '1',  'j',  -2 }, { '2',  'j',  -2 }, { '3',  ',',  -1 }, { '3',  ';',  -1 }, { '3',  'j',  -2 }, { '4',  'j',  -2 },
+    { '5',  ',',  -1 }, { '5',  ';',  -1 }, { '5',  'j',  -2 }, { '6',  ',',  -1 }, { '6',  'j',  -2 }, { '7',  ',',  -2 },
+    { '7',  '.',  -2 }, { '7',  ';',  -1 }, { '7',  'j',  -2 }, { '8',  ',',  -1 }, { '8',  ';',  -1 }, { '8',  'j',  -2 },
+    { '9',  ',',  -1 }, { '9',  ';',  -1 }, { '9',  'j',  -2 }, { ':', '\\',  -1 }, { '?',  ' ',   2 }, { 'F',  ' ',  -1 },
+    { 'F',  ',',  -1 }, { 'F',  '.',  -1 }, { 'F',  ';',  -1 }, { 'L',  ' ',  -1 }, { 'L',  '"',  -1 }, { 'L',  'Y',  -1 },
+    { 'L',  '\'', -1 }, { 'L',  '\\', -2 }, { 'P',  ',',  -1 }, { 'P',  '.',  -1 }, { 'P',  ';',  -1 }, { 'P',  '_',  -1 },
+    { 'T',  ' ',  -1 }, { 'T',  ',',  -1 }, { 'T',  '.',  -1 }, { 'T',  ';',  -1 }, { 'T',  'a',  -1 }, { 'T',  'e',  -1 },
+    { 'T',  'o',  -1 }, { 'V',  ',',  -1 }, { 'V',  '.',  -1 }, { 'V',  ';',  -1 }, { 'V',  'a',  -1 }, { 'Y',  ',',  -1 },
+    { 'Y',  '.',  -1 }, { 'Y',  ';',  -1 }, { '\'', 'J',  -2 }, { '\'', 'a',  -1 }, { '\'', 'c',  -1 }, { '\'', 'd',  -1 },
+    { '\'', 'e',  -1 }, { '\'', 'g',  -1 }, { '\'', 'j',  -2 }, { '\'', 'o',  -1 }, { '\\', 'T',  -1 }, { '\\', 'V',  -1 },
+    { '\\', '\\', -2 }, { '\\', 't',  -1 }, { '_',  'f',  -1 }, { '_',  't',  -1 }, { '_',  'v',  -1 }, { 'a',  '"',  -1 },
+    { 'a',  '\'', -1 }, { 'a',  '\\', -1 }, { 'a',  'j',  -2 }, { 'b',  '"',  -1 }, { 'b',  ',',  -1 }, { 'b',  ';',  -1 },
+    { 'b',  '\'', -1 }, { 'b',  '\\', -1 }, { 'b',  'j',  -2 }, { 'c',  '"',  -1 }, { 'c',  ',',  -1 }, { 'c',  ';',  -1 },
+    { 'c',  '\'', -1 }, { 'c',  '\\', -1 }, { 'c',  'j',  -2 }, { 'd',  'j',  -2 }, { 'e',  '"',  -1 }, { 'e',  ',',  -1 },
+    { 'e',  ';',  -1 }, { 'e',  '\'', -1 }, { 'e',  '\\', -1 }, { 'e',  '_',  -1 }, { 'e',  'j',  -2 }, { 'f',  ' ',  -1 },
+    { 'f',  ',',  -2 }, { 'f',  ';',  -1 }, { 'f',  '_',  -1 }, { 'f',  'a',  -1 }, { 'f',  'j',  -2 }, { 'h',  '\\', -1 },
+    { 'h',  'j',  -2 }, { 'i',  'j',  -2 }, { 'k',  'j',  -2 }, { 'l',  'j',  -2 }, { 'm',  '"',  -1 }, { 'm',  '\'', -1 },
+    { 'm',  '\\', -1 }, { 'm',  'j',  -2 }, { 'n',  '"',  -1 }, { 'n',  '\'', -1 }, { 'n',  '\\', -1 }, { 'n',  'j',  -2 },
+    { 'o',  '"',  -1 }, { 'o',  ',',  -1 }, { 'o',  ';',  -1 }, { 'o',  '\'', -1 }, { 'o',  '\\', -1 }, { 'o',  'j',  -2 },
+    { 'p',  '"',  -1 }, { 'p',  ',',  -1 }, { 'p',  ';',  -1 }, { 'p',  '\'', -1 }, { 'p',  '\\', -1 }, { 'p',  'j',  -2 },
+    { 'r',  ' ',  -1 }, { 'r',  '"',  -1 }, { 'r',  ')',  -1 }, { 'r',  ',',  -2 }, { 'r',  '.',  -1 }, { 'r',  ';',  -1 },
+    { 'r',  '\'', -1 }, { 'r',  '\\', -1 }, { 'r',  '_',  -2 }, { 'r',  'a',  -1 }, { 'r',  'j',  -2 }, { 's',  ',',  -1 },
+    { 's',  ';',  -1 }, { 's',  '\\', -1 }, { 's',  'j',  -2 }, { 't',  '\\', -1 }, { 't',  'j',  -2 }, { 'u',  'j',  -2 },
+    { 'v',  ',',  -1 }, { 'v',  ';',  -1 }, { 'v',  '\\', -1 }, { 'v',  'a',  -1 }, { 'v',  'j',  -2 }, { 'w',  '\\', -1 },
+    { 'w',  'j',  -2 }, { 'x',  '\\', -1 }, { 'x',  'j',  -2 }, { 'y',  '\\', -1 }, { 'z',  '\\', -1 }, { 'z',  'j',  -2 },
+    { '\0', '\0',  0 }
 };
 
 int C_TextWidth(const char *text, const dboolean formatting, const dboolean kerning)
@@ -746,39 +774,40 @@ static void C_DrawBackground(int height)
 
     if (!blurred)
     {
+        // blur background
         memcpy(blurscreen, screens[0], height);
 
         for (int y = 0; y <= height - CONSOLEWIDTH; y += CONSOLEWIDTH)
             for (int x = y; x <= y + CONSOLEWIDTH - 2; x++)
-                blurscreen[x] = tinttab50[blurscreen[x] + (blurscreen[x + 1] << 8)];
+                blurscreen[x] = tinttab50[(blurscreen[x + 1] << 8) + blurscreen[x]];
 
         for (int y = 0; y <= height - CONSOLEWIDTH; y += CONSOLEWIDTH)
             for (int x = y + CONSOLEWIDTH - 2; x >= y; x--)
-                blurscreen[x] = tinttab50[blurscreen[x] + (blurscreen[x - 1] << 8)];
+                blurscreen[x] = tinttab50[(blurscreen[x - 1] << 8) + blurscreen[x]];
 
         for (int y = 0; y <= height - CONSOLEWIDTH * 2; y += CONSOLEWIDTH)
             for (int x = y; x <= y + CONSOLEWIDTH - 2; x++)
-                blurscreen[x] = tinttab50[blurscreen[x] + (blurscreen[x + CONSOLEWIDTH + 1] << 8)];
+                blurscreen[x] = tinttab50[(blurscreen[x + CONSOLEWIDTH + 1] << 8) + blurscreen[x]];
 
         for (int y = height - CONSOLEWIDTH; y >= CONSOLEWIDTH; y -= CONSOLEWIDTH)
             for (int x = y + CONSOLEWIDTH - 1; x >= y + 1; x--)
-                blurscreen[x] = tinttab50[blurscreen[x] + (blurscreen[x - CONSOLEWIDTH - 1] << 8)];
+                blurscreen[x] = tinttab50[(blurscreen[x - CONSOLEWIDTH - 1] << 8) + blurscreen[x]];
 
         for (int y = 0; y <= height - CONSOLEWIDTH * 2; y += CONSOLEWIDTH)
             for (int x = y; x <= y + CONSOLEWIDTH - 1; x++)
-                blurscreen[x] = tinttab50[blurscreen[x] + (blurscreen[x + CONSOLEWIDTH] << 8)];
+                blurscreen[x] = tinttab50[(blurscreen[x + CONSOLEWIDTH] << 8) + blurscreen[x]];
 
         for (int y = height - CONSOLEWIDTH; y >= CONSOLEWIDTH; y -= CONSOLEWIDTH)
             for (int x = y; x <= y + CONSOLEWIDTH - 1; x++)
-                blurscreen[x] = tinttab50[blurscreen[x] + (blurscreen[x - CONSOLEWIDTH] << 8)];
+                blurscreen[x] = tinttab50[(blurscreen[x - CONSOLEWIDTH] << 8) + blurscreen[x]];
 
         for (int y = 0; y <= height - CONSOLEWIDTH * 2; y += CONSOLEWIDTH)
             for (int x = y + CONSOLEWIDTH - 1; x >= y + 1; x--)
-                blurscreen[x] = tinttab50[blurscreen[x] + (blurscreen[x + CONSOLEWIDTH - 1] << 8)];
+                blurscreen[x] = tinttab50[(blurscreen[x + CONSOLEWIDTH - 1] << 8) + blurscreen[x]];
 
         for (int y = height - CONSOLEWIDTH; y >= CONSOLEWIDTH; y -= CONSOLEWIDTH)
             for (int x = y; x <= y + CONSOLEWIDTH - 2; x++)
-                blurscreen[x] = tinttab50[blurscreen[x] + (blurscreen[x - CONSOLEWIDTH + 1] << 8)];
+                blurscreen[x] = tinttab50[(blurscreen[x - CONSOLEWIDTH + 1] << 8) + blurscreen[x]];
     }
 
     if (forceconsoleblurredraw)
@@ -789,16 +818,13 @@ static void C_DrawBackground(int height)
     else
         blurred = (consoleheight == CONSOLEHEIGHT && !dowipe);
 
+    // tint background using con_backcolor CVAR
     for (int i = 0, color = nearestcolors[con_backcolor] << 8; i < height; i++)
         screens[0][i] = tinttab50[blurscreen[i] + color];
 
+    // apply corrugated glass effect to background
     for (int i = height - 2; i > 1; i -= 3)
-    {
-        screens[0][i] = colormaps[0][256 * 6 + screens[0][i]];
-
-        if (((i - 1) % CONSOLEWIDTH) < CONSOLEWIDTH - 2)
-            screens[0][i + 1] = colormaps[0][256 * 6 + screens[0][i - 1]];
-    }
+        screens[0][i + 1] = colormaps[0][6 * 256 + screens[0][i + (i % CONSOLEWIDTH && (i + 1) % CONSOLEWIDTH ? -1 : 1)]];
 
     // draw branding
     V_DrawBigTranslucentPatch(CONSOLEWIDTH - brandwidth, consoleheight - brandheight + 2, brand);
@@ -807,21 +833,22 @@ static void C_DrawBackground(int height)
     for (int i = height - CONSOLEWIDTH * 3; i < height; i++)
         screens[0][i] = tinttab50[consoleedgecolor + screens[0][i]];
 
-    // soften edges
+    // bevel left and right edges
     for (int i = 0; i < height; i += CONSOLEWIDTH)
     {
-        screens[0][i] = tinttab50[screens[0][i] + (nearestblack << 8)];
-        screens[0][i + CONSOLEWIDTH - 1] = tinttab50[screens[0][i + CONSOLEWIDTH - 1] + (nearestblack << 8)];
+        screens[0][i] = tinttab50[(nearestblack << 8) + screens[0][i + 1]];
+        screens[0][i + CONSOLEWIDTH - 1] = tinttab50[(nearestblack << 8) + screens[0][i + CONSOLEWIDTH - 2]];
     }
 
+    // bevel bottom edge
     for (int i = height - CONSOLEWIDTH + 1; i < height - 1; i++)
-        screens[0][i] = tinttab25[screens[0][i] + (nearestblack << 8)];
+        screens[0][i] = tinttab25[(nearestblack << 8) + screens[0][i]];
 
     // draw shadow
     if (gamestate != GS_TITLESCREEN)
         for (int i = CONSOLEWIDTH; i <= 4 * CONSOLEWIDTH; i += CONSOLEWIDTH)
             for (int j = height; j < height + i; j++)
-                screens[0][j] = colormaps[0][256 * 4 + screens[0][j]];
+                screens[0][j] = colormaps[0][4 * 256 + screens[0][j]];
 }
 
 static int C_DrawConsoleText(int x, int y, char *text, const int color1, const int color2, const int boldcolor,
@@ -834,7 +861,7 @@ static int C_DrawConsoleText(int x, int y, char *text, const int color1, const i
     int             truncate = len;
     unsigned char   prevletter = '\0';
     int             width = 0;
-    int             lastcolor1;
+    int             lastcolor1 = color1;
     int             startx = x;
 
     y -= CONSOLEHEIGHT - consoleheight;
@@ -854,8 +881,16 @@ static int C_DrawConsoleText(int x, int y, char *text, const int color1, const i
     }
     else if (len > 100)
     {
-        while (C_TextWidth(M_SubString(text, 0, truncate), formatting, kerning) + width + 6 > CONSOLETEXTPIXELWIDTH)
-            truncate--;
+        do
+        {
+            char    *temp = M_SubString(text, 0, truncate);
+            int     width2 = C_TextWidth(temp, formatting, kerning) + width + 6;
+
+            free(temp);
+
+            if (width2 <= CONSOLETEXTPIXELWIDTH)
+                break;
+        } while (truncate-- > 0);
 
         if (truncate == len - 1 && text[truncate] == '.')
             truncate++;
@@ -1121,7 +1156,7 @@ void C_Drawer(void)
         int             start;
         int             end;
         int             len;
-        char            middletext[512];
+        char            partialinput[255];
         const dboolean  prevconsoleactive = consoleactive;
         static int      consolewait;
 
@@ -1224,10 +1259,12 @@ void C_Drawer(void)
                 if (console[i].count > 1)
                 {
                     char    buffer[CONSOLETEXTMAXLENGTH];
+                    char    *temp = commify(console[i].count);
 
-                    M_snprintf(buffer, sizeof(buffer), "(%s)", commify(console[i].count));
+                    M_snprintf(buffer, sizeof(buffer), "(%s)", temp);
                     C_DrawConsoleText(CONSOLETEXTX + width + 2, y, buffer, consoleplayermessagecolor,
                         NOBACKGROUNDCOLOR, consoleplayermessagecolor, tinttab66, notabs, false, false, i);
+                    free(temp);
                 }
 
                 if (con_timestamps)
@@ -1271,34 +1308,42 @@ void C_Drawer(void)
 
         if (*consoleinput)
         {
-            char    lefttext[512];
-
             // draw input text to left of caret
             for (i = 0; i < MIN(selectstart, caretpos); i++)
-                lefttext[i] = consoleinput[i];
+                partialinput[i] = consoleinput[i];
 
-            lefttext[i] = '\0';
-            x += C_DrawConsoleText(x, CONSOLEHEIGHT - 17, lefttext, consoleinputcolor,
+            partialinput[i] = '\0';
+            x += C_DrawConsoleText(x, CONSOLEHEIGHT - 17, partialinput, consoleinputcolor,
                 NOBACKGROUNDCOLOR, NOBOLDCOLOR, NULL, notabs, false, true, 0);
 
             // draw any selected text to left of caret
             if (selectstart < caretpos)
             {
                 for (i = selectstart; i < selectend; i++)
-                    middletext[i - selectstart] = consoleinput[i];
+                    partialinput[i - selectstart] = consoleinput[i];
 
-                middletext[i - selectstart] = '\0';
+                partialinput[i - selectstart] = '\0';
 
-                if (*middletext)
+                if (*partialinput)
                 {
                     for (i = 1; i < CONSOLELINEHEIGHT - 1; i++)
-                        screens[0][(CONSOLEHEIGHT - 17 + i) * SCREENWIDTH + x - 1] = consoleselectedinputbackgroundcolor;
+                    {
+                        int y = CONSOLEHEIGHT - 17 + i - (CONSOLEHEIGHT - consoleheight);
 
-                    x += C_DrawConsoleText(x, CONSOLEHEIGHT - 17, middletext, consoleselectedinputcolor,
+                        if (y >= 0)
+                            screens[0][y * SCREENWIDTH + x - 1] = consoleselectedinputbackgroundcolor;
+                    }
+
+                    x += C_DrawConsoleText(x, CONSOLEHEIGHT - 17, partialinput, consoleselectedinputcolor,
                         consoleselectedinputbackgroundcolor, NOBOLDCOLOR, NULL, notabs, false, true, 0);
 
                     for (i = 1; i < CONSOLELINEHEIGHT - 1; i++)
-                        screens[0][(CONSOLEHEIGHT - 17 + i) * SCREENWIDTH + x] = consoleselectedinputbackgroundcolor;
+                    {
+                        int y = CONSOLEHEIGHT - 17 + i - (CONSOLEHEIGHT - consoleheight);
+
+                        if (y >= 0)
+                            screens[0][y * SCREENWIDTH + x] = consoleselectedinputbackgroundcolor;
+                    }
                 }
             }
         }
@@ -1327,20 +1372,30 @@ void C_Drawer(void)
         if (selectend > caretpos)
         {
             for (i = selectstart; i < selectend; i++)
-                middletext[i - selectstart] = consoleinput[i];
+                partialinput[i - selectstart] = consoleinput[i];
 
-            middletext[i - selectstart] = '\0';
+            partialinput[i - selectstart] = '\0';
 
-            if (*middletext)
+            if (*partialinput)
             {
                 for (i = 1; i < CONSOLELINEHEIGHT - 1; i++)
-                    screens[0][(CONSOLEHEIGHT - 17 + i) * SCREENWIDTH + x - 1] = consoleselectedinputbackgroundcolor;
+                {
+                    int y = CONSOLEHEIGHT - 17 + i - (CONSOLEHEIGHT - consoleheight);
 
-                x += C_DrawConsoleText(x, CONSOLEHEIGHT - 17, middletext, consoleselectedinputcolor,
+                    if (y >= 0)
+                        screens[0][y * SCREENWIDTH + x - 1] = consoleselectedinputbackgroundcolor;
+                }
+
+                x += C_DrawConsoleText(x, CONSOLEHEIGHT - 17, partialinput, consoleselectedinputcolor,
                     consoleselectedinputbackgroundcolor, NOBOLDCOLOR, NULL, notabs, false, true, i);
 
                 for (i = 1; i < CONSOLELINEHEIGHT - 1; i++)
-                    screens[0][(CONSOLEHEIGHT - 17 + i) * SCREENWIDTH + x] = consoleselectedinputbackgroundcolor;
+                {
+                    int y = CONSOLEHEIGHT - 17 + i - (CONSOLEHEIGHT - consoleheight);
+
+                    if (y >= 0)
+                        screens[0][y * SCREENWIDTH + x] = consoleselectedinputbackgroundcolor;
+                }
             }
         }
 
@@ -1349,15 +1404,13 @@ void C_Drawer(void)
 
         if (caretpos < len)
         {
-            char    righttext[512];
-
             for (i = selectend; i < len; i++)
-                righttext[i - selectend] = consoleinput[i];
+                partialinput[i - selectend] = consoleinput[i];
 
-            righttext[i - selectend] = '\0';
+            partialinput[i - selectend] = '\0';
 
-            if (*righttext)
-                C_DrawConsoleText(x, CONSOLEHEIGHT - 17, righttext, consoleinputcolor,
+            if (*partialinput)
+                C_DrawConsoleText(x, CONSOLEHEIGHT - 17, partialinput, consoleinputcolor,
                     NOBACKGROUNDCOLOR, NOBOLDCOLOR, NULL, notabs, false, true, i);
         }
     }
@@ -1719,12 +1772,17 @@ dboolean C_Responder(event_t *ev)
                     }
                     else
                     {
-                        i += 1 + (consoleinput[i + 1] == ' ');
-                        M_StringCopy(prefix, M_SubString(consoleinput, 0, i), sizeof(prefix));
+                        char    *temp1 = M_SubString(consoleinput, 0, (i += 1 + (consoleinput[i + 1] == ' ')));
+
+                        M_StringCopy(prefix, temp1, sizeof(prefix));
+                        free(temp1);
 
                         if (autocomplete == -1)
                         {
-                            M_StringCopy(input, M_SubString(consoleinput, i, (size_t)len - i), sizeof(input));
+                            char    *temp2 = M_SubString(consoleinput, i, (size_t)len - i);
+
+                            M_StringCopy(input, temp2, sizeof(input));
+                            free(temp2);
 
                             if (!*input)
                                 break;
@@ -1743,8 +1801,16 @@ dboolean C_Responder(event_t *ev)
                         int         game;
 
                         autocomplete += direction;
-                        M_StringCopy(output, (GetCapsLockState() ? uppercase(autocompletelist[autocomplete].text) :
-                            autocompletelist[autocomplete].text), sizeof(output));
+
+                        if (GetCapsLockState())
+                        {
+                            char    *temp = uppercase(autocompletelist[autocomplete].text);
+
+                            M_StringCopy(output, temp, sizeof(output));
+                            free(temp);
+                        }
+                        else
+                            M_StringCopy(output, autocompletelist[autocomplete].text, sizeof(output));
 
                         if (M_StringCompare(output, input))
                             continue;
@@ -1764,11 +1830,13 @@ dboolean C_Responder(event_t *ev)
                                 || (spaces1 == 2 && !endspace1 && (spaces2 == 2 || (spaces2 == 3 && endspace2)))
                                 || (spaces1 == 3 && !endspace1)))
                         {
-                            M_StringCopy(consoleinput, M_StringJoin(prefix, M_StringReplace(output, input, input), NULL),
-                                sizeof(consoleinput));
+                            char    *temp = M_StringJoin(prefix, M_StringReplace(output, input, input), NULL);
+
+                            M_StringCopy(consoleinput, temp, sizeof(consoleinput));
                             caretpos = selectstart = selectend = len2 + (int)strlen(prefix);
                             caretwait = I_GetTimeMS() + CARETBLINKTIME;
                             showcaret = true;
+                            free(temp);
                             return true;
                         }
                     }
@@ -1900,7 +1968,12 @@ dboolean C_Responder(event_t *ev)
                 // copy selected text to clipboard
                 if (modstate & KMOD_CTRL)
                     if (selectstart < selectend)
-                        SDL_SetClipboardText(M_SubString(consoleinput, selectstart, (size_t)selectend - selectstart));
+                    {
+                        char    *temp = M_SubString(consoleinput, selectstart, (size_t)selectend - selectstart);
+
+                        SDL_SetClipboardText(temp);
+                        free(temp);
+                    }
 
                 break;
 
@@ -1909,9 +1982,10 @@ dboolean C_Responder(event_t *ev)
                 if (modstate & KMOD_CTRL)
                 {
                     char    buffer[255];
+                    char    *temp1 = M_SubString(consoleinput, 0, selectstart);
+                    char    *temp2 = M_SubString(consoleinput, selectend, (size_t)len - selectend);
 
-                    M_snprintf(buffer, sizeof(buffer), "%s%s%s", M_SubString(consoleinput, 0, selectstart),
-                        SDL_GetClipboardText(), M_SubString(consoleinput, selectend, (size_t)len - selectend));
+                    M_snprintf(buffer, sizeof(buffer), "%s%s%s", temp1, SDL_GetClipboardText(), temp2);
                     M_StringCopy(buffer, M_StringReplace(buffer, "(null)", ""), sizeof(buffer));
                     M_StringCopy(buffer, M_StringReplace(buffer, "(null)", ""), sizeof(buffer));
 
@@ -1922,6 +1996,9 @@ dboolean C_Responder(event_t *ev)
                         selectstart += (int)strlen(SDL_GetClipboardText());
                         selectend = caretpos = selectstart;
                     }
+
+                    free(temp1);
+                    free(temp2);
                 }
 
                 break;
@@ -1931,8 +2008,11 @@ dboolean C_Responder(event_t *ev)
                 if (modstate & KMOD_CTRL)
                     if (selectstart < selectend)
                     {
+                        char    *temp = M_SubString(consoleinput, selectstart, (size_t)selectend - selectstart);
+
                         C_AddToUndoHistory();
-                        SDL_SetClipboardText(M_SubString(consoleinput, selectstart, (size_t)selectend - selectstart));
+                        SDL_SetClipboardText(temp);
+                        free(temp);
 
                         for (i = selectend; i < len; i++)
                             consoleinput[selectstart + i - selectend] = consoleinput[i];
@@ -1968,11 +2048,12 @@ dboolean C_Responder(event_t *ev)
     else if (ev->type == ev_text)
     {
         char    ch = (char)ev->data1;
+        char    *temp = NULL;
 
         if (ch >= ' ' && ch <= '}' && ch != '`' && C_TextWidth(consoleinput, false, true)
             + (ch == ' ' ? spacewidth : SHORT(consolefont[ch - CONSOLEFONTSTART]->width))
-            - (selectstart < selectend ? C_TextWidth(M_SubString(consoleinput, selectstart,
-            (size_t)selectend - selectstart), false, true) : 0) <= CONSOLEINPUTPIXELWIDTH)
+            - (selectstart < selectend ? C_TextWidth((temp = M_SubString(consoleinput, selectstart,
+            (size_t)selectend - selectstart)), false, true) : 0) <= CONSOLEINPUTPIXELWIDTH)
         {
             C_AddToUndoHistory();
 
@@ -2004,6 +2085,9 @@ dboolean C_Responder(event_t *ev)
             autocomplete = -1;
             inputhistory = -1;
         }
+
+        if (temp)
+            free(temp);
     }
     else if (ev->type == ev_mousewheel)
     {
@@ -2059,10 +2143,10 @@ void C_PrintCompileDate(void)
 
 #if defined(_MSC_FULL_VER)
     if (_MSC_BUILD)
-        C_Output("It was compiled using <i><b>Microsoft C/C++ Optimizing Compiler v%i.%02i.%i.%i</b></i>.",
+        C_Output("It was compiled using <i><b>Microsoft C/C++ Optimizing Compiler v%i.%02i.%i.%i.</b></i>",
             _MSC_FULL_VER / 10000000, (_MSC_FULL_VER % 10000000) / 100000, _MSC_FULL_VER % 100000, _MSC_BUILD);
     else
-        C_Output("It was compiled using <i><b>Microsoft C/C++ Optimizing Compiler v%i.%02i.%i</b></i>.",
+        C_Output("It was compiled using <i><b>Microsoft C/C++ Optimizing Compiler v%i.%02i.%i.</b></i>",
             _MSC_FULL_VER / 10000000, (_MSC_FULL_VER % 10000000) / 100000, _MSC_FULL_VER % 100000);
 #endif
 }
@@ -2073,12 +2157,11 @@ void C_PrintSDLVersions(void)
 
     if (revision)
     {
-        char    *revision_str = commify(revision);
+        char    *temp = commify(revision);
 
         C_Output("Using v%i.%i.%i (revision %s) of the <i><b>SDL (Simple DirectMedia Layer)</b></i> library.",
-            SDL_MAJOR_VERSION, SDL_MINOR_VERSION, SDL_PATCHLEVEL, revision_str);
-
-        free(revision_str);
+            SDL_MAJOR_VERSION, SDL_MINOR_VERSION, SDL_PATCHLEVEL, temp);
+        free(temp);
     }
     else
         C_Output("Using v%i.%i.%i of the <i><b>SDL (Simple DirectMedia Layer)</b></i> library.",

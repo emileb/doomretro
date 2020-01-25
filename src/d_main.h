@@ -7,7 +7,7 @@
 ========================================================================
 
   Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2019 by Brad Harding.
+  Copyright © 2013-2020 by Brad Harding.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
@@ -40,6 +40,10 @@
 #define __D_MAIN_H__
 
 #include "d_event.h"
+
+extern char **episodes[];
+extern char **expansions[];
+extern char **skilllevels[];
 
 //
 // D_DoomMain()

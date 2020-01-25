@@ -7,7 +7,7 @@
 ========================================================================
 
   Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2019 by Brad Harding.
+  Copyright © 2013-2020 by Brad Harding.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
@@ -546,6 +546,7 @@ static void WI_UpdateAnimatedBack(void)
 
                         a->nexttic = bcnt + a->period;
                     }
+
                     break;
             }
         }
@@ -794,10 +795,10 @@ static void WI_InitStats(void)
     if (totalsecret)
         C_TabbedOutput(tabs, "Secrets\t<b>%i%%</b>", (wbs->ssecret * 100) / wbs->maxsecret);
 
-    C_TabbedOutput(tabs, "Time\t<b>%.2i:%.2i</b>", wbs->stime / TICRATE / 60, wbs->stime / TICRATE % 60);
+    C_TabbedOutput(tabs, "Time\t<b>%02i:%02i</b>", wbs->stime / TICRATE / 60, wbs->stime / TICRATE % 60);
 
     if (wbs->partime)
-        C_TabbedOutput(tabs, "Par time\t<b>%.2i:%.2i</b>", wbs->partime / TICRATE / 60, wbs->partime / TICRATE % 60);
+        C_TabbedOutput(tabs, "Par time\t<b>%02i:%02i</b>", wbs->partime / TICRATE / 60, wbs->partime / TICRATE % 60);
 
     WI_InitAnimatedBack();
 }

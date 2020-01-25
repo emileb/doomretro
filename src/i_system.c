@@ -7,7 +7,7 @@
 ========================================================================
 
   Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2019 by Brad Harding.
+  Copyright © 2013-2020 by Brad Harding.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
@@ -58,7 +58,7 @@
 #include "version.h"
 
 #if defined(_WIN32)
-extern char     *previouswad;
+extern char *previouswad;
 
 typedef long (__stdcall *PRTLGETVERSION)(PRTL_OSVERSIONINFOEXW);
 typedef BOOL (WINAPI *PGETPRODUCTINFO)(DWORD, DWORD, DWORD, DWORD, PDWORD);
@@ -190,7 +190,7 @@ void I_PrintWindowsVersion(void)
             else if (info.dwMajorVersion == 10)
                 M_StringCopy(infoname, (info.wProductType == VER_NT_WORKSTATION ? "10" : "Server 2016"), sizeof(infoname));
 
-            C_Output("Running on %i-bit <i><b>Microsoft Windows %s%s%s%s%ws%s (Build %s)</b></i>.",
+            C_Output("Running on %i-bit <i><b>Microsoft Windows %s%s%s%s%ws%s (Build %s).</b></i>",
                 bits, infoname, (*typename ? " " : ""), typename, (wcslen(info.szCSDVersion) ? " (" : ""),
                 (wcslen(info.szCSDVersion) ? info.szCSDVersion : L""), (wcslen(info.szCSDVersion) ? ")" : ""), build);
 
@@ -198,7 +198,7 @@ void I_PrintWindowsVersion(void)
         }
 
         if (bits == 64 && sizeof(intptr_t) == 4)
-            C_Warning(1, "The 64-bit version of <i>" PACKAGE_NAME "</i> is recommended on this system.");
+            C_Warning(1, "The 64-bit version of <i>" PACKAGE_NAME "</i> is recommended on this PC.");
     }
 }
 #endif
@@ -208,8 +208,7 @@ void I_PrintSystemInfo(void)
     int     cores = SDL_GetCPUCount();
     char    *RAM = commify(SDL_GetSystemRAM() / 1000);
 
-    C_Output("There %s %i core%s and %sGB of RAM on this " PC ".",
-        (cores > 1 ? "are" : "is"), cores, (cores > 1 ? "s" : ""), RAM);
+    C_Output("There %s %i core%s and %sGB of RAM on this " PC ".", (cores > 1 ? "are" : "is"), cores, (cores > 1 ? "s" : ""), RAM);
     free(RAM);
 }
 

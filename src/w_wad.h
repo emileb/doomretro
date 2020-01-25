@@ -7,7 +7,7 @@
 ========================================================================
 
   Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2019 by Brad Harding.
+  Copyright © 2013-2020 by Brad Harding.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
@@ -77,6 +77,11 @@ dboolean IsBFGEdition(const char *iwadname);
 dboolean IsUltimateDOOM(const char *iwadname);
 
 char *GetCorrectCase(char *path);
+
+#if defined(_WIN32)
+char *W_NearestFilename(char *path, char *string);
+#endif
+
 dboolean W_AddFile(char *filename, dboolean automatic);
 int W_WadType(char *filename);
 

@@ -7,7 +7,7 @@
 ========================================================================
 
   Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2019 by Brad Harding.
+  Copyright © 2013-2020 by Brad Harding.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
@@ -119,5 +119,7 @@ void STlib_InitMultIcon(st_multicon_t *mi, int x, int y, patch_t **il, int *inum
 void STlib_UpdateMultIcon(st_multicon_t *mi, dboolean refresh);
 
 void STlib_UpdateArmsIcon(st_multicon_t *mi, dboolean refresh, int i);
+
+void STLib_Init(void);
 
 #endif

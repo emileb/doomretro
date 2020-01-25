@@ -7,7 +7,7 @@
 ========================================================================
 
   Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2019 by Brad Harding.
+  Copyright © 2013-2020 by Brad Harding.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
@@ -64,6 +64,7 @@
 #include "c_console.h"
 #include "doomdef.h"
 #include "i_system.h"
+#include "m_fixed.h"
 #include "m_misc.h"
 #include "version.h"
 #include "w_file.h"
@@ -205,7 +206,7 @@ char *M_GetResourceFolder(void)
     char    *executablefolder = M_GetExecutableFolder();
 
 #if !defined(_WIN32)
-    // On Linux and macOS, first assume that the executable is in .../bin and
+    // On Linux and macOS, first assume that the executable is in ../bin and
     // try to load resources from ../share/doomretro.
     char    *resourcefolder = M_StringJoin(executablefolder,
                 DIR_SEPARATOR_S ".." DIR_SEPARATOR_S "share" DIR_SEPARATOR_S PACKAGE, NULL);
@@ -393,7 +394,7 @@ const char *M_StrCaseStr(const char *haystack, const char *needle)
 
     for (int i = 0; i <= len; i++)
         if (!strncasecmp(haystack + i, needle, needle_len))
-            return haystack + i;
+            return (haystack + i);
 
     return NULL;
 }

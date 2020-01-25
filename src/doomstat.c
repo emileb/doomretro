@@ -7,7 +7,7 @@
 ========================================================================
 
   Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2019 by Brad Harding.
+  Copyright © 2013-2020 by Brad Harding.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
@@ -41,8 +41,7 @@
 // Game Mode - identify IWAD as shareware, retail etc.
 GameMode_t      gamemode = indetermined;
 GameMission_t   gamemission = doom;
-GameVersion_t   gameversion = exe_final;
-char            *gamedescription;
+char            gamedescription[255];
 
 dboolean        sigil;
 dboolean        autosigil = false;

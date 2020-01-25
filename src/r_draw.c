@@ -7,7 +7,7 @@
 ========================================================================
 
   Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2019 by Brad Harding.
+  Copyright © 2013-2020 by Brad Harding.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
@@ -477,7 +477,7 @@ void R_DrawSkyColumn(void)
 
         if (!(dc_texheight & heightmask))
         {
-            heightmask = (heightmask << FRACBITS) | 0xFFFF;
+            heightmask = ((heightmask << FRACBITS) | 0xFFFF);
 
             while ((y -= 2) >= 0)
             {
@@ -524,12 +524,12 @@ void R_DrawFlippedSkyColumn(void)
 
     while (--y)
     {
-        *dest = colormap[dc_source[(i = frac >> FRACBITS) < 128 ? i : 126 - (i & 127)]];
+        *dest = colormap[dc_source[((i = frac >> FRACBITS) < 128 ? i : 126 - (i & 127))]];
         dest += SCREENWIDTH;
         frac += dc_iscale;
     }
 
-    *dest = colormap[dc_source[(i = frac >> FRACBITS) < 128 ? i : 126 - (i & 127)]];
+    *dest = colormap[dc_source[((i = frac >> FRACBITS) < 128 ? i : 126 - (i & 127))]];
 }
 
 void R_DrawSkyColorColumn(void)
@@ -1221,13 +1221,13 @@ void R_InitBuffer(int width, int height)
         ylookup1[i] = screens[1] + y;
     }
 
-    for (int y = 1; y < SCREENHEIGHT - 1; y++)
-        for (int x = 0; x < SCREENWIDTH; x++)
-            fuzztable[y * SCREENWIDTH + x] = FUZZ(-1, 1);
-
     for (int x = 0; x < SCREENWIDTH; x++)
     {
         fuzztable[x] = FUZZ(0, 1);
+
+        for (int y = SCREENWIDTH; y < SCREENWIDTH * (SCREENHEIGHT - 1); y += SCREENWIDTH)
+            fuzztable[y + x] = FUZZ(-1, 1);
+
         fuzztable[SCREENHEIGHT - 1 + x] = FUZZ(-1, 0);
     }
 }
