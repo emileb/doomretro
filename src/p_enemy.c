@@ -377,7 +377,7 @@ static dboolean P_SmartMove(mobj_t *actor)
                     && actor->subsector->sector->islift);
 
     // killough 10/98: allow dogs to drop off of taller ledges sometimes.
-    // dropoff==1 means always allow it, dropoff==2 means only up to 128 high,
+    // dropoff==1 means always allow it, dropoff == 2 means only up to 128 high,
     // and only if the target is immediately on the other side of the line.
     if (actor->type == MT_DOGS
         && target && !((target->flags ^ actor->flags) & MF_FRIEND)
@@ -1554,6 +1554,7 @@ void A_FatAttack1(mobj_t *actor, player_t *player, pspdef_t *psp)
     angle_t an;
     mobj_t  *mo;
     mobj_t  *target = actor->target;
+    int     speed;
 
     if (!target)
         return;
@@ -1567,8 +1568,9 @@ void A_FatAttack1(mobj_t *actor, player_t *player, pspdef_t *psp)
     mo = P_SpawnMissile(actor, target, MT_FATSHOT);
     mo->angle += FATSPREAD;
     an = mo->angle >> ANGLETOFINESHIFT;
-    mo->momx = FixedMul(mo->info->speed, finecosine[an]);
-    mo->momy = FixedMul(mo->info->speed, finesine[an]);
+    speed = mo->info->speed;
+    mo->momx = FixedMul(speed, finecosine[an]);
+    mo->momy = FixedMul(speed, finesine[an]);
 }
 
 void A_FatAttack2(mobj_t *actor, player_t *player, pspdef_t *psp)
@@ -1576,6 +1578,7 @@ void A_FatAttack2(mobj_t *actor, player_t *player, pspdef_t *psp)
     angle_t an;
     mobj_t  *mo;
     mobj_t  *target = actor->target;
+    int     speed;
 
     if (!target)
         return;
@@ -1589,8 +1592,9 @@ void A_FatAttack2(mobj_t *actor, player_t *player, pspdef_t *psp)
     mo = P_SpawnMissile(actor, target, MT_FATSHOT);
     mo->angle -= FATSPREAD * 2;
     an = mo->angle >> ANGLETOFINESHIFT;
-    mo->momx = FixedMul(mo->info->speed, finecosine[an]);
-    mo->momy = FixedMul(mo->info->speed, finesine[an]);
+    speed = mo->info->speed;
+    mo->momx = FixedMul(speed, finecosine[an]);
+    mo->momy = FixedMul(speed, finesine[an]);
 }
 
 void A_FatAttack3(mobj_t *actor, player_t *player, pspdef_t *psp)
@@ -1598,6 +1602,7 @@ void A_FatAttack3(mobj_t *actor, player_t *player, pspdef_t *psp)
     angle_t an;
     mobj_t  *mo;
     mobj_t  *target = actor->target;
+    int     speed;
 
     if (!target)
         return;
@@ -1607,14 +1612,15 @@ void A_FatAttack3(mobj_t *actor, player_t *player, pspdef_t *psp)
     mo = P_SpawnMissile(actor, target, MT_FATSHOT);
     mo->angle -= FATSPREAD / 2;
     an = mo->angle >> ANGLETOFINESHIFT;
-    mo->momx = FixedMul(mo->info->speed, finecosine[an]);
-    mo->momy = FixedMul(mo->info->speed, finesine[an]);
+    speed = mo->info->speed;
+    mo->momx = FixedMul(speed, finecosine[an]);
+    mo->momy = FixedMul(speed, finesine[an]);
 
     mo = P_SpawnMissile(actor, target, MT_FATSHOT);
     mo->angle += FATSPREAD / 2;
     an = mo->angle >> ANGLETOFINESHIFT;
-    mo->momx = FixedMul(mo->info->speed, finecosine[an]);
-    mo->momy = FixedMul(mo->info->speed, finesine[an]);
+    mo->momx = FixedMul(speed, finecosine[an]);
+    mo->momy = FixedMul(speed, finesine[an]);
 }
 
 //
@@ -1733,28 +1739,14 @@ void A_PainDie(mobj_t *actor, player_t *player, pspdef_t *psp)
 
 void A_Scream(mobj_t *actor, player_t *player, pspdef_t *psp)
 {
-    int sound;
+    int sound = actor->info->deathsound;
 
-    switch (actor->info->deathsound)
-    {
-        case sfx_None:
-            return;
-
-        case sfx_podth1:
-        case sfx_podth2:
-        case sfx_podth3:
-            sound = sfx_podth1 + M_Random() % 3;
-            break;
-
-        case sfx_bgdth1:
-        case sfx_bgdth2:
-            sound = sfx_bgdth1 + M_Random() % 2;
-            break;
-
-        default:
-            sound = actor->info->deathsound;
-            break;
-    }
+    if (sound == sfx_None)
+        return;
+    else if (sound >= sfx_podth1 && sound <= sfx_podth3)
+        sound = sfx_podth1 + M_Random() % 3;
+    else if (sound == sfx_bgdth1 || sound == sfx_bgdth2)
+        sound = sfx_bgdth1 + M_Random() % 2;
 
     S_StartSound(actor, sound);
 }
@@ -2195,7 +2187,7 @@ void A_KeenDie(mobj_t *actor, player_t *player, pspdef_t *psp)
     // scan the remaining thinkers to see if all Keens are dead
     for (thinker_t *th = thinkers[th_mobj].cnext; th != &thinkers[th_mobj]; th = th->cnext)
     {
-        mobj_t *mo = (mobj_t *)th;
+        mobj_t  *mo = (mobj_t *)th;
 
         if (mo != actor && mo->type == actor->type && mo->health > 0)
             return;         // other Keen not dead

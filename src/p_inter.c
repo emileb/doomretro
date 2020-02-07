@@ -2052,7 +2052,9 @@ void P_DamageMobj(mobj_t *target, mobj_t *inflicter, mobj_t *source, int damage,
     // Some close combat weapons should not
     // inflict thrust and push the victim out of reach,
     // thus kick away unless using the chainsaw.
-    if (inflicter && (!tplayer || !inflicter->player) && !(flags & MF_NOCLIP)
+    if (inflicter
+        && (!tplayer || !inflicter->player)
+        && !(flags & MF_NOCLIP)
         && (!source || !splayer || splayer->readyweapon != wp_chainsaw))
     {
         unsigned int    ang = R_PointToAngle2(inflicter->x, inflicter->y, target->x, target->y);
@@ -2076,7 +2078,27 @@ void P_DamageMobj(mobj_t *target, mobj_t *inflicter, mobj_t *source, int damage,
     }
 
     if (corpse)
+    {
+        // [BH] gib corpse if enough damage
+        if (r_corpses_gib && damage >= 25)
+        {
+            int state = info->xdeathstate;
+
+            if (state && target->state < &states[state])
+            {
+                while (states[state].tics >= 0)
+                    state++;
+
+                P_SetMobjState(target, state);
+                S_StartSound(target, sfx_slop);
+
+                if (M_Random() & 1)
+                    target->flags2 ^= MF2_MIRRORED;
+            }
+        }
+
         return;
+    }
 
     // player specific
     if (splayer && type != MT_BARREL)
@@ -2127,8 +2149,7 @@ void P_DamageMobj(mobj_t *target, mobj_t *inflicter, mobj_t *source, int damage,
             tplayer->health = 1;
             target->health = 1;
         }
-
-        if (!(tplayer->cheats & CF_BUDDHA) || tplayer->health >= 1)
+        else
         {
             tplayer->damagereceived += damage;
             stat_damagereceived = SafeAdd(stat_damagereceived, damage);

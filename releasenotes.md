@@ -1,3 +1,33 @@
+### DOOM Retro v3.5
+
+* Optimizations have been made to further improve the overall performance and stability of *DOOM Retro*.
+* Improvements have been made to the support of IWADs that contain censored Wolfenstein SS sprites.
+* IWADs specified using the `-file` command-line parameter will now always be treated as PWADs.
+* Minor changes have been made to the character set used in the console.
+* Minor changes have been made to text that is output to the console.
+* The keys on the numeric keypad now work correctly in the console.
+* *DOOM Retro* will now play sound effect lumps that are in [WAV format](https://en.wikipedia.org/wiki/WAV).
+* The corpses of some of the smaller monsters, as well as other marines, will now be gibbed when close enough to barrel and rocket explosions. This feature can be toggled on or off using the new `r_corpses_gib` CVAR, which is `on` by default and `off` when vanilla mode is on.
+* A bug has been fixed whereby certain floor textures would glitch in some rare instances if the `r_liquid_current` CVAR was `on`.
+* The following changes have been made to *DOOM Retro’s* *MBF*-compatible helper dogs:
+  * The `DOGSA1` to `DOGSN0` lumps have now been replaced with [sprites by Nash Muhandes](https://forum.zdoom.org/viewtopic.php?f=59&t=58035), released under the [*Creative Commons (BY 3.0)*](https://creativecommons.org/licenses/by/3.0/) license.
+  * The `DSDGACT` and `DSDGATK` lumps have now been replaced with edited versions of [“Mr Dog_01.wav” by apolloaiello](https://freesound.org/people/apolloaiello/sounds/276267/), released under the [*Creative Commons (CC0 1.0 Universal)*](https://creativecommons.org/publicdomain/zero/1.0/) license.
+  * The `DSDGDTH`, `DSDGPAIN` and `DSDGSIT` lumps have now been replaced with edited versions of [“DogYelp.wav” by TobiasKosmos](http://freesound.org/people/TobiasKosmos/sounds/163280/), released under the [*Creative Commons (BY 3.0)*](https://creativecommons.org/licenses/by/3.0/) license.
+* The `map` CCMD now also accepts a map’s title as its parameter. For example, entering `map nuclearplant` in the console will warp the player to *E1M2: Nuclear Plant*.
+* The effects of changing the `r_blood` CVAR in the console will now always be immediate.
+* The `teleport` CCMD now accepts an optional third parameter, specifying the height the player will be from the floor once they have teleported.
+* The color of the console’s bottom edge may now be changed using the new `con_edgecolor` CVAR. It is `180` by default.
+* The `s_musicvolume` and `s_sfxvolume` CVARs are now both set to the same lowest value when vanilla mode is on.
+* A crash will no longer occur when the player uses the secret exit in *SIGIL’s E5M6: Unspeakable Persecution*.
+* Further improvements have been made to the support of `MAPINFO` lumps.
+* A sound is now made when toggling between fullscreen and a window.
+* Lines with special 46 (“GR Door Open Stay”) now work correctly.
+* Monsters can no longer be spawned using the `spawn` CCMD when the `nomonsters` CCMD is in effect.
+
+---
+
+###### Saturday, January 4, 2020
+
 ### DOOM Retro v3.4
 
 * Optimizations have been made to further improve the overall performance and stability of *DOOM Retro*.
@@ -14,7 +44,7 @@
 * A bug has been fixed whereby widescreen mode wouldn’t be displayed correctly after pressing <kbd>ALT</kbd> + <kbd>ENTER</kbd> to toggle between fullscreen and a window, and if the `vid_borderlesswindow` CVAR was `off`.
 * The default of the `vid_borderlesswindow` CVAR is now `on`.
 * The default of the `vid_scalefilter` CVAR has been changed from `“nearest”` to `“nearest_linear”`.
-* A new `r_graduallighting` CVAR has been implemented to allow the player to toggle the gradual lighting under doors and crushing sectors. It is `on` by default and `off` when vanilla mode is on.
+* A new `r_graduallighting` CVAR has been implemented that toggles the gradual lighting under doors and crushing sectors. It is `on` by default and `off` when vanilla mode is on.
 * The player’s view will no longer shift slightly when exiting a map by using a switch.
 * Par times are no longer displayed on the intermission screen for maps that don’t have one.
 * A crash will no longer occur when using the `kill` or `resurrect` CCMDs with a monster’s name previously set by the `name` CCMD as the parameter.
@@ -1783,7 +1813,7 @@
 * Stylized quotes are now used in place of double quotes in the console.
 * Text in the console is now slightly translucent.
 * A random static effect has been applied to the console’s background.
-* The effects of changing the `vid_windowpos` and `vid_windowsize` CVARs while in the console and in a window is now immediate.
+* The effects of changing the `vid_windowpos` and `vid_windowsize` CVARs while in the console and in a window are now immediate.
 
 ---
 

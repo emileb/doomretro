@@ -83,7 +83,7 @@ static void P_Thrust(angle_t angle, fixed_t move)
 
 //
 // P_Bob
-// Same as P_Thrust, but only affects bobbing.
+// Same as P_Thrust(), but only affects bobbing.
 //
 // killough 10/98: We apply thrust separately between the real physical player
 // and the part which affects bobbing. This way, bobbing only comes from player
@@ -211,6 +211,7 @@ static dboolean P_CheckForSteps(fixed_t width)
     return false;
 }
 
+//
 // P_MovePlayer
 //
 void P_MovePlayer(void)
@@ -430,6 +431,7 @@ void P_ResurrectPlayer(int health)
     viewplayer->recoil = 0;
     viewplayer->oldrecoil = 0;
     infight = false;
+
     P_SetupPsprites();
     P_MapEnd();
 
@@ -501,9 +503,9 @@ void P_PlayerThink(void)
     mobj_t      *mo = viewplayer->mo;
     static int  motionblur;
 
-    if (menuactive && (vid_widescreen || !messagetoprint || !consoleactive))
+    if (menuactive)
     {
-        if (!inhelpscreens)
+        if (!inhelpscreens && ((messagetoprint && !consoleactive) || !messagetoprint))
             mo->angle += ANG1 / 32 * spindirection;
 
         return;

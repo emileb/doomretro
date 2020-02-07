@@ -286,6 +286,7 @@ static void CheckSteamEdition(void)
     free(install_path);
 }
 
+
 // Default install directories for DOS DOOM
 static void CheckDOSDefaults(void)
 {

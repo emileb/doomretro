@@ -87,7 +87,7 @@ static dboolean sendsave;                       // send a save event next tic
 
 dboolean        viewactive;
 
-int             gametime;
+int             gametime = 0;
 int             totalkills;                     // for intermission
 int             totalitems;
 int             totalsecret;
@@ -150,6 +150,7 @@ dboolean        m_doubleclick_use = m_doubleclick_use_default;
 dboolean        m_invertyaxis = m_invertyaxis_default;
 dboolean        m_novertical = m_novertical_default;
 dboolean        mouselook = mouselook_default;
+
 dboolean        canmouselook = false;
 dboolean        usemouselook = false;
 
@@ -589,8 +590,6 @@ void G_DoLoadLevel(void)
         pendinggameskill = 0;
     }
 
-    M_Seed((unsigned int)time(NULL));
-
     // initialize the msecnode_t freelist. phares 3/25/98
     // any nodes in the freelist are gone by now, cleared
     // by Z_FreeTags() when the previous level ended or player
@@ -730,7 +729,7 @@ dboolean G_Responder(event_t *ev)
                 G_PrevWeapon();
             else if (key == keyboardnextweapon && !menuactive && !paused)
                 G_NextWeapon();
-            else if (key == KEY_PAUSE && !menuactive && !keydown)
+            else if (key == KEY_PAUSE && !menuactive && !keydown && !idclevtics)
             {
                 keydown = KEY_PAUSE;
                 sendpause = true;
@@ -1240,11 +1239,11 @@ static void G_DoCompleted(void)
     wminfo.epsd = gameepisode - 1;
     wminfo.last = gamemap - 1;
 
-    if (secretexit && secretnextmap > 0)
-        wminfo.next = secretnextmap - 1;
-    else if (gamemode == commercial)
+    if (gamemode == commercial)
     {
-        if (nextmap > 0)
+        if (secretexit && secretnextmap > 0)
+            wminfo.next = secretnextmap - 1;
+        else if (nextmap > 0)
             wminfo.next = nextmap - 1;
         else if (secretexit)
         {
@@ -1302,7 +1301,9 @@ static void G_DoCompleted(void)
     }
     else
     {
-        if (nextmap > 0)
+        if (secretexit && secretnextmap > 0)
+            wminfo.next = secretnextmap - (gameepisode - 1) * 10 - 1;
+        else if (nextmap > 0)
             wminfo.next = nextmap - (gameepisode - 1) * 10 - 1;
         else if (secretexit)
             wminfo.next = 8;            // go to secret level
@@ -1424,6 +1425,9 @@ void G_DoLoadGame(void)
     loadaction = gameaction;
     gameaction = ga_nothing;
 
+    if (consolestrings < 2 || !M_StringStartsWith(console[consolestrings - 3].string, "load "))
+        C_Input("load %s", savename);
+
     if (!(save_stream = fopen(savename, "rb")))
     {
         C_Warning(1, "<b>%s</b> couldn't be found.", savename);
@@ -1453,6 +1457,7 @@ void G_DoLoadGame(void)
     P_UnArchiveMap();
 
     P_RestoreTargets();
+    P_RemoveCorruptMobjs();
 
     P_MapEnd();
 
@@ -1474,9 +1479,6 @@ void G_DoLoadGame(void)
     R_FillBackScreen();
 
     st_facecount = 0;
-
-    if (consolestrings < 2 || !M_StringStartsWith(console[consolestrings - 3].string, "load "))
-        C_Input("load %s", savename);
 
     if (consoleactive)
     {

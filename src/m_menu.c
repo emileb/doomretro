@@ -59,6 +59,7 @@
 #include "p_saveg.h"
 #include "s_sound.h"
 #include "st_lib.h"
+#include "st_stuff.h"
 #include "v_data.h"
 #include "v_video.h"
 #include "w_wad.h"
@@ -677,10 +678,10 @@ static struct
 // M_DrawString
 //  draw a string on screen
 //
-void M_DrawString(int x, int y, char *str)
+void M_DrawString(int x, int y, char *string)
 {
     static char prev;
-    int         len = (int)strlen(str);
+    int         len = (int)strlen(string);
 
     for (int i = 0; i < len; i++)
     {
@@ -688,12 +689,12 @@ void M_DrawString(int x, int y, char *str)
         int         k = 0;
         dboolean    overlapping = false;
 
-        if (str[i] < 123)
-            j = chartoi[(int)str[i]];
+        if (string[i] < 123)
+            j = chartoi[(int)string[i]];
 
         while (bigkern[k].char1)
         {
-            if (prev == bigkern[k].char1 && str[i] == bigkern[k].char2)
+            if (prev == bigkern[k].char1 && string[i] == bigkern[k].char2)
             {
                 x += bigkern[k].adjust;
                 break;
@@ -706,7 +707,7 @@ void M_DrawString(int x, int y, char *str)
 
         while (overlap[k].char1)
         {
-            if (prev == overlap[k].char1 && str[i] == overlap[k].char2)
+            if (prev == overlap[k].char1 && string[i] == overlap[k].char2)
             {
                 overlapping = true;
                 break;
@@ -723,7 +724,7 @@ void M_DrawString(int x, int y, char *str)
             x += (int)strlen(redcharset[j]) / 18 - 2;
         }
 
-        prev = str[i];
+        prev = string[i];
     }
 }
 
@@ -731,27 +732,27 @@ void M_DrawString(int x, int y, char *str)
 // M_BigStringWidth
 //  return width of string in pixels
 //
-static int M_BigStringWidth(char *str)
+static int M_BigStringWidth(char *string)
 {
     int         w = 0;
     static char prev;
-    int         len = (int)strlen(str);
+    int         len = (int)strlen(string);
 
     for (int i = 0; i < len; i++)
     {
-        int j = chartoi[(int)str[i]];
+        int j = chartoi[(int)string[i]];
         int k = 0;
 
         while (bigkern[k].char1)
         {
-            if (prev == bigkern[k].char1 && str[i] == bigkern[k].char2)
+            if (prev == bigkern[k].char1 && string[i] == bigkern[k].char2)
                 w += bigkern[k].adjust;
 
             k++;
         }
 
         w += (j == -1 ? 7 : (int)strlen(redcharset[j]) / 18 - 2);
-        prev = str[i];
+        prev = string[i];
     }
 
     return w;
@@ -761,9 +762,9 @@ static int M_BigStringWidth(char *str)
 // M_DrawCenteredString
 //  draw a string centered horizontally on screen
 //
-void M_DrawCenteredString(int y, char *str)
+void M_DrawCenteredString(int y, char *string)
 {
-    M_DrawString((ORIGINALWIDTH - M_BigStringWidth(str) - 1) / 2, y, str);
+    M_DrawString((ORIGINALWIDTH - M_BigStringWidth(string) - 1) / 2, y, string);
 }
 
 //
@@ -791,7 +792,7 @@ static void M_DrawPatchWithShadow(int x, int y, patch_t *patch)
     short   width = SHORT(patch->width);
     short   height = SHORT(patch->height);
 
-    if (width >= ORIGINALWIDTH || height >= ORIGINALHEIGHT)
+    if (width == ORIGINALWIDTH || height == ORIGINALHEIGHT)
         V_DrawPagePatch(patch);
     else
         V_DrawPatchWithShadow(x, y, patch, false);
@@ -806,7 +807,7 @@ static void M_DrawCenteredPatchWithShadow(int y, patch_t *patch)
     short   width = SHORT(patch->width);
     short   height = SHORT(patch->height);
 
-    if (width >= ORIGINALWIDTH || height >= ORIGINALHEIGHT)
+    if (width == ORIGINALWIDTH || height == ORIGINALHEIGHT)
         V_DrawPagePatch(patch);
     else
         V_DrawPatchWithShadow((ORIGINALWIDTH - width) / 2 + SHORT(patch->leftoffset), y, patch, false);
@@ -1148,19 +1149,20 @@ extern char **mapnamesp[];
 extern char **mapnamest[];
 extern char **mapnamesn[];
 
-static const char *RemoveMapNum(const char *str)
+static char *RemoveMapNum(char *string)
 {
-    char    *pos = strchr(str, ':');
+    char    *newstr = M_StringDuplicate(string);
+    char    *pos = strchr(newstr, ':');
 
     if (pos)
     {
-        str = pos + 1;
+        newstr = pos + 1;
 
-        while (str[0] == ' ')
-            str++;
+        while (newstr[0] == ' ')
+            newstr++;
     }
 
-    return str;
+    return newstr;
 }
 
 void M_UpdateSaveGameName(int i)
@@ -1178,7 +1180,7 @@ void M_UpdateSaveGameName(int i)
         && W_CheckNumForName(savegamestrings[i]) >= 0)
         match = true;
 
-    if (!match && !M_StringCompare(maptitle, mapnumandtitle))
+    if (!match && !M_StringCompare(mapnum, mapnumandtitle))
     {
         if (len >= 4 && savegamestrings[i][len - 1] == '.' && savegamestrings[i][len - 2] == '.'
             && savegamestrings[i][len - 3] == '.' && savegamestrings[i][len - 4] != '.')
@@ -1200,7 +1202,6 @@ void M_UpdateSaveGameName(int i)
                     break;
 
                 case doom2:
-                case pack_nerve:
                     if (bfgedition)
                     {
                         for (int j = 0; j < 33; j++)
@@ -1220,6 +1221,9 @@ void M_UpdateSaveGameName(int i)
                             }
                     }
 
+                    break;
+
+                case pack_nerve:
                     for (int j = 0; j < 9; j++)
                         if (M_StringCompare(savegamestrings[i], RemoveMapNum(*mapnamesn[j])))
                         {
@@ -1291,6 +1295,8 @@ static void M_SaveSelect(int choice)
     M_StringCopy(saveOldString, savegamestrings[saveSlot], SAVESTRINGSIZE);
     M_UpdateSaveGameName(saveSlot);
     saveCharIndex = (int)strlen(savegamestrings[saveSlot]);
+    showcaret = !showcaret;
+    caretwait = I_GetTimeMS() + CARETBLINKTIME;
 }
 
 //
@@ -1426,7 +1432,7 @@ static void M_DeleteSavegame(void)
 //
 static void M_DrawReadThis(void)
 {
-    char    lumpname[6];
+    char    lumpname[6] = "HELP1";
 
     if (gamemode == shareware)
         M_StringCopy(lumpname, (W_CheckNumForName("HELP3") >= 0 ? "HELP3" : "HELP2"), sizeof(lumpname));
@@ -1434,13 +1440,11 @@ static void M_DrawReadThis(void)
         M_StringCopy(lumpname, "HELP2", sizeof(lumpname));
     else if (gamemode == commercial)
         M_StringCopy(lumpname, "HELP", sizeof(lumpname));
-    else
-        M_StringCopy(lumpname, "HELP1", sizeof(lumpname));
 
     if (W_CheckNumForName(lumpname) >= 0)
     {
         if (automapactive)
-            V_FillRect(0, 0, 0, SCREENWIDTH, SCREENHEIGHT, 245, false);
+            V_FillRect(0, 0, 0, SCREENWIDTH, SCREENHEIGHT, nearestcolors[245], false);
         else
         {
             viewplayer->fixedcolormap = 0;
@@ -2528,7 +2532,7 @@ dboolean M_Responder(event_t *ev)
     int         key = -1;
     static int  keywait;
 
-    if (startingnewgame || dowipe)
+    if (startingnewgame || dowipe || idclevtics)
         return false;
 
     if (ev->type == ev_gamepad)
@@ -3062,6 +3066,7 @@ dboolean M_Responder(event_t *ev)
         {
             keydown = key;
             functionkey = KEY_F10;
+            M_StartControlPanel();
             S_StartSound(NULL, sfx_swtchn);
             M_QuitDOOM(0);
             return false;
@@ -3736,6 +3741,7 @@ void M_ClearMenus(void)
         return;
 
     menuactive = false;
+    message_menu = false;
 
     if (gp_vibrate_barrels || gp_vibrate_damage || gp_vibrate_weapons)
     {

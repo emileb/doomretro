@@ -55,6 +55,7 @@ int         r_blood = r_blood_default;
 int         r_bloodsplats_max = r_bloodsplats_max_default;
 int         r_bloodsplats_total;
 dboolean    r_corpses_color = r_corpses_color_default;
+dboolean    r_corpses_gib = r_corpses_gib_default;
 dboolean    r_corpses_mirrored = r_corpses_mirrored_default;
 dboolean    r_corpses_moreblood = r_corpses_moreblood_default;
 dboolean    r_corpses_nudge = r_corpses_nudge_default;
@@ -535,7 +536,7 @@ floater:
                     // Decrease viewheight for a moment
                     // after hitting the ground (hard),
                     // and utter appropriate sound.
-                    player->deltaviewheight = mo->momz >> 3;
+                    player->deltaviewheight = mo->momz / 8;
 
                     if (mo->health > 0)
                         S_StartSound(mo, sfx_oof);
@@ -701,7 +702,7 @@ void P_MobjThinker(mobj_t *mobj)
             {
                 if (mobj->momz < -GRAVITY * 8)
                 {
-                    player->deltaviewheight = mobj->momz >> 3;
+                    player->deltaviewheight = mobj->momz / 8;
 
                     if (mobj->momz < -23 * FRACUNIT)
                         P_NoiseAlert(mobj);
@@ -776,21 +777,15 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
     state_t     *st;
     mobjinfo_t  *info = &mobjinfo[type];
     sector_t    *sector;
-    static int  prevx, prevy;
-    static int  prevbob;
 
     mobj->type = type;
     mobj->info = info;
-    mobj->x = x;
-    mobj->y = y;
+    mobj->x = mobj->oldx = x;
+    mobj->y = mobj->oldy = y;
     mobj->radius = info->radius;
-    mobj->height = (z == ONCEILINGZ && type != MT_KEEN && info->projectilepassheight ? info->projectilepassheight : info->height);
     mobj->flags = info->flags;
     mobj->flags2 = info->flags2;
     mobj->health = info->spawnhealth;
-
-    if (z == ONCEILINGZ)
-        mobj->flags2 &= ~MF2_CASTSHADOW;
 
     if (gameskill != sk_nightmare)
         mobj->reactiontime = info->reactiontime;
@@ -798,36 +793,18 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
     // do not set the state with P_SetMobjState,
     // because action routines cannot be called yet
     st = &states[info->spawnstate];
-
-    // [BH] initialize certain mobj's animations to random start frame
-    // so groups of same mobjs are deliberately out of sync
-    if (info->frames > 1)
-    {
-        int frames = M_RandomInt(0, info->frames);
-        int i = 0;
-
-        while (i++ < frames && st->nextstate != S_NULL)
-            st = &states[st->nextstate];
-    }
-
     mobj->state = st;
     mobj->tics = st->tics;
     mobj->sprite = st->sprite;
     mobj->frame = st->frame;
+
     mobj->colfunc = info->colfunc;
     mobj->altcolfunc = info->altcolfunc;
     mobj->id = -1;
-
-    P_SetShadowColumnFunction(mobj);
-
     mobj->shadowoffset = info->shadowoffset;
     mobj->blood = info->blood;
 
-    // [BH] set random pitch for monster sounds when spawned
-    mobj->pitch = NORM_PITCH;
-
-    if ((mobj->flags & MF_SHOOTABLE) && type != MT_PLAYER && type != MT_BARREL)
-        mobj->pitch += M_RandomInt(-16, 16);
+    P_SetShadowColumnFunction(mobj);
 
     // set subsector and/or block links
     P_SetThingPosition(mobj);
@@ -837,26 +814,26 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
     mobj->floorz = sector->floorheight;
     mobj->ceilingz = sector->ceilingheight;
 
-    // [BH] initialize bobbing things
-    mobj->floatbob = prevbob = (x == prevx && y == prevy ? prevbob : M_Random());
-    prevx = x;
-    prevy = y;
-
     if (z == ONFLOORZ)
     {
-        mobj->z = mobj->floorz;
+        mobj->height = info->height;
+        mobj->z = mobj->oldz = mobj->floorz;
 
         if ((mobj->flags2 & MF2_FOOTCLIP) && !sector->heightsec && P_IsInLiquid(mobj))
             mobj->flags2 |= MF2_FEETARECLIPPED;
     }
     else if (z == ONCEILINGZ)
-        mobj->z = mobj->ceilingz - mobj->height;
+    {
+        mobj->height = (type != MT_KEEN && info->projectilepassheight ? info->projectilepassheight : info->height);
+        mobj->z = mobj->oldz = mobj->ceilingz - mobj->height;
+        mobj->flags2 &= ~MF2_CASTSHADOW;
+    }
     else
-        mobj->z = z;
+    {
+        mobj->height = info->height;
+        mobj->z = mobj->oldz = z;
+    }
 
-    mobj->oldx = mobj->x;
-    mobj->oldy = mobj->y;
-    mobj->oldz = mobj->z;
     mobj->oldangle = mobj->angle;
 
     mobj->thinker.function = (type == MT_MUSICSOURCE ? MusInfoThinker : P_MobjThinker);
@@ -875,10 +852,9 @@ int         iquetail;
 //
 void P_RemoveMobj(mobj_t *mobj)
 {
-    int         flags = mobj->flags;
-    mobjtype_t  type;
+    int flags = mobj->flags;
 
-    if ((flags & MF_SPECIAL) && !(flags & MF_DROPPED) && (type = mobj->type) != MT_INV && type != MT_INS)
+    if ((flags & MF_SPECIAL) && !(flags & MF_DROPPED) && mobj->type != MT_INV && mobj->type != MT_INS)
     {
         itemrespawnque[iquehead] = mobj->spawnpoint;
         itemrespawntime[iquehead] = leveltime;
@@ -1035,7 +1011,9 @@ static void P_SpawnPlayer(const mapthing_t *mthing)
     mobj = P_SpawnMobj(mthing->x << FRACBITS, mthing->y << FRACBITS, ONFLOORZ, MT_PLAYER);
 
     for (const struct msecnode_s *seclist = mobj->touching_sectorlist; seclist; seclist = seclist->m_tnext)
-        mobj->z = mobj->floorz = MAX(mobj->z, seclist->m_sector->floorheight);
+        mobj->z = MAX(mobj->z, seclist->m_sector->floorheight);
+
+    mobj->floorz = mobj->z;
 
     mobj->angle = ((mthing->angle % 45) ? mthing->angle * (ANG45 / 45) : ANG45 * (mthing->angle / 45));
     mobj->player = viewplayer;
@@ -1126,14 +1104,17 @@ static void P_SpawnMoreBlood(mobj_t *mobj)
 //
 mobj_t *P_SpawnMapThing(mapthing_t *mthing, dboolean spawnmonsters)
 {
-    int     i;
-    int     bit;
-    mobj_t  *mobj;
-    fixed_t x, y, z;
-    short   type = mthing->type;
-    short   options = mthing->options;
-    int     flags;
-    int     musicid = 0;
+    int         i;
+    int         bit;
+    mobj_t      *mobj;
+    fixed_t     x, y, z;
+    short       type = mthing->type;
+    short       options = mthing->options;
+    int         flags;
+    int         musicid = 0;
+    mobjinfo_t  *info;
+    static int  prevx, prevy;
+    static int  prevbob;
 
     // check for players specially
     if (type == Player1Start)
@@ -1163,7 +1144,7 @@ mobj_t *P_SpawnMapThing(mapthing_t *mthing, dboolean spawnmonsters)
 
     if (type == VisualModeCamera)
     {
-        char *temp = commify(thingid);
+        char    *temp = commify(thingid);
 
         C_Warning(2, "Thing %s at (%i,%i) didn't spawn because it is a \"visual mode camera\".", temp, mthing->x, mthing->y);
         free(temp);
@@ -1276,12 +1257,35 @@ mobj_t *P_SpawnMapThing(mapthing_t *mthing, dboolean spawnmonsters)
             P_SpawnMoreBlood(mobj);
     }
 
+    info = mobj->info;
+
     // [crispy] randomly colorize space marine corpse objects
-    if (mobj->info->spawnstate == S_PLAY_DIE7 || mobj->info->spawnstate == S_PLAY_XDIE9)
+    if (info->spawnstate == S_PLAY_DIE7 || info->spawnstate == S_PLAY_XDIE9)
         mobj->flags |= (M_RandomInt(0, 3) << MF_TRANSSHIFT);
 
     if ((mobj->flags2 & MF2_DECORATION) && i != MT_BARREL)
         numdecorations++;
+
+    // [BH] initialize certain mobj's animations to random start frame
+    // so groups of same mobjs are deliberately out of sync
+    if (info->frames > 1)
+    {
+        int     frames = M_RandomInt(0, info->frames);
+        state_t *st = mobj->state;
+
+        for (int j = 0; j < frames && st->nextstate != S_NULL; j++)
+            st = &states[st->nextstate];
+
+        mobj->state = st;
+    }
+
+    // [BH] set random pitch for monster sounds when spawned
+    mobj->pitch = NORM_PITCH + ((mobj->flags & MF_SHOOTABLE) && i != MT_BARREL ? M_RandomInt(-16, 16) : 0);
+
+    // [BH] initialize bobbing things
+    mobj->floatbob = prevbob = (x == prevx && y == prevy ? prevbob : M_Random());
+    prevx = x;
+    prevy = y;
 
     return mobj;
 }
@@ -1370,7 +1374,7 @@ void P_SpawnBlood(fixed_t x, fixed_t y, fixed_t z, angle_t angle, int damage, mo
 {
     int         minz = target->z;
     int         maxz = minz + spriteheight[sprites[target->sprite].spriteframes[0].lump[0]];
-    int         type = (r_blood == r_blood_all && target->blood ? target->blood : (r_blood == r_blood_green ? MT_GREENBLOOD : MT_BLOOD));
+    int         type = (target->blood ? target->blood : MT_BLOOD);
     mobjinfo_t  *info = &mobjinfo[type];
     int         blood = info->blood;
     state_t     *st = &states[info->spawnstate];
@@ -1490,7 +1494,6 @@ mobj_t *P_SpawnMissile(mobj_t *source, mobj_t *dest, mobjtype_t type)
     fixed_t z = source->z + 32 * FRACUNIT;
     mobj_t  *th;
     angle_t an;
-    int     dist;
     int     speed;
 
     if ((source->flags2 & MF2_FEETARECLIPPED) && !source->subsector->sector->heightsec && r_liquid_clipsprites)
@@ -1513,8 +1516,7 @@ mobj_t *P_SpawnMissile(mobj_t *source, mobj_t *dest, mobjtype_t type)
     speed = th->info->speed;
     th->momx = FixedMul(speed, finecosine[an]);
     th->momy = FixedMul(speed, finesine[an]);
-    dist = MAX(1, P_ApproxDistance(dest->x - source->x, dest->y - source->y) / speed);
-    th->momz = (dest->z - source->z) / dist;
+    th->momz = (dest->z - source->z) / MAX(1, P_ApproxDistance(dest->x - source->x, dest->y - source->y) / speed);
     th->flags2 |= MF2_MONSTERMISSILE;
     P_CheckMissileSpawn(th);
 

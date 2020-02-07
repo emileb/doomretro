@@ -109,8 +109,8 @@ static void R_MapPlane(int y, int x1, int x2)
 
         cachedheight[y] = planeheight;
         cacheddistance[y] = distance = FixedMul(planeheight, yslope[y]);
-        cachedviewcosdistance[y] = viewcosdistance = viewx + xoffset + FixedMul(viewcos, distance);
-        cachedviewsindistance[y] = viewsindistance = -viewy + yoffset - FixedMul(viewsin, distance);
+        cachedviewcosdistance[y] = viewcosdistance = FixedMul(viewcos, distance);
+        cachedviewsindistance[y] = viewsindistance = FixedMul(viewsin, distance);
         cachedxstep[y] = ds_xstep = FixedMul(viewsin, planeheight) / dy;
         cachedystep[y] = ds_ystep = FixedMul(viewcos, planeheight) / dy;
     }
@@ -124,8 +124,8 @@ static void R_MapPlane(int y, int x1, int x2)
     }
 
     dx = x1 - centerx;
-    ds_xfrac = viewcosdistance + dx * ds_xstep;
-    ds_yfrac = viewsindistance + dx * ds_ystep;
+    ds_xfrac = viewx + xoffset + viewcosdistance + dx * ds_xstep;
+    ds_yfrac = -viewy + yoffset - viewsindistance + dx * ds_ystep;
 
     ds_colormap = (fixedcolormap ? fixedcolormap : planezlight[MIN(distance >> LIGHTZSHIFT, MAXLIGHTZ - 1)]);
 
@@ -203,17 +203,8 @@ visplane_t *R_FindPlane(fixed_t height, int picnum, int lightlevel, fixed_t x, f
     check->lightlevel = lightlevel;
     check->left = viewwidth;
     check->right = -1;
-
-    if (!(picnum & PL_SKYFLAT) && terraintypes[picnum] > SOLID && r_liquid_current && !x && !y)
-    {
-        check->xoffset = animatedliquidxoffs;
-        check->yoffset = animatedliquidyoffs;
-    }
-    else
-    {
-        check->xoffset = x;
-        check->yoffset = y;
-    }
+    check->xoffset = x;
+    check->yoffset = y;
 
     memset(check->top, UINT_MAX, sizeof(check->top));
     return check;
@@ -295,8 +286,17 @@ static void R_MakeSpans(visplane_t *pl)
     static int  spanstart[SCREENHEIGHT];
     int         stop = pl->right + 1;
 
-    xoffset = pl->xoffset;
-    yoffset = pl->yoffset;
+    if (terraintypes[pl->picnum] != SOLID && r_liquid_current)
+    {
+        xoffset = animatedliquidxoffs;
+        yoffset = animatedliquidyoffs;
+    }
+    else
+    {
+        xoffset = pl->xoffset;
+        yoffset = pl->yoffset;
+    }
+
     planeheight = ABS(pl->height - viewz);
     planezlight = zlight[MIN((pl->lightlevel >> LIGHTSEGSHIFT) + extralight, LIGHTLEVELS - 1)];
     pl->top[pl->left - 1] = UINT_MAX;
@@ -472,14 +472,13 @@ void R_DrawPlanes(void)
                     tex_patch = R_CacheTextureCompositePatchNum(texture);
 
                     for (int x = pl->left; x <= pl->right; x++)
-                        if ((dc_yl = pl->top[x]) != UINT_MAX)
-                            if (dc_yl <= (dc_yh = pl->bottom[x]))
-                            {
-                                dc_x = x;
-                                dc_source = R_GetTextureColumn(tex_patch,
-                                    (((an + xtoviewangle[x]) ^ flip) >> ANGLETOSKYSHIFT) + skyoffset);
-                                skycolfunc();
-                            }
+                        if ((dc_yl = pl->top[x]) != UINT_MAX && dc_yl <= (dc_yh = pl->bottom[x]))
+                        {
+                            dc_x = x;
+                            dc_source = R_GetTextureColumn(tex_patch,
+                                (((an + xtoviewangle[x]) ^ flip) >> ANGLETOSKYSHIFT) + skyoffset);
+                            skycolfunc();
+                        }
                 }
                 else
                 {

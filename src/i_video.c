@@ -413,6 +413,12 @@ static short __inline clamp(short value, short deadzone)
 dboolean    altdown;
 dboolean    waspaused;
 
+static const int keypad[] =
+{
+    SDL_SCANCODE_KP_1, SDL_SCANCODE_DOWN, SDL_SCANCODE_KP_3, SDL_SCANCODE_LEFT, SDL_SCANCODE_KP_5,
+    SDL_SCANCODE_RIGHT, SDL_SCANCODE_KP_7, SDL_SCANCODE_UP, SDL_SCANCODE_KP_9, SDL_SCANCODE_KP_0
+};
+
 static void I_GetEvent(void)
 {
     SDL_Event   SDLEvent;
@@ -446,8 +452,14 @@ static void I_GetEvent(void)
                 break;
 
             case SDL_KEYDOWN:
+            {
+                SDL_Scancode    scancode = Event->key.keysym.scancode;
+
+                if (scancode >= SDL_SCANCODE_KP_1 && scancode <= SDL_SCANCODE_KP_0 && !SDL_IsTextInputActive())
+                    scancode = keypad[scancode - SDL_SCANCODE_KP_1];
+
                 event.type = ev_keydown;
-                event.data1 = translatekey[Event->key.keysym.scancode];
+                event.data1 = translatekey[scancode];
                 event.data2 = Event->key.keysym.sym;
 
                 if (event.data2 < SDLK_SPACE || event.data2 > SDLK_z)
@@ -499,10 +511,17 @@ static void I_GetEvent(void)
                 }
 
                 break;
+            }
 
             case SDL_KEYUP:
+            {
+                SDL_Scancode    scancode = Event->key.keysym.scancode;
+
+                if (scancode >= SDL_SCANCODE_KP_1 && scancode <= SDL_SCANCODE_KP_0 && !SDL_IsTextInputActive())
+                    scancode = keypad[scancode - SDL_SCANCODE_KP_1];
+
                 event.type = ev_keyup;
-                event.data1 = translatekey[Event->key.keysym.scancode];
+                event.data1 = translatekey[scancode];
                 altdown = (Event->key.keysym.mod & KMOD_ALT);
                 keydown = 0;
 
@@ -516,6 +535,7 @@ static void I_GetEvent(void)
                     D_PostEvent(&event);
 
                 break;
+            }
 
             case SDL_MOUSEBUTTONDOWN:
                 idclev = false;
@@ -613,7 +633,7 @@ static void I_GetEvent(void)
                 break;
 
             case SDL_CONTROLLERBUTTONDOWN:
-                gamepadbuttons |= (1 << Event->cbutton.button);
+                gamepadbuttons |= 1 << Event->cbutton.button;
                 event.type = ev_gamepad;
                 D_PostEvent(&event);
                 break;
@@ -1177,7 +1197,7 @@ void I_CreateExternalAutomap(int outputlevel)
         const char  *displayname = SDL_GetDisplayName(am_displayindex);
 
         if (*displayname)
-            C_Output("Created an external automap on display %i called \"%s\".", am_displayindex + 1, displayname);
+            C_Output("Created an external automap on \"%s\" (display %i).", displayname, am_displayindex + 1);
         else
             C_Output("Created an external automap on display %i.", am_displayindex + 1);
     }
@@ -1361,7 +1381,7 @@ static void SetVideoMode(dboolean output)
     SDL_RendererInfo    rendererinfo;
     const char          *displayname = SDL_GetDisplayName((displayindex = vid_display - 1));
 
-    if (displayindex < 0 || displayindex >= numdisplays || !displayname)
+    if (displayindex < 0 || displayindex >= numdisplays)
     {
         if (output)
             C_Warning(1, "Unable to find display %i.", vid_display);
@@ -1372,9 +1392,17 @@ static void SetVideoMode(dboolean output)
     if (output)
     {
         if (displayname)
-            C_Output("Using display %i of %i called \"%s\".", displayindex + 1, numdisplays, displayname);
+        {
+            if (numdisplays == 1)
+                C_Output("Using the \"%s\" display.", displayname);
+            else
+                C_Output("Using \"%s\" (display %i of %i).", displayname, displayindex + 1, numdisplays);
+        }
         else
-            C_Output("Using display %i of %i.", displayindex + 1, numdisplays);
+        {
+            if (numdisplays != 1)
+                C_Output("Using display %i of %i.", displayindex + 1, numdisplays);
+        }
     }
 
     if (vid_vsync)
@@ -1480,7 +1508,7 @@ static void SetVideoMode(dboolean output)
                 char    *temp1 = commify(width);
                 char    *temp2 = commify(height);
 
-                C_Output("Created a resizable window with dimensions %sx%s centered on the screen.", temp1, temp2);
+                C_Output("Created a %sx%s resizable window centered on the screen.", temp1, temp2);
 
                 free(temp1);
                 free(temp2);
@@ -1495,7 +1523,7 @@ static void SetVideoMode(dboolean output)
                 char    *temp1 = commify(width);
                 char    *temp2 = commify(height);
 
-                C_Output("Created a resizable window with dimensions %sx%s at (%i,%i).", temp1, temp2, windowx, windowy);
+                C_Output("Created a %sx%s resizable window at (%i,%i).", temp1, temp2, windowx, windowy);
 
                 free(temp1);
                 free(temp2);
@@ -1530,19 +1558,19 @@ static void SetVideoMode(dboolean output)
 
     if (output)
     {
-        char *temp1 = commify(height * 4 / 3);
-        char *temp2 = commify(height);
+        char    *temp1 = commify(height * 4 / 3);
+        char    *temp2 = commify(height);
 
-        C_Output("<i><b>" PACKAGE_NAME "</b></i> is using a software renderer.");
+        C_Output("<i><b>" PACKAGE_NAME "</b></i> uses a software renderer to render each frame.");
 
         if (nearestlinear)
         {
-            char *temp3 = commify((int64_t)upscaledwidth * SCREENWIDTH);
-            char *temp4 = commify((int64_t)upscaledheight * SCREENHEIGHT);
+            char    *temp3 = commify((int64_t)upscaledwidth * SCREENWIDTH);
+            char    *temp4 = commify((int64_t)upscaledheight * SCREENHEIGHT);
 
             C_Output("Each frame is scaled from %ix%i to %sx%s using nearest-neighbor interpolation.",
                 SCREENWIDTH, SCREENHEIGHT, temp3, temp4);
-            C_Output("They are then scaled down to %sx%s using linear filtering.", temp1, temp2);
+            C_Output("Each frame is then scaled down to %sx%s using linear filtering.", temp1, temp2);
 
             free(temp3);
             free(temp4);
@@ -1579,14 +1607,14 @@ static void SetVideoMode(dboolean output)
                 SDL_SetHintWithPriority(SDL_HINT_RENDER_DRIVER, vid_scaleapi, SDL_HINT_OVERRIDE);
 
                 if (output)
-                    C_Output("This is now done in hardware using <i><b>Direct3D %s.</b></i>",
+                    C_Output("This scaling is now done in hardware using <i><b>Direct3D %s.</b></i>",
                         (SDL_VIDEO_RENDER_D3D11 ? "v11.0" : "v9.0"));
 #endif
             }
             else
             {
                 if (output)
-                    C_Output("This is done in hardware using <i><b>OpenGL v%i.%i.</b></i>", major, minor);
+                    C_Output("This scaling is done in hardware using <i><b>OpenGL v%i.%i.</b></i>", major, minor);
 
                 if (!M_StringCompare(vid_scaleapi, vid_scaleapi_opengl))
                 {
@@ -1599,7 +1627,7 @@ static void SetVideoMode(dboolean output)
         else if (M_StringCompare(rendererinfo.name, vid_scaleapi_direct3d))
         {
             if (output)
-                C_Output("This is done in hardware using <i><b>Direct3D %s.</b></i>",
+                C_Output("This scaling is done in hardware using <i><b>Direct3D %s.</b></i>",
                     (SDL_VIDEO_RENDER_D3D11 ? "v11.0" : "v9.0"));
 
             if (!M_StringCompare(vid_scaleapi, vid_scaleapi_direct3d))
@@ -1612,19 +1640,19 @@ static void SetVideoMode(dboolean output)
         else if (M_StringCompare(rendererinfo.name, vid_scaleapi_metal))
         {
             if (output)
-                C_Output("This is done in hardware using <i><b>Metal.</b></i>");
+                C_Output("This scaling is done in hardware using <i><b>Metal.</b></i>");
         }
 #endif
 #if !defined(_WIN32)
         else if (M_StringCompare(rendererinfo.name, vid_scaleapi_opengles))
         {
             if (output)
-                C_Output("This is done in hardware using <i><b>OpenGL ES.</b></i>");
+                C_Output("This scaling is done in hardware using <i><b>OpenGL ES.</b></i>");
         }
         else if (M_StringCompare(rendererinfo.name, vid_scaleapi_opengles2))
         {
             if (output)
-                C_Output("This is done in hardware using <i><b>OpenGL ES 2.</b></i>");
+                C_Output("This scaling is done in hardware using <i><b>OpenGL ES 2.</b></i>");
         }
 #endif
         else if (M_StringCompare(rendererinfo.name, vid_scaleapi_software))
@@ -1634,7 +1662,7 @@ static void SetVideoMode(dboolean output)
             SDL_SetHintWithPriority(SDL_HINT_RENDER_SCALE_QUALITY, vid_scalefilter_nearest, SDL_HINT_OVERRIDE);
 
             if (output)
-                C_Output("This is also done in software.");
+                C_Output("This scaling is also done in software.");
 
             if (!M_StringCompare(vid_scaleapi, vid_scaleapi_software))
             {
@@ -1655,11 +1683,11 @@ static void SetVideoMode(dboolean output)
 
             if (pglGetString)
             {
-                const char *graphicscard = (const char *)pglGetString(GL_RENDERER);
-                const char *vendor = (const char *)pglGetString(GL_VENDOR);
+                const char  *graphicscard = (const char *)pglGetString(GL_RENDERER);
+                const char  *vendor = (const char *)pglGetString(GL_VENDOR);
 
                 if (graphicscard && vendor)
-                    C_Output("Using %s <i><b>%s</b></i> graphics card by <i><b>%s.</b></i>",
+                    C_Output("Using %s <i><b>%s</b></i> graphics card from <i><b>%s.</b></i>",
                         (isvowel(graphicscard[0]) ? "an" : "a"), graphicscard, vendor);
             }
         }
@@ -1884,6 +1912,8 @@ void I_ToggleFullscreen(void)
 
     if (nearestlinear)
         I_UpdateBlitFunc(viewplayer && viewplayer->damagecount);
+
+    S_StartSound(NULL, sfx_stnmov);
 
     if (vid_fullscreen)
         C_StrCVAROutput(stringize(vid_fullscreen), "on");

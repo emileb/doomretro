@@ -1239,14 +1239,13 @@ void ST_Ticker(void)
     }
 
     // [BH] action the IDCLEV cheat after a small delay to allow its player message to display
-    if (idclevtics)
-        if (!--idclevtics)
-        {
-            if (!samelevel)
-                S_StopMusic();
+    if (idclevtics && !--idclevtics)
+    {
+        if (!samelevel)
+            S_StopMusic();
 
-            G_DeferredLoadLevel(gameskill, gameepisode, gamemap);
-        }
+        G_DeferredLoadLevel(gameskill, gameepisode, gamemap);
+    }
 }
 
 static void ST_DoPaletteStuff(void)
@@ -1265,7 +1264,7 @@ static void ST_DoPaletteStuff(void)
             palette = MIN((count >> 3) + (doom4vanilla ? r_berserkintensity + 3 : r_berserkintensity), NUMREDPALS);
     }
     else if (count)
-        palette = STARTREDPALS + MIN((count + 7) >> 3, NUMREDPALS - 1);
+        palette = (chex ? RADIATIONPAL : STARTREDPALS + MIN((count + 7) >> 3, NUMREDPALS - 1));
     else if (viewplayer->health > 0)
     {
         if (viewplayer->bonuscount)
@@ -1273,10 +1272,6 @@ static void ST_DoPaletteStuff(void)
         else if (viewplayer->powers[pw_ironfeet] > STARTFLASHING || (viewplayer->powers[pw_ironfeet] & 8))
             palette = RADIATIONPAL;
     }
-
-    // [BH] show green instead of red palette in Chex Quest
-    if (chex && palette >= STARTREDPALS && palette < STARTREDPALS + NUMREDPALS)
-        palette = RADIATIONPAL;
 
     if (palette != st_palette)
     {

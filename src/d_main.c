@@ -67,6 +67,7 @@
 #include "m_config.h"
 #include "m_menu.h"
 #include "m_misc.h"
+#include "m_random.h"
 #include "p_local.h"
 #include "p_saveg.h"
 #include "p_setup.h"
@@ -702,7 +703,7 @@ static loaddehlast_t loaddehlast[8] =
 
 static void LoadDehFile(char *path)
 {
-    char    *dehpath = FindDehPath(path, ".bex", ".[Bb][Ee][Xx]");
+    char    *dehpath;
 
     for (int i = 0; i < 8; i++)
         if (M_StringCompare(leafname(path), loaddehlast[i].filename))
@@ -711,7 +712,7 @@ static void LoadDehFile(char *path)
             return;
         }
 
-    if (dehpath)
+    if ((dehpath = FindDehPath(path, ".bex", ".[Bb][Ee][Xx]")))
     {
         if (!DehFileProcessed(dehpath))
         {
@@ -721,7 +722,7 @@ static void LoadDehFile(char *path)
             if (HasDehackedLump(path))
                 M_snprintf(dehwarning, sizeof(dehwarning), "<b>%s</b> was ignored.", GetCorrectCase(dehpath));
             else
-                ProcessDehFile(dehpath, 0);
+                ProcessDehFile(dehpath, 0, true);
 
             if (dehfilecount < MAXDEHFILES)
                 M_StringCopy(dehfiles[dehfilecount++], dehpath, MAX_PATH);
@@ -736,7 +737,7 @@ static void LoadDehFile(char *path)
             if (HasDehackedLump(path))
                 M_snprintf(dehwarning, sizeof(dehwarning), "<b>%s</b> was ignored.", GetCorrectCase(dehpath));
             else
-                ProcessDehFile(dehpath, 0);
+                ProcessDehFile(dehpath, 0, true);
 
             if (dehfilecount < MAXDEHFILES)
                 M_StringCopy(dehfiles[dehfilecount++], dehpath, MAX_PATH);
@@ -1571,7 +1572,6 @@ static int D_OpenWADLauncher(void)
                 // if an IWAD has now been found, make second pass through the PWADs to merge them
                 if (iwadfound)
                 {
-                    char        D4Vpath[MAX_PATH] = "";
                     dboolean    mapspresent = false;
 
 #if defined(_WIN32)
@@ -1592,9 +1592,7 @@ static int D_OpenWADLauncher(void)
                         {
                             D_CheckSupportedPWAD(fullpath);
 
-                            if (M_StringCompare(pwadpass2, "D4V.wad"))
-                                M_StringCopy(D4Vpath, fullpath, sizeof(D4Vpath));
-                            else if (W_MergeFile(fullpath, false))
+                            if (W_MergeFile(fullpath, false))
                             {
 #if defined(_WIN32)
                                 wad = M_StringDuplicate(leafname(fullpath));
@@ -1630,11 +1628,6 @@ static int D_OpenWADLauncher(void)
                         if (W_MergeFile(fullpath, true))
                             nerve = true;
                     }
-
-                    // always merge D4V.WAD last
-                    if (*D4Vpath)
-                        if (W_MergeFile(D4Vpath, false))
-                            modifiedgame = true;
                 }
             }
 
@@ -1707,7 +1700,7 @@ static void D_ProcessDehCommandLine(void)
             if (*myargv[p] == '-')
                 deh = (M_StringCompare(myargv[p], "-deh") || M_StringCompare(myargv[p], "-bex"));
             else if (deh)
-                ProcessDehFile(myargv[p], 0);
+                ProcessDehFile(myargv[p], 0, false);
     }
 }
 
@@ -1725,24 +1718,24 @@ static void D_ProcessDehInWad(void)
                 && process
                 && !M_StringCompare(leafname(lumpinfo[i]->wadfile->path), PACKAGE_WAD)
                 && !M_StringCompare(leafname(lumpinfo[i]->wadfile->path), "D4V.WAD"))
-                ProcessDehFile(NULL, i);
+                ProcessDehFile(NULL, i, false);
 
         for (int i = 0; i < numlumps; i++)
             if (M_StringCompare(lumpinfo[i]->name, "DEHACKED")
                 && M_StringCompare(leafname(lumpinfo[i]->wadfile->path), "D4V.WAD"))
-                ProcessDehFile(NULL, i);
+                ProcessDehFile(NULL, i, false);
 
         for (int i = 0; i < numlumps; i++)
             if (M_StringCompare(lumpinfo[i]->name, "DEHACKED")
                 && M_StringCompare(leafname(lumpinfo[i]->wadfile->path), PACKAGE_WAD))
-                ProcessDehFile(NULL, i);
+                ProcessDehFile(NULL, i, false);
     }
     else if (hacx || FREEDOOM)
     {
         for (int i = 0; i < numlumps; i++)
             if (M_StringCompare(lumpinfo[i]->name, "DEHACKED")
                 && (process || M_StringCompare(leafname(lumpinfo[i]->wadfile->path), PACKAGE_WAD)))
-                ProcessDehFile(NULL, i);
+                ProcessDehFile(NULL, i, false);
     }
     else
     {
@@ -1750,12 +1743,12 @@ static void D_ProcessDehInWad(void)
             if (M_StringCompare(lumpinfo[i]->name, "DEHACKED")
                 && !M_StringCompare(leafname(lumpinfo[i]->wadfile->path), "SIGIL_v1_2.wad")
                 && (process || M_StringCompare(leafname(lumpinfo[i]->wadfile->path), PACKAGE_WAD)))
-                ProcessDehFile(NULL, i);
+                ProcessDehFile(NULL, i, false);
     }
 
     for (int i = 0; i < 8; i++)
         if (loaddehlast[i].present)
-            ProcessDehFile(loaddehlast[i].filename, 0);
+            ProcessDehFile(loaddehlast[i].filename, 0, false);
 }
 
 static void D_ParseStartupString(const char *string)
@@ -1784,7 +1777,7 @@ static void D_DoomMainSetup(void)
     char    *iwadfile;
     int     startloadgame;
     char    *resourcefolder = M_GetResourceFolder();
-    char    *time;
+    char    *seconds;
 
     packagewad = M_StringJoin(resourcefolder, DIR_SEPARATOR_S, PACKAGE_WAD, NULL);
     free(resourcefolder);
@@ -2314,9 +2307,11 @@ static void D_DoomMainSetup(void)
 #endif
     }
 
-    time = striptrailingzero((I_GetTimeMS() - startuptimer) / 1000.0f, 1);
-    C_Output("Startup took %s seconds to complete.", time);
-    free(time);
+    M_Seed((unsigned int)time(NULL));
+
+    seconds = striptrailingzero((I_GetTimeMS() - startuptimer) / 1000.0f, 1);
+    C_Output("Startup took %s seconds to complete.", seconds);
+    free(seconds);
 
     // Ty 04/08/98 - Add 5 lines of misc. data, only if non-blank
     // The expectation is that these will be set in a .bex file

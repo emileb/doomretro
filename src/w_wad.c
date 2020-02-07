@@ -104,7 +104,6 @@ static dboolean IsFreedoom(const char *iwadname)
     }
 
     fclose(fp);
-
     return result;
 }
 
@@ -144,7 +143,6 @@ dboolean IsBFGEdition(const char *iwadname)
     }
 
     fclose(fp);
-
     return (result1 && result2);
 }
 
@@ -174,7 +172,6 @@ dboolean IsUltimateDOOM(const char *iwadname)
     }
 
     fclose(fp);
-
     return result;
 }
 
@@ -304,26 +301,17 @@ dboolean W_AddFile(char *filename, dboolean automatic)
 
     // Homebrew levels?
     if (strncmp(header.id, "IWAD", 4) && strncmp(header.id, "PWAD", 4))
-        I_Error("WAD file %s doesn't have an IWAD or PWAD id.", filename);
+        I_Error("%s doesn't have an IWAD or PWAD id.", filename);
 
     wadfile->type = (!strncmp(header.id, "IWAD", 4) || M_StringCompare(leafname(filename), "DOOM2.WAD") ? IWAD : PWAD);
 
     if (wadfile->type == IWAD)
         bfgedition = IsBFGEdition(filename);
-    else if ((M_StringCompare(leafname(filename), "SIGIL_v1_21.wad")
-        || M_StringCompare(leafname(filename), "SIGIL_v1_2.wad")
-        || M_StringCompare(leafname(filename), "SIGIL_v1_1.wad")
-        || M_StringCompare(leafname(filename), "SIGIL.wad")) && automatic)
-        autosigil = true;
-    else if (M_StringCompare(leafname(filename), "SIGIL_SHREDS.wad")
-        || M_StringCompare(leafname(filename), "SIGIL_SHREDS_COMPAT.wad"))
-        buckethead = true;
 
     header.numlumps = LONG(header.numlumps);
     header.infotableofs = LONG(header.infotableofs);
     length = header.numlumps * sizeof(filelump_t);
     fileinfo = malloc(length);
-
     W_Read(wadfile, header.infotableofs, fileinfo, length);
 
     // Increase size of numlumps array to accommodate the new file.
@@ -332,7 +320,6 @@ dboolean W_AddFile(char *filename, dboolean automatic)
     startlump = numlumps;
     numlumps += header.numlumps;
     lumpinfo = I_Realloc(lumpinfo, numlumps * sizeof(lumpinfo_t *));
-
     filerover = fileinfo;
 
     for (int i = startlump; i < numlumps; i++)
@@ -345,30 +332,35 @@ dboolean W_AddFile(char *filename, dboolean automatic)
         lump_p->cache = NULL;
         strncpy(lump_p->name, filerover->name, 8);
         lumpinfo[i] = lump_p;
-
         filerover++;
     }
+
+    free(fileinfo);
 
     temp = commify((int64_t)numlumps - startlump);
     C_Output("%s %s lump%s from %s <b>%s</b>.", (automatic ? "Automatically added" : "Added"), temp,
         (numlumps - startlump == 1 ? "" : "s"), (wadfile->type == IWAD ? "IWAD" : "PWAD"), wadfile->path);
+    free(temp);
 
     if (M_StringCompare(leafname(filename), "SIGIL_v1_21.wad")
         || M_StringCompare(leafname(filename), "SIGIL_v1_2.wad")
         || M_StringCompare(leafname(filename), "SIGIL_v1_1.wad")
         || M_StringCompare(leafname(filename), "SIGIL.wad"))
+    {
+        autosigil = automatic;
         C_Output("<i><b>SIGIL</b></i> is now available to play from the episode menu.");
+    }
     else if (M_StringCompare(leafname(filename), "SIGIL_SHREDS.WAD")
         || M_StringCompare(leafname(filename), "SIGIL_SHREDS_COMPAT.wad"))
+    {
+        buckethead = true;
         C_Output("Buckethead's soundtrack will now be used when playing <i><b>SIGIL.</b></i>");
+    }
     else if (M_StringCompare(leafname(filename), "DOOM.WAD"))
         C_Output("<i><b>E1M4B: Phobos Mission Control</b></i> and <i><b>E1M8B: Tech Gone Bad</b></i> "
             "are now available to play using the <b>map</b> CCMD.");
     else if (M_StringCompare(leafname(filename), "NERVE.WAD"))
         C_Output("<i><b>No Rest For The Living</b></i> is now available to play from the expansion menu.");
-
-    free(fileinfo);
-    free(temp);
 
     if (!packagewadadded)
     {
@@ -426,7 +418,6 @@ dboolean HasDehackedLump(const char *pwadname)
     }
 
     fclose(fp);
-
     return result;
 }
 
@@ -442,17 +433,16 @@ GameMission_t IWADRequiredByPWAD(char *pwadname)
     if (!fp)
         I_Error("Can't open PWAD: %s\n", pwadname);
 
-    if (fread(&header, 1, sizeof(header), fp) != sizeof(header) || header.id[0] != 'P'
-        || header.id[1] != 'W' || header.id[2] != 'A' || header.id[3] != 'D')
-        I_Error("PWAD tag not present: %s\n", pwadname);
+    if (fread(&header, 1, sizeof(header), fp) != sizeof(header)
+        || (header.id[0] != 'I' && header.id[0] != 'P') || header.id[1] != 'W' || header.id[2] != 'A' || header.id[3] != 'D')
+        I_Error("%s doesn't have an IWAD or PWAD id.", pwadname);
 
     fseek(fp, LONG(header.infotableofs), SEEK_SET);
 
     for (header.numlumps = LONG(header.numlumps); header.numlumps && fread(&lump, sizeof(lump), 1, fp); header.numlumps--)
         if (n[0] == 'E' && isdigit((int)n[1]) && n[2] == 'M' && isdigit((int)n[3]) && n[4] == '\0')
             result = doom;
-        else if (n[0] == 'M' && n[1] == 'A' && n[2] == 'P' && isdigit((int)n[3]) && isdigit((int)n[4]) && n[5] == '\0'
-            && !M_StringCompare(leaf, "d4v.wad"))
+        else if (n[0] == 'M' && n[1] == 'A' && n[2] == 'P' && isdigit((int)n[3]) && isdigit((int)n[4]) && n[5] == '\0')
             result = doom2;
 
     fclose(fp);
@@ -481,7 +471,6 @@ int W_WadType(char *filename)
         return 0;
 
     W_Read(wadfile, 0, &header, sizeof(header));
-
     W_CloseFile(wadfile);
 
     if (!strncmp(header.id, "IWAD", 4) || M_StringCompare(leafname(filename), "DOOM2.WAD"))

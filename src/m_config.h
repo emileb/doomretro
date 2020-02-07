@@ -68,6 +68,7 @@ extern dboolean     autotilt;
 extern dboolean     autouse;
 extern dboolean     centerweapon;
 extern int          con_backcolor;
+extern int          con_edgecolor;
 extern dboolean     con_obituaries;
 extern dboolean     con_timestamps;
 extern int          crosshair;
@@ -107,6 +108,7 @@ extern dboolean     r_bloodsplats_translucency;
 extern dboolean     r_brightmaps;
 extern int          r_color;
 extern dboolean     r_corpses_color;
+extern dboolean     r_corpses_gib;
 extern dboolean     r_corpses_mirrored;
 extern dboolean     r_corpses_moreblood;
 extern dboolean     r_corpses_nudge;
@@ -360,6 +362,10 @@ enum
 #define con_backcolor_default                   12
 #define con_backcolor_max                       255
 
+#define con_edgecolor_min                       0
+#define con_edgecolor_default                   180
+#define con_edgecolor_max                       255
+
 #define con_obituaries_default                  true
 
 #define con_timestamps_default                  true
@@ -486,6 +492,8 @@ enum
 #define r_color_max                             100
 
 #define r_corpses_color_default                 true
+
+#define r_corpses_gib_default                   true
 
 #define r_corpses_mirrored_default              true
 
