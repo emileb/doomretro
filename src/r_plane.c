@@ -38,6 +38,7 @@
 
 #include <string.h>
 
+#include "c_console.h"
 #include "doomstat.h"
 #include "i_system.h"
 #include "m_config.h"
@@ -83,7 +84,6 @@ dboolean            r_liquid_swirl = r_liquid_swirl_default;
 
 extern fixed_t      animatedliquidxoffs;
 extern fixed_t      animatedliquidyoffs;
-extern dboolean     canmouselook;
 
 //
 // R_MapPlane
@@ -142,7 +142,7 @@ static void R_MapPlane(int y, int x1, int x2)
 //
 void R_ClearPlanes(void)
 {
-    // opening / clipping determination
+    // opening/clipping determination
     for (int i = 0; i < viewwidth; i++)
     {
         floorclip[i] = viewheight;
@@ -345,15 +345,15 @@ static int  offsets[1024 * 4096];
 static byte *R_DistortedFlat(int flatnum)
 {
     static byte distortedflat[4096];
-    static int  prevleveltime = -1;
+    static int  prevgametime = -1;
     static int  prevflatnum = -1;
     static byte *normalflat;
-    static int  *offset;
+    static int  *offset = offsets;
 
-    if (prevleveltime != leveltime)
+    if (prevgametime != gametime && !consoleactive && !paused)
     {
-        offset = &offsets[(leveltime & 1023) << 12];
-        prevleveltime = leveltime;
+        offset = &offsets[(gametime & 1023) << 12];
+        prevgametime = gametime;
 
         if (prevflatnum != flatnum)
         {

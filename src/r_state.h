@@ -107,7 +107,7 @@ extern side_t       *sides;
 
 extern int          numtextures;
 
-extern int          numthings;
+extern int          numspawnedthings;
 extern int          thingid;
 extern int          numdecorations;
 
@@ -119,6 +119,7 @@ typedef enum
 } mapformat_t;
 
 extern mapformat_t  mapformat;
+extern const char   *mapformats[];
 
 extern dboolean     boomcompatible;
 extern dboolean     mbfcompatible;

@@ -215,7 +215,6 @@ void D_PostEvent(event_t *ev)
 // wipegamestate can be set to -1 to force a wipe on the next draw
 gamestate_t         wipegamestate = GS_TITLESCREEN;
 
-extern dboolean     setsizeneeded;
 extern dboolean     message_on;
 extern gameaction_t loadaction;
 
@@ -287,7 +286,7 @@ void D_Display(void)
         // draw the view directly
         R_RenderPlayerView();
 
-        if (am_path && !(viewplayer->cheats & CF_NOCLIP) && !freeze)
+        if (!(viewplayer->cheats & CF_NOCLIP) && !freeze)
             AM_AddToPath();
 
         if (mapwindow || automapactive)
@@ -427,13 +426,13 @@ static void D_DoomLoop(void)
     time_t      now = time(0);
     player_t    player;
 
-    R_ExecuteSetViewSize();
-
 #if defined(_WIN32)
     localtime_s(&gamestarttime, &now);
 #else
     localtime_r(&now, &gamestarttime);
 #endif
+
+    R_ExecuteSetViewSize();
 
     viewplayer = &player;
     viewplayer->damagecount = 0;
@@ -454,7 +453,7 @@ static void D_DoomLoop(void)
 //
 int             titlesequence = 0;
 int             pagetic = 3 * TICRATE;
-static int      logotic = 3 * TICRATE;
+int             logotic = 3 * TICRATE;
 
 static patch_t  *pagelump;
 static patch_t  *splashlump;
@@ -470,14 +469,15 @@ static byte     *splashpal;
 void D_PageTicker(void)
 {
     static int  pagewait;
+    int         pagetime;
 
     if (menuactive || startingnewgame || consoleactive)
         return;
 
-    if (pagewait < I_GetTime())
+    if (pagewait < (pagetime = I_GetTime()))
     {
         pagetic--;
-        pagewait = I_GetTime();
+        pagewait = pagetime;
 
         if (splashscreen)
             logotic--;
@@ -501,7 +501,7 @@ void D_PageDrawer(void)
             if (logotic >= 77 && logotic < 94)
                 V_DrawBigPatch(143, 167, logolump[94 - logotic]);
 
-            I_SetSimplePalette(&splashpal[(pagetic < 9 ? (9 - pagetic) : (pagetic > 94 ? (pagetic - 94) : 0)) * 768]);
+            I_SetSimplePalette(&splashpal[(pagetic < 9 ? 9 - pagetic : (pagetic > 94 ? pagetic - 94 : 0)) * 768]);
             prevtic = pagetic;
         }
     }
@@ -716,9 +716,6 @@ static void LoadDehFile(char *path)
     {
         if (!DehFileProcessed(dehpath))
         {
-            if (chex)
-                chexdeh = true;
-
             if (HasDehackedLump(path))
                 M_snprintf(dehwarning, sizeof(dehwarning), "<b>%s</b> was ignored.", GetCorrectCase(dehpath));
             else
@@ -783,7 +780,7 @@ static dboolean D_IsUnsupportedIWAD(char *filename)
         {
             char    buffer[1024];
 
-            M_snprintf(buffer, sizeof(buffer), PACKAGE_NAME" doesn't support %s.", unsupported[i].title);
+            M_snprintf(buffer, sizeof(buffer), PACKAGE_NAME " doesn't support %s.", unsupported[i].title);
             SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_WARNING, PACKAGE_NAME, buffer, NULL);
 
 #if defined(_WIN32)
@@ -825,8 +822,6 @@ static void D_CheckSupportedPWAD(char *filename)
         nerve = true;
         expansion = 2;
     }
-    else if (M_StringCompare(leaf, "breach.wad"))
-        breach = true;
     else if (M_StringCompare(leaf, "chex.wad"))
         chex = chex1 = true;
     else if (M_StringCompare(leaf, "chex2.wad"))
@@ -861,17 +856,12 @@ static void D_CheckSupportedPWAD(char *filename)
 
 static dboolean D_IsUnsupportedPWAD(char *filename)
 {
-    return M_StringCompare(leafname(filename), "voices.wad");
+    return (M_StringCompare(leafname(filename), PACKAGE_WAD) || M_StringCompare(leafname(filename), "voices.wad"));
 }
 
 static dboolean D_CheckParms(void)
 {
     dboolean    result = false;
-
-
-#if !defined(_WIN32) && !defined(__OpenBSD__) && !defined(__ANDROID__)
-    wordexp_t   p;
-#endif
 
     if (myargc == 2 && M_StringEndsWith(myargv[1], ".wad"))
     {
@@ -945,8 +935,8 @@ static dboolean D_CheckParms(void)
         // if it's a PWAD, determine the IWAD required and try loading that as well
         else if (W_WadType(myargv[1]) == PWAD && !D_IsUnsupportedPWAD(myargv[1]))
         {
-            int     iwadrequired = IWADRequiredByPWAD(myargv[1]);
-            char    fullpath[MAX_PATH];
+            GameMission_t   iwadrequired = IWADRequiredByPWAD(myargv[1]);
+            char            fullpath[MAX_PATH];
 
             if (iwadrequired == none)
                 iwadrequired = doom2;
@@ -981,6 +971,8 @@ static dboolean D_CheckParms(void)
 #if defined(_WIN32) || defined(__OpenBSD__) || defined(__ANDROID__)
                 M_snprintf(fullpath, sizeof(fullpath), "%s" DIR_SEPARATOR_S "%s", iwadfolder, iwadsrequired[iwadrequired]);
 #else
+                wordexp_t   p;
+
                 if (!wordexp(iwadfolder, &p, 0) && p.we_wordc > 0)
                 {
                     M_snprintf(fullpath, sizeof(fullpath), "%s" DIR_SEPARATOR_S "%s", p.we_wordv[0], iwadsrequired[iwadrequired]);
@@ -1150,7 +1142,8 @@ static int D_OpenWADLauncher(void)
             char    *folder = M_ExtractFolder(file);
 
             if (!M_StringEndsWith(file, ".wad") && !M_StringEndsWith(file, ".deh")
-                && !M_StringEndsWith(file, ".bex") && !M_StringEndsWith(file, ".cfg"))
+                && !M_StringEndsWith(file, ".bex") && !M_StringEndsWith(file, ".cfg")
+                && (strlen(file) < 4 || file[strlen(file) - 4] != '.'))
                 file = M_StringJoin(file, ".wad", NULL);
 
 #if defined(_WIN32)
@@ -1242,8 +1235,8 @@ static int D_OpenWADLauncher(void)
             // if it's a PWAD, determine the IWAD required and try loading that as well
             else if (W_WadType(file) == PWAD && !D_IsUnsupportedPWAD(file))
             {
-                int     iwadrequired = IWADRequiredByPWAD(file);
-                char    fullpath[MAX_PATH];
+                GameMission_t   iwadrequired = IWADRequiredByPWAD(file);
+                char            fullpath[MAX_PATH];
 
                 if (iwadrequired == none)
                     iwadrequired = doom2;
@@ -1398,23 +1391,20 @@ static int D_OpenWADLauncher(void)
 
                 if (D_IsDOOMIWAD(fullpath))
                 {
-                    if (!iwadfound)
-                    {
-                        D_IdentifyIWADByName(fullpath);
+                    D_IdentifyIWADByName(fullpath);
 
-                        if (W_AddFile(fullpath, false))
-                        {
-                            iwadfound = 1;
-                            sharewareiwad = M_StringCompare(iwadpass1, "DOOM1.WAD");
-                            isDOOM2 = M_StringCompare(iwadpass1, "DOOM2.WAD");
+                    if (W_AddFile(fullpath, false))
+                    {
+                        iwadfound = 1;
+                        sharewareiwad = M_StringCompare(iwadpass1, "DOOM1.WAD");
+                        isDOOM2 = M_StringCompare(iwadpass1, "DOOM2.WAD");
 
 #if defined(_WIN32)
-                            wad = M_StringDuplicate(leafname(fullpath));
+                        wad = M_StringDuplicate(leafname(fullpath));
 #endif
 
-                            iwadfolder = M_ExtractFolder(fullpath);
-                            break;
-                        }
+                        iwadfolder = M_ExtractFolder(fullpath);
+                        break;
                     }
                 }
 
@@ -1503,7 +1493,7 @@ static int D_OpenWADLauncher(void)
 
                     if (W_WadType(fullpath) == PWAD && !D_IsUnsupportedPWAD(fullpath) && !D_IsDehFile(fullpath))
                     {
-                        int iwadrequired = IWADRequiredByPWAD(fullpath);
+                        GameMission_t   iwadrequired = IWADRequiredByPWAD(fullpath);
 
                         if (iwadrequired != none)
                         {
@@ -1706,7 +1696,7 @@ static void D_ProcessDehCommandLine(void)
 
 static void D_ProcessDehInWad(void)
 {
-    dboolean    process = (!chexdeh && !M_CheckParm("-nodeh") && !M_CheckParm("-nobex"));
+    dboolean    process = (!M_CheckParm("-nodeh") && !M_CheckParm("-nobex"));
 
     if (*dehwarning)
         C_Warning(1, dehwarning);
@@ -1739,6 +1729,9 @@ static void D_ProcessDehInWad(void)
     }
     else
     {
+        if (chex1)
+            ProcessDehFile(NULL, W_GetNumForName("CHEXDEH"), true);
+
         for (int i = numlumps - 1; i >= 0; i--)
             if (M_StringCompare(lumpinfo[i]->name, "DEHACKED")
                 && !M_StringCompare(leafname(lumpinfo[i]->wadfile->path), "SIGIL_v1_2.wad")
@@ -1911,7 +1904,8 @@ static void D_DoomMainSetup(void)
                 if ((choseniwad = D_OpenWADLauncher()) == -1)
                     I_Quit(false);
 #if defined(_WIN32)
-                else if (!choseniwad && !error && (!*wad || M_StringEndsWith(wad, ".wad")))
+                else if (!choseniwad && !error
+                    && (!*wad || (M_StringEndsWith(wad, ".wad") && !M_StringCompare(leafname(wad), PACKAGE_WAD))))
 #else
                 else if (!choseniwad && !error)
 #endif
@@ -1919,12 +1913,12 @@ static void D_DoomMainSetup(void)
                     char    buffer[256];
 
 #if defined(_WIN32)
-                    M_snprintf(buffer, sizeof(buffer), PACKAGE_NAME" couldn't find %s.", (*wad ? wad : "any IWADs"));
+                    M_snprintf(buffer, sizeof(buffer), PACKAGE_NAME " couldn't find %s.", (*wad ? wad : "any IWADs"));
 
                     if (previouswad)
                         wad = M_StringDuplicate(previouswad);
 #else
-                    M_snprintf(buffer, sizeof(buffer), PACKAGE_NAME" couldn't find any IWADs.");
+                    M_snprintf(buffer, sizeof(buffer), PACKAGE_NAME " couldn't find any IWADs.");
 #endif
 
                     SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_WARNING, PACKAGE_NAME, buffer, NULL);
@@ -1959,9 +1953,9 @@ static void D_DoomMainSetup(void)
                 }
                 else
                 {
-                    int     iwadrequired = IWADRequiredByPWAD(file);
-                    char    fullpath[MAX_PATH];
-                    char    *folder = M_ExtractFolder(file);
+                    GameMission_t   iwadrequired = IWADRequiredByPWAD(file);
+                    char            fullpath[MAX_PATH];
+                    char            *folder = M_ExtractFolder(file);
 
                     if (iwadrequired == none)
                         iwadrequired = doom2;
@@ -2029,7 +2023,7 @@ static void D_DoomMainSetup(void)
         } while ((p = M_CheckParmsWithArgs("-file", "-pwad", "-merge", 1, p)));
 
     if (!iwadfile && !modifiedgame && !choseniwad)
-        I_Error(PACKAGE_NAME" couldn't find any IWADs.");
+        I_Error(PACKAGE_NAME " couldn't find any IWADs.");
 
     W_Init();
 
@@ -2069,16 +2063,15 @@ static void D_DoomMainSetup(void)
     D_ProcessDehInWad();
 
     if (!M_StringCompare(s_VERSION, PACKAGE_NAMEANDVERSIONSTRING))
-        I_Error("%s is the wrong version.", packagewad);
+        I_Error("The wrong version of %s was found.", packagewad);
 
     D_SetGameDescription();
 
     if (nerve && expansion == 2)
         gamemission = pack_nerve;
-
-    if (gamemode == retail && !sigil && episode == 5)
+    else if (gamemission == doom && !sigil && episode == 5)
     {
-        episode = 4;
+        episode = 1;
         M_SaveCVARs();
     }
 
@@ -2088,7 +2081,7 @@ static void D_DoomMainSetup(void)
     if (modifiedgame)
     {
         if (gamemode == shareware)
-            I_Error("You cannot load PWADs with DOOM1.WAD.");
+            I_Error("You can't load PWADs with DOOM1.WAD.");
 
         // Check for fake IWAD with right name,
         // but w/o all the lumps of the registered version.
@@ -2105,7 +2098,7 @@ static void D_DoomMainSetup(void)
 
             for (int i = 0; i < 23; i++)
                 if (W_CheckNumForName(name[i]) < 0)
-                    I_Error("This is not the registered version.");
+                    I_Error("This is not the registered version of DOOM.WAD.");
         }
     }
 
@@ -2146,7 +2139,6 @@ static void D_DoomMainSetup(void)
             startepisode = temp;
             episode = temp;
             M_SaveCVARs();
-            startmap = 1;
 
             if (gamemode == commercial)
                 M_snprintf(lumpname, sizeof(lumpname), "MAP%02i", startmap);
@@ -2168,8 +2160,6 @@ static void D_DoomMainSetup(void)
             gamemission = (temp == 1 ? doom2 : pack_nerve);
             expansion = temp;
             M_SaveCVARs();
-            startepisode = 1;
-            startmap = 1;
             M_snprintf(lumpname, sizeof(lumpname), "MAP%02i", startmap);
             autostart = true;
             C_Output("An <b>-expansion</b> parameter was found on the command-line. The expansion is now <i><b>%s.</b></i>",
@@ -2208,8 +2198,6 @@ static void D_DoomMainSetup(void)
 
                 if (p + 2 < myargc)
                     startmap = myargv[p + 2][0] - '0';
-                else
-                    startmap = 1;
             }
 
             M_snprintf(lumpname, sizeof(lumpname), "E%iM%i", startepisode, startmap);
@@ -2259,7 +2247,7 @@ static void D_DoomMainSetup(void)
     {
         char    buffer[9];
 
-        M_snprintf(buffer, sizeof(buffer), "DRLOGO%.2d", i + 1);
+        M_snprintf(buffer, sizeof(buffer), "DRLOGO%02d", i + 1);
         logolump[i] = W_CacheLumpName(buffer);
     }
 

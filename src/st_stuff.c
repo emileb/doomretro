@@ -242,7 +242,7 @@ static int                  st_shotguns;
 // holds key-type for each key box on bar
 static int                  keyboxes[3];
 
-// a random number per tick
+// a random number per tic
 static int                  st_randomnumber;
 
 int                         oldhealth = 100;
@@ -423,7 +423,6 @@ void ST_AutomapEvent(int type)
 }
 
 extern char cheatkey;
-extern int  episode;
 
 static int ST_CalcPainOffset(void);
 
@@ -453,6 +452,11 @@ dboolean ST_Responder(event_t *ev)
 
                 if (viewplayer->cheats & CF_GODMODE)
                 {
+                    viewplayer->cheats &= ~CF_BUDDHA;
+
+                    if (viewplayer->powers[pw_invulnerability] > STARTFLASHING)
+                        viewplayer->powers[pw_invulnerability] = STARTFLASHING;
+
                     // [BH] remember player's current health,
                     //  and only set to 100% if less than 100%
                     oldhealth = viewplayer->health;
@@ -688,6 +692,12 @@ dboolean ST_Responder(event_t *ev)
                     if ((i != pw_strength && viewplayer->powers[i] >= 0 && viewplayer->powers[i] <= STARTFLASHING)
                         || (i == pw_strength && !viewplayer->powers[i]))
                     {
+                        if (i == pw_invulnerability)
+                        {
+                            viewplayer->cheats &= ~CF_BUDDHA;
+                            viewplayer->cheats &= ~CF_GODMODE;
+                        }
+
                         P_GivePower(i);
 
                         // [BH] set to -1 so power-up won't run out, but can still be toggled off using cheat
@@ -702,7 +712,7 @@ dboolean ST_Responder(event_t *ev)
                         {
                             // [BH] switch to fists if 'idbeholds' cheat is entered
                             if (viewplayer->readyweapon != wp_fist)
-                                viewplayer->pendingweapon = wp_fist;
+                                P_EquipWeapon(wp_fist);
 
                             viewplayer->fistorchainsaw = wp_fist;
 
@@ -740,7 +750,7 @@ dboolean ST_Responder(event_t *ev)
 
                             if (viewplayer->readyweapon == wp_fist && viewplayer->weaponowned[wp_chainsaw])
                             {
-                                viewplayer->pendingweapon = wp_chainsaw;
+                                P_EquipWeapon(wp_chainsaw);
                                 viewplayer->fistorchainsaw = wp_chainsaw;
                             }
                         }
@@ -752,7 +762,7 @@ dboolean ST_Responder(event_t *ev)
                                 viewplayer->cheats &= ~CF_CHOPPERS;
 
                                 if (viewplayer->weaponbeforechoppers != wp_chainsaw)
-                                    viewplayer->pendingweapon = viewplayer->weaponbeforechoppers;
+                                    P_EquipWeapon(viewplayer->weaponbeforechoppers);
 
                                 viewplayer->weaponowned[wp_chainsaw] = viewplayer->chainsawbeforechoppers;
                                 oldweaponsowned[wp_chainsaw] = viewplayer->chainsawbeforechoppers;
@@ -838,8 +848,11 @@ dboolean ST_Responder(event_t *ev)
                     {
                         viewplayer->weaponowned[wp_chainsaw] = true;
                         oldweaponsowned[wp_chainsaw] = true;
-                        viewplayer->pendingweapon = wp_chainsaw;
+                        P_EquipWeapon(wp_chainsaw);
                     }
+
+                    viewplayer->cheats &= ~CF_BUDDHA;
+                    viewplayer->cheats &= ~CF_GODMODE;
 
                     // [BH] fixed bug where invulnerability was never given, and now
                     //  needs to be toggled off with cheat or switch from chainsaw
@@ -863,7 +876,7 @@ dboolean ST_Responder(event_t *ev)
                     viewplayer->powers[pw_invulnerability] = (viewplayer->invulnbeforechoppers ? 1 : STARTFLASHING);
 
                     if (viewplayer->weaponbeforechoppers != wp_chainsaw)
-                        viewplayer->pendingweapon = viewplayer->weaponbeforechoppers;
+                        P_EquipWeapon(viewplayer->weaponbeforechoppers);
 
                     viewplayer->weaponowned[wp_chainsaw] = viewplayer->chainsawbeforechoppers;
                     oldweaponsowned[wp_chainsaw] = viewplayer->chainsawbeforechoppers;
@@ -898,6 +911,11 @@ dboolean ST_Responder(event_t *ev)
 
                 if (viewplayer->cheats & CF_BUDDHA)
                 {
+                    viewplayer->cheats &= ~CF_GODMODE;
+
+                    if (viewplayer->powers[pw_invulnerability] > STARTFLASHING)
+                        viewplayer->powers[pw_invulnerability] = STARTFLASHING;
+
                     C_Output(s_STSTR_BUDDHAON);
                     HU_SetPlayerMessage(s_STSTR_BUDDHAON, false, false);
 

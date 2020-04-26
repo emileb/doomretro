@@ -54,26 +54,30 @@
 
 #define HU_MSGTIMEOUT               (4 * TICRATE)
 
-#define HUD_HEALTH_X                40
-#define HUD_HEALTH_Y                (SCREENHEIGHT - SBARHEIGHT - 23)
+#define HUD_HEALTH_X                45
+#define HUD_HEALTH_Y                (SCREENHEIGHT - SBARHEIGHT - 28)
 #define HUD_HEALTH_MIN              20
 #define HUD_HEALTH_WAIT             250
 #define HUD_HEALTH_HIGHLIGHT_WAIT   250
 
-#define HUD_AMMO_X                  102
+#define HUD_ARMOR_X                 114
+#define HUD_ARMOR_Y                 HUD_HEALTH_Y
+#define HUD_ARMOR_HIGHLIGHT_WAIT    250
+
+#define HUD_KEYS_X                  (SCREENWIDTH - 78)
+#define HUD_KEYS_Y                  (HUD_HEALTH_Y - 1)
+
+#define HUD_AMMO_X                  (SCREENWIDTH - 41)
 #define HUD_AMMO_Y                  HUD_HEALTH_Y
 #define HUD_AMMO_MIN                20
 #define HUD_AMMO_WAIT               250
 #define HUD_AMMO_HIGHLIGHT_WAIT     250
 
-#define HUD_KEYS_X                  (SCREENWIDTH - 87)
-#define HUD_KEYS_Y                  HUD_HEALTH_Y
-
-#define HUD_ARMOR_X                 (SCREENWIDTH - 41)
-#define HUD_ARMOR_Y                 HUD_HEALTH_Y
-#define HUD_ARMOR_HIGHLIGHT_WAIT    250
-
 #define HUD_KEY_WAIT                250
+
+#define ALTHUD_LEFT_X               56
+#define ALTHUD_RIGHT_X              (SCREENWIDTH - 179)
+#define ALTHUD_Y                    (SCREENHEIGHT - SBARHEIGHT - 37)
 
 //
 // HEADS UP TEXT

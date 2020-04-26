@@ -224,9 +224,9 @@ static uint32_t ReadTime(uint8_t **musptrp)
 // Returns the maximum channel number unassigned unless that is 9 in which
 // case 10 is returned.
 //
-static char FirstChannelAvailable(signed char MUS2MIDchannel[])
+static char FirstChannelAvailable(char MUS2MIDchannel[MIDI_TRACKS])
 {
-    signed char max = -1;
+    char    max = -1;
 
     // find the largest MIDI channel assigned so far
     for (int i = 0; i < 15; i++)
@@ -306,7 +306,7 @@ dboolean mmus2mid(uint8_t *mus, size_t size, MIDI *mididata)
     size_t              muslen;
     static MUSheader    MUSh;
     uint8_t             MIDIchan2track[MIDI_TRACKS];
-    signed char         MUS2MIDchannel[MIDI_TRACKS];
+    char                MUS2MIDchannel[MIDI_TRACKS];
 
     // haleyjd 04/04/10: don't bite off more than you can chew
     if (size < sizeof(MUSheader))
@@ -352,7 +352,7 @@ dboolean mmus2mid(uint8_t *mus, size_t size, MIDI *mididata)
     // allocate the first track which is a special tempo/key track
     // note multiple tracks means midi format 1
 
-    // set the divisions (ticks per quarter note)
+    // set the divisions (tics per quarter note)
     mididata->divisions = 89;
 
     // allocate for midi tempo/key track, allow for end of track
@@ -579,7 +579,7 @@ void MIDIToMidi(const MIDI *mididata, uint8_t **mid, int *midlen)
     if (!(*mid = (uint8_t *)malloc(total)))
         return;
 
-    // fill in number of tracks and big endian divisions (ticks/qnote)
+    // fill in number of tracks and big endian divisions (tics/qnote)
     midihdr[10] = 0;
     midihdr[11] = (uint8_t)ntrks;   // set number of tracks in header
     midihdr[12] = (mididata->divisions >> 8) & 0x7F;

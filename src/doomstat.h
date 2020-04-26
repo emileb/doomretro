@@ -96,11 +96,9 @@ extern dboolean         buckethead;
 extern dboolean         nerve;
 extern dboolean         bfgedition;
 
-extern dboolean         breach;
 extern dboolean         chex;
 extern dboolean         chex1;
 extern dboolean         chex2;
-extern dboolean         chexdeh;
 extern dboolean         hacx;
 extern dboolean         BTSX;
 extern dboolean         BTSXE1;
@@ -120,6 +118,7 @@ extern dboolean         doom4vanilla;
 extern dboolean         remnant;
 
 extern dboolean         DMENUPIC;
+extern dboolean         DSSECRET;
 extern dboolean         FREEDOOM;
 extern dboolean         FREEDM;
 extern dboolean         M_DOOM;
@@ -149,7 +148,6 @@ extern dboolean         STCFN034;
 extern dboolean         STYSNUM0;
 extern dboolean         TITLEPIC;
 extern dboolean         WISCRT2;
-extern dboolean         DSSECRET;
 
 // -------------------------
 // Internal parameters for sound rendering.

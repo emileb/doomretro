@@ -70,7 +70,6 @@ extern dboolean     centerweapon;
 extern int          con_backcolor;
 extern int          con_edgecolor;
 extern dboolean     con_obituaries;
-extern dboolean     con_timestamps;
 extern int          crosshair;
 extern int          crosshaircolor;
 extern int          episode;
@@ -194,6 +193,7 @@ extern unsigned int stat_skilllevel_heynottoorough;
 extern unsigned int stat_skilllevel_hurtmeplenty;
 extern unsigned int stat_skilllevel_ultraviolence;
 extern unsigned int stat_skilllevel_nightmare;
+extern unsigned int stat_suicides;
 extern unsigned int stat_time;
 extern int          stillbob;
 extern dboolean     tossdrop;
@@ -238,7 +238,8 @@ enum
     r_blood_none,
     r_blood_red,
     r_blood_all,
-    r_blood_green
+    r_blood_green,
+    r_blood_nofuzz
 };
 
 enum
@@ -368,8 +369,6 @@ enum
 
 #define con_obituaries_default                  true
 
-#define con_timestamps_default                  true
-
 #define crosshair_min                           crosshair_none
 #define crosshair_default                       crosshair_none
 #define crosshair_max                           crosshair_dot
@@ -473,7 +472,7 @@ enum
 
 #define r_blood_min                             r_blood_none
 #define r_blood_default                         r_blood_all
-#define r_blood_max                             r_blood_green
+#define r_blood_max                             r_blood_nofuzz
 
 #define r_bloodsplats_max_min                   0
 #define r_bloodsplats_max_default               65536

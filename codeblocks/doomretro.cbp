@@ -153,9 +153,6 @@
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="../src/m_controls.h" />
-		<Unit filename="../src/m_fixed.c">
-			<Option compilerVar="CC" />
-		</Unit>
 		<Unit filename="../src/m_fixed.h" />
 		<Unit filename="../src/m_menu.c">
 			<Option compilerVar="CC" />
@@ -165,9 +162,6 @@
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="../src/m_misc.h" />
-		<Unit filename="../src/m_random.c">
-			<Option compilerVar="CC" />
-		</Unit>
 		<Unit filename="../src/m_random.h" />
 		<Unit filename="../src/mmus2mid.c">
 			<Option compilerVar="CC" />

@@ -106,7 +106,7 @@ static char     saveOldString[SAVESTRINGSIZE];
 
 dboolean        inhelpscreens;
 dboolean        menuactive;
-static dboolean savegames;
+dboolean        savegames;
 dboolean        startingnewgame;
 
 char            savegamestrings[6][SAVESTRINGSIZE];
@@ -123,6 +123,7 @@ static dboolean usinggamepad;
 static menu_t   *currentMenu;
 
 int             spindirection;
+static angle_t  playerangle;
 
 extern patch_t  *hu_font[HU_FONTSIZE];
 extern dboolean message_menu;
@@ -133,7 +134,6 @@ extern dboolean dowipe;
 
 extern dboolean splashscreen;
 
-extern dboolean skipaction;
 extern dboolean skippsprinterp;
 
 //
@@ -461,8 +461,6 @@ menu_t SaveDef =
     load1
 };
 
-static int blurheight;
-
 static void BlurScreen(byte *screen, byte *blurscreen, int height)
 {
     for (int i = 0; i < height; i++)
@@ -476,9 +474,9 @@ static void BlurScreen(byte *screen, byte *blurscreen, int height)
         for (int x = y + SCREENWIDTH - 2; x >= y; x--)
             blurscreen[x] = tinttab50[(blurscreen[x - 1] << 8) + blurscreen[x]];
 
-    for (int y = 0; y <= height - SCREENWIDTH * 2; y += SCREENWIDTH)
+    for (int y = SCREENWIDTH; y <= height - SCREENWIDTH * 2; y += SCREENWIDTH)
         for (int x = y; x <= y + SCREENWIDTH - 2; x++)
-            blurscreen[x] = tinttab50[(blurscreen[x + SCREENWIDTH + 1] << 8) + blurscreen[x]];
+            blurscreen[x] = tinttab50[(blurscreen[x + M_RandomInt(-1, 1) * SCREENWIDTH + M_RandomInt(-1, 1)] << 8) + blurscreen[x]];
 
     for (int y = height - SCREENWIDTH; y >= SCREENWIDTH; y -= SCREENWIDTH)
         for (int x = y + SCREENWIDTH - 1; x >= y + 1; x--)
@@ -501,6 +499,8 @@ static void BlurScreen(byte *screen, byte *blurscreen, int height)
             blurscreen[x] = tinttab50[(blurscreen[x - SCREENWIDTH + 1] << 8) + blurscreen[x]];
 }
 
+static int  blurtic = -1;
+
 //
 // M_DarkBackground
 //  darken and blur background while menu is displayed
@@ -509,12 +509,12 @@ void M_DarkBackground(void)
 {
     static byte blurscreen1[SCREENWIDTH * SCREENHEIGHT];
     static byte blurscreen2[(SCREENHEIGHT - SBARHEIGHT) * SCREENWIDTH];
-    static int  prevtic = -1;
+    int         blurheight = (SCREENHEIGHT - (vid_widescreen && gamestate == GS_LEVEL) * SBARHEIGHT) * SCREENWIDTH;
 
-    blurheight = (SCREENHEIGHT - (vid_widescreen && gamestate == GS_LEVEL) * SBARHEIGHT) * SCREENWIDTH;
-
-    if (gametime != prevtic)
+    if (gametime != blurtic && (!(gametime % 3) || blurtic == -1 || vid_capfps == TICRATE))
     {
+        M_Seed(gametime);
+
         for (int i = 0; i < blurheight; i += SCREENWIDTH)
         {
             screens[0][i] = nearestblack;
@@ -524,7 +524,7 @@ void M_DarkBackground(void)
         }
 
         for (int i = 0; i < blurheight; i++)
-            screens[0][i] = colormaps[0][(M_Random() & 7) * 256 + screens[0][i]];
+            screens[0][i] = colormaps[0][(M_Random() & 5) * 256 + screens[0][i]];
 
         BlurScreen(screens[0], blurscreen1, blurheight);
 
@@ -550,7 +550,7 @@ void M_DarkBackground(void)
                 blurscreen2[i] = tinttab33[blurscreen2[i]];
         }
 
-        prevtic = gametime;
+        blurtic = gametime;
     }
 
     memcpy(screens[0], blurscreen1, blurheight);
@@ -1022,6 +1022,7 @@ static void M_LoadSelect(int choice)
         functionkey = 0;
         quickSaveSlot = choice;
         M_ClearMenus();
+        S_StopMusic();
         G_LoadGame(name);
     }
     else
@@ -1133,7 +1134,6 @@ static void M_DoSave(int slot)
 {
     M_ClearMenus();
     G_SaveGame(slot, savegamestrings[slot], "");
-    savegames = true;
     functionkey = 0;
     quickSaveSlot = slot;
 }
@@ -1535,7 +1535,7 @@ static void M_MusicVol(int choice)
         case 0:
             if (musicVolume > 0)
             {
-                S_SetMusicVolume(--musicVolume * MAX_MUSIC_VOLUME / 31);
+                S_SetMusicVolume(--musicVolume * MAX_MUSIC_VOLUME / 31 / (gamestate == GS_LEVEL ? LOWER_MUSIC_VOLUME_FACTOR : 1));
                 S_StartSound(NULL, sfx_stnmov);
                 s_musicvolume = musicVolume * 100 / 31;
                 C_PctCVAROutput(stringize(s_musicvolume), s_musicvolume);
@@ -1547,7 +1547,7 @@ static void M_MusicVol(int choice)
         case 1:
             if (musicVolume < 31)
             {
-                S_SetMusicVolume(++musicVolume * MAX_MUSIC_VOLUME / 31);
+                S_SetMusicVolume(++musicVolume * MAX_MUSIC_VOLUME / 31 / (gamestate == GS_LEVEL ? LOWER_MUSIC_VOLUME_FACTOR : 1));
                 S_StartSound(NULL, sfx_stnmov);
                 s_musicvolume = musicVolume * 100 / 31;
                 C_PctCVAROutput(stringize(s_musicvolume), s_musicvolume);
@@ -1932,6 +1932,7 @@ static void M_EndGameResponse(int key)
     }
 
     currentMenu->lastOn = itemOn;
+    S_StopMusic();
     M_ClearMenus();
     viewactive = false;
     automapactive = false;
@@ -2258,6 +2259,7 @@ static void M_SizeDisplay(int choice)
             break;
     }
 
+    blurtic = -1;
     skippsprinterp = true;
 }
 
@@ -3083,11 +3085,7 @@ dboolean M_Responder(event_t *ev)
     // screenshot
     if (key == keyboardscreenshot)
     {
-#if defined(_WIN32)
-        if (key != KEY_PRINTSCREEN)
-#endif
-            G_ScreenShot();
-
+        G_ScreenShot();
         return false;
     }
 
@@ -3175,6 +3173,9 @@ dboolean M_Responder(event_t *ev)
                 expansion = itemOn + 1;
                 M_SaveCVARs();
                 C_IntCVAROutput(stringize(expansion), expansion);
+
+                if (gamestate != GS_LEVEL)
+                    gamemission = (expansion == 2 && nerve ? pack_nerve : doom2);
             }
             else if (currentMenu == &NewDef)
             {
@@ -3253,6 +3254,9 @@ dboolean M_Responder(event_t *ev)
                 expansion = itemOn + 1;
                 M_SaveCVARs();
                 C_IntCVAROutput(stringize(expansion), expansion);
+
+                if (gamestate != GS_LEVEL)
+                    gamemission = (expansion == 2 && nerve ? pack_nerve : doom2);
             }
             else if (currentMenu == &NewDef)
             {
@@ -3444,6 +3448,9 @@ dboolean M_Responder(event_t *ev)
                         expansion = itemOn + 1;
                         M_SaveCVARs();
                         C_IntCVAROutput(stringize(expansion), expansion);
+
+                        if (gamestate != GS_LEVEL)
+                            gamemission = (expansion == 2 && nerve ? pack_nerve : doom2);
                     }
                     else if (currentMenu == &NewDef)
                     {
@@ -3505,6 +3512,9 @@ dboolean M_Responder(event_t *ev)
                         expansion = itemOn + 1;
                         M_SaveCVARs();
                         C_IntCVAROutput(stringize(expansion), expansion);
+
+                        if (gamestate != GS_LEVEL)
+                            gamemission = (expansion == 2 && nerve ? pack_nerve : doom2);
                     }
                     else if (currentMenu == &NewDef)
                     {
@@ -3567,11 +3577,23 @@ void M_StartControlPanel(void)
     if (vid_motionblur)
         I_SetMotionBlur(0);
 
-    if (gamestate == GS_LEVEL && !vid_widescreen && !automapactive && !inhelpscreens)
-        R_SetViewSize(8);
+    if (gamestate == GS_LEVEL)
+    {
+        playerangle = viewplayer->mo->angle;
 
-    if (automapactive)
-        AM_SetAutomapSize();
+        if (!vid_widescreen && !automapactive && !inhelpscreens)
+            R_SetViewSize(8);
+
+        if (automapactive)
+        {
+            AM_SetAutomapSize();
+
+            if (!am_rotatemode)
+                viewplayer->mo->angle = ANG90;
+        }
+
+        S_SetMusicVolume(musicVolume * MAX_MUSIC_VOLUME / 31 / LOWER_MUSIC_VOLUME_FACTOR);
+    }
 }
 
 //
@@ -3742,6 +3764,7 @@ void M_ClearMenus(void)
 
     menuactive = false;
     message_menu = false;
+    blurtic = -1;
 
     if (gp_vibrate_barrels || gp_vibrate_damage || gp_vibrate_weapons)
     {
@@ -3753,11 +3776,15 @@ void M_ClearMenus(void)
     {
         I_SetPalette(&PLAYPAL[st_palette * 768]);
 
+        viewplayer->mo->angle = playerangle;
+
         if (!vid_widescreen && !automapactive && !inhelpscreens)
             R_SetViewSize(r_screensize);
 
         if (automapactive)
             AM_SetAutomapSize();
+
+        S_SetMusicVolume(musicVolume * MAX_MUSIC_VOLUME / 31);
     }
 }
 
@@ -3776,12 +3803,11 @@ static void M_SetupNextMenu(menu_t *menudef)
 //
 void M_Ticker(void)
 {
-    if ((!saveStringEnter || !whichSkull) && windowfocused)
-        if (--skullAnimCounter <= 0)
-        {
-            whichSkull ^= 1;
-            skullAnimCounter = 8;
-        }
+    if ((!saveStringEnter || !whichSkull) && windowfocused && --skullAnimCounter <= 0)
+    {
+        whichSkull ^= 1;
+        skullAnimCounter = 8;
+    }
 }
 
 //

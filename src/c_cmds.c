@@ -137,7 +137,6 @@ dboolean            vanilla = false;
 
 char                *version = version_default;
 
-extern dboolean     setsizeneeded;
 extern char         *packageconfig;
 extern int          st_palette;
 extern int          timer;
@@ -446,11 +445,11 @@ consolecmd_t consolecmds[] =
     CVAR_BOOL(alwaysrun, "", bool_cvars_func1, alwaysrun_cvar_func2, BOOLVALUEALIAS,
         "Toggles the player to always run when they move."),
     CVAR_INT(am_allmapcdwallcolor, am_allmapcdwallcolour, color_cvars_func1, color_cvars_func2, CF_NONE, NOVALUEALIAS,
-        "The color of lines in the automap indicating a\nchange in ceiling height and when the player has a\ncomputer area map power-up "
-        "(<b>0</b> to <b>255</b>)."),
+        "The color of lines in the automap indicating a\nchange in ceiling height when the player has a\n"
+        "computer area map power-up (<b>0</b> to <b>255</b>)."),
     CVAR_INT(am_allmapfdwallcolor, am_allmapfdwallcolour, color_cvars_func1, color_cvars_func2, CF_NONE, NOVALUEALIAS,
-        "The color of lines in the automap indicating a\nchange in floor height and when the player has a\ncomputer area map power-up "
-        "(<b>0</b> to <b>255</b>)."),
+        "The color of lines in the automap indicating a\nchange in floor height when the player has a\n"
+        "computer area map power-up (<b>0</b> to <b>255</b>)."),
     CVAR_INT(am_allmapwallcolor, am_allmapwallcolour, color_cvars_func1, color_cvars_func2, CF_NONE, NOVALUEALIAS,
         "The color of solid walls in the automap when the\nplayer has a computer area map power-up (<b>0</b> to\n<b>255</b>)."),
     CVAR_INT(am_backcolor, am_backcolour, color_cvars_func1, color_cvars_func2, CF_NONE, NOVALUEALIAS,
@@ -521,8 +520,6 @@ consolecmd_t consolecmds[] =
         "The color of the console's bottom edge (<b>0</b> to <b>255</b>)."),
     CVAR_BOOL(con_obituaries, "", bool_cvars_func1, bool_cvars_func2, BOOLVALUEALIAS,
         "Toggles obituaries in the console when the player\nor monsters are killed."),
-    CVAR_BOOL(con_timestamps, "", bool_cvars_func1, bool_cvars_func2, BOOLVALUEALIAS,
-        "Toggles timestamps next to player messages and\nobituaries in the console."),
     CMD(condump, "", condump_cmd_func1, condump_cmd_func2, true, "[<i>filename</i><b>.txt</b>]",
         "Dumps the contents of the console to a file."),
     CVAR_INT(crosshair, "", crosshair_cvar_func1, crosshair_cvar_func2, CF_NONE, CROSSHAIRVALUEALIAS,
@@ -550,8 +547,8 @@ consolecmd_t consolecmds[] =
     CVAR_TIME(gametime, "", null_func1, time_cvars_func2,
         "The amount of time <i><b>" PACKAGE_NAME "</b></i> has been running."),
     CMD(give, "", give_cmd_func1, give_cmd_func2, true, GIVECMDFORMAT,
-        "Gives <b>ammo</b>, <b>armor</b>, <b>health</b>, <b>keys</b>, <b>weapons</b>, or\n<b>all</b> or certain <i>items</i> to the "
-        "player."),
+        "Gives <b>ammo</b>, <b>armor</b>, <b>health</b>, <b>keys</b>, <b>weapons</b>, or\n"
+        "<b>all</b> or certain <i>items</i> to the player."),
     CMD(god, "", alive_func1, god_cmd_func2, true, "[<b>on</b>|<b>off</b>]",
         "Toggles god mode."),
     CVAR_BOOL(gp_analog, gp_analogue, bool_cvars_func1, bool_cvars_func2, BOOLVALUEALIAS,
@@ -659,7 +656,8 @@ consolecmd_t consolecmds[] =
     CVAR_INT(r_berserkintensity, "", int_cvars_func1, int_cvars_func2, CF_NONE, NOVALUEALIAS,
         "The intensity of the effect when the player has a\nberserk power-up and their fists equipped (<b>0</b> to <b>8</b>)."),
     CVAR_INT(r_blood, "", r_blood_cvar_func1, r_blood_cvar_func2, CF_NONE, BLOODVALUEALIAS,
-        "The colors of the blood of the player and monsters\n(<b>all</b>, <b>none</b>, <b>red</b> or <b>green</b>)."),
+        "The colors of the blood spilled by the player and\n"
+        "monsters (<b>all</b>, <b>none</b>, <b>red</b>, <b>green</b> or <b>nofuzz</b>)."),
     CVAR_INT(r_bloodsplats_max, "", int_cvars_func1, int_cvars_func2, CF_NONE, NOVALUEALIAS,
         "The maximum number of blood splats allowed in a\nmap (<b>0</b> to <b>1,048,576</b>)."),
     CVAR_INT(r_bloodsplats_total, "", int_cvars_func1, int_cvars_func2, CF_READONLY, NOVALUEALIAS,
@@ -779,10 +777,10 @@ consolecmd_t consolecmds[] =
     CVAR_INT(stillbob, "", int_cvars_func1, int_cvars_func2, CF_PERCENT, NOVALUEALIAS,
         "The amount the player's view and weapon bob up\nand down when they stand still (<b>0%</b> to <b>100%</b>)."),
     CMD(take, "", take_cmd_func1, take_cmd_func2, true, TAKECMDFORMAT,
-        "Takes <b>ammo</b>, <b>armor</b>, <b>health</b>, <b>keys</b>, <b>weapons</b>, or\n<b>all</b> or certain <i>items</i> from the "
-        "player."),
+        "Takes <b>ammo</b>, <b>armor</b>, <b>health</b>, <b>keys</b>, <b>weapons</b>, or\n"
+        "<b>all</b> or certain <i>items</i> from the player."),
     CMD(teleport, "", teleport_cmd_func1, teleport_cmd_func2, true, TELEPORTCMDFORMAT,
-        "Teleports the player to (<i>x</i>,<i>y</i>,<i>z</i>)."),
+        "Teleports the player to (<i>x</i>,<i>y</i>,<i>z</i>) in the current\nmap."),
     CMD(thinglist, "", game_func1, thinglist_cmd_func2, false, "",
         "Lists all things in the current map."),
     CMD(timer, "", null_func1, timer_cmd_func2, true, TIMERCMDFORMAT,
@@ -821,8 +819,8 @@ consolecmd_t consolecmds[] =
         "The API used to scale each frame (<b>\"direct3d\"</b>,\n<b>\"opengl\"</b> or <b>\"software\"</b>)."),
 #elif defined(__APPLE__)
     CVAR_STR(vid_scaleapi, "", vid_scaleapi_cvar_func1, vid_scaleapi_cvar_func2, CF_NONE,
-        "The API used to scale each frame (<b>\"metal\"</b>,\n<b>\"opengl\"</b>, <b>\"opengles\"</b>, <b>\"opengles2\"</b> or "
-        "<b>\"software\"</b>)."),
+        "The API used to scale each frame (<b>\"metal\"</b>,\n"
+        "<b>\"opengl\"</b>, <b>\"opengles\"</b>, <b>\"opengles2\"</b> or <b>\"software\"</b>)."),
 #else
     CVAR_STR(vid_scaleapi, "", vid_scaleapi_cvar_func1, vid_scaleapi_cvar_func2, CF_NONE,
         "The API used to scale each frame (<b>\"opengl\"</b>,\n<b>\"opengles\"</b>, <b>\"opengles2\"</b> or <b>\"software\"</b>)."),
@@ -1722,7 +1720,7 @@ void C_DumpConsoleStringToFile(int index)
             }
         }
 
-        if ((console[index].stringtype == playermessagestring || console[index].stringtype == obituarystring) && con_timestamps)
+        if (console[index].stringtype == playermessagestring || console[index].stringtype == obituarystring)
         {
             char    buffer[9];
 
@@ -1761,17 +1759,25 @@ static void condump_cmd_func2(char *cmd, char *parms)
         M_snprintf(filename, sizeof(filename), "%s" DIR_SEPARATOR_S "condump.txt", appdatafolder);
 
         while (M_FileExists(filename))
-            M_snprintf(filename, sizeof(filename), "%s" DIR_SEPARATOR_S "condump (%i).txt", appdatafolder, ++count);
+        {
+            char    *temp = commify(++count);
+
+            M_snprintf(filename, sizeof(filename), "%s" DIR_SEPARATOR_S "condump (%s).txt", appdatafolder, temp);
+            free(temp);
+        }
     }
     else
         M_snprintf(filename, sizeof(filename), "%s" DIR_SEPARATOR_S "%s", appdatafolder, parms);
 
     if ((condumpfile = fopen(filename, "wt")))
     {
+        char    *temp = commify(consolestrings - 2);
+
         for (int i = 1; i < consolestrings - 1; i++)
             C_DumpConsoleStringToFile(i);
 
-        C_Output("Dumped %i lines from the console to <b>%s</b>.", consolestrings - 2, filename);
+        C_Output("Dumped %s lines from the console to <b>%s</b>.", temp, filename);
+        free(temp);
     }
 }
 
@@ -2072,17 +2078,18 @@ static dboolean give_cmd_func1(char *cmd, char *parms)
     {
         for (int i = 0, num = -1; i < NUMMOBJTYPES; i++)
         {
-            char    *temp1 = removenonalpha(mobjinfo[i].name1);
+            char    *temp1 = (*mobjinfo[i].name1 ? removenonalpha(mobjinfo[i].name1) : NULL);
             char    *temp2 = (*mobjinfo[i].name2 ? removenonalpha(mobjinfo[i].name2) : NULL);
             char    *temp3 = (*mobjinfo[i].name3 ? removenonalpha(mobjinfo[i].name3) : NULL);
 
-            if ((mobjinfo[i].flags & MF_SPECIAL) && (M_StringCompare(parm, temp1)
-                || (*mobjinfo[i].name2 && M_StringCompare(parm, temp2))
-                || (*mobjinfo[i].name3 && M_StringCompare(parm, temp3))
-                || (sscanf(parm, "%10d", &num) == 1 && num == mobjinfo[i].doomednum && num != -1)))
+            if ((mobjinfo[i].flags & MF_SPECIAL)
+                && ((*mobjinfo[i].name1 && M_StringCompare(parm, temp1))
+                    || (*mobjinfo[i].name2 && M_StringCompare(parm, temp2))
+                    || (*mobjinfo[i].name3 && M_StringCompare(parm, temp3))
+                    || (sscanf(parm, "%10d", &num) == 1 && num == mobjinfo[i].doomednum && num != -1)))
                 result = true;
 
-            if (*temp1)
+            if (temp1)
                 free(temp1);
 
             if (temp2)
@@ -2145,10 +2152,11 @@ static void give_cmd_func2(char *cmd, char *parms)
             }
             else
             {
-                char    *temp = titlecase(playername);
+                if (M_StringCompare(playername, playername_default))
+                    C_Warning(0, "You already have everything.");
+                else
+                    C_Warning(0, "%s already has everything.", playername);
 
-                C_Warning(0, "%s already has everything.", temp);
-                free(temp);
                 free(parm);
                 return;
             }
@@ -2163,11 +2171,11 @@ static void give_cmd_func2(char *cmd, char *parms)
             }
             else
             {
-                char    *temp = titlecase(playername);
+                if (M_StringCompare(playername, playername_default))
+                    C_Warning(0, "You already have full health.");
+                else
+                    C_Warning(0, "%s already has full health.", playername);
 
-                C_Warning(0, "%s already %s full health.",
-                    temp, (M_StringCompare(playername, playername_default) ? "have" : "has"));
-                free(temp);
                 free(parm);
                 return;
             }
@@ -2182,11 +2190,11 @@ static void give_cmd_func2(char *cmd, char *parms)
             }
             else
             {
-                char    *temp = titlecase(playername);
+                if (M_StringCompare(playername, playername_default))
+                    C_Warning(0, "You already have all the weapons.");
+                else
+                    C_Warning(0, "%s already has all the weapons.", playername);
 
-                C_Warning(0, "%s already %s all the weapons.",
-                    temp, (M_StringCompare(playername, playername_default) ? "have" : "has"));
-                free(temp);
                 free(parm);
                 return;
             }
@@ -2201,11 +2209,11 @@ static void give_cmd_func2(char *cmd, char *parms)
             }
             else
             {
-                char    *temp = titlecase(playername);
+                if (M_StringCompare(playername, playername_default))
+                    C_Warning(0, "You already have full ammo.");
+                else
+                    C_Warning(0, "%s already has full ammo.", playername);
 
-                C_Warning(0, "%s already %s full ammo.",
-                    temp, (M_StringCompare(playername, playername_default) ? "have" : "has"));
-                free(temp);
                 free(parm);
                 return;
             }
@@ -2221,11 +2229,11 @@ static void give_cmd_func2(char *cmd, char *parms)
             }
             else
             {
-                char    *temp = titlecase(playername);
+                if (M_StringCompare(playername, playername_default))
+                    C_Warning(0, "You already have full armor.");
+                else
+                    C_Warning(0, "%s already has full armor.", playername);
 
-                C_Warning(0, "%s already %s full armor.",
-                    temp, (M_StringCompare(playername, playername_default) ? "have" : "has"));
-                free(temp);
                 free(parm);
                 return;
             }
@@ -2240,11 +2248,11 @@ static void give_cmd_func2(char *cmd, char *parms)
             }
             else
             {
-                char    *temp = titlecase(playername);
+                if (M_StringCompare(playername, playername_default))
+                    C_Warning(0, "You already have all the keycards and skull keys.");
+                else
+                    C_Warning(0, "%s already has all the keycards and skull keys.", playername);
 
-                C_Warning(0, "%s already %s all the keycards and skull keys.",
-                    temp, (M_StringCompare(playername, playername_default) ? "have" : "has"));
-                free(temp);
                 free(parm);
                 return;
             }
@@ -2259,11 +2267,11 @@ static void give_cmd_func2(char *cmd, char *parms)
             }
             else
             {
-                char    *temp = titlecase(playername);
+                if (M_StringCompare(playername, playername_default))
+                    C_Warning(0, "You already have all the keycards.");
+                else
+                    C_Warning(0, "%s already has all the keycards.", playername);
 
-                C_Warning(0, "%s already %s all the keycards.",
-                    temp, (M_StringCompare(playername, playername_default) ? "have" : "has"));
-                free(temp);
                 free(parm);
                 return;
             }
@@ -2278,11 +2286,11 @@ static void give_cmd_func2(char *cmd, char *parms)
             }
             else
             {
-                char    *temp = titlecase(playername);
+                if (M_StringCompare(playername, playername_default))
+                    C_Warning(0, "You already have all the skull keys.");
+                else
+                    C_Warning(0, "%s already has all the skull keys.", playername);
 
-                C_Warning(0, "%s already %s all the skull keys.",
-                    temp, (M_StringCompare(playername, playername_default) ? "have" : "has"));
-                free(temp);
                 free(parm);
                 return;
             }
@@ -2291,18 +2299,18 @@ static void give_cmd_func2(char *cmd, char *parms)
         {
             if (viewplayer->weaponowned[wp_pistol])
             {
-                char    *temp = titlecase(playername);
+                if (M_StringCompare(playername, playername_default))
+                    C_Warning(0, "You already have a pistol.");
+                else
+                    C_Warning(0, "%s already has a pistol.", playername);
 
-                C_Warning(0, "%s already %s a pistol.",
-                    temp, (M_StringCompare(playername, playername_default) ? "have" : "has"));
-                free(temp);
                 free(parm);
                 return;
             }
 
             viewplayer->weaponowned[wp_pistol] = true;
             oldweaponsowned[wp_pistol] = true;
-            viewplayer->pendingweapon = wp_pistol;
+            P_EquipWeapon(wp_pistol);
             C_HideConsole();
             free(parm);
             return;
@@ -2312,12 +2320,12 @@ static void give_cmd_func2(char *cmd, char *parms)
             for (int i = 0, num = -1; i < NUMMOBJTYPES; i++)
             {
                 dboolean    result = false;
-                char        *temp1 = removenonalpha(mobjinfo[i].name1);
+                char        *temp1 = (*mobjinfo[i].name1 ? removenonalpha(mobjinfo[i].name1) : NULL);
                 char        *temp2 = (*mobjinfo[i].name2 ? removenonalpha(mobjinfo[i].name2) : NULL);
                 char        *temp3 = (*mobjinfo[i].name3 ? removenonalpha(mobjinfo[i].name3) : NULL);
 
                 if ((mobjinfo[i].flags & MF_SPECIAL)
-                    && (M_StringCompare(parm, temp1)
+                    && ((*mobjinfo[i].name1 && M_StringCompare(parm, temp1))
                         || (*mobjinfo[i].name2 && M_StringCompare(parm, temp2))
                         || (*mobjinfo[i].name3 && M_StringCompare(parm, temp3))
                         || (sscanf(parm, "%10d", &num) == 1 && num == mobjinfo[i].doomednum && num != -1)))
@@ -2325,20 +2333,15 @@ static void give_cmd_func2(char *cmd, char *parms)
                     dboolean    old_freeze = freeze;
 
                     if (gamemode != commercial && (i == MT_SUPERSHOTGUN || i == MT_MEGA))
-                    {
-                        char    *temp = titlecase(playername);
 
-                        C_Warning(0, "%s can't get %s in <i><b>%s.</b></i>", temp, mobjinfo[i].plural1, gamedescription);
-                        free(temp);
-                    }
+                        C_Warning(0, "%s can't get %s in <i><b>%s.</b></i>",
+                            (M_StringCompare(playername, playername_default) ? "You" : playername),
+                            mobjinfo[i].plural1, gamedescription);
                     else if (gamemode == shareware && (i == MT_MISC7 || i == MT_MISC8 || i == MT_MISC9
                         || i == MT_MISC20 || i == MT_MISC21 || i == MT_MISC25 || i == MT_MISC28))
-                    {
-                        char    *temp = titlecase(playername);
-
-                        C_Warning(0, "%s can't get %s in <i><b>%s.</b></i>", temp, mobjinfo[i].plural1, gamedescription);
-                        free(temp);
-                    }
+                        C_Warning(0, "%s can't get %s in <i><b>%s.</b></i>",
+                            (M_StringCompare(playername, playername_default) ? "You" : playername),
+                            mobjinfo[i].plural1, gamedescription);
                     else
                     {
                         freeze = false;
@@ -2349,7 +2352,7 @@ static void give_cmd_func2(char *cmd, char *parms)
                     }
                 }
 
-                if (*temp1)
+                if (temp1)
                     free(temp1);
 
                 if (temp2)
@@ -2544,18 +2547,21 @@ static dboolean kill_cmd_func1(char *cmd, char *parms)
         for (int i = 0, num = -1; i < NUMMOBJTYPES; i++)
             if (*mobjinfo[i].name1)
             {
-                char    *temp1 = removenonalpha(mobjinfo[i].name1);
-                char    *temp2 = removenonalpha(mobjinfo[i].plural1);
+                char    *temp1 = (*mobjinfo[i].name1 ? removenonalpha(mobjinfo[i].name1) : NULL);
+                char    *temp2 = (*mobjinfo[i].plural1 ? removenonalpha(mobjinfo[i].plural1) : NULL);
                 char    *temp3 = (*mobjinfo[i].name2 ? removenonalpha(mobjinfo[i].name2) : NULL);
                 char    *temp4 = (*mobjinfo[i].plural2 ? removenonalpha(mobjinfo[i].plural2) : NULL);
                 char    *temp5 = (*mobjinfo[i].name3 ? removenonalpha(mobjinfo[i].name3) : NULL);
                 char    *temp6 = (*mobjinfo[i].plural3 ? removenonalpha(mobjinfo[i].plural3) : NULL);
 
+                if (M_StringStartsWith(parm, "all"))
+                    strreplace(parm, "all", "");
+
                 killcmdtype = mobjinfo[i].doomednum;
 
                 if (killcmdtype >= 0
-                    && (M_StringCompare(parm, temp1)
-                        || M_StringCompare(parm, temp2)
+                    && ((*mobjinfo[i].name1 && M_StringCompare(parm, temp1))
+                        || (*mobjinfo[i].plural1 && M_StringCompare(parm, temp2))
                         || (*mobjinfo[i].name2 && M_StringCompare(parm, temp3))
                         || (*mobjinfo[i].plural2 && M_StringCompare(parm, temp4))
                         || (*mobjinfo[i].name3 && M_StringCompare(parm, temp5))
@@ -2565,7 +2571,7 @@ static dboolean kill_cmd_func1(char *cmd, char *parms)
                     if (killcmdtype == WolfensteinSS && !allowwolfensteinss && !states[S_SSWV_STND].dehacked)
                         result = false;
                     else
-                        result = (mobjinfo[i].flags & MF_SHOOTABLE);
+                        result = mobjinfo[i].flags & MF_SHOOTABLE;
                 }
 
                 if (temp1)
@@ -2705,7 +2711,7 @@ void kill_cmd_func2(char *cmd, char *parms)
                                         const int   r = M_RandomInt(-1, 1);
 
                                         thing->momx += FRACUNIT * r;
-                                        thing->momy += FRACUNIT * M_RandomIntNoRepeat(-1, 1, (!r ? 0 : 2));
+                                        thing->momy += FRACUNIT * (!r ? M_RandomIntNoRepeat(-1, 1, 0) : M_RandomInt(-1, 1));
                                     }
 
                                     kills++;
@@ -2783,7 +2789,7 @@ void kill_cmd_func2(char *cmd, char *parms)
                     const int   r = M_RandomInt(-1, 1);
 
                     killcmdmobj->momx += FRACUNIT * r;
-                    killcmdmobj->momy += FRACUNIT * M_RandomIntNoRepeat(-1, 1, (!r ? 0 : 2));
+                    killcmdmobj->momy += FRACUNIT * (!r ? M_RandomIntNoRepeat(-1, 1, 0) : M_RandomInt(-1, 1));
                 }
 
                 M_snprintf(buffer, sizeof(buffer), "%s was killed.", temp);
@@ -2834,7 +2840,7 @@ void kill_cmd_func2(char *cmd, char *parms)
                                     const int   r = M_RandomInt(-1, 1);
 
                                     thing->momx += FRACUNIT * r;
-                                    thing->momy += FRACUNIT * M_RandomIntNoRepeat(-1, 1, (!r ? 0 : 2));
+                                    thing->momy += FRACUNIT * (!r ? M_RandomIntNoRepeat(-1, 1, 0) : M_RandomInt(-1, 1));
                                 }
 
                                 kills++;
@@ -3367,11 +3373,12 @@ static void maplist_cmd_func2(char *cmd, char *parms)
     const int   tabs[4] = { 40, 93, 370, 0 };
     int         count = 0;
     char        (*maplist)[256] = malloc(numlumps * sizeof(char *));
+    dboolean    mapfound[50] = { false };
 
     C_Header(tabs, maplistheader, MAPLISTHEADER);
 
     // search through lumps for maps
-    for (int i = 0; i < numlumps; i++)
+    for (int i = numlumps - 1; i >= 0; i--)
     {
         int         ep = -1;
         int         map = -1;
@@ -3403,9 +3410,10 @@ static void maplist_cmd_func2(char *cmd, char *parms)
                 sscanf(lump, "E%1iM%1i", &ep, &map);
         }
 
-        if (ep-- == -1 || map-- == -1)
+        if (ep-- == -1 || map-- == -1 || mapfound[ep * 10 + map + 1])
             continue;
 
+        mapfound[ep * 10 + map + 1] = true;
         M_StringCopy(wadname, leafname(lumpinfo[i]->wadfile->path), sizeof(wadname));
         replaced = (W_CheckMultipleLumps(lump) > 1 && !chex && !FREEDOOM);
         pwad = (lumpinfo[i]->wadfile->type == PWAD);
@@ -3426,7 +3434,7 @@ static void maplist_cmd_func2(char *cmd, char *parms)
                 break;
 
             case doom2:
-                if ((!M_StringCompare(wadname, "NERVE.WAD") && ((!replaced || pwad || nerve) && (pwad || !BTSX))) || hacx)
+                if ((!M_StringCompare(wadname, "NERVE.WAD") && (!replaced || pwad || nerve)) || hacx)
                 {
                     if (BTSX)
                     {
@@ -3665,12 +3673,42 @@ static void mapstats_cmd_func2(char *cmd, char *parms)
     }
 
     {
-        int i = (nerve && gamemission == doom2 ? W_GetLastNumForName(mapnum) : W_CheckNumForName(mapnum));
+        int     i = (nerve && gamemission == doom2 ? W_GetLastNumForName(mapnum) : W_CheckNumForName(mapnum));
+        char    wadname[MAX_PATH];
+        int     wadtype = lumpinfo[i]->wadfile->type;
 
-        C_TabbedOutput(tabs, "%s\t<b>%s%s</b>", (lumpinfo[i]->wadfile->type == IWAD ? "IWAD" : "PWAD"),
-            leafname(lumpinfo[i]->wadfile->path), (lumpinfo[i]->wadfile->type == IWAD && bfgedition ? " <i>(BFG Edition)</i>" : ""));
+        M_StringCopy(wadname, leafname(lumpinfo[i]->wadfile->path), MAX_PATH);
 
-        if (lumpinfo[i]->wadfile->type == PWAD)
+        C_TabbedOutput(tabs, "%s\t<b>%s%s</b>", (wadtype == IWAD ? "IWAD" : "PWAD"), wadname,
+            (wadtype == IWAD && bfgedition ? " <i>(BFG Edition)</i>" : ""));
+
+        if (M_StringCompare(wadname, "DOOM.WAD"))
+        {
+            if (bfgedition)
+                C_TabbedOutput(tabs, "Release date\t<b>October 16, 2012</b>");
+            else if (gameepisode == 4)
+                C_TabbedOutput(tabs, "Release date\t<b>April 30, 1995</b>");
+            else
+                C_TabbedOutput(tabs, "Release date\t<b>December 10, 1993</b>");
+        }
+        else if (M_StringCompare(wadname, "SIGIL_v1_21.wad")
+            || M_StringCompare(wadname, "SIGIL_v1_2.wad")
+            || M_StringCompare(wadname, "SIGIL_v1_1.wad")
+            || M_StringCompare(wadname, "SIGIL.wad"))
+            C_TabbedOutput(tabs, "Release date\t<b>May 22, 2019</b>");
+        else if (M_StringCompare(wadname, "DOOM2.WAD"))
+        {
+            if (bfgedition)
+                C_TabbedOutput(tabs, "Release date\t<b>October 16, 2012</b>");
+            else
+                C_TabbedOutput(tabs, "Release date\t<b>September 30, 1994</b>");
+        }
+        else if (M_StringCompare(wadname, "NERVE.WAD"))
+            C_TabbedOutput(tabs, "Release date\t<b>September 27, 2006</b>");
+        else if (M_StringCompare(wadname, "PLUTONIA.WAD") || M_StringCompare(wadname, "TNT.WAD"))
+            C_TabbedOutput(tabs, "Release date\t<b>June 17, 1996</b>");
+
+        if (wadtype == PWAD)
             C_TabbedOutput(tabs, "IWAD\t<b>%s%s</b>", leafname(lumpinfo[W_GetLastNumForName("PLAYPAL")]->wadfile->path),
                 (bfgedition ? " <i>(BFG Edition)</i>" : ""));
     }
@@ -3685,7 +3723,7 @@ static void mapstats_cmd_func2(char *cmd, char *parms)
             C_TabbedOutput(tabs, "Par time\t<b>%02i:%02i</b>", partime / 60, partime % 60);
     }
 
-    temp = commify(numthings);
+    temp = commify(numspawnedthings);
     C_TabbedOutput(tabs, "Things\t<b>%s</b>", temp);
     free(temp);
 
@@ -3729,12 +3767,26 @@ static void mapstats_cmd_func2(char *cmd, char *parms)
     C_TabbedOutput(tabs, "Nodes\t<b>%s</b>", temp);
     free(temp);
 
-    C_TabbedOutput(tabs, "Node format\t<b>%s</b>",
-        (mapformat == DOOMBSP ? "Regular" : (mapformat == DEEPBSP ? "<i>DeePBSP v4</i>" : "<i>ZDoom</i> (uncompressed)")));
+    C_TabbedOutput(tabs, "Node format\t<b>%s</b>", mapformats[mapformat]);
 
     temp = commify(numsectors);
     C_TabbedOutput(tabs, "Sectors\t<b>%s</b>", temp);
     free(temp);
+
+    {
+        int outside = 0;
+
+        for (int i = 0; i < numsectors; i++)
+        {
+            short   picnum = sectors[i].ceilingpic;
+
+            if (picnum == skyflatnum || (picnum & PL_SKYFLAT))
+                outside++;
+        }
+
+        outside = outside * 100 / numsectors;
+        C_TabbedOutput(tabs, "   Inside/outside\t<b>%i%%/%i%%</b>", 100 - outside, outside);
+    }
 
     temp = commify(totalsecret);
     C_TabbedOutput(tabs, "   Secret\t<b>%s</b>", temp);
@@ -3944,11 +3996,11 @@ static dboolean name_cmd_func1(char *cmd, char *parms)
             if ((mobjinfo[i].flags & MF_SHOOTABLE) && i != MT_PLAYER && i != MT_BARREL)
             {
                 dboolean    result = false;
-                char        *temp1 = removenonalpha(mobjinfo[i].name1);
+                char        *temp1 = (*mobjinfo[i].name1 ? removenonalpha(mobjinfo[i].name1) : NULL);
                 char        *temp2 = (*mobjinfo[i].name2 ? removenonalpha(mobjinfo[i].name2) : NULL);
                 char        *temp3 = (*mobjinfo[i].name3 ? removenonalpha(mobjinfo[i].name3) : NULL);
 
-                if (M_StringStartsWith(parm, temp1))
+                if (*mobjinfo[i].name1 && M_StringStartsWith(parm, temp1))
                 {
                     M_StringCopy(namecmdold, mobjinfo[i].name1, sizeof(namecmdold));
                     strreplace(parm, temp1, "");
@@ -3973,7 +4025,8 @@ static dboolean name_cmd_func1(char *cmd, char *parms)
                     result = true;
                 }
 
-                free(temp1);
+                if (temp1)
+                    free(temp1);
 
                 if (temp2)
                     free(temp2);
@@ -4775,6 +4828,14 @@ static void C_PlayerStats_Game(void)
     temp1 = commify(viewplayer->deaths);
     temp2 = commify(stat_deaths);
     C_TabbedOutput(tabs, "Deaths\t<b>%s</b>\t<b>%s</b>", temp1, temp2);
+    free(temp1);
+    free(temp2);
+
+    temp1 = commify(viewplayer->suicides);
+    temp2 = commify(stat_suicides);
+    C_TabbedOutput(tabs, "Suicides\t<b>%s</b>\t<b>%s</b>", temp1, temp2);
+    free(temp1);
+    free(temp2);
 
     temp1 = commify(viewplayer->cheated);
     temp2 = commify(stat_cheated);
@@ -5012,6 +5073,10 @@ static void C_PlayerStats_NoGame(void)
 
     temp1 = commify(stat_deaths);
     C_TabbedOutput(tabs, "Deaths\t-\t<b>%s</b>", temp1);
+    free(temp1);
+
+    temp1 = commify(stat_suicides);
+    C_TabbedOutput(tabs, "Suicides\t-\t<b>%s</b>", temp1);
     free(temp1);
 
     temp1 = commify(stat_cheated);
@@ -5487,18 +5552,21 @@ static dboolean resurrect_cmd_func1(char *cmd, char *parms)
         for (int i = 0, num = -1; i < NUMMOBJTYPES; i++)
             if (*mobjinfo[i].name1)
             {
-                char    *temp1 = removenonalpha(mobjinfo[i].name1);
-                char    *temp2 = removenonalpha(mobjinfo[i].plural1);
+                char    *temp1 = (*mobjinfo[i].name1 ? removenonalpha(mobjinfo[i].name1) : NULL);
+                char    *temp2 = (*mobjinfo[i].plural1 ? removenonalpha(mobjinfo[i].plural1) : NULL);
                 char    *temp3 = (*mobjinfo[i].name2 ? removenonalpha(mobjinfo[i].name2) : NULL);
                 char    *temp4 = (*mobjinfo[i].plural2 ? removenonalpha(mobjinfo[i].plural2) : NULL);
                 char    *temp5 = (*mobjinfo[i].name3 ? removenonalpha(mobjinfo[i].name3) : NULL);
                 char    *temp6 = (*mobjinfo[i].plural3 ? removenonalpha(mobjinfo[i].plural3) : NULL);
 
+                if (M_StringStartsWith(parm, "all"))
+                    strreplace(parm, "all", "");
+
                 resurrectcmdtype = mobjinfo[i].doomednum;
 
                 if (resurrectcmdtype >= 0
-                    && (M_StringCompare(parm, temp1)
-                        || M_StringCompare(parm, temp2)
+                    && ((*mobjinfo[i].name1 && M_StringCompare(parm, temp1))
+                        || (*mobjinfo[i].plural1 && M_StringCompare(parm, temp2))
                         || (*mobjinfo[i].name2 && M_StringCompare(parm, temp3))
                         || (*mobjinfo[i].plural2 && M_StringCompare(parm, temp4))
                         || (*mobjinfo[i].name3 && M_StringCompare(parm, temp5))
@@ -5508,7 +5576,7 @@ static dboolean resurrect_cmd_func1(char *cmd, char *parms)
                     if (resurrectcmdtype == WolfensteinSS && !allowwolfensteinss && !states[S_SSWV_STND].dehacked)
                         result = false;
                     else
-                        result = (mobjinfo[i].flags & MF_SHOOTABLE);
+                        result = mobjinfo[i].flags & MF_SHOOTABLE;
                 }
 
                 if (temp1)
@@ -5762,19 +5830,20 @@ static dboolean spawn_cmd_func1(char *cmd, char *parms)
 
         for (int i = 0; i < NUMMOBJTYPES; i++)
         {
-            char    *temp1 = removenonalpha(mobjinfo[i].name1);
+            char    *temp1 = (*mobjinfo[i].name1 ? removenonalpha(mobjinfo[i].name1) : NULL);
             char    *temp2 = (*mobjinfo[i].name2 ? removenonalpha(mobjinfo[i].name2) : NULL);
             char    *temp3 = (*mobjinfo[i].name3 ? removenonalpha(mobjinfo[i].name3) : NULL);
 
             spawncmdtype = mobjinfo[i].doomednum;
 
-            if (spawncmdtype >= 0 && (M_StringCompare(parm, temp1)
+            if (spawncmdtype >= 0
+                && ((*mobjinfo[i].name1 && M_StringCompare(parm, temp1))
                 || (*mobjinfo[i].name2 && M_StringCompare(parm, temp2))
                 || (*mobjinfo[i].name3 && M_StringCompare(parm, temp3))
                 || (sscanf(parm, "%10d", &num) == 1 && num == spawncmdtype && num != -1)))
                 result = true;
 
-            if (*temp1)
+            if (temp1)
                 free(temp1);
 
             if (temp2)
@@ -5804,6 +5873,7 @@ static void spawn_cmd_func2(char *cmd, char *parms)
     else
     {
         dboolean    spawn = true;
+        mobjtype_t  type = P_FindDoomedNum(spawncmdtype);
 
         if (gamemode != commercial)
         {
@@ -5811,22 +5881,22 @@ static void spawn_cmd_func2(char *cmd, char *parms)
 
             if (spawncmdtype >= ArchVile && spawncmdtype <= MonstersSpawner)
             {
-                M_StringCopy(buffer, mobjinfo[P_FindDoomedNum(spawncmdtype)].plural1, sizeof(buffer));
+                M_StringCopy(buffer, mobjinfo[type].plural1, sizeof(buffer));
 
                 if (!*buffer)
-                    M_snprintf(buffer, sizeof(buffer), "%ss", mobjinfo[P_FindDoomedNum(spawncmdtype)].name1);
+                    M_snprintf(buffer, sizeof(buffer), "%ss", mobjinfo[type].name1);
 
                 buffer[0] = toupper(buffer[0]);
                 C_Warning(0, "%s can't be spawned in <i><b>%s.</b></i>", buffer, gamedescription);
                 spawn = false;
             }
 
-            if (gamemode == shareware && (spawncmdtype == Cyberdemon || spawncmdtype == SpiderMastermind))
+            if (gamemode == shareware && (spawncmdtype == Cyberdemon || spawncmdtype == SpiderMastermind || spawncmdtype == Berserk))
             {
-                M_StringCopy(buffer, mobjinfo[P_FindDoomedNum(spawncmdtype)].plural1, sizeof(buffer));
+                M_StringCopy(buffer, mobjinfo[type].plural1, sizeof(buffer));
 
                 if (!*buffer)
-                    M_snprintf(buffer, sizeof(buffer), "%ss", mobjinfo[P_FindDoomedNum(spawncmdtype)].name1);
+                    M_snprintf(buffer, sizeof(buffer), "%ss", mobjinfo[type].name1);
 
                 buffer[0] = toupper(buffer[0]);
                 C_Warning(0, "%s can't be spawned in <i><b>%s.</b></i>", buffer, gamedescription);
@@ -5839,23 +5909,18 @@ static void spawn_cmd_func2(char *cmd, char *parms)
                 (spawncmdfriendly ? "Friendly " : ""), (bfgedition || spawncmdfriendly ? "" : "this version of "), gamedescription);
             spawn = false;
         }
-        else if (nomonsters && spawncmdtype >= 0 && (mobjinfo[P_FindDoomedNum(spawncmdtype)].flags & MF_SHOOTABLE))
-        {
-            C_Warning(0, "Monsters can't be spawned when the <b>nomonsters</b> CCMD is in effect.");
-            spawn = false;
-        }
 
         if (spawn)
         {
-            fixed_t     x = viewx + 100 * viewcos;
-            fixed_t     y = viewy + 100 * viewsin;
+            fixed_t x = viewx + 100 * viewcos;
+            fixed_t y = viewy + 100 * viewsin;
 
             if (P_CheckLineSide(viewplayer->mo, x, y))
             {
-                char    *temp = titlecase(playername);
-
-                C_Warning(0, "%s %s too close to the wall.", temp, (M_StringCompare(playername, playername_default) ? "are" : "is"));
-                free(temp);
+                if (M_StringCompare(playername, playername_default))
+                    C_Warning(0, "You are too close to that wall.");
+                else
+                    C_Warning(0, "%s is too close to that wall.", playername);
             }
             else
             {
@@ -5869,19 +5934,47 @@ static void spawn_cmd_func2(char *cmd, char *parms)
 
                 if ((thing = P_SpawnMapThing(&mthing, true)))
                 {
-                    thing->angle = R_PointToAngle2(thing->x, thing->y, viewx, viewy);
+                    angle_t angle = R_PointToAngle2(x, y, viewx, viewy);
+                    int     flags = thing->flags;
 
-                    if (thing->flags & MF_COUNTITEM)
+                    thing->angle = angle;
+
+                    if (flags & MF_SHOOTABLE)
                     {
-                        stat_cheated = SafeAdd(stat_cheated, 1);
-                        M_SaveCVARs();
+                        if (spawncmdfriendly)
+                        {
+                            thing->flags |= MF_FRIEND;
+                            stat_cheated = SafeAdd(stat_cheated, 1);
+                            M_SaveCVARs();
+                        }
+
+                        thing->flags3 |= MF3_SPAWNEDBYPLAYER;
+
+                        if (flags & MF_NOGRAVITY)
+                        {
+                            thing->z = 32 * FRACUNIT;
+                            thing = P_SpawnMobj(x, y, 32 * FRACUNIT, MT_TFOG);
+                        }
+                        else
+                            thing = P_SpawnMobj(x, y, ONFLOORZ, MT_TFOG);
+
+                        S_StartSound(thing, sfx_telept);
                     }
-                    else if (spawncmdfriendly && (thing->flags & MF_SHOOTABLE))
+                    else
                     {
-                        thing->flags |= MF_FRIEND;
-                        stat_cheated = SafeAdd(stat_cheated, 1);
-                        M_SaveCVARs();
+                        if (flags & MF_COUNTITEM)
+                        {
+                            stat_cheated = SafeAdd(stat_cheated, 1);
+                            M_SaveCVARs();
+                        }
+
+                        thing = P_SpawnMobj(x, y, ((flags & MF_SPAWNCEILING) ? ONCEILINGZ :
+                            ((thing->flags2 & MF2_FLOATBOB) ? 14 * FRACUNIT : ONFLOORZ)), MT_IFOG);
+
+                        S_StartSound(thing, sfx_itmbk);
                     }
+
+                    thing->angle = ANG45 * (angle / 45);
 
                     C_HideConsole();
                 }
@@ -5920,20 +6013,20 @@ static dboolean take_cmd_func1(char *cmd, char *parms)
         || M_StringCompare(parm, "pistol"))
         result = true;
     else
-    {
         for (int i = 0, num = -1; i < NUMMOBJTYPES; i++)
         {
-            char    *temp1 = removenonalpha(mobjinfo[i].name1);
+            char    *temp1 = (*mobjinfo[i].name1 ? removenonalpha(mobjinfo[i].name1) : NULL);
             char    *temp2 = (*mobjinfo[i].name2 ? removenonalpha(mobjinfo[i].name2) : NULL);
             char    *temp3 = (*mobjinfo[i].name3 ? removenonalpha(mobjinfo[i].name3) : NULL);
 
-            if ((mobjinfo[i].flags & MF_SPECIAL) && (M_StringCompare(parm, temp1)
-                || (*mobjinfo[i].name2 && M_StringCompare(parm, temp2))
-                || (*mobjinfo[i].name3 && M_StringCompare(parm, temp3))
-                || (sscanf(parm, "%10d", &num) == 1 && num == mobjinfo[i].doomednum && num != -1)))
+            if ((mobjinfo[i].flags & MF_SPECIAL)
+                && ((*mobjinfo[i].name1 && M_StringCompare(parm, temp1))
+                    || (*mobjinfo[i].name2 && M_StringCompare(parm, temp2))
+                    || (*mobjinfo[i].name3 && M_StringCompare(parm, temp3))
+                    || (sscanf(parm, "%10d", &num) == 1 && num == mobjinfo[i].doomednum && num != -1)))
                 result = true;
 
-            if (*temp1)
+            if (temp1)
                 free(temp1);
 
             if (temp2)
@@ -5945,7 +6038,6 @@ static dboolean take_cmd_func1(char *cmd, char *parms)
             if (result)
                 break;
         }
-    }
 
     free(parm);
     return result;
@@ -5991,7 +6083,7 @@ static void take_cmd_func2(char *cmd, char *parms)
                     result = true;
                 }
 
-            viewplayer->pendingweapon = wp_fist;
+            P_EquipWeapon(wp_fist);
 
             for (ammotype_t i = 0; i < NUMAMMO; i++)
                 if (viewplayer->ammo[i])
@@ -6023,14 +6115,10 @@ static void take_cmd_func2(char *cmd, char *parms)
 
             if (result)
                 C_HideConsole();
+            else if (M_StringCompare(playername, playername_default))
+                C_Warning(0, "You don't have anything.");
             else
-            {
-                char    *temp = titlecase(playername);
-
-                C_Warning(0, "%s %s have anything.",
-                    temp, (M_StringCompare(playername, playername_default) ? "don't" : "doesn't"));
-                free(temp);
-            }
+                C_Warning(0, "%s doesn't have anything.", playername);
         }
         else if (M_StringCompare(parm, "health") || M_StringCompare(parm, "allhealth"))
         {
@@ -6041,36 +6129,29 @@ static void take_cmd_func2(char *cmd, char *parms)
                 healthcvar = false;
                 C_HideConsole();
             }
+            else if (M_StringCompare(playername, playername_default))
+                C_Warning(0, "You are already dead.");
             else
-            {
-                char    *temp = titlecase(playername);
-
-                C_Warning(0, "%s %s already dead.",
-                    temp, (M_StringCompare(playername, playername_default) ? "are" : "is"));
-                free(temp);
-            }
+                C_Warning(0, "%s is already dead.", playername);
         }
         else if (M_StringCompare(parm, "weapons") || M_StringCompare(parm, "allweapons"))
         {
-            for (weapontype_t i = wp_shotgun; i < NUMWEAPONS; i++)
+            for (weapontype_t i = wp_pistol; i < NUMWEAPONS; i++)
                 if (viewplayer->weaponowned[i])
                 {
-                    viewplayer->weaponowned[i] = oldweaponsowned[i] = false;
+                    viewplayer->weaponowned[i] = false;
+                    oldweaponsowned[i] = false;
                     result = true;
                 }
 
-            viewplayer->pendingweapon = wp_fist;
+            P_EquipWeapon(wp_fist);
 
             if (result)
                 C_HideConsole();
+            else if (M_StringCompare(playername, playername_default))
+                C_Warning(0, "You don't have any weapons.");
             else
-            {
-                char    *temp = titlecase(playername);
-
-                C_Warning(0, "%s %s have any weapons.",
-                    temp, (M_StringCompare(playername, playername_default) ? "don't" : "doesn't"));
-                free(temp);
-            }
+                C_Warning(0, "%s doesn't have any weapons.", playername);
         }
         else if (M_StringCompare(parm, "ammo") || M_StringCompare(parm, "allammo"))
         {
@@ -6081,18 +6162,14 @@ static void take_cmd_func2(char *cmd, char *parms)
                     result = true;
                 }
 
-            viewplayer->pendingweapon = wp_fist;
+            P_EquipWeapon(wp_fist);
 
             if (result)
                 C_HideConsole();
+            else if (M_StringCompare(playername, playername_default))
+                C_Warning(0, "You don't have any ammo.");
             else
-            {
-                char    *temp = titlecase(playername);
-
-                C_Warning(0, "%s %s have any ammo.",
-                    temp, (M_StringCompare(playername, playername_default) ? "don't" : "doesn't"));
-                free(temp);
-            }
+                C_Warning(0, "%s doesn't have any ammo.", playername);
         }
         else if (M_StringCompare(parm, "armor") || M_StringCompare(parm, "allarmor")
                 || M_StringCompare(parm, "armour") || M_StringCompare(parm, "allarmour"))
@@ -6103,14 +6180,10 @@ static void take_cmd_func2(char *cmd, char *parms)
                 viewplayer->armortype = armortype_none;
                 C_HideConsole();
             }
+            else if (M_StringCompare(playername, playername_default))
+                C_Warning(0, "You don't have any armor.");
             else
-            {
-                char    *temp = titlecase(playername);
-
-                C_Warning(0, "%s %s have any armor.",
-                    temp, (M_StringCompare(playername, playername_default) ? "don't" : "doesn't"));
-                free(temp);
-            }
+                C_Warning(0, "%s doesn't have any armor.", playername);
         }
         else if (M_StringCompare(parm, "keys") || M_StringCompare(parm, "allkeys"))
         {
@@ -6123,14 +6196,10 @@ static void take_cmd_func2(char *cmd, char *parms)
 
             if (result)
                 C_HideConsole();
+            else if (M_StringCompare(playername, playername_default))
+                C_Warning(0, "You don't have any keycards or skull keys.");
             else
-            {
-                char    *temp = titlecase(playername);
-
-                C_Warning(0, "%s %s have any keycards or skull keys.",
-                    temp, (M_StringCompare(playername, playername_default) ? "don't" : "doesn't"));
-                free(temp);
-            }
+                C_Warning(0, "%s doesn't have any keycards or skull keys.", playername);
         }
         else if (M_StringCompare(parm, "keycards") || M_StringCompare(parm, "allkeycards"))
         {
@@ -6141,14 +6210,10 @@ static void take_cmd_func2(char *cmd, char *parms)
                 viewplayer->cards[it_yellowcard] = 0;
                 C_HideConsole();
             }
+            else if (M_StringCompare(playername, playername_default))
+                C_Warning(0, "You don't have any keycards.");
             else
-            {
-                char    *temp = titlecase(playername);
-
-                C_Warning(0, "%s %s have any keycards.",
-                    temp, (M_StringCompare(playername, playername_default) ? "don't" : "doesn't"));
-                free(temp);
-            }
+                C_Warning(0, "%s doesn't have any keycards.", playername);
         }
         else if (M_StringCompare(parm, "skullkeys") || M_StringCompare(parm, "allskullkeys"))
         {
@@ -6159,26 +6224,14 @@ static void take_cmd_func2(char *cmd, char *parms)
                 viewplayer->cards[it_yellowskull] = 0;
                 C_HideConsole();
             }
+            else if (M_StringCompare(playername, playername_default))
+                C_Warning(0, "You don't have any skull keys.");
             else
-            {
-                char    *temp = titlecase(playername);
-
-                C_Warning(0, "%s %s have any skull keys.",
-                    temp, (M_StringCompare(playername, playername_default) ? "don't" : "doesn't"));
-                free(temp);
-            }
+                C_Warning(0, "%s doesn't have any skull keys.", playername);
         }
         else if (M_StringCompare(parm, "pistol"))
         {
-            if (!viewplayer->weaponowned[wp_pistol])
-            {
-                char    *temp = titlecase(playername);
-
-                C_Warning(0, "%s %s have a pistol.",
-                    temp, (M_StringCompare(playername, playername_default) ? "don't" : "doesn't"));
-                free(temp);
-            }
-            else
+            if (viewplayer->weaponowned[wp_pistol])
             {
                 viewplayer->weaponowned[wp_pistol] = false;
                 oldweaponsowned[wp_pistol] = false;
@@ -6188,34 +6241,36 @@ static void take_cmd_func2(char *cmd, char *parms)
 
                 P_CheckAmmo(viewplayer->readyweapon);
             }
+            else if (M_StringCompare(playername, playername_default))
+                C_Warning(0, "You don't have a pistol.");
+            else
+                C_Warning(0, "%s doesn't have a pistol.", playername);
         }
         else
         {
             for (int i = 0, num = -1; i < NUMMOBJTYPES; i++)
             {
-                char    *temp1 = removenonalpha(mobjinfo[i].name1);
+                char    *temp1 = (*mobjinfo[i].name1 ? removenonalpha(mobjinfo[i].name1) : NULL);
                 char    *temp2 = (*mobjinfo[i].name2 ? removenonalpha(mobjinfo[i].name2) : NULL);
                 char    *temp3 = (*mobjinfo[i].name3 ? removenonalpha(mobjinfo[i].name3) : NULL);
 
                 if ((mobjinfo[i].flags & MF_SPECIAL)
-                    && (M_StringCompare(parm, temp1)
+                    && ((*mobjinfo[i].name1 && M_StringCompare(parm, temp1))
                         || (*mobjinfo[i].name2 && M_StringCompare(parm, temp2))
                         || (*mobjinfo[i].name3 && M_StringCompare(parm, temp3))
                         || (sscanf(parm, "%10d", &num) == 1 && num == mobjinfo[i].doomednum && num != -1)))
                 {
-                    if (!P_TakeSpecialThing(i))
-                    {
-                        char    *temp = titlecase(playername);
-
-                        C_Warning(0, "%s %s have a %s.",
-                            temp, (M_StringCompare(playername, playername_default) ? "don't" : "doesn't"), mobjinfo[i].name1);
-                        free(temp);
-                    }
-
-                    result = true;
+                    if (P_TakeSpecialThing(i))
+                        result = true;
+                    else if (M_StringCompare(playername, playername_default))
+                        C_Warning(0, "You don't have %s %s.",
+                            (isvowel(mobjinfo[i].name1[0]) ? "an" : "a"), mobjinfo[i].name1);
+                    else
+                        C_Warning(0, "%s doesn't have %s %s.",
+                            (isvowel(mobjinfo[i].name1[0]) ? "an" : "a"), playername, mobjinfo[i].name1);
                 }
 
-                if (*temp1)
+                if (temp1)
                     free(temp1);
 
                 if (temp2)
@@ -6343,7 +6398,7 @@ static void thinglist_cmd_func2(char *cmd, char *parms)
 
         temp1 = commify(mobj->id);
         temp2 = sentencecase(name);
-        C_TabbedOutput(tabs, "%s%s\t%s\t(%i, %i, %i)", (mobj->id >= 0 ? temp1 : "-"), (mobj->id >= 0 ? "." : ""),
+        C_TabbedOutput(tabs, "%s%s\t%s\t(%i,%i,%i)", (mobj->id >= 0 ? temp1 : "-"), (mobj->id >= 0 ? "." : ""),
             temp2, mobj->x >> FRACBITS, mobj->y >> FRACBITS, mobj->z >> FRACBITS);
         free(temp1);
         free(temp2);
@@ -6369,14 +6424,17 @@ static void timer_cmd_func2(char *cmd, char *parms)
 
         if (value != INT_MAX)
         {
+            char    *temp = commify(value);
+
             if (value == timer)
-                C_Output("The timer for each map has been reset to %i minutes.", value);
+                C_Output("The timer for each map has been reset to %s minute%s.", temp, (value == 1 ? "" : "s"));
             else if (value)
-                C_Output("The timer for each map is now %i minutes.", value);
+                C_Output("The timer for each map is now %s minute%s.", temp, (value == 1 ? "" : "s"));
             else
                 C_Output("The timer for each map has been cleared.");
 
             P_SetTimer(value);
+            free(temp);
         }
     }
 }
@@ -6986,7 +7044,12 @@ static void expansion_cvar_func2(char *cmd, char *parms)
     int_cvars_func2(cmd, parms);
 
     if (expansion != expansion_old && gamemode == commercial)
+    {
         ExpDef.lastOn = (nerve ? expansion : 1) - 1;
+
+        if (gamestate != GS_LEVEL)
+            gamemission = (expansion == 2 && nerve ? pack_nerve : doom2);
+    }
 }
 
 //
@@ -7205,40 +7268,43 @@ static void player_cvars_func2(char *cmd, char *parms)
             sscanf(parms, "%10d", &value);
             value = BETWEEN(health_min, value, maxhealth);
 
-            if (viewplayer->health <= 0)
+            if (value != viewplayer->health)
             {
-                if (value <= 0)
+                if (viewplayer->health <= 0)
                 {
-                    viewplayer->health = value;
-                    viewplayer->mo->health = value;
-                    healthhighlight = I_GetTimeMS() + HUD_HEALTH_HIGHLIGHT_WAIT;
+                    if (value <= 0)
+                    {
+                        viewplayer->health = value;
+                        viewplayer->mo->health = value;
+                        healthhighlight = I_GetTimeMS() + HUD_HEALTH_HIGHLIGHT_WAIT;
+                    }
+                    else
+                    {
+                        P_ResurrectPlayer(value);
+                        P_AddBonus();
+                        S_StartSound(NULL, sfx_itemup);
+                    }
                 }
                 else
                 {
-                    P_ResurrectPlayer(value);
-                    P_AddBonus();
-                    S_StartSound(NULL, sfx_itemup);
-                }
-            }
-            else
-            {
-                if (value < viewplayer->health)
-                {
-                    healthcvar = true;
-                    P_DamageMobj(viewplayer->mo, viewplayer->mo, NULL, viewplayer->health - value, false);
-                    healthcvar = false;
-                }
-                else
-                {
-                    P_UpdateHealthStat(value - viewplayer->health);
-                    viewplayer->health = value;
-                    viewplayer->mo->health = value;
-                    healthhighlight = I_GetTimeMS() + HUD_HEALTH_HIGHLIGHT_WAIT;
-                    P_AddBonus();
-                    S_StartSound(NULL, sfx_itemup);
-                }
+                    if (value < viewplayer->health)
+                    {
+                        healthcvar = true;
+                        P_DamageMobj(viewplayer->mo, viewplayer->mo, viewplayer->mo, viewplayer->health - value, false);
+                        healthcvar = false;
+                    }
+                    else
+                    {
+                        P_UpdateHealthStat(value - viewplayer->health);
+                        viewplayer->health = value;
+                        viewplayer->mo->health = value;
+                        healthhighlight = I_GetTimeMS() + HUD_HEALTH_HIGHLIGHT_WAIT;
+                        P_AddBonus();
+                        S_StartSound(NULL, sfx_itemup);
+                    }
 
-                C_HideConsole();
+                    C_HideConsole();
+                }
             }
         }
         else
@@ -7878,14 +7944,14 @@ static void s_volume_cvars_func2(char *cmd, char *parms)
         if (M_StringCompare(cmd, stringize(s_musicvolume)) && s_musicvolume != value)
         {
             s_musicvolume = value;
-            musicVolume = (BETWEEN(s_musicvolume_min, s_musicvolume, s_musicvolume_max) * 31 + 50) / 100;
-            S_SetMusicVolume(musicVolume * MAX_MUSIC_VOLUME / 31);
+            musicVolume = (s_musicvolume * 31 + 50) / 100;
+            S_SetMusicVolume(musicVolume * MAX_MUSIC_VOLUME / 31 / LOWER_MUSIC_VOLUME_FACTOR);
             M_SaveCVARs();
         }
         else if (s_sfxvolume != value)
         {
             s_sfxvolume = value;
-            sfxVolume = (BETWEEN(s_sfxvolume_min, s_sfxvolume, s_sfxvolume_max) * 31 + 50) / 100;
+            sfxVolume = (s_sfxvolume * 31 + 50) / 100;
             S_SetSfxVolume(sfxVolume * MAX_SFX_VOLUME / 31);
             M_SaveCVARs();
         }

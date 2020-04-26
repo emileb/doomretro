@@ -151,7 +151,6 @@ dboolean        m_invertyaxis = m_invertyaxis_default;
 dboolean        m_novertical = m_novertical_default;
 dboolean        mouselook = mouselook_default;
 
-dboolean        canmouselook = false;
 dboolean        usemouselook = false;
 
 static int      dclicktime;
@@ -177,6 +176,7 @@ unsigned int    stat_skilllevel_nightmare = 0;
 
 extern int      barrelms;
 extern int      st_palette;
+extern int      logotic;
 extern int      pagetic;
 extern int      timer;
 extern int      countdown;
@@ -205,7 +205,7 @@ void G_NextWeapon(void)
 
     if (i != readyweapon)
     {
-        viewplayer->pendingweapon = i;
+        P_EquipWeapon(i);
 
         if (i == wp_fist && viewplayer->powers[pw_strength])
             S_StartSound(NULL, sfx_getpow);
@@ -234,7 +234,7 @@ void G_PrevWeapon(void)
 
     if (i != readyweapon)
     {
-        viewplayer->pendingweapon = i;
+        P_EquipWeapon(i);
 
         if (i == wp_fist && viewplayer->powers[pw_strength])
             S_StartSound(NULL, sfx_getpow);
@@ -559,7 +559,6 @@ void G_DoLoadLevel(void)
     viewplayer->cheated = 0;
     viewplayer->shotshit = 0;
     viewplayer->shotsfired = 0;
-    viewplayer->deaths = 0;
     viewplayer->distancetraveled = 0;
     viewplayer->gamessaved = 0;
     viewplayer->itemspickedup_ammo_bullets = 0;
@@ -621,6 +620,8 @@ void G_DoLoadLevel(void)
     for (int i = 0; i < BACKUPTICS; i++)
         memset(&localcmds[i], 0, sizeof(ticcmd_t));
 
+    P_SetPlayerViewheight();
+
     stat_mapsstarted = SafeAdd(stat_mapsstarted, 1);
 
     M_SetWindowCaption();
@@ -650,8 +651,6 @@ void G_ToggleAlwaysRun(evtype_t type)
 
     M_SaveCVARs();
 }
-
-extern dboolean splashscreen;
 
 //
 // G_Responder
@@ -687,8 +686,10 @@ dboolean G_Responder(event_t *ev)
             gamepadwait = I_GetTime() + 8;
             mousewait = I_GetTime() + 5;
 
+            logotic = MAX(77, logotic);
+
             if (splashscreen)
-                pagetic = MIN(10, pagetic);
+                pagetic = MIN(pagetic, 10);
             else
             {
                 M_StartControlPanel();
@@ -716,9 +717,8 @@ dboolean G_Responder(event_t *ev)
             return true;        // automap ate it
     }
 
-    if (gamestate == GS_FINALE)
-        if (F_Responder(ev))
-            return true;        // finale ate the event
+    if (gamestate == GS_FINALE && F_Responder(ev))
+        return true;        // finale ate the event
 
     switch (ev->type)
     {
@@ -851,12 +851,9 @@ dboolean G_Responder(event_t *ev)
 
             return true;        // eat events
 
-        case ev_none:
-        case ev_text:
+        default:
             return false;
     }
-
-    return false;
 }
 
 void D_Display(void);
@@ -1031,12 +1028,16 @@ void G_PlayerReborn(void)
     int killcount = viewplayer->killcount;
     int itemcount = viewplayer->itemcount;
     int secretcount = viewplayer->secretcount;
+    int deaths = viewplayer->deaths;
+    int suicides = viewplayer->suicides;
 
     memset(viewplayer, 0, sizeof(*viewplayer));
 
     viewplayer->killcount = killcount;
     viewplayer->itemcount = itemcount;
     viewplayer->secretcount = secretcount;
+    viewplayer->deaths = deaths;
+    viewplayer->suicides = suicides;
 
     // don't do anything immediately
     viewplayer->usedown = true;
@@ -1069,7 +1070,8 @@ static void G_DoReborn(void)
 
 void G_ScreenShot(void)
 {
-    gameaction = ga_screenshot;
+    if (!splashscreen)
+        gameaction = ga_screenshot;
 }
 
 void G_DoScreenShot(void)
@@ -1181,8 +1183,6 @@ int G_GetParTime(void)
             return pars[gameepisode][gamemap];
     }
 }
-
-extern int  episode;
 
 static void G_DoCompleted(void)
 {
@@ -1321,15 +1321,12 @@ static void G_DoCompleted(void)
                     break;
 
                 case 3:
+                case 5:
                     wminfo.next = 6;
                     break;
 
                 case 4:
                     wminfo.next = 2;
-                    break;
-
-                case 5:
-                    wminfo.next = 6;
                     break;
             }
         }
@@ -1414,8 +1411,6 @@ void G_LoadGame(char *name)
     gameaction = ga_loadgame;
 }
 
-extern dboolean setsizeneeded;
-
 void G_DoLoadGame(void)
 {
     int savedleveltime;
@@ -1430,7 +1425,9 @@ void G_DoLoadGame(void)
 
     if (!(save_stream = fopen(savename, "rb")))
     {
-        C_Warning(1, "<b>%s</b> couldn't be found.", savename);
+        menuactive = false;
+        C_ShowConsole();
+        C_Warning(1, "<b>%s</b> couldn't be loaded.", savename);
         loadaction = ga_nothing;
         return;
     }
@@ -1531,7 +1528,7 @@ static void G_DoSaveGame(void)
     {
         menuactive = false;
         C_ShowConsole();
-        C_Warning(1, "<b>%s</b> couldn't be saved.", savename);
+        C_Warning(1, "<b>%s</b> couldn't be saved.", savegame_file);
     }
     else
     {
@@ -1563,6 +1560,8 @@ static void G_DoSaveGame(void)
         rename(temp_savegame_file, savegame_file);
 
         free(backup_savegame_file);
+
+        savegames = true;
 
         if (!consolestrings || !M_StringStartsWith(console[consolestrings - 1].string, "save "))
             C_Input("save %s", savegame_file);

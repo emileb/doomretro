@@ -1,8 +1,110 @@
+### DOOM Retro v3.5.5
+
+* Optimizations have been made to further improve the overall performance and stability of *DOOM Retro*.
+* Minor changes have been made to text that is output to the console.
+* The music volume is now lower while either the menu or console is open.
+* The following changes have been made to the menu’s background:
+  * The random noise is now slightly slower.
+  * Liquid sectors now still animate in the background when the menu is open.
+* The following changes have been made to the widescreen HUD:
+  * Health, armor and ammo now flash gold rather than white when they change.
+  * Keycards and skull keys that the player picks up are now slightly higher.
+* Brightmaps are no longer applied to the `SLADRIP1`, `SLADRIP2` and `SLADRIP3` textures when the `r_brightmaps` CVAR is `on`.
+* The timer displayed by the `timer` CCMD will now be positioned lower if the `vid_showfps` CVAR is `on`.
+* More fixes have been applied to certain maps in the official *DOOM* and *DOOM II* WADs when the `r_fixmaperrors` CVAR is `on`.
+* The `mapstats` CCMD now displays the release date for maps in the official *DOOM* and *DOOM II* WADs.
+* The translucency of item and teleport fogs is no longer additive when the `r_translucency` CVAR is `on`.
+* Due to a change in the latest patch of the [*Bethesda.net Launcher*](https://bethesda.net/en/game/bethesda-launcher) version of [*DOOM II*](https://bethesda.net/en/store/product/DO2GNGPCBG01), MAP04 to MAP08 in *No Rest For The Living* now use the `SKY3` texture as their skies.
+
+---
+
+###### Friday, April 3, 2020
+
+### DOOM Retro v3.5.4
+
+* Optimizations have been made to further improve the overall performance and stability of *DOOM Retro*.
+* Improvements have been made to the support of [*Chex Quest*](https://doomwiki.org/wiki/Chex_Quest).
+* A bug has been fixed whereby the wrong map name would be displayed on the intermission screen in some instances.
+* A brightmap is now applied to the `SLADRIP2` texture when the `r_brightmaps` CVAR is `on`.
+
+---
+
+###### Monday, March 23, 2020
+
+### DOOM Retro v3.5.3
+
+* Optimizations have been made to further improve the overall performance and stability of *DOOM Retro*.
+* Minor changes have been made to text that is output to the console.
+* A bug has been fixed whereby screenshots couldn’t be taken while the console was open.
+* The following changes have been made to timestamps in the console:
+  * The `con_timestamps` CVAR has been deprecated. Timestamps will now always appear in the console next to player messages.
+  * Timestamps in the console are now a translucent yellow.
+* The following changes have been made to obituaries in the console:
+  * Obituaries involving an exploding barrel now indicate who caused the explosion.
+  * Names set using the `name` CCMD will now be used when an arch-vile resurrects a monster.
+* The number of times the player commits suicide is now displayed by the `playerstats` CCMD.
+* All monsters spawned using the `spawn` CCMD can now cross monster-blocking lines.
+* More blood splats now appear around decorative corpses.
+* A crash will no longer occur when trying to spawn a berserk power-up using the `spawn` CCMD in *DOOM (Shareware)*.
+
+---
+
+###### Friday, March 13, 2020
+
+### DOOM Retro v3.5.2
+
+* *DOOM Retro* now uses [*SDL v2.0.12*](https://www.libsdl.org).
+* Optimizations have been made to further improve the overall performance and stability of *DOOM Retro*.
+* *DOOM Retro’s* keyboard and mouse controls are now more responsive.
+* Further improvements have been made to the console’s autocomplete feature.
+* Minor changes have been made to text that is output to the console.
+* Item fogs spawned while using the `spawn` or `respawnitems` CCMDs are now always positioned correctly.
+* The following changes have been made to the `r_blood` CVAR:
+  * The CVAR can now be set to `nofuzz`, causing all blood spilled by spectres (as well as the player while they have a partial invisibility power-up) to be red instead of fuzzy.
+  * Puffs are now spawned rather than nothing when the CVAR is `none`.
+  * All blood spilled will now be red when the CVAR is `red`, and green when the CVAR is `green`.
+* Flying monsters spawned using the `spawn` CCMD now spawn higher off the ground.
+* The player’s path around the current map will now always be recorded even while the `am_path` CVAR is `off`.
+* The following changes have been made to the `mapstats` CCMD:
+  * The total number of things in the current map is now correct.
+  * How much the current map is inside/outside is now displayed.
+* The number of times the player has died in the current map is now correct in the `playerstats` CCMD.
+* The following changes have been made to the numbers displayed in the widescreen HUD:
+  * Health, armor and ammo now flash slightly brighter when they change, and do so even when the `r_hud_translucency` CVAR is `off`.
+  * Ammo now flashes when the player switches to a weapon with different ammo.
+  * Health and ammo now flash on and off when low and the `r_hud_translucency` CVAR is `off`.
+* 3D bridges that use the `STEP2` wall texture are now rendered correctly.
+* The automap will now rotate correctly in the background if the menu is open and the `am_rotatemode` CVAR is `off`.
+
+---
+
+###### Friday, February 21, 2020
+
+### DOOM Retro v3.5.1
+
+* Optimizations have been made to further improve the overall performance and stability of *DOOM Retro*.
+* Minor changes have been made to the character set used in the console.
+* Minor changes have been made to text that is output to the console.
+* Monsters can now be spawned using the `spawn` CCMD when the `nomonsters` CCMD has been entered in the console, or the `-nomonsters` parameter has been specified on the command-line.
+* The following changes have been made to the widescreen HUD:
+  * The HUD has been brought in slightly from the edges of the screen.
+  * The player’s armor is now on the left side of the screen next to their health, and the ammo for their currently equipped weapon on the right.
+* Item and teleport fogs are now spawned when using the `spawn` CCMD.
+* Thing triangles in the automap representing *MBF*-compatible helper dogs are now the correct size again when using the `IDDT` cheat.
+* Minor improvements have been made to the menu’s background.
+* The player’s view is now reset again when exiting the menu.
+* A bug has been fixed whereby the use of `LIQUID` or `NOLIQUID` in a `MAPINFO` lump would have no effect.
+* The scrollbar in the console has been widened and now includes a grip.
+
+---
+
+###### Saturday, February 8, 2020
+
 ### DOOM Retro v3.5
 
 * Optimizations have been made to further improve the overall performance and stability of *DOOM Retro*.
 * Improvements have been made to the support of IWADs that contain censored Wolfenstein SS sprites.
-* IWADs specified using the `-file` command-line parameter will now always be treated as PWADs.
+* IWADs specified using the `-file` command-line parameter will now be treated as PWADs.
 * Minor changes have been made to the character set used in the console.
 * Minor changes have been made to text that is output to the console.
 * The keys on the numeric keypad now work correctly in the console.
@@ -46,7 +148,7 @@
 * The default of the `vid_scalefilter` CVAR has been changed from `“nearest”` to `“nearest_linear”`.
 * A new `r_graduallighting` CVAR has been implemented that toggles the gradual lighting under doors and crushing sectors. It is `on` by default and `off` when vanilla mode is on.
 * The player’s view will no longer shift slightly when exiting a map by using a switch.
-* Par times are no longer displayed on the intermission screen for maps that don’t have one.
+* Par times are no longer displayed on the intermission screen for maps that don’t have them.
 * A crash will no longer occur when using the `kill` or `resurrect` CCMDs with a monster’s name previously set by the `name` CCMD as the parameter.
 * `SIGIL_SHREDS.wad` will no longer be automatically loaded if music has been disabled by specifying `-nomusic` or `-nosound` on the command-line.
 * The background will now always be displayed correctly when confirming use of the `resetall` CCMD.

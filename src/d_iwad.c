@@ -199,7 +199,7 @@ static char *GetRegistryString(registryvalue_t *reg_val)
         return NULL;
 
     // Find the type and length of the string, and only accept strings.
-    if (RegQueryValueEx(key, reg_val->value, NULL, &valtype, NULL, &len) == ERROR_SUCCESS && valtype == REG_SZ)
+    if (RegQueryValueEx(key, reg_val->value, NULL, &valtype, NULL, &len) == ERROR_SUCCESS && valtype == REG_SZ && len > 0)
     {
         // Allocate a buffer for the value and read the value
         result = malloc((size_t)len + 1);
@@ -285,7 +285,6 @@ static void CheckSteamEdition(void)
 
     free(install_path);
 }
-
 
 // Default install directories for DOS DOOM
 static void CheckDOSDefaults(void)
@@ -709,7 +708,7 @@ void D_SetGameDescription(void)
             C_Output("Playing <i><b>%s: %s</b></i> and <i><b>%s: %s.</b></i>", s_CAPTION_DOOM2, s_CAPTION_HELLONEARTH,
                 s_CAPTION_DOOM2, s_CAPTION_NERVE);
     }
-    else if (modifiedgame && !sigil && !chex)
+    else if (modifiedgame && !sigil && !chex && !BTSX)
         C_Output("Playing <b>%s</b>.", gamedescription);
     else
     {

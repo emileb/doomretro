@@ -139,7 +139,7 @@ static dboolean PIT_StompThing(mobj_t *thing)
 //
 // killough 8/28/98:
 //
-// P_GetFriction()
+// P_GetFriction
 //
 // Returns the friction associated with a particular mobj.
 int P_GetFriction(const mobj_t *mo, int *frictionfactor)
@@ -312,7 +312,7 @@ static dboolean PIT_CrossLine(line_t *ld)
     if (!(ld->flags & ML_TWOSIDED) || (ld->flags & (ML_BLOCKING/* | ML_BLOCKMONSTERS*/)))
         if (!(tmbbox[BOXLEFT] > ld->bbox[BOXRIGHT]
             || tmbbox[BOXRIGHT] < ld->bbox[BOXLEFT]
-            || tmbbox[BOXTOP]    < ld->bbox[BOXBOTTOM]
+            || tmbbox[BOXTOP] < ld->bbox[BOXBOTTOM]
             || tmbbox[BOXBOTTOM] > ld->bbox[BOXTOP]))
             if (P_PointOnLineSide(pe_x, pe_y, ld) != P_PointOnLineSide(ls_x, ls_y, ld))
                 return false;   // line blocks trajectory
@@ -385,7 +385,8 @@ static dboolean PIT_CheckLine(line_t *ld)
 
         // killough 8/9/98: monster-blockers don't affect friends
         // [BH] monster-blockers don't affect corpses
-        if (!(tmthing->flags & MF_FRIEND || tmthing->player) && (ld->flags & ML_BLOCKMONSTERS) && !(tmthing->flags & MF_CORPSE))
+        if (!((tmthing->flags & MF_FRIEND) || tmthing->player || (tmthing->flags3 & MF3_SPAWNEDBYPLAYER))
+            && (ld->flags & ML_BLOCKMONSTERS) && !(tmthing->flags & MF_CORPSE))
             return false;                               // block monsters only
     }
 
@@ -428,15 +429,10 @@ static dboolean PIT_CheckThing(mobj_t *thing)
 {
     fixed_t     blockdist;
     dboolean    unblocking = false;
-    int         flags;
-    int         tmflags;
-    dboolean    corpse;
-    int         type;
-
-    flags = thing->flags;
-    tmflags = tmthing->flags;
-    corpse = flags & MF_CORPSE;
-    type = thing->type;
+    int         flags = thing->flags;
+    int         tmflags = tmthing->flags;
+    dboolean    corpse = flags & MF_CORPSE;
+    int         type = thing->type;
 
     // [BH] apply small amount of momentum to a corpse when a monster walks over it
     if (corpse && (tmflags & MF_SHOOTABLE) && type != MT_BARREL && !thing->nudge && thing->z == tmthing->z && r_corpses_nudge)
@@ -445,7 +441,7 @@ static dboolean PIT_CheckThing(mobj_t *thing)
             const int   r = M_RandomInt(-1, 1);
 
             thing->momx += FRACUNIT * r;
-            thing->momy += FRACUNIT * M_RandomIntNoRepeat(-1, 1, (!r ? 0 : 2));
+            thing->momy += FRACUNIT * (!r ? M_RandomIntNoRepeat(-1, 1, 0) : M_RandomInt(-1, 1));
             thing->nudge = TICRATE;
 
             if (!(thing->flags2 & MF2_FEETARECLIPPED))
@@ -553,9 +549,8 @@ static dboolean PIT_CheckThing(mobj_t *thing)
             // Don't hit same species as originator.
             if (thing == tmthing->target)
                 return true;
-            else if (type != MT_PLAYER && !infight && !species_infighting)
+            else if (!infight && !species_infighting)
                 // Explode, but do no damage.
-                // Let players missile other players.
                 return false;
         }
 
@@ -1723,7 +1718,7 @@ static dboolean PTR_ShootTraverse(intercept_t *in)
 
     // Spawn bullet puffs or blood spots,
     // depending on target type.
-    if (th->flags & MF_NOBLOOD)
+    if ((th->flags & MF_NOBLOOD) || r_blood == r_blood_none)
         P_SpawnPuff(x, y, z, shootangle);
     else
     {
@@ -1987,7 +1982,7 @@ static dboolean PIT_RadiusAttack(mobj_t *thing)
 //
 void P_RadiusAttack(mobj_t *spot, mobj_t *source, int damage, dboolean verticality)
 {
-    fixed_t dist = (damage + MAXRADIUS) << FRACBITS;
+    fixed_t dist = (damage << FRACBITS) + MAXRADIUS;
     int     xh = P_GetSafeBlockX(spot->x + dist - bmaporgx);
     int     xl = P_GetSafeBlockX(spot->x - dist - bmaporgx);
     int     yh = P_GetSafeBlockY(spot->y + dist - bmaporgy);
@@ -2005,16 +2000,13 @@ void P_RadiusAttack(mobj_t *spot, mobj_t *source, int damage, dboolean verticali
 
 //
 // SECTOR HEIGHT CHANGING
-// After modifying a sectors floor or ceiling height,
+// After modifying a sector's floor or ceiling height,
 // call this routine to adjust the positions
 // of all things that touch the sector.
 //
 // If anything doesn't fit anymore, true will be returned.
-// If crunch is true, they will take damage
-//  as they are being crushed.
-// If Crunch is false, you should set the sector height back
-//  the way it was and call P_ChangeSector again
-//  to undo the changes.
+// If crunch is true, they will take damage as they are being crushed.
+// If crunch is false, you should set the sector height back the way it was and call P_ChangeSector() again to undo the changes.
 //
 static dboolean crushchange;
 static dboolean nofit;

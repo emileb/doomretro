@@ -60,6 +60,9 @@
 // Each screen is [SCREENWIDTH * SCREENHEIGHT];
 byte            *screens[5];
 
+byte            *menushadow;
+byte            *hudhighlight;
+
 static fixed_t  DX, DY;
 static fixed_t  DXI, DYI;
 
@@ -530,9 +533,7 @@ void V_DrawConsolePatch(int x, int y, patch_t *patch, int color)
 
             while (count--)
             {
-                int height = topdelta + length - count;
-
-                if (y + height > CONSOLETOP && *source)
+                if (y + topdelta + length - count > CONSOLETOP && *source)
                     *dest = tinttab50[(*source == 4 ? (nearestwhite << 8) : color) + *dest];
 
                 source++;
@@ -564,9 +565,7 @@ void V_DrawConsoleBrandingPatch(int x, int y, patch_t *patch, int color)
 
             while (count--)
             {
-                int height = topdelta + length - count;
-
-                if (y + height > CONSOLETOP &&*source)
+                if (y + topdelta + length - count > CONSOLETOP && *source)
                     *dest = (*source == 4 || *source == 82 ? nearestcolors[*source] : tinttab50[color + *dest]);
 
                 source++;
@@ -742,9 +741,8 @@ void V_DrawTranslucentAltHUDText(int x, int y, byte *screen, patch_t *patch, int
 
 void V_DrawPatchWithShadow(int x, int y, patch_t *patch, dboolean flag)
 {
-    byte        *desttop;
-    int         w = SHORT(patch->width) << FRACBITS;
-    const byte  *shadow = &tinttab50[nearestblack << 8];
+    byte    *desttop;
+    int     w = SHORT(patch->width) << FRACBITS;
 
     y -= SHORT(patch->topoffset);
     x -= SHORT(patch->leftoffset);
@@ -777,7 +775,7 @@ void V_DrawPatchWithShadow(int x, int y, patch_t *patch, dboolean flag)
                     byte    *dot = dest + SCREENWIDTH + 2;
 
                     if (!flag || (*dot != 47 && *dot != 191))
-                        *dot = shadow[*dot];
+                        *dot = menushadow[*dot];
                 }
 
                 srccol += DYI;
@@ -847,7 +845,7 @@ void V_DrawHighlightedHUDNumberPatch(int x, int y, patch_t *patch, byte *translu
             {
                 byte    dot = *source++;
 
-                *dest = (dot == 109 ? tinttab33[*dest] : dot);
+                *dest = (dot == 109 ? tinttab33[*dest] : hudhighlight[dot]);
                 dest += SCREENWIDTH;
             }
 
@@ -933,8 +931,10 @@ void V_DrawAltHUDPatch(int x, int y, patch_t *patch, int from, int to)
             {
                 byte    dot = *source++;
 
-                if (dot)
-                    *dest = (dot == from ? to : nearestcolors[dot]);
+                if (dot == from)
+                    *dest = to;
+                else if (dot)
+                    *dest = nearestcolors[dot];
 
                 dest += SCREENWIDTH;
             }
@@ -967,8 +967,10 @@ void V_DrawTranslucentAltHUDPatch(int x, int y, patch_t *patch, int from, int to
             {
                 byte    dot = *source++;
 
-                if (dot)
-                    *dest = alttinttab60[(dot == from ? to : (nearestcolors[dot] << 8)) + *dest];
+                if (dot == from)
+                    *dest = alttinttab60[to + *dest];
+                else if (dot)
+                    *dest = alttinttab60[(nearestcolors[dot] << 8) + *dest];
 
                 dest += SCREENWIDTH;
             }
@@ -1339,9 +1341,8 @@ static const byte nogreen[256] =
 
 void V_DrawNoGreenPatchWithShadow(int x, int y, patch_t *patch)
 {
-    byte        *desttop;
-    int         w = SHORT(patch->width) << FRACBITS;
-    const byte  *shadow = &tinttab50[nearestblack << 8];
+    byte    *desttop;
+    int     w = SHORT(patch->width) << FRACBITS;
 
     y -= SHORT(patch->topoffset);
     x -= SHORT(patch->leftoffset);
@@ -1372,7 +1373,7 @@ void V_DrawNoGreenPatchWithShadow(int x, int y, patch_t *patch)
                     dot = dest + SCREENWIDTH * 2 + 2;
 
                     if (*dot != 47 && *dot != 191)
-                        *dot = shadow[*dot];
+                        *dot = menushadow[*dot];
                 }
 
                 dest += SCREENWIDTH;
@@ -1424,8 +1425,7 @@ void V_DrawTranslucentNoGreenPatch(int x, int y, patch_t *patch)
 
 void V_DrawPixel(int x, int y, byte color, dboolean drawshadow)
 {
-    byte        *dest = &screens[0][(y * SCREENWIDTH + x) * SCREENSCALE];
-    const byte  *shadow = &tinttab50[nearestblack << 8];
+    byte    *dest = &screens[0][(y * SCREENWIDTH + x) * SCREENSCALE];
 
     if (color == 251)
     {
@@ -1435,15 +1435,13 @@ void V_DrawPixel(int x, int y, byte color, dboolean drawshadow)
                 {
                     byte    *dot = dest + yy + xx;
 
-                    *dot = shadow[*dot];
+                    *dot = menushadow[*dot];
                 }
     }
     else if (color && color != 32)
-    {
         for (int yy = 0; yy < SCREENSCALE * SCREENWIDTH; yy += SCREENWIDTH)
             for (int xx = 0; xx < SCREENSCALE; xx++)
                 *(dest + yy + xx) = color;
-    }
 }
 
 void GetPixelSize(dboolean reset)
@@ -1452,7 +1450,8 @@ void GetPixelSize(dboolean reset)
     int height = -1;
 
     if (sscanf(r_lowpixelsize, "%10dx%10d", &width, &height) == 2
-        && width > 0 && width <= SCREENWIDTH && height > 0 && height <= SCREENHEIGHT && (width >= 2 || height >= 2))
+        && width > 0 && width <= SCREENWIDTH && height > 0 && height <= SCREENHEIGHT
+        && (width >= 2 || height >= 2))
     {
         pixelwidth = width;
         pixelheight = height * SCREENWIDTH;
@@ -1597,7 +1596,7 @@ dboolean V_ScreenShot(void)
     if (consoleactive)
         M_StringCopy(mapname, "Console", sizeof(mapname));
     else if (menuactive)
-        M_StringCopy(mapname, "Menu", sizeof(mapname));
+        M_StringCopy(mapname, (inhelpscreens ? "Help" : "Menu"), sizeof(mapname));
     else if (automapactive)
         M_StringCopy(mapname, "Automap", sizeof(mapname));
     else
@@ -1617,18 +1616,28 @@ dboolean V_ScreenShot(void)
 
             default:
             {
-                char    *temp = titlecase(maptitle);
+                char    *temp2 = titlecase(maptitle);
 
-                M_StringCopy(mapname, (inhelpscreens ? "Help" : temp), sizeof(mapname));
-                free(temp);
+                M_StringCopy(mapname, temp2, sizeof(mapname));
+                free(temp2);
                 break;
             }
         }
 
     if (M_StringStartsWith(mapname, "The "))
-        M_snprintf(mapname, sizeof(mapname), "%s, The", M_SubString(mapname, 4, strlen(mapname) - 4));
+    {
+        char    *temp2 = M_SubString(mapname, 4, strlen(mapname) - 4);
+
+        M_snprintf(mapname, sizeof(mapname), "%s, The", temp2);
+        free(temp2);
+    }
     else if (M_StringStartsWith(mapname, "A "))
-        M_snprintf(mapname, sizeof(mapname), "%s, A", M_SubString(mapname, 2, strlen(mapname) - 2));
+    {
+        char    *temp2 = M_SubString(mapname, 2, strlen(mapname) - 2);
+
+        M_snprintf(mapname, sizeof(mapname), "%s, A", temp2);
+        free(temp2);
+    }
 
     temp1 = makevalidfilename(mapname);
 

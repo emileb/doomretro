@@ -40,6 +40,7 @@
 
 #include "i_colors.h"
 #include "i_swap.h"
+#include "v_video.h"
 #include "w_wad.h"
 #include "z_zone.h"
 
@@ -82,7 +83,9 @@ static byte general[256] =
 #define BLACK       0
 #define RED         176
 #define WHITE       4
+#define YELLOW      160
 
+byte    *tinttab15;
 byte    *tinttab20;
 byte    *tinttab25;
 byte    *tinttab33;
@@ -163,6 +166,9 @@ void FindNearestColors(byte *palette)
     nearestblack = nearestcolors[BLACK];
     nearestred = nearestcolors[RED];
     nearestwhite = nearestcolors[WHITE];
+
+    menushadow = &tinttab40[nearestblack << 8];
+    hudhighlight = &tinttab15[nearestcolors[YELLOW] << 8];
 }
 
 int FindDominantColor(patch_t *patch)
@@ -256,6 +262,7 @@ void I_InitTintTables(byte *palette)
 {
     int lump = W_CheckNumForName("TRANMAP");
 
+    tinttab15 = GenerateTintTable(palette, 15, general, ALL);
     tinttab20 = GenerateTintTable(palette, 20, general, ALL);
     tinttab25 = GenerateTintTable(palette, 25, general, ALL);
     tinttab33 = GenerateTintTable(palette, 33, general, ALL);

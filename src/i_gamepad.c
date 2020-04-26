@@ -94,12 +94,11 @@ void I_InitGamepad(void)
         int numjoysticks = SDL_NumJoysticks();
 
         for (int i = 0; i < numjoysticks; i++)
-            if ((joystick = SDL_JoystickOpen(i)))
-                if (SDL_IsGameController(i))
-                {
-                    gamecontroller = SDL_GameControllerOpen(i);
-                    break;
-                }
+            if ((joystick = SDL_JoystickOpen(i)) && SDL_IsGameController(i))
+            {
+                gamecontroller = SDL_GameControllerOpen(i);
+                break;
+            }
 
         if (!gamecontroller)
             SDL_QuitSubSystem(SDL_INIT_GAMECONTROLLER | SDL_INIT_HAPTIC);
@@ -118,7 +117,10 @@ void I_InitGamepad(void)
                 C_OutputNoRepeat("A gamepad is connected.");
 
             if (!(haptic = SDL_HapticOpenFromJoystick(joystick)) || SDL_HapticRumbleInit(haptic) < 0)
+            {
+                haptic = NULL;
                 C_Warning(1, "This gamepad doesn't support vibration.");
+            }
 
             SDL_SetHintWithPriority(SDL_HINT_JOYSTICK_ALLOW_BACKGROUND_EVENTS, "1", SDL_HINT_OVERRIDE);
         }
@@ -133,25 +135,25 @@ void I_InitGamepad(void)
 
 void I_ShutdownGamepad(void)
 {
-    if (gamecontroller)
+    if (!gamecontroller)
+        return;
+
+    if (haptic)
     {
-        if (haptic)
-        {
-            SDL_HapticClose(haptic);
-            haptic = NULL;
-            barrelvibrationtics = 0;
-            damagevibrationtics = 0;
-            weaponvibrationtics = 0;
-        }
-
-        SDL_GameControllerClose(gamecontroller);
-        gamecontroller = NULL;
-
-        SDL_JoystickClose(joystick);
-        joystick = NULL;
-
-        SDL_QuitSubSystem(SDL_INIT_GAMECONTROLLER | SDL_INIT_HAPTIC);
+        SDL_HapticClose(haptic);
+        haptic = NULL;
+        barrelvibrationtics = 0;
+        damagevibrationtics = 0;
+        weaponvibrationtics = 0;
     }
+
+    SDL_GameControllerClose(gamecontroller);
+    gamecontroller = NULL;
+
+    SDL_JoystickClose(joystick);
+    joystick = NULL;
+
+    SDL_QuitSubSystem(SDL_INIT_GAMECONTROLLER | SDL_INIT_HAPTIC);
 }
 
 void I_GamepadVibration(int strength)

@@ -49,11 +49,9 @@ dboolean        buckethead = false;
 dboolean        nerve;
 dboolean        bfgedition;
 
-dboolean        breach;
 dboolean        chex;
 dboolean        chex1;
 dboolean        chex2;
-dboolean        chexdeh;
 dboolean        hacx;
 dboolean        BTSX;
 dboolean        BTSXE1;
@@ -76,6 +74,7 @@ dboolean        remnant;
 dboolean        modifiedgame;
 
 dboolean        DMENUPIC;
+dboolean        DSSECRET;
 dboolean        FREEDOOM;
 dboolean        FREEDM;
 dboolean        M_DOOM;
@@ -105,4 +104,3 @@ dboolean        STCFN034;
 dboolean        STYSNUM0;
 dboolean        TITLEPIC;
 dboolean        WISCRT2;
-dboolean        DSSECRET;

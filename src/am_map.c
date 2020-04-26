@@ -610,7 +610,6 @@ void AM_ClearMarks(void)
             // clear all marks
             C_Output(s_AMSTR_MARKSCLEARED);
             HU_SetPlayerMessage(s_AMSTR_MARKSCLEARED, false, true);
-            message_dontfuckwithme = true;
             markpointnum = 0;
         }
         else if (markpress == 1)
@@ -621,31 +620,30 @@ void AM_ClearMarks(void)
             M_snprintf(message, sizeof(message), s_AMSTR_MARKCLEARED, markpointnum--);
             C_Output(message);
             HU_SetPlayerMessage(message, false, true);
-            message_dontfuckwithme = true;
         }
+
+        message_dontfuckwithme = true;
     }
 }
 
 void AM_AddToPath(void)
 {
-    const int   x = viewplayer->mo->x >> FRACTOMAPBITS;
-    const int   y = viewplayer->mo->y >> FRACTOMAPBITS;
+    const int   x = viewplayer->mo->x;
+    const int   y = viewplayer->mo->y;
+    static int  prevx = INT_MAX;
+    static int  prevy = INT_MAX;
 
-    if (pathpointnum)
-        if (ABS(pathpoints[pathpointnum - 1].x - x) < FRACUNIT
-            && ABS(pathpoints[pathpointnum - 1].y - y) < FRACUNIT)
-            return;
+    if (prevx == x && prevy == y)
+        return;
 
     if (pathpointnum >= pathpointnum_max)
     {
-        pathpointnum_max = (pathpointnum_max ? pathpointnum_max << 1 : 1024);
+        pathpointnum_max = (pathpointnum_max ? (pathpointnum_max << 1) : 1024);
         pathpoints = I_Realloc(pathpoints, pathpointnum_max * sizeof(*pathpoints));
     }
 
-    pathpoints[pathpointnum].x = x;
-    pathpoints[pathpointnum].y = y;
-
-    pathpointnum++;
+    pathpoints[pathpointnum].x = prevx = x;
+    pathpoints[pathpointnum++].y = prevy = y;
 }
 
 void AM_ToggleRotateMode(void)
@@ -1310,24 +1308,24 @@ static dboolean AM_ClipMline(int *x0, int *y0, int *x1, int *y1)
     return !(outcode1 & outcode2);
 }
 
-static __inline void _PUTDOT(byte *dot, byte *color)
+static inline void _PUTDOT(byte *dot, byte *color)
 {
     *dot = *(*dot + color);
 }
 
-static __inline void PUTDOT(unsigned int x, unsigned int y, byte *color)
+static inline void PUTDOT(unsigned int x, unsigned int y, byte *color)
 {
     if (x < mapwidth && y < maparea)
         _PUTDOT(mapscreen + y + x, color);
 }
 
-static __inline void PUTDOT2(unsigned int x, unsigned int y, byte *color)
+static inline void PUTDOT2(unsigned int x, unsigned int y, byte *color)
 {
     if (x < mapwidth && y < maparea)
         *(mapscreen + y + x) = *color;
 }
 
-static __inline void PUTBIGDOT(unsigned int x, unsigned int y, byte *color)
+static inline void PUTBIGDOT(unsigned int x, unsigned int y, byte *color)
 {
     if (x < mapwidth)
     {
@@ -1362,7 +1360,7 @@ static __inline void PUTBIGDOT(unsigned int x, unsigned int y, byte *color)
     }
 }
 
-static __inline void PUTTRANSDOT(unsigned int x, unsigned int y, byte *color)
+static inline void PUTTRANSDOT(unsigned int x, unsigned int y, byte *color)
 {
     if (x < mapwidth && y < maparea)
     {
@@ -1439,7 +1437,7 @@ static void AM_DrawFline(int x0, int y0, int x1, int y1, byte *color,
 
                     while (x0 != x1)
                     {
-                        int mask = ~(error >> (sizeof(int) * CHARBIT - 1));
+                        int mask = ~(error >> 31);
 
                         putdot((x0 += sx), (y0 += (sy & mask)), color);
                         error += dy - (dx & mask);
@@ -1455,7 +1453,7 @@ static void AM_DrawFline(int x0, int y0, int x1, int y1, byte *color,
 
                     while (y0 != y1)
                     {
-                        int mask = ~(error >> (sizeof(int) * CHARBIT - 1));
+                        int mask = ~(error >> 31);
 
                         putdot((x0 += (sx & mask)), (y0 += sy), color);
                         error += dx - (dy & mask);
@@ -1908,22 +1906,21 @@ static void AM_DrawPath(void)
     if (pathpointnum >= 1)
     {
         mpoint_t    player;
+        mpoint_t    end;
 
         player.x = viewplayer->mo->x >> FRACTOMAPBITS;
         player.y = viewplayer->mo->y >> FRACTOMAPBITS;
 
         if (am_rotatemode)
         {
-            mpoint_t    end;
-
             for (int i = 1; i < pathpointnum; i++)
             {
                 mpoint_t    start;
 
-                start.x = pathpoints[i - 1].x;
-                start.y = pathpoints[i - 1].y;
-                end.x = pathpoints[i].x;
-                end.y = pathpoints[i].y;
+                start.x = pathpoints[i - 1].x >> FRACTOMAPBITS;
+                start.y = pathpoints[i - 1].y >> FRACTOMAPBITS;
+                end.x = pathpoints[i].x >> FRACTOMAPBITS;
+                end.y = pathpoints[i].y >> FRACTOMAPBITS;
 
                 if (ABS(start.x - end.x) > FRACUNIT * 4 || ABS(start.y - end.y) > FRACUNIT * 4)
                     continue;
@@ -1942,17 +1939,27 @@ static void AM_DrawPath(void)
         else
         {
             for (int i = 1; i < pathpointnum; i++)
-                if (ABS(pathpoints[i - 1].x - pathpoints[i].x) <= FRACUNIT * 4
-                    && ABS(pathpoints[i - 1].y - pathpoints[i].y) <= FRACUNIT * 4)
-                    AM_DrawFline(pathpoints[i - 1].x, pathpoints[i - 1].y, pathpoints[i].x, pathpoints[i].y, pathcolor, putbigdot);
+            {
+                mpoint_t    start;
+
+                start.x = pathpoints[i - 1].x >> FRACTOMAPBITS;
+                start.y = pathpoints[i - 1].y >> FRACTOMAPBITS;
+                end.x = pathpoints[i].x >> FRACTOMAPBITS;
+                end.y = pathpoints[i].y >> FRACTOMAPBITS;
+
+                if (ABS(start.x - end.x) > FRACUNIT * 4 || ABS(start.y - end.y) > FRACUNIT * 4)
+                    continue;
+
+                AM_DrawFline(start.x, start.y, end.x, end.y, pathcolor, putbigdot);
+            }
 
             if (pathpointnum > 1 && !freeze && !(viewplayer->cheats & CF_NOCLIP))
-                AM_DrawFline(pathpoints[pathpointnum - 1].x, pathpoints[pathpointnum - 1].y, player.x, player.y, pathcolor, putbigdot);
+                AM_DrawFline(end.x, end.y, player.x, player.y, pathcolor, putbigdot);
         }
     }
 }
 
-static __inline void AM_DrawScaledPixel(const int x, const int y, byte *color)
+static inline void AM_DrawScaledPixel(const int x, const int y, byte *color)
 {
     byte    *dest = &mapscreen[(y * 2 - 1) * mapwidth + x * 2 - 1];
 
@@ -1965,7 +1972,7 @@ static __inline void AM_DrawScaledPixel(const int x, const int y, byte *color)
     *dest = *(*dest + color);
 }
 
-static __inline void AM_DrawSolidScaledPixel(const int x, const int y, byte color)
+static inline void AM_DrawSolidScaledPixel(const int x, const int y, byte color)
 {
     byte    *dest = &mapscreen[(y * 2 - 1) * mapwidth + x * 2 - 1];
 
@@ -2015,7 +2022,7 @@ static void AM_SetFrameVariables(void)
     am_frame.center.x = x;
     am_frame.center.y = y;
 
-    if (am_rotatemode)
+    if (am_rotatemode || menuactive)
     {
         const int       angle = (ANG90 - viewplayer->mo->angle) >> ANGLETOFINESHIFT;
         const fixed_t   dx = m_w / 2;

@@ -40,6 +40,7 @@
 #include "doomstat.h"
 #include "g_game.h"
 #include "i_swap.h"
+#include "m_config.h"
 #include "m_misc.h"
 #include "m_random.h"
 #include "p_setup.h"
@@ -393,7 +394,7 @@ static void WI_DrawLF(void)
         char    name[9];
 
         if (gamemode == commercial)
-            M_snprintf(name, sizeof(name), "CWILV%2.2d", wbs->last);
+            M_snprintf(name, sizeof(name), "CWILV%02d", wbs->last);
         else
             M_snprintf(name, sizeof(name), "WILV%i%i", wbs->epsd, wbs->last);
 
@@ -453,7 +454,7 @@ static void WI_DrawEL(void)
         char    name[9];
 
         if (gamemode == commercial)
-            M_snprintf(name, sizeof(name), "CWILV%2.2d", wbs->next);
+            M_snprintf(name, sizeof(name), "CWILV%02d", wbs->next);
         else
             M_snprintf(name, sizeof(name), "WILV%i%i", wbs->epsd, wbs->next);
 
@@ -774,7 +775,7 @@ static void WI_DrawShowNextLoc(void)
         return;
 
     // draws which level you are entering...
-    if (gamemode != commercial || wbs->next != 30 || (wbs->next == 30 && P_GetMapNext(wbs->last + 1)))
+    if (gamemode != commercial || wbs->next != 30 || P_GetMapNext(wbs->last + 1))
         WI_DrawEL();
 }
 
@@ -799,6 +800,11 @@ static void WI_InitStats(void)
     cnt_time = -1;
     cnt_par = -1;
     cnt_pause = TICRATE;
+
+    if (M_StringCompare(playername, playername_default))
+        C_PlayerMessage("You have finished <b><i>%s</i></b>.", mapname);
+    else
+        C_PlayerMessage("%s has finished <b><i>%s</i></b>.", playername, mapname);
 
     C_TabbedOutput(tabs, "Kills\t<b>%i%%</b>", (wbs->skills * 100) / wbs->maxkills);
     C_TabbedOutput(tabs, "Items\t<b>%i%%</b>", (wbs->sitems * 100) / wbs->maxitems);
@@ -1003,7 +1009,7 @@ void WI_CheckForAccelerate(void)
         viewplayer->usedown = false;
 }
 
-// Updates stuff each tick
+// Updates stuff each tic
 void WI_Ticker(void)
 {
     if (menuactive || paused || consoleactive)
@@ -1044,7 +1050,7 @@ static void WI_LoadUnloadData(load_callback_t callback)
     {
         for (int i = 0; i < NUMCMAPS; i++)
         {
-            M_snprintf(name, sizeof(name), "CWILV%2.2d", i);
+            M_snprintf(name, sizeof(name), "CWILV%02d", i);
             callback(name, &lnames[i]);
         }
     }
@@ -1076,7 +1082,7 @@ static void WI_LoadUnloadData(load_callback_t callback)
                     if (wbs->epsd != 1 || j != 8)
                     {
                         // animations
-                        M_snprintf(name, sizeof(name), "WIA%i%.2d%.2d", wbs->epsd, j, i);
+                        M_snprintf(name, sizeof(name), "WIA%i%02d%02d", wbs->epsd, j, i);
                         callback(name, &a->p[i]);
                     }
                     else
@@ -1191,6 +1197,8 @@ void WI_Drawer(void)
 
 static void WI_InitVariables(wbstartstruct_t *wbstartstruct)
 {
+    char    *temp = titlecase(maptitle);
+
     wbs = wbstartstruct;
 
     acceleratestage = false;
@@ -1209,7 +1217,9 @@ static void WI_InitVariables(wbstartstruct_t *wbstartstruct)
     if (gamemode != retail && wbs->epsd > 2)
         wbs->epsd -= 3;
 
-    M_StringCopy(mapname, maptitle, 128);
+    M_StringCopy(mapname, temp, 128);
+    free(temp);
+
     P_MapName(wbs->epsd + 1, wbs->next + 1);
     M_StringCopy(nextmapname, maptitle, 128);
 }

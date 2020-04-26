@@ -62,6 +62,8 @@
 #define RMAPINFO_SCRIPT_NAME    "RMAPINFO"
 #define MAPINFO_SCRIPT_NAME     "MAPINFO"
 
+#define MAXMAPINFO              100
+
 #define NUMLIQUIDS              256
 
 #define MCMD_AUTHOR             1
@@ -135,7 +137,7 @@ line_t              *lines;
 int                 numsides;
 side_t              *sides;
 
-int                 numthings;
+int                 numspawnedthings;
 int                 thingid;
 int                 numdecorations;
 
@@ -188,7 +190,7 @@ dboolean            skipblstart;            // MaxW: Skip initial blocklist shor
 static int          rejectlump = -1;        // cph - store reject lump num if cached
 const byte          *rejectmatrix;          // cph - const*
 
-static mapinfo_t    mapinfo[101];
+static mapinfo_t    mapinfo[MAXMAPINFO + 1];
 
 static char *mapcmdnames[] =
 {
@@ -241,6 +243,13 @@ dboolean        r_fixmaperrors = r_fixmaperrors_default;
 static dboolean samelevel;
 
 mapformat_t     mapformat;
+
+const char *mapformats[] =
+{
+    "Regular",
+    "<i>DeeP</i>",
+    "<i>ZDoom</i> extended (uncompressed)"
+};
 
 dboolean        boomcompatible;
 dboolean        mbfcompatible;
@@ -1416,6 +1425,7 @@ static void P_LoadNodes_V4(int lump)
     W_ReleaseLumpNum(lump);
 }
 
+// MB 2020-03-01: Fix endianness for 32-bit ZDoom nodes
 static void P_LoadZSegs(const byte *data)
 {
     for (int i = 0; i < numsegs; i++)
@@ -1427,8 +1437,8 @@ static void P_LoadZSegs(const byte *data)
         seg_t               *li = segs + i;
         const mapseg_znod_t *ml = (const mapseg_znod_t *)data + i;
 
-        v1 = ml->v1;
-        v2 = ml->v2;
+        v1 = LONG(ml->v1);
+        v2 = LONG(ml->v2);
 
         linedefnum = (unsigned short)SHORT(ml->linedef);
 
@@ -1508,6 +1518,8 @@ static void P_LoadZSegs(const byte *data)
     }
 }
 
+// MB 2020-03-01: Fix endianness for 32-bit ZDoom nodes
+// <https://zdoom.org/wiki/Node#ZDoom_extended_nodes>
 static void P_LoadZNodes(int lump)
 {
     byte            *data = W_CacheLumpNum(lump);
@@ -1523,10 +1535,10 @@ static void P_LoadZNodes(int lump)
     data += 4;
 
     // Read extra vertices added during node building
-    orgVerts = *((const unsigned int *)data);
+    orgVerts = LONG(*((const unsigned int *)data));
     data += sizeof(orgVerts);
 
-    newVerts = *((const unsigned int *)data);
+    newVerts = LONG(*((const unsigned int *)data));
     data += sizeof(newVerts);
 
     if (!samelevel)
@@ -1541,10 +1553,10 @@ static void P_LoadZNodes(int lump)
 
         for (unsigned int i = 0; i < newVerts; i++)
         {
-            newvertarray[i + orgVerts].x = *((const unsigned int *)data);
+            newvertarray[i + orgVerts].x = LONG(*((const unsigned int *)data));
             data += sizeof(newvertarray[0].x);
 
-            newvertarray[i + orgVerts].y = *((const unsigned int *)data);
+            newvertarray[i + orgVerts].y = LONG(*((const unsigned int *)data));
             data += sizeof(newvertarray[0].y);
         }
 
@@ -1570,7 +1582,7 @@ static void P_LoadZNodes(int lump)
     }
 
     // Read the subsectors
-    numSubs = *((const unsigned int *)data);
+    numSubs = LONG(*((const unsigned int *)data));
     data += sizeof(numSubs);
     numsubsectors = numSubs;
 
@@ -1584,8 +1596,8 @@ static void P_LoadZNodes(int lump)
         const mapsubsector_znod_t   *mseg = (const mapsubsector_znod_t *)data + i;
 
         subsectors[i].firstline = currSeg;
-        subsectors[i].numlines = mseg->numsegs;
-        currSeg += mseg->numsegs;
+        subsectors[i].numlines = LONG(mseg->numsegs);
+        currSeg += LONG(mseg->numsegs);
     }
 
     data += numSubs * sizeof(mapsubsector_znod_t);
@@ -1605,7 +1617,7 @@ static void P_LoadZNodes(int lump)
     data += numsegs * sizeof(mapseg_znod_t);
 
     // Read nodes
-    numNodes = *((const unsigned int *)data);
+    numNodes = LONG(*((const unsigned int *)data));
     data += sizeof(numNodes);
     numnodes = numNodes;
     nodes = calloc_IfSameLevel(nodes, numNodes, sizeof(node_t));
@@ -1622,7 +1634,7 @@ static void P_LoadZNodes(int lump)
 
         for (int j = 0; j < 2; j++)
         {
-            no->children[j] = (unsigned int)(mn->children[j]);
+            no->children[j] = LONG(mn->children[j]);
 
             for (int k = 0; k < 4; k++)
                 no->bbox[j][k] = SHORT(mn->bbox[j][k]) << FRACBITS;
@@ -1640,11 +1652,13 @@ static void P_LoadZNodes(int lump)
 static void P_LoadThings(int lump)
 {
     const mapthing_t    *data = (const mapthing_t *)W_CacheLumpNum(lump);
+    int                 numthings;
 
     if (!data || !(numthings = W_LumpLength(lump) / sizeof(mapthing_t)))
         I_Error("There are no things in this map.");
 
     M_Seed(numthings);
+    numspawnedthings = 0;
     numdecorations = 0;
 
     for (thingid = 0; thingid < numthings; thingid++)
@@ -2732,7 +2746,8 @@ static mapformat_t P_CheckMapFormat(int lumpnum)
 
     if ((b = lumpnum + ML_BLOCKMAP + 1) < numlumps && !strncasecmp(lumpinfo[b]->name, "BEHAVIOR", 8))
         I_Error("Hexen format maps are not supported.");
-    else if ((b = lumpnum + ML_NODES) < numlumps && (n = W_CacheLumpNum(b)) && W_LumpLength(b))
+
+    if ((b = lumpnum + ML_NODES) < numlumps && (n = W_CacheLumpNum(b)) && W_LumpLength(b))
     {
         if (!memcmp(n, "xNd4\0\0\0\0", 8))
             format = DEEPBSP;
@@ -2759,6 +2774,7 @@ void P_SetupLevel(int ep, int map)
     char        lumpname[6];
     int         lumpnum;
     static int  prevlumpnum = -1;
+    char        *temp;
 
     boomcompatible = false;
     mbfcompatible = false;
@@ -2823,7 +2839,11 @@ void P_SetupLevel(int ep, int map)
     {
         viewplayer->cheats &= ~CF_ALLMAP;
         viewplayer->cheats &= ~CF_ALLMAP_THINGS;
+        viewplayer->deaths = 0;
+        viewplayer->suicides = 0;
     }
+
+    prevlumpnum = lumpnum;
 
     mapformat = P_CheckMapFormat(lumpnum);
 
@@ -2831,7 +2851,15 @@ void P_SetupLevel(int ep, int map)
         || (nerve && gamemission == doom2)) && !FREEDOOM);
 
     C_AddConsoleDivider();
-    C_Output(mapnumandtitle);
+
+    temp = titlecase(maptitle);
+
+    if (M_StringCompare(playername, playername_default))
+        C_PlayerMessage("You have %s <b><i>%s</i></b>.", (samelevel ? "reentered": "entered"), temp);
+    else
+        C_PlayerMessage("%s has %s <b><i>%s</i></b>.", playername, (samelevel ? "reentered" : "entered"), temp);
+
+    free(temp);
 
     leveltime = 0;
     animatedliquiddiff = FRACUNIT * 2;
@@ -2903,9 +2931,9 @@ void P_SetupLevel(int ep, int map)
 
     massacre = false;
 
-    P_SetLiquids();
     P_GetMapLiquids((ep - 1) * 10 + map);
     P_GetMapNoLiquids((ep - 1) * 10 + map);
+    P_SetLiquids();
 
     P_LoadThings(lumpnum + ML_THINGS);
 
@@ -2944,7 +2972,7 @@ static void P_InitMapInfo(void)
             return;
 
     info = mapinfo;
-    memset(info, 0, sizeof(mapinfo_t));
+    memset(info, 0, sizeof(mapinfo_t) * (MAXMAPINFO + 1));
 
     for (int i = 0; i < NUMLIQUIDS; i++)
     {
@@ -2995,7 +3023,7 @@ static void P_InitMapInfo(void)
                     nerve = false;
                     NewDef.prevMenu = &MainDef;
                     MAPINFO = -1;
-                    return;
+                    break;
                 }
                 else
                 {
@@ -3220,7 +3248,7 @@ char *P_GetMapAuthor(int map)
 void P_GetMapLiquids(int map)
 {
     for (int i = 0; i < liquidlumps; i++)
-        sectors[mapinfo[QualifyMap(map)].liquid[i]].terraintype = LIQUID;
+        terraintypes[mapinfo[QualifyMap(map)].liquid[i]] = LIQUID;
 }
 
 int P_GetMapMusic(int map)
@@ -3257,7 +3285,7 @@ dboolean P_GetMapNoJump(int map)
 void P_GetMapNoLiquids(int map)
 {
     for (int i = 0; i < noliquidlumps; i++)
-        sectors[mapinfo[QualifyMap(map)].noliquid[i]].terraintype = SOLID;
+        terraintypes[mapinfo[QualifyMap(map)].liquid[i]] = SOLID;
 }
 
 dboolean P_GetMapNoMouselook(int map)

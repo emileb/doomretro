@@ -52,7 +52,7 @@
 
 // Finally, for odd reasons, the player input
 // is buffered within the player data struct,
-// as commands per game tick.
+// as commands per game tic.
 #include "d_ticcmd.h"
 
 typedef enum
@@ -214,13 +214,14 @@ typedef struct player_s
     fixed_t         bounce;
     fixed_t         bouncemax;
 
-    // For playerstats cmd
+    // For playerstats CCMD
     int             damageinflicted;
     int             damagereceived;
     int             cheated;
     int             shotshit;
     int             shotsfired;
     int             deaths;
+    int             suicides;
     int             mobjcount[NUMMOBJTYPES];
     int             distancetraveled;
     int             gamessaved;

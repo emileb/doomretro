@@ -49,6 +49,9 @@
 // Screen 1 is an extra buffer.
 extern byte *screens[5];
 
+extern byte *menushadow;
+extern byte *hudhighlight;
+
 // Allocates buffer screens, call before R_Init.
 void V_Init(void);
 

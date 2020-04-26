@@ -196,29 +196,19 @@ void HUlib_DrawAltAutomapTextLine(hu_textline_t *l, dboolean external)
     for (int i = 0; i < len; i++)
     {
         unsigned char   letter = l->l[i];
-        unsigned char   nextletter = l->l[i + 1];
         patch_t         *patch = unknownchar;
         int             j = 0;
+        const int       c = letter - CONSOLEFONTSTART;
 
-        if (letter == 194 && nextletter == 176)
+        if (c >= 0 && c < CONSOLEFONTSIZE)
+            patch = consolefont[c];
+
+        if (!i || prevletter == ' ')
         {
-            patch = degree;
-            i++;
-        }
-        else
-        {
-            const int   c = letter - CONSOLEFONTSTART;
-
-            if (c >= 0 && c < CONSOLEFONTSIZE)
-                patch = consolefont[c];
-
-            if (!i || prevletter == ' ')
-            {
-                if (letter == '\'')
-                    patch = lsquote;
-                else if (letter == '\"')
-                    patch = ldquote;
-            }
+            if (letter == '\'')
+                patch = lsquote;
+            else if (letter == '\"')
+                patch = ldquote;
         }
 
         // [BH] apply kerning to certain character pairs
@@ -296,10 +286,6 @@ void HUlib_DrawTextLine(hu_textline_t *l, dboolean external)
                     j = 64;
                 else if (c == '\'')
                     j = 65;
-#if defined(_WIN32)
-                else if (c == 146)
-                    j = 65;
-#endif
             }
 
             if (c == 176)
@@ -372,20 +358,18 @@ void HUlib_DrawTextLine(hu_textline_t *l, dboolean external)
             {
                 unsigned char   src = underscores[y1 * ORIGINALWIDTH + x1];
 
-                for (int y2 = 0; y2 < scale; y2++)
-                    for (int x2 = 0; x2 < scale; x2++)
-                    {
-                        byte    *dest = &tempscreen[((l->y + y1 + 7) * scale + y2) * SCREENWIDTH + (l->x + x1 - 3) * scale + x2];
+                if (src != ' ')
+                    for (int y2 = 0; y2 < scale; y2++)
+                        for (int x2 = 0; x2 < scale; x2++)
+                        {
+                            byte    *dest = &tempscreen[((l->y + y1 + 6) * scale + y2) * SCREENWIDTH + (l->x + x1 - 3) * scale + x2];
 
-                        if (src == 251)
-                            *dest = 0;
-                        else if (src != ' ')
-                            *dest = src;
-                    }
+                            *dest = (src == 251 ? 0 : src);
+                        }
             }
     }
 
-    // [BH] draw entire message from buffer onto screen with translucency
+    // [BH] draw entire message from buffer onto screen
     maxx = l->x + tw + 1;
     maxy = y + 11;
 
@@ -401,18 +385,15 @@ void HUlib_DrawTextLine(hu_textline_t *l, dboolean external)
             int     dot = yy * SCREENWIDTH + xx;
             byte    *source = &tempscreen[dot];
             byte    *dest1 = &fb1[dot];
-            byte    *dest2 = &fb2[dot];
 
             if (!*source)
-                *dest1 = tinttab50[(nearestblack << 8) + *dest2];
+                *dest1 = tinttab50[(nearestblack << 8) + fb2[dot]];
             else if (*source != 251)
             {
-                byte color = *source;
-
                 if (vid_widescreen && r_hud_translucency && !hacx)
-                    color = tinttab66[(color << 8) + *dest2];
-
-                *dest1 = color;
+                    *dest1 = tinttab66[(*source << 8) + fb2[dot]];
+                else
+                    *dest1 = *source;
             }
         }
 }

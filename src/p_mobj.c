@@ -94,6 +94,8 @@ void P_DelSeclist(msecnode_t *node);
 //
 dboolean P_SetMobjState(mobj_t *mobj, statenum_t state)
 {
+    pspdef_t    *psp = &viewplayer->psprites[ps_weapon];
+
     do
     {
         state_t *st;
@@ -114,7 +116,7 @@ dboolean P_SetMobjState(mobj_t *mobj, statenum_t state)
         // Modified handling.
         // Call action functions when the state is set
         if (st->action)
-            st->action(mobj, NULL, NULL);
+            st->action(mobj, viewplayer, psp);
 
         state = st->nextstate;
     } while (!mobj->tics);
@@ -188,16 +190,13 @@ static void P_XYMovement(mobj_t *mo)
     mo->momx = BETWEEN(-MAXMOVE, mo->momx, MAXMOVE);
     mo->momy = BETWEEN(-MAXMOVE, mo->momy, MAXMOVE);
 
-    xmove = mo->momx;
-    ymove = mo->momy;
-
-    if (xmove < 0)
+    if ((xmove = mo->momx) < 0)
     {
         xmove = -xmove;
         stepdir = 1;
     }
 
-    if (ymove < 0)
+    if ((ymove = mo->momy) < 0)
     {
         ymove = -ymove;
         stepdir |= 2;
@@ -291,21 +290,16 @@ static void P_XYMovement(mobj_t *mo)
 
         if (blood)
         {
-            int     radius = (spritewidth[sprites[mo->sprite].spriteframes[mo->frame & FF_FRAMEMASK].lump[0]] >> FRACBITS) >> 1;
-            int     max = MIN((ABS(mo->momx) + ABS(mo->momy)) >> (FRACBITS - 2), 8);
-            fixed_t floorz = mo->floorz;
+            int max = MIN((ABS(mo->momx) + ABS(mo->momy)) >> (FRACBITS - 2), 8);
 
-            for (int i = 0; i < max; i++)
+            if (max)
             {
-                fixed_t x, y;
+                int     radius = (spritewidth[sprites[mo->sprite].spriteframes[mo->frame & FF_FRAMEMASK].lump[0]] >> FRACBITS) >> 1;
+                fixed_t floorz = mo->floorz;
 
-                if (!mo->bloodsplats)
-                    break;
-
-                x = mo->x + (M_RandomInt(-radius, radius) << FRACBITS);
-                y = mo->y + (M_RandomInt(-radius, radius) << FRACBITS);
-
-                P_SpawnBloodSplat(x, y, blood, floorz, mo);
+                for (int i = 0; i < max; i++)
+                    P_SpawnBloodSplat(mo->x + (M_RandomInt(-radius, radius) << FRACBITS),
+                        mo->y + (M_RandomInt(-radius, radius) << FRACBITS), blood, floorz, mo);
             }
         }
     }
@@ -977,7 +971,7 @@ void P_RespawnSpecials(void)
 
     x = mthing->x << FRACBITS;
     y = mthing->y << FRACBITS;
-    z = ((mobjinfo[i].flags & MF_SPAWNCEILING) ? ONCEILINGZ : ONFLOORZ);
+    z = ((mobjinfo[i].flags & MF_SPAWNCEILING) ? ONCEILINGZ : (mobjinfo[i].flags2 & MF2_FLOATBOB) ? 14 * FRACUNIT : ONFLOORZ);
 
     // spawn a teleport fog at the new spot
     mo = P_SpawnMobj(x, y, z, MT_IFOG);
@@ -990,6 +984,25 @@ void P_RespawnSpecials(void)
 
     // pull it from the queue
     iquetail = (iquetail + 1) & (ITEMQUEUESIZE - 1);
+}
+
+//
+// P_SetPlayerViewheight
+//
+void P_SetPlayerViewheight(void)
+{
+    mobj_t  *mo = viewplayer->mo;
+
+    for (const struct msecnode_s *seclist = mo->touching_sectorlist; seclist; seclist = seclist->m_tnext)
+        mo->z = MAX(mo->z, seclist->m_sector->floorheight);
+
+    mo->floorz = mo->z;
+
+    viewplayer->viewheight = VIEWHEIGHT;
+    viewplayer->viewz = viewplayer->oldviewz = mo->z + viewplayer->viewheight;
+
+    if ((mo->flags2 & MF2_FEETARECLIPPED) && r_liquid_lowerview)
+        viewplayer->viewz -= FOOTCLIPSIZE;
 }
 
 //
@@ -1010,11 +1023,6 @@ static void P_SpawnPlayer(const mapthing_t *mthing)
 
     mobj = P_SpawnMobj(mthing->x << FRACBITS, mthing->y << FRACBITS, ONFLOORZ, MT_PLAYER);
 
-    for (const struct msecnode_s *seclist = mobj->touching_sectorlist; seclist; seclist = seclist->m_tnext)
-        mobj->z = MAX(mobj->z, seclist->m_sector->floorheight);
-
-    mobj->floorz = mobj->z;
-
     mobj->angle = ((mthing->angle % 45) ? mthing->angle * (ANG45 / 45) : ANG45 * (mthing->angle / 45));
     mobj->player = viewplayer;
     mobj->health = viewplayer->health;
@@ -1027,12 +1035,6 @@ static void P_SpawnPlayer(const mapthing_t *mthing)
     viewplayer->bonuscount = 0;
     viewplayer->extralight = 0;
     viewplayer->fixedcolormap = 0;
-
-    viewplayer->viewheight = VIEWHEIGHT;
-    viewplayer->viewz = viewplayer->oldviewz = mobj->z + viewplayer->viewheight;
-
-    if ((mobj->flags2 & MF2_FEETARECLIPPED) && r_liquid_lowerview)
-        viewplayer->viewz -= FOOTCLIPSIZE;
 
     viewplayer->psprites[ps_weapon].sx = 0;
     viewplayer->mo->momx = 0;
@@ -1069,7 +1071,7 @@ static void P_SpawnMoreBlood(mobj_t *mobj)
     if (blood)
     {
         int     radius = ((spritewidth[sprites[mobj->sprite].spriteframes[0].lump[0]] >> FRACBITS) >> 1) + 12;
-        int     max = M_RandomInt(50, 100) + radius;
+        int     max = M_RandomInt(100, 150) + radius;
         fixed_t x = mobj->x;
         fixed_t y = mobj->y;
         fixed_t floorz = mobj->floorz;
@@ -1209,6 +1211,8 @@ mobj_t *P_SpawnMapThing(mapthing_t *mthing, dboolean spawnmonsters)
     mobj->spawnpoint = *mthing;
     mobj->musicid = musicid;
 
+    numspawnedthings++;
+
     if (mthing->options & MTF_AMBUSH)
         mobj->flags |= MF_AMBUSH;
 
@@ -1280,7 +1284,7 @@ mobj_t *P_SpawnMapThing(mapthing_t *mthing, dboolean spawnmonsters)
     }
 
     // [BH] set random pitch for monster sounds when spawned
-    mobj->pitch = NORM_PITCH + ((mobj->flags & MF_SHOOTABLE) && i != MT_BARREL ? M_RandomInt(-16, 16) : 0);
+    mobj->pitch = ((mobj->flags & MF_SHOOTABLE) && i != MT_BARREL ? NORM_PITCH + M_RandomInt(-16, 16) : NORM_PITCH);
 
     // [BH] initialize bobbing things
     mobj->floatbob = prevbob = (x == prevx && y == prevy ? prevbob : M_Random());
@@ -1374,7 +1378,8 @@ void P_SpawnBlood(fixed_t x, fixed_t y, fixed_t z, angle_t angle, int damage, mo
 {
     int         minz = target->z;
     int         maxz = minz + spriteheight[sprites[target->sprite].spriteframes[0].lump[0]];
-    int         type = (target->blood ? target->blood : MT_BLOOD);
+    int         type = (r_blood == r_blood_red ? MT_BLOOD : (r_blood == r_blood_green ? MT_GREENBLOOD :
+                    (target->blood ? target->blood : MT_BLOOD)));
     mobjinfo_t  *info = &mobjinfo[type];
     int         blood = info->blood;
     state_t     *st = &states[info->spawnstate];

@@ -102,7 +102,6 @@ static default_t cvars[NUMCVARS] =
     CONFIG_VARIABLE_INT          (con_backcolor,                                     NOVALUEALIAS       ),
     CONFIG_VARIABLE_INT          (con_edgecolor,                                     NOVALUEALIAS       ),
     CONFIG_VARIABLE_INT          (con_obituaries,                                    BOOLVALUEALIAS     ),
-    CONFIG_VARIABLE_INT          (con_timestamps,                                    BOOLVALUEALIAS     ),
     CONFIG_VARIABLE_INT          (crosshair,                                         CROSSHAIRVALUEALIAS),
     CONFIG_VARIABLE_INT          (crosshaircolor,                                    NOVALUEALIAS       ),
     CONFIG_VARIABLE_INT          (episode,                                           NOVALUEALIAS       ),
@@ -257,28 +256,29 @@ static default_t cvars[NUMCVARS] =
     CONFIG_VARIABLE_INT_UNSIGNED (stat_skilllevel_imtooyoungtodie,                   NOVALUEALIAS       ),
     CONFIG_VARIABLE_INT_UNSIGNED (stat_skilllevel_nightmare,                         NOVALUEALIAS       ),
     CONFIG_VARIABLE_INT_UNSIGNED (stat_skilllevel_ultraviolence,                     NOVALUEALIAS       ),
+    CONFIG_VARIABLE_INT_UNSIGNED (stat_suicides,                                     NOVALUEALIAS       ),
     CONFIG_VARIABLE_INT_UNSIGNED (stat_time,                                         NOVALUEALIAS       )
 };
 
 valuealias_t valuealiases[] =
 {
-    { "off",     0, BOOLVALUEALIAS      }, { "on",        1, BOOLVALUEALIAS      },
-    { "0",       0, BOOLVALUEALIAS      }, { "1",         1, BOOLVALUEALIAS      },
-    { "no",      0, BOOLVALUEALIAS      }, { "yes",       1, BOOLVALUEALIAS      },
-    { "false",   0, BOOLVALUEALIAS      }, { "true",      1, BOOLVALUEALIAS      },
-    { "low",     0, DETAILVALUEALIAS    }, { "high",      1, DETAILVALUEALIAS    },
-    { "off",     1, GAMMAVALUEALIAS     }, { "none",      0, BLOODVALUEALIAS     },
-    { "red",     1, BLOODVALUEALIAS     }, { "all",       2, BLOODVALUEALIAS     },
-    { "green",   3, BLOODVALUEALIAS     }, { "imperial",  0, UNITSVALUEALIAS     },
-    { "metric",  1, UNITSVALUEALIAS     }, { "off",       0, CAPVALUEALIAS       },
-    { "none",   -1, SKYVALUEALIAS       }, { "off",      -1, SKYVALUEALIAS       },
-    { "none",    5, FACEBACKVALUEALIAS  }, { "off",       5, FACEBACKVALUEALIAS  },
-    { "none",    0, ARMORTYPEVALUEALIAS }, { "green",     1, ARMORTYPEVALUEALIAS },
-    { "blue",    2, ARMORTYPEVALUEALIAS }, { "none",      0, CROSSHAIRVALUEALIAS },
-    { "off",     0, CROSSHAIRVALUEALIAS }, { "cross",     1, CROSSHAIRVALUEALIAS },
-    { "dot",     2, CROSSHAIRVALUEALIAS }, { "adaptive", -1, VSYNCVALUEALIAS     },
-    { "off",     0, VSYNCVALUEALIAS     }, { "on",        1, VSYNCVALUEALIAS     },
-    { "",        0, NOVALUEALIAS        }
+    { "off",       0, BOOLVALUEALIAS      }, { "on",      1, BOOLVALUEALIAS      },
+    { "0",         0, BOOLVALUEALIAS      }, { "1",       1, BOOLVALUEALIAS      },
+    { "no",        0, BOOLVALUEALIAS      }, { "yes",     1, BOOLVALUEALIAS      },
+    { "false",     0, BOOLVALUEALIAS      }, { "true",    1, BOOLVALUEALIAS      },
+    { "low",       0, DETAILVALUEALIAS    }, { "high",    1, DETAILVALUEALIAS    },
+    { "off",       1, GAMMAVALUEALIAS     }, { "none",    0, BLOODVALUEALIAS     },
+    { "red",       1, BLOODVALUEALIAS     }, { "all",     2, BLOODVALUEALIAS     },
+    { "green",     3, BLOODVALUEALIAS     }, { "nofuzz",  4, BLOODVALUEALIAS     },
+    { "imperial",  0, UNITSVALUEALIAS     }, { "metric",  1, UNITSVALUEALIAS     },
+    { "off",       0, CAPVALUEALIAS       }, { "none",   -1, SKYVALUEALIAS       },
+    { "off",      -1, SKYVALUEALIAS       }, { "none",    5, FACEBACKVALUEALIAS  },
+    { "off",       5, FACEBACKVALUEALIAS  }, { "none",    0, ARMORTYPEVALUEALIAS },
+    { "green",     1, ARMORTYPEVALUEALIAS }, { "blue",    2, ARMORTYPEVALUEALIAS },
+    { "none",      0, CROSSHAIRVALUEALIAS }, { "off",     0, CROSSHAIRVALUEALIAS },
+    { "cross",     1, CROSSHAIRVALUEALIAS }, { "dot",     2, CROSSHAIRVALUEALIAS },
+    { "adaptive", -1, VSYNCVALUEALIAS     }, { "off",     0, VSYNCVALUEALIAS     },
+    { "on",        1, VSYNCVALUEALIAS     }, { "",        0, NOVALUEALIAS        }
 };
 
 static void SaveBind(FILE *file, char *control, char *string)
@@ -522,7 +522,7 @@ void M_SaveCVARs(void)
 // Parses integer values in the configuration file
 static int ParseIntParameter(char *strparm, int valuealiastype)
 {
-    int parm = 0;
+    int parm = INT_MAX;
 
     for (int i = 0; *valuealiases[i].text; i++)
         if (M_StringCompare(strparm, valuealiases[i].text) && valuealiastype == valuealiases[i].type)
@@ -634,9 +634,6 @@ static void M_CheckCVARs(void)
     if (con_obituaries != false && con_obituaries != true)
         con_obituaries = con_obituaries_default;
 
-    if (con_timestamps != false && con_timestamps != true)
-        con_timestamps = con_timestamps_default;
-
     if (crosshair != crosshair_none && crosshair != crosshair_cross && crosshair != crosshair_dot)
         crosshair = crosshair_default;
 
@@ -719,7 +716,8 @@ static void M_CheckCVARs(void)
 
     r_berserkintensity = BETWEEN(r_berserkintensity_min, r_berserkintensity, r_berserkintensity_max);
 
-    if (r_blood != r_blood_none && r_blood != r_blood_red && r_blood != r_blood_all && r_blood != r_blood_green)
+    if (r_blood != r_blood_none && r_blood != r_blood_red && r_blood != r_blood_all && r_blood != r_blood_green
+        && r_blood != r_blood_nofuzz)
         r_blood = r_blood_default;
 
     r_bloodsplats_max = BETWEEN(r_bloodsplats_max_min, r_bloodsplats_max, r_bloodsplats_max_max);

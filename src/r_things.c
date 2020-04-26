@@ -615,9 +615,6 @@ static void R_ProjectSprite(mobj_t *thing)
     if (thing->player && thing->player->mo == thing)
         return;
 
-    if (thing->info->spawnstate == S_BLOOD1 && r_blood == r_blood_none)
-        return;
-
     // [AM] Interpolate between current and last position, if prudent.
     if (thing->interpolate && interpolatesprites)
     {
@@ -741,8 +738,15 @@ static void R_ProjectSprite(mobj_t *thing)
     else
         vis->shadowpos = 1;
 
-    if ((thing->flags & MF_FUZZ) && pausesprites)
-        vis->colfunc = (r_textures ? R_DrawPausedFuzzColumn : thing->colfunc);
+    if (thing->flags & MF_FUZZ)
+    {
+        if (r_blood == r_blood_nofuzz && thing->type == MT_FUZZYBLOOD)
+            vis->colfunc = (r_translucency ? R_DrawTranslucent33Column : R_DrawColumn);
+        else if (pausesprites)
+            vis->colfunc = (r_textures ? R_DrawPausedFuzzColumn : thing->colfunc);
+        else
+            vis->colfunc = (invulnerable && r_textures ? thing->altcolfunc : thing->colfunc);
+    }
     else
         vis->colfunc = (invulnerable && r_textures ? thing->altcolfunc : thing->colfunc);
 
@@ -866,6 +870,11 @@ static void R_ProjectBloodSplat(const bloodsplat_t *splat)
     else if (r_blood == r_blood_red)
     {
         vis->blood = MT_BLOOD;
+        vis->colfunc = (r_bloodsplats_translucency ? R_DrawBloodSplatColumn : R_DrawSolidBloodSplatColumn);
+    }
+    else if (r_blood == r_blood_nofuzz)
+    {
+        vis->blood = (splat->colfunc == fuzzcolfunc ? MT_BLOOD : splat->blood);
         vis->colfunc = (r_bloodsplats_translucency ? R_DrawBloodSplatColumn : R_DrawSolidBloodSplatColumn);
     }
     else

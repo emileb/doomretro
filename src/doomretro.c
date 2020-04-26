@@ -43,11 +43,9 @@
 #include "SDL_syswm.h"
 #endif
 
-#include "c_console.h"
 #include "d_main.h"
 #include "doomstat.h"
 #include "i_gamepad.h"
-#include "i_midirpc.h"
 #include "m_argv.h"
 #include "m_config.h"
 #include "version.h"
@@ -78,42 +76,6 @@ static void I_SetProcessDPIAware(void)
     }
 }
 
-static HHOOK    g_hKeyboardHook;
-
-void G_ScreenShot(void);
-
-LRESULT CALLBACK LowLevelKeyboardProc(int nCode, WPARAM wParam, LPARAM lParam)
-{
-    dboolean    bEatKeystroke = false;
-
-    if (nCode == HC_ACTION)
-        switch (wParam)
-        {
-            case WM_KEYDOWN:
-            case WM_SYSKEYDOWN:
-            case WM_KEYUP:
-            case WM_SYSKEYUP:
-                if (windowfocused)
-                {
-                    DWORD   vkCode = ((KBDLLHOOKSTRUCT *)lParam)->vkCode;
-
-                    if (vkCode == VK_LWIN || vkCode == VK_RWIN)
-                        bEatKeystroke = ((!menuactive && !paused && !consoleactive) || vid_fullscreen);
-                    else if (keyboardscreenshot == KEY_PRINTSCREEN && vkCode == VK_SNAPSHOT)
-                    {
-                        if (wParam == WM_KEYDOWN)
-                            G_ScreenShot();
-
-                        bEatKeystroke = true;
-                    }
-                }
-
-                break;
-        }
-
-    return (bEatKeystroke ? 1 : CallNextHookEx(g_hKeyboardHook, nCode, wParam, lParam));
-}
-
 static WNDPROC  oldProc;
 static HICON    icon;
 
@@ -139,18 +101,24 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
         else if ((wParam & 0xFFF0) == SC_KEYMENU)
             return false;
     }
-    else if (msg == WM_SYSKEYDOWN && wParam == VK_RETURN && !(lParam & 0x40000000))
+    else if (msg == WM_SYSKEYDOWN)
     {
-        I_ToggleFullscreen();
-        return true;
+        if (wParam == VK_RETURN && !(lParam & 0x40000000))
+        {
+            I_ToggleFullscreen();
+            return true;
+        }
     }
     else if (msg == WM_DEVICECHANGE)
     {
         I_ShutdownGamepad();
         I_InitGamepad();
     }
-    else if (msg == WM_SIZE && !vid_fullscreen)
-        I_WindowResizeBlit();
+    else if (msg == WM_SIZE)
+    {
+        if (!vid_fullscreen)
+            I_WindowResizeBlit();
+    }
     else if (msg == WM_GETMINMAXINFO)
     {
         LPMINMAXINFO    minmaxinfo = (LPMINMAXINFO)lParam;
@@ -215,13 +183,6 @@ static void I_AccessibilityShortcutKeys(dboolean bAllowKeys)
     }
 }
 
-LONG WINAPI ExceptionHandler(LPEXCEPTION_POINTERS info)
-{
-    I_MidiRPCClientShutDown();
-
-    return EXCEPTION_CONTINUE_SEARCH;
-}
-
 void I_InitWindows32(void)
 {
     HINSTANCE       handle = GetModuleHandle(NULL);
@@ -242,14 +203,11 @@ void I_InitWindows32(void)
 
     windowborderwidth = (GetSystemMetrics(SM_CXFRAME) + GetSystemMetrics(SM_CXPADDEDBORDER)) * 2;
     windowborderheight = (GetSystemMetrics(SM_CYFRAME) + GetSystemMetrics(SM_CXPADDEDBORDER)) * 2 + GetSystemMetrics(SM_CYCAPTION);
-
-    SetUnhandledExceptionFilter(ExceptionHandler);
 }
 
 void I_ShutdownWindows32(void)
 {
     DestroyIcon(icon);
-    UnhookWindowsHookEx(g_hKeyboardHook);
     ReleaseMutex(hInstanceMutex);
     CloseHandle(hInstanceMutex);
     I_AccessibilityShortcutKeys(true);
@@ -262,6 +220,9 @@ int main_android(int argc, char **argv)
 int main(int argc, char **argv)
 #endif
 {
+    myargc = argc;
+    myargv = argv;
+
 #if defined(_WIN32)
     hInstanceMutex = CreateMutex(NULL, true, PACKAGE_MUTEX);
 
@@ -274,7 +235,8 @@ int main(int argc, char **argv)
         return 1;
     }
 
-    g_hKeyboardHook = SetWindowsHookEx(WH_KEYBOARD_LL, LowLevelKeyboardProc, GetModuleHandle(NULL), 0);
+    RegisterHotKey(NULL, 1, (MOD_ALT | MOD_NOREPEAT), VK_SNAPSHOT);
+    RegisterHotKey(NULL, 2, MOD_NOREPEAT, VK_SNAPSHOT);
 
     // Save the current sticky/toggle/filter key settings so they can be restored them later
     SystemParametersInfo(SPI_GETSTICKYKEYS, sizeof(STICKYKEYS), &g_StartupStickyKeys, 0);
@@ -285,9 +247,6 @@ int main(int argc, char **argv)
 
     I_SetProcessDPIAware();
 #endif
-
-    myargc = argc;
-    myargv = argv;
 
     D_DoomMain();
 

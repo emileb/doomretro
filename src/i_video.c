@@ -62,6 +62,7 @@
 #include "m_menu.h"
 #include "m_misc.h"
 #include "m_random.h"
+#include "r_main.h"
 #include "s_sound.h"
 #include "v_video.h"
 #include "version.h"
@@ -79,6 +80,7 @@
 #endif
 
 // CVARs
+dboolean            alwaysrun = alwaysrun_default;
 dboolean            m_acceleration = m_acceleration_default;
 int                 r_color = r_color_default;
 float               r_gamma = r_gamma_default;
@@ -191,11 +193,9 @@ HANDLE              CapFPSEvent;
 #endif
 
 static dboolean     capslock;
-dboolean            alwaysrun = alwaysrun_default;
 
 evtype_t            lasteventtype = ev_none;
 
-extern dboolean     setsizeneeded;
 extern int          st_palette;
 extern int          windowborderwidth;
 extern int          windowborderheight;
@@ -405,7 +405,7 @@ static int AccelerateMouse(int value)
     return (value > 10 ? value * 2 - 10 : (value < -10 ? value * 2 + 10 : value));
 }
 
-static short __inline clamp(short value, short deadzone)
+static short inline clamp(short value, short deadzone)
 {
     return (ABS(value) < deadzone ? 0 : (gp_analog ? MAX(-SHRT_MAX, value) : SIGN(value) * SHRT_MAX));
 }
@@ -465,7 +465,7 @@ static void I_GetEvent(void)
                 if (event.data2 < SDLK_SPACE || event.data2 > SDLK_z)
                     event.data2 = 0;
 
-                altdown = (Event->key.keysym.mod & KMOD_ALT);
+                altdown = Event->key.keysym.mod & KMOD_ALT;
 
                 if (event.data1)
                 {
@@ -522,7 +522,7 @@ static void I_GetEvent(void)
 
                 event.type = ev_keyup;
                 event.data1 = translatekey[scancode];
-                altdown = (Event->key.keysym.mod & KMOD_ALT);
+                altdown = Event->key.keysym.mod & KMOD_ALT;
                 keydown = 0;
 
 #if !defined(_WIN32)
@@ -530,7 +530,6 @@ static void I_GetEvent(void)
                 if (event.data1 == KEY_ENTER)
                     enterdown = false;
 #endif
-
                 if (event.data1)
                     D_PostEvent(&event);
 
@@ -838,7 +837,8 @@ static void CalculateFPS(void)
         starttime = currenttime;
     }
 
-    C_UpdateFPS();
+    if (framespersecond)
+        C_UpdateFPS();
 }
 
 #if defined(_WIN32)
@@ -1119,8 +1119,11 @@ static void GetDisplays(void)
 
 void I_CreateExternalAutomap(int outputlevel)
 {
-    uint32_t    rmask, gmask, bmask, amask;
-    int         bpp;
+    uint32_t    rmask = 0;
+    uint32_t    gmask = 0;
+    uint32_t    bmask = 0;
+    uint32_t    amask = 0;
+    int         bpp = 0;
     int         am_displayindex = !displayindex;
 
     mapscreen = *screens;
@@ -1155,10 +1158,9 @@ void I_CreateExternalAutomap(int outputlevel)
     mapsurface = SDL_CreateRGBSurface(0, SCREENWIDTH, SCREENHEIGHT, 8, 0, 0, 0, 0);
 
 
-    if (SDL_PixelFormatEnumToMasks(SDL_GetWindowPixelFormat(mapwindow), &bpp, &rmask, &gmask, &bmask, &amask))
-        mapbuffer = SDL_CreateRGBSurface(0, SCREENWIDTH, SCREENHEIGHT, 32, rmask, gmask, bmask, amask);
-    else
-        mapbuffer = SDL_CreateRGBSurface(0, SCREENWIDTH, SCREENHEIGHT, 32, 0, 0, 0, 0);
+    SDL_PixelFormatEnumToMasks(SDL_GetWindowPixelFormat(mapwindow), &bpp, &rmask, &gmask, &bmask, &amask);
+    mapbuffer = SDL_CreateRGBSurface(0, SCREENWIDTH, SCREENHEIGHT, bpp, rmask, gmask, bmask, amask);
+
 
     SDL_FillRect(mapbuffer, NULL, 0);
 
@@ -1376,8 +1378,11 @@ static void SetVideoMode(dboolean output)
     int                 rendererflags = SDL_RENDERER_TARGETTEXTURE;
     int                 windowflags = SDL_WINDOW_RESIZABLE;
     int                 width, height;
-    uint32_t            rmask, gmask, bmask, amask;
-    int                 bpp;
+    uint32_t            rmask = 0;
+    uint32_t            gmask = 0;
+    uint32_t            bmask = 0;
+    uint32_t            amask = 0;
+    int                 bpp = 0;
     SDL_RendererInfo    rendererinfo;
     const char          *displayname = SDL_GetDisplayName((displayindex = vid_display - 1));
 
@@ -1785,10 +1790,8 @@ static void SetVideoMode(dboolean output)
 
     screens[0] = surface->pixels;
 
-    if (SDL_PixelFormatEnumToMasks(SDL_GetWindowPixelFormat(window), &bpp, &rmask, &gmask, &bmask, &amask))
-        buffer = SDL_CreateRGBSurface(0, SCREENWIDTH, SCREENHEIGHT, 32, rmask, gmask, bmask, amask);
-    else
-        buffer = SDL_CreateRGBSurface(0, SCREENWIDTH, SCREENHEIGHT, 32, 0, 0, 0, 0);
+    SDL_PixelFormatEnumToMasks(SDL_GetWindowPixelFormat(window), &bpp, &rmask, &gmask, &bmask, &amask);
+    buffer = SDL_CreateRGBSurface(0, SCREENWIDTH, SCREENHEIGHT, bpp, rmask, gmask, bmask, amask);
 
     SDL_FillRect(buffer, NULL, 0);
 
@@ -1805,7 +1808,6 @@ static void SetVideoMode(dboolean output)
     if (nearestlinear)
     {
         SDL_SetHintWithPriority(SDL_HINT_RENDER_SCALE_QUALITY, vid_scalefilter_linear, SDL_HINT_OVERRIDE);
-
 #ifdef __ANDROID__
         texture_upscaled = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_TARGET, upscaledwidth * SCREENWIDTH,
             upscaledheight * SCREENHEIGHT);
@@ -2034,8 +2036,6 @@ void I_InitGraphics(void)
 #if defined(_WIN32)
     I_InitWindows32();
 #endif
-
-    SDL_EventState(SDL_SYSWMEVENT, SDL_ENABLE);
 
     SDL_SetWindowTitle(window, PACKAGE_NAME);
 

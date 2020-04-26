@@ -474,7 +474,7 @@ void P_SetLifts(void)
 //
 
 //
-// getSide()
+// getSide
 // Will return a side_t*
 //  given the number of the current sector,
 //  the line number, and the side (0/1) that you want.
@@ -485,7 +485,7 @@ side_t *getSide(int currentSector, int line, int side)
 }
 
 //
-// getSector()
+// getSector
 // Will return a sector_t*
 //  given the number of the current sector,
 //  the line number and the side (0/1) that you want.
@@ -496,7 +496,7 @@ sector_t *getSector(int currentSector, int line, int side)
 }
 
 //
-// twoSided()
+// twoSided
 // Given the sector number and the line number,
 //  it will tell you whether the line is two-sided or not.
 //
@@ -508,7 +508,7 @@ dboolean twoSided(int sector, int line)
 }
 
 //
-// getNextSector()
+// getNextSector
 // Return sector_t * of sector next to current.
 // NULL if not two-sided line
 //
@@ -523,7 +523,7 @@ sector_t *getNextSector(line_t *line, sector_t *sec)
 }
 
 //
-// P_IsSelfReferencingSector()
+// P_IsSelfReferencingSector
 //
 dboolean P_IsSelfReferencingSector(sector_t *sec)
 {
@@ -542,7 +542,7 @@ dboolean P_IsSelfReferencingSector(sector_t *sec)
 }
 
 //
-// P_FindLowestFloorSurrounding()
+// P_FindLowestFloorSurrounding
 // FIND LOWEST FLOOR HEIGHT IN SURROUNDING SECTORS
 //
 fixed_t P_FindLowestFloorSurrounding(sector_t *sec)
@@ -562,7 +562,7 @@ fixed_t P_FindLowestFloorSurrounding(sector_t *sec)
 }
 
 //
-// P_FindHighestFloorSurrounding()
+// P_FindHighestFloorSurrounding
 // FIND HIGHEST FLOOR HEIGHT IN SURROUNDING SECTORS
 //
 fixed_t P_FindHighestFloorSurrounding(sector_t *sec)
@@ -644,7 +644,7 @@ fixed_t P_FindNextLowestFloor(sector_t *sec, int currentheight)
 }
 
 //
-// P_FindNextLowestCeiling()
+// P_FindNextLowestCeiling
 //
 // Passed a sector and a ceiling height, returns the fixed point value
 // of the largest ceiling height in a surrounding sector smaller than
@@ -680,7 +680,7 @@ fixed_t P_FindNextLowestCeiling(sector_t *sec, int currentheight)
 }
 
 //
-// P_FindNextHighestCeiling()
+// P_FindNextHighestCeiling
 //
 // Passed a sector and a ceiling height, returns the fixed point value
 // of the smallest ceiling height in a surrounding sector larger than
@@ -754,7 +754,7 @@ fixed_t P_FindHighestCeilingSurrounding(sector_t *sec)
 }
 
 //
-// P_FindShortestTextureAround()
+// P_FindShortestTextureAround
 //
 // Passed a sector number, returns the shortest lower texture on a
 // linedef bounding the sector.
@@ -786,7 +786,7 @@ fixed_t P_FindShortestTextureAround(int secnum)
 }
 
 //
-// P_FindShortestUpperAround()
+// P_FindShortestUpperAround
 //
 // Passed a sector number, returns the shortest upper texture on a
 // linedef bounding the sector.
@@ -818,7 +818,7 @@ fixed_t P_FindShortestUpperAround(int secnum)
 }
 
 //
-// P_FindModelFloorSector()
+// P_FindModelFloorSector
 //
 // Passed a floor height and a sector number, return a pointer to a
 // a sector with that floor height across the lowest numbered two sided
@@ -849,7 +849,7 @@ sector_t *P_FindModelFloorSector(fixed_t floordestheight, int secnum)
 }
 
 //
-// P_FindModelCeilingSector()
+// P_FindModelCeilingSector
 //
 // Passed a ceiling height and a sector number, return a pointer to a
 // a sector with that ceiling height across the lowest numbered two sided
@@ -953,7 +953,7 @@ int P_FindMinSurroundingLight(sector_t *sec, int min)
 }
 
 //
-// P_CanUnlockGenDoor()
+// P_CanUnlockGenDoor
 //
 // Passed a generalized locked door linedef and a player, returns whether
 // the player has the keys necessary to unlock that door.
@@ -1133,7 +1133,7 @@ dboolean P_CanUnlockGenDoor(line_t *line)
 }
 
 //
-// P_SectorActive()
+// P_SectorActive
 //
 // Passed a linedef special class (floor, ceiling, lighting) and a sector
 // returns whether the sector is already busy with a linedef special of the
@@ -1153,7 +1153,7 @@ dboolean P_SectorActive(special_e t, sector_t *sec)
 }
 
 //
-// P_CheckTag()
+// P_CheckTag
 //
 // Passed a line, returns true if the tag is non-zero or the line special
 // allows no tag without harm.
@@ -2251,7 +2251,7 @@ void P_PlayerInSpecialSector(sector_t *sector)
                 break;
 
             case 1:
-                // 2/5 damage per 31 ticks
+                // 2/5 damage per 31 tics
                 if (!viewplayer->powers[pw_ironfeet])
                     if (!(leveltime & 0x1F))
                         P_DamageMobj(viewplayer->mo, NULL, NULL, 5, true);
@@ -2259,7 +2259,7 @@ void P_PlayerInSpecialSector(sector_t *sector)
                 break;
 
             case 2:
-                // 5/10 damage per 31 ticks
+                // 5/10 damage per 31 tics
                 if (!viewplayer->powers[pw_ironfeet])
                     if (!(leveltime & 0x1F))
                         P_DamageMobj(viewplayer->mo, NULL, NULL, 10, true);
@@ -2267,7 +2267,7 @@ void P_PlayerInSpecialSector(sector_t *sector)
                 break;
 
             case 3:
-                // 10/20 damage per 31 ticks
+                // 10/20 damage per 31 tics
                 if (!viewplayer->powers[pw_ironfeet] || M_Random() < 5) // take damage even with suit
                     if (!(leveltime & 0x1F))
                         P_DamageMobj(viewplayer->mo, NULL, NULL, 20, true);
@@ -2474,8 +2474,17 @@ void P_SpawnSpecials(void)
 
     if (p)
     {
-        P_SetTimer(atoi(myargv[p + 1]));
-        C_Output("A <b>-timer</b> parameter was found on the command-line. The time limit for each map is %i minutes.", timer);
+        int minutes = atoi(myargv[p + 1]);
+
+        if (minutes > 0)
+        {
+            char    *temp = commify(minutes);
+
+            C_Output("A <b>-timer</b> parameter was found on the command-line. The time limit for each map is %s minute%s.",
+                temp, (minutes == 1 ? "" : "s"));
+            P_SetTimer(minutes);
+            free(temp);
+        }
     }
 
     if (M_CheckParm("-avg"))
@@ -2500,15 +2509,12 @@ void P_SpawnSpecials(void)
                 break;
 
             case LightBlinks_2Hz:
+            case DamageNegative10Or20PercentHealthAndLightBlinks_2Hz:
                 P_SpawnStrobeFlash(sector, FASTDARK, false);
                 break;
 
             case LightBlinks_1Hz:
                 P_SpawnStrobeFlash(sector, SLOWDARK, false);
-                break;
-
-            case DamageNegative10Or20PercentHealthAndLightBlinks_2Hz:
-                P_SpawnStrobeFlash(sector, FASTDARK, false);
                 break;
 
             case LightGlows_1PlusSec:
@@ -2557,7 +2563,6 @@ void P_SpawnSpecials(void)
     P_SpawnPushers();                   // phares 3/20/98: New pusher model using linedefs
 
     for (int i = 0; i < numlines; i++, line++)
-    {
         switch (line->special)
         {
             // killough 3/7/98:
@@ -2611,7 +2616,6 @@ void P_SpawnSpecials(void)
 
                 break;
         }
-    }
 }
 
 // killough 2/28/98:
