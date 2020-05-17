@@ -155,7 +155,7 @@ char *M_GetAppDataFolder(void)
 {
 #ifdef __ANDROID__
     char    *path = malloc(MAX_PATH);
-    return strcpy(path,"./doomretro/"); // CWD
+    return strcpy(path,"./user_files/doomretro/"); // CWD
     return path;
 #endif
 
