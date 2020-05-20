@@ -433,15 +433,15 @@ void P_UpdateHealthStat(int num)
 // P_GiveBody
 // Returns false if the body isn't needed at all
 //
-dboolean P_GiveBody(int num, dboolean stat)
+dboolean P_GiveBody(int num, int max, dboolean stat)
 {
     int oldhealth;
 
-    if (viewplayer->health >= MAXHEALTH)
+    if (viewplayer->health >= max)
         return false;
 
     oldhealth = viewplayer->health;
-    viewplayer->health = MIN(oldhealth + num, MAXHEALTH);
+    viewplayer->health = MIN(oldhealth + num, max);
     viewplayer->mo->health = viewplayer->health;
     healthhighlight = I_GetTimeMS() + HUD_HEALTH_HIGHLIGHT_WAIT;
 
@@ -727,7 +727,7 @@ dboolean P_GivePower(int power)
             break;
 
         case pw_strength:
-            P_GiveBody(100, true);
+            P_GiveBody(100, MAXHEALTH, true);
             break;
 
         case pw_invisibility:
@@ -934,7 +934,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, dboolean message, dbo
 
         // stimpack
         case SPR_STIM:
-            if (!P_GiveBody(10, stat))
+            if (!P_GiveBody(10, MAXHEALTH, stat))
                 return;
 
             if (message)
@@ -944,7 +944,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, dboolean message, dbo
 
         // medikit
         case SPR_MEDI:
-            if (!P_GiveBody(25, stat))
+            if (!P_GiveBody(25, MAXHEALTH, stat))
                 return;
 
             if (message)
@@ -1756,7 +1756,7 @@ static void P_WriteObituary(mobj_t *target, mobj_t *inflicter, mobj_t *source, d
                             (target->type == MT_BARREL ? "exploded" : (gibbed ? "gibbed" : "killed")),
                             targetname,
                             weaponinfo[readyweapon].description,
-                            (readyweapon == wp_fist && viewplayer->powers[pw_strength] ? " while you went berserk" : ""));
+                            (readyweapon == wp_fist && viewplayer->powers[pw_strength] ? " while berserk" : ""));
                     }
                 }
                 else
@@ -1784,7 +1784,7 @@ static void P_WriteObituary(mobj_t *target, mobj_t *inflicter, mobj_t *source, d
                             (target->type == MT_BARREL ? "exploded" : (gibbed ? "gibbed" : "killed")),
                             targetname,
                             weaponinfo[readyweapon].description,
-                            (readyweapon == wp_fist && viewplayer->powers[pw_strength] ? " while they went berserk" : ""));
+                            (readyweapon == wp_fist && viewplayer->powers[pw_strength] ? " while berserk" : ""));
                     }
                 }
             }
@@ -2042,6 +2042,9 @@ void P_KillMobj(mobj_t *target, mobj_t *inflicter, mobj_t *source)
 
         if (r_mirroredweapons && (M_Random() & 1))
             mo->flags2 |= MF2_MIRRORED;
+
+        if (massacre)
+            mo->flags2 |= MF2_MASSACRE;
     }
 }
 
@@ -2147,17 +2150,22 @@ void P_DamageMobj(mobj_t *target, mobj_t *inflicter, mobj_t *source, int damage,
 
     if (tplayer)
     {
+        int cheats = tplayer->cheats;
         int damagecount;
 
         if (freeze && (!inflicter || !inflicter->player))
+            return;
+
+        // ignore damage if in god mode or player about to warp
+        if ((cheats & CF_GODMODE) || idclevtics)
             return;
 
         // end of game hell hack
         if (target->subsector->sector->special == DamageNegative10Or20PercentHealthAndEndLevel && damage >= target->health)
             damage = target->health - 1;
 
-        // below certain threshold, ignore damage in god mode, or with invulnerability power-up
-        if ((tplayer->cheats & CF_GODMODE) || idclevtics || (damage < 1000 && tplayer->powers[pw_invulnerability]))
+        // below certain threshold, ignore damage if player has invulnerability power-up
+        if (tplayer->powers[pw_invulnerability] && damage < 1000)
             return;
 
         if (adjust && tplayer->armorpoints)
@@ -2171,19 +2179,24 @@ void P_DamageMobj(mobj_t *target, mobj_t *inflicter, mobj_t *source, int damage,
                 tplayer->armortype = armortype_none;
             }
 
-            tplayer->armorpoints -= saved;
-            damage -= saved;
-
             if (saved)
+            {
+                tplayer->armorpoints -= saved;
+                damage -= saved;
                 armorhighlight = I_GetTimeMS() + HUD_ARMOR_HIGHLIGHT_WAIT;
+            }
         }
 
         tplayer->health -= damage;
         target->health -= damage;
-        healthhighlight = I_GetTimeMS() + HUD_HEALTH_HIGHLIGHT_WAIT;
 
-        if (tplayer->health <= 0 && (tplayer->cheats & CF_BUDDHA))
+        if ((cheats & CF_BUDDHA) && tplayer->health <= 0)
         {
+            int stat = tplayer->health + damage - 1;
+
+            tplayer->damagereceived += stat;
+            stat_damagereceived = SafeAdd(stat_damagereceived, stat);
+
             tplayer->health = 1;
             target->health = 1;
         }
@@ -2233,7 +2246,7 @@ void P_DamageMobj(mobj_t *target, mobj_t *inflicter, mobj_t *source, int damage,
             // [crispy] the lethal pellet of a point-blank SSG blast
             // gets an extra damage boost for the occasional gib chance
             if (splayer && splayer->readyweapon == wp_supershotgun && info->xdeathstate
-                && P_CheckMeleeRange(target) && damage >= 10 && info->gibhealth < 0)
+                && damage >= 10 && info->gibhealth < 0 && P_CheckMeleeRange(target))
                 target->health = info->gibhealth - 1;
 
             P_KillMobj(target, inflicter, source);
@@ -2251,6 +2264,9 @@ void P_DamageMobj(mobj_t *target, mobj_t *inflicter, mobj_t *source, int damage,
 
     if ((!target->threshold || type == MT_VILE) && source && source != target && source->type != MT_VILE)
     {
+        state_t *state = target->state;
+        state_t *spawnstate = &states[info->spawnstate];
+
         // if not intent on another player, chase after this one
         if (!target->lastenemy || target->lastenemy->health <= 0 || !target->lastenemy->player)
             P_SetTarget(&target->lastenemy, target->target);    // remember last enemy - killough
@@ -2258,7 +2274,8 @@ void P_DamageMobj(mobj_t *target, mobj_t *inflicter, mobj_t *source, int damage,
         P_SetTarget(&target->target, source);                   // killough 11/98
         target->threshold = BASETHRESHOLD;
 
-        if (target->state == &states[info->spawnstate] && info->seestate != S_NULL)
+        // [BH] Fix enemy not waking up if damaged during second frame of their idle animation
+        if ((state == spawnstate || state == &states[spawnstate->nextstate]) && info->seestate != S_NULL)
             P_SetMobjState(target, info->seestate);
     }
 
@@ -2278,7 +2295,7 @@ void P_ResurrectMobj(mobj_t *target)
 
     target->height = info->height;
     target->radius = info->radius;
-    target->flags = (info->flags | (target->flags & MF_FRIEND));
+    target->flags = info->flags | (target->flags & MF_FRIEND);
     target->flags2 = info->flags2;
     target->health = info->spawnhealth;
     target->shadowoffset = info->shadowoffset;

@@ -318,7 +318,8 @@ void D_Display(void)
             }
 
             if (r_detail == r_detail_low)
-                V_LowGraphicDetail();
+                V_LowGraphicDetail(viewwindowx, viewwindowy * SCREENWIDTH, viewwindowx + viewwidth,
+                    (viewwindowy + viewheight) * SCREENWIDTH, lowpixelwidth, lowpixelheight);
         }
 
         HU_Drawer();
@@ -1730,7 +1731,7 @@ static void D_ProcessDehInWad(void)
     else
     {
         if (chex1)
-            ProcessDehFile(NULL, W_GetNumForName("CHEXDEH"), true);
+            ProcessDehFile(NULL, W_GetNumForName("CHEXBEX"), true);
 
         for (int i = numlumps - 1; i >= 0; i--)
             if (M_StringCompare(lumpinfo[i]->name, "DEHACKED")
@@ -1751,8 +1752,11 @@ static void D_ParseStartupString(const char *string)
     for (size_t i = 0, start = 0; i < len; i++)
         if (string[i] == '\n' || i == len - 1)
         {
-            C_Output(M_SubString(string, start, i - start));
+            char    *temp = M_SubString(string, start, i - start);
+
+            C_Output(temp);
             start = i + 1;
+            free(temp);
         }
 }
 
@@ -2303,7 +2307,7 @@ static void D_DoomMainSetup(void)
 
     // Ty 04/08/98 - Add 5 lines of misc. data, only if non-blank
     // The expectation is that these will be set in a .bex file
-    if (*startup1 || *startup2 || *startup3 || *startup4 || *startup5)
+    if ((*startup1 || *startup2 || *startup3 || *startup4 || *startup5) && !FREEDOOM)
     {
         C_AddConsoleDivider();
 

@@ -184,7 +184,6 @@ patch_t                     *faces[ST_NUMFACES];
 
 // main bar right
 static patch_t              *armsbg;
-static patch_t              *armsbg2;
 
 // weapon ownership patches
 static patch_t              *arms[6][2];
@@ -391,35 +390,25 @@ static void ST_RefreshBackground(void)
     if (st_statusbaron)
     {
 #if SCREENSCALE == 1
-        V_DrawSTBARPatch(ST_X, ORIGINALHEIGHT - ORIGINALSBARHEIGHT, sbar);
-        V_DrawPatch(ST_ARMSBGX + hacx * 4, ORIGINALHEIGHT - ORIGINALSBARHEIGHT, 0, armsbg);
-#else
-        if (STBAR >= 3 || r_detail == r_detail_low)
+        if (STBAR >= 3)
         {
             V_DrawSTBARPatch(ST_X, ORIGINALHEIGHT - ORIGINALSBARHEIGHT, sbar);
             V_DrawPatch(ST_ARMSBGX + hacx * 4, ORIGINALHEIGHT - ORIGINALSBARHEIGHT, 0, armsbg);
         }
         else
+            V_DrawSTBARPatch(ST_X, ORIGINALHEIGHT - ORIGINALSBARHEIGHT, sbar);
+#else
+        if (STBAR >= 3)
         {
-            V_DrawBigPatch(ST_X, ST_Y, sbar2);
-            V_DrawBigPatch(ST_ARMSBGX * 2, ST_Y, armsbg2);
+            V_DrawSTBARPatch(ST_X, ORIGINALHEIGHT - ORIGINALSBARHEIGHT, sbar);
+            V_DrawPatch(ST_ARMSBGX + hacx * 4, ORIGINALHEIGHT - ORIGINALSBARHEIGHT, 0, armsbg);
         }
+        else if (r_detail == r_detail_low)
+            V_DrawSTBARPatch(ST_X, ORIGINALHEIGHT - ORIGINALSBARHEIGHT, sbar);
+        else
+            V_DrawBigPatch(ST_X, ST_Y, sbar2);
 #endif
     }
-}
-
-//
-// ST_AutomapEvent
-//
-// haleyjd 09/29/04: Replaces the weird hack Dave Taylor put into
-// ST_Responder to toggle the status bar when the automap is toggled.
-// The automap now calls this function instead of sending fake events
-// to ST_Responder, allowing that function to be minimized.
-//
-void ST_AutomapEvent(int type)
-{
-    if (type == AM_MSGENTERED)
-        st_firsttime = true;
 }
 
 extern char cheatkey;
@@ -460,7 +449,7 @@ dboolean ST_Responder(event_t *ev)
                     // [BH] remember player's current health,
                     //  and only set to 100% if less than 100%
                     oldhealth = viewplayer->health;
-                    P_GiveBody(god_health, false);
+                    P_GiveBody(god_health, god_health, false);
 
                     if (oldhealth < initial_health)
                         P_AddBonus();
@@ -1115,7 +1104,7 @@ static void ST_UpdateFaceWidget(void)
     {
         if (viewplayer->damagecount && viewplayer->attacker && viewplayer->attacker != viewplayer->mo)
         {
-            // [BH] fix ouch-face when damage > 20
+            // [BH] Fix <https://doomwiki.org/wiki/Ouch_face>.
             if (st_oldhealth - viewplayer->health > ST_MUCHPAIN)
             {
                 priority = 8;   // [BH] keep ouch-face visible
@@ -1151,7 +1140,7 @@ static void ST_UpdateFaceWidget(void)
         // getting hurt because of your own damn stupidity
         if (viewplayer->damagecount)
         {
-            // [BH] fix ouch-face when damage > 20
+            // [BH] Fix <https://doomwiki.org/wiki/Ouch_face>.
             if (st_oldhealth - viewplayer->health > ST_MUCHPAIN)
             {
                 priority = 7;
@@ -1398,12 +1387,9 @@ static void ST_LoadUnloadGraphics(load_callback_t callback)
 
     // arms background
     callback("STARMS", &armsbg);
-    callback("STARMS2", &armsbg2);
 
     armsbg->leftoffset = 0;
     armsbg->topoffset = 0;
-    armsbg2->leftoffset = 0;
-    armsbg2->topoffset = 0;
 
     // arms ownership widgets
     // [BH] now manually drawn
@@ -1484,9 +1470,9 @@ static void ST_LoadUnloadGraphics(load_callback_t callback)
 static void ST_LoadCallback(char *lumpname, patch_t **variable)
 {
     if (M_StringCompare(lumpname, "STARMS"))
-        *variable = (FREEDOOM || hacx ? W_CacheLastLumpName("STARMS") : W_CacheLumpName("STARMS"));
+        *variable = ((FREEDOOM && !modifiedgame) || hacx ? W_CacheLastLumpName("STARMS") : W_CacheLumpName("STARMS"));
     else if (M_StringCompare(lumpname, "STBAR"))
-        *variable = (FREEDOOM || hacx ? W_CacheLastLumpName("STBAR") : W_CacheLumpName("STBAR"));
+        *variable = ((FREEDOOM && !modifiedgame) || hacx ? W_CacheLastLumpName("STBAR") : W_CacheLumpName("STBAR"));
     else
         *variable = W_CacheLumpName(lumpname);
 }

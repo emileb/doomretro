@@ -76,7 +76,6 @@ static hu_textline_t    w_title;
 
 dboolean                message_on;
 dboolean                message_dontfuckwithme;
-dboolean                message_menu;
 static dboolean         message_external;
 static dboolean         message_nottobefuckedwith;
 
@@ -559,7 +558,27 @@ static void HU_DrawHUD(void)
 
     if (viewplayer->neededcardflash)
     {
-        if ((patch = keypics[viewplayer->neededcard].patch))
+        const int   neededcard = viewplayer->neededcard;
+
+        if (neededcard == it_allkeys)
+        {
+            if (!gamepaused && keywait < currenttime)
+            {
+                showkey = !showkey;
+                keywait = currenttime + HUD_KEY_WAIT;
+                viewplayer->neededcardflash--;
+            }
+
+            if (showkey || gamepaused)
+                for (int i = 0; i < NUMCARDS; i++)
+                    if ((patch = keypics[i].patch) && viewplayer->cards[i] != i)
+                    {
+                        keypic_x -= SHORT(patch->width);
+                        hudfunc(keypic_x, HUD_KEYS_Y - (SHORT(patch->height) - 16), patch, tinttab66);
+                        keypic_x -= 5;
+                    }
+        }
+        else if ((patch = keypics[neededcard].patch))
         {
             if (!gamepaused && keywait < currenttime)
             {
@@ -893,24 +912,55 @@ static void HU_DrawAltHUD(void)
 
     if (viewplayer->neededcardflash)
     {
-        if (!(menuactive || paused || consoleactive || freeze))
-        {
-            int currenttime = I_GetTimeMS();
+        const dboolean  gamepaused = (menuactive || paused || consoleactive || freeze);
+        const int       neededcard = viewplayer->neededcard;
 
-            if (keywait < currenttime)
+        if (neededcard == it_allkeys)
+        {
+            if (!gamepaused)
             {
-                showkey = !showkey;
-                keywait = currenttime + HUD_KEY_WAIT;
-                viewplayer->neededcardflash--;
+                int currenttime = I_GetTimeMS();
+
+                if (keywait < currenttime)
+                {
+                    showkey = !showkey;
+                    keywait = currenttime + HUD_KEY_WAIT;
+                    viewplayer->neededcardflash--;
+                }
             }
+
+            if (showkey || gamepaused)
+                for (int i = 0; i < NUMCARDS; i++)
+                    if (viewplayer->cards[i] != i)
+                    {
+                        altkeypic_t altkeypic = altkeypics[i];
+                        patch_t     *patch = altkeypic.patch;
+
+                        althudfunc(keypic_x, ALTHUD_Y, patch, WHITE, altkeypic.color);
+                        keypic_x += SHORT(patch->width) + 4;
+                    }
         }
-
-        if (showkey)
+        else
         {
-            altkeypic_t altkeypic = altkeypics[viewplayer->neededcard];
-            patch_t     *patch = altkeypic.patch;
+            if (!gamepaused)
+            {
+                int currenttime = I_GetTimeMS();
 
-            althudfunc(keypic_x, ALTHUD_Y, patch, WHITE, altkeypic.color);
+                if (keywait < currenttime)
+                {
+                    showkey = !showkey;
+                    keywait = currenttime + HUD_KEY_WAIT;
+                    viewplayer->neededcardflash--;
+                }
+            }
+
+            if (showkey || gamepaused)
+            {
+                altkeypic_t altkeypic = altkeypics[viewplayer->neededcard];
+                patch_t     *patch = altkeypic.patch;
+
+                althudfunc(keypic_x, ALTHUD_Y, patch, WHITE, altkeypic.color);
+            }
         }
     }
     else
@@ -965,7 +1015,7 @@ void HU_DrawDisk(void)
 
 void HU_Drawer(void)
 {
-    if (menuactive && !message_menu)
+    if (menuactive)
         return;
 
     if (w_message.l->l[0])
@@ -995,9 +1045,6 @@ void HU_Drawer(void)
         }
 
         HUlib_DrawSText(&w_message, message_external);
-
-        if (message_menu)
-            return;
     }
 
     if (automapactive)
@@ -1069,11 +1116,10 @@ void HU_Ticker(void)
     const dboolean  idmypos = viewplayer->cheats & CF_MYPOS;
 
     // tic down message counter if message is up
-    if (message_counter && (!menuactive || message_menu) && !idmypos && !--message_counter)
+    if (message_counter && !menuactive && !idmypos && !--message_counter)
     {
         message_on = false;
         message_nottobefuckedwith = false;
-        message_menu = false;
         message_external = false;
     }
 

@@ -162,6 +162,7 @@ static int      dclicks2;
 
 static int      savegameslot;
 static char     savedescription[SAVESTRINGSIZE];
+char            savename[MAX_PATH];
 
 gameaction_t    loadaction = ga_nothing;
 
@@ -371,8 +372,7 @@ void G_BuildTiccmd(ticcmd_t *cmd)
             if (gamekeydown[key] && !keydown)
             {
                 keydown = key;
-                cmd->buttons |= BT_CHANGE;
-                cmd->buttons |= i << BT_WEAPONSHIFT;
+                cmd->buttons |= BT_CHANGE | (i << BT_WEAPONSHIFT);
                 break;
             }
             else if (gamepadbuttons & *gamepadweapons[i])
@@ -380,8 +380,7 @@ void G_BuildTiccmd(ticcmd_t *cmd)
                 if (viewplayer->readyweapon != i || (i == wp_fist && viewplayer->weaponowned[wp_chainsaw])
                     || (i == wp_shotgun && viewplayer->weaponowned[wp_supershotgun]))
                 {
-                    cmd->buttons |= BT_CHANGE;
-                    cmd->buttons |= i << BT_WEAPONSHIFT;
+                    cmd->buttons |= BT_CHANGE | (i << BT_WEAPONSHIFT);
                     break;
                 }
             }
@@ -417,9 +416,7 @@ void G_BuildTiccmd(ticcmd_t *cmd)
         }
 
         // strafe double click
-        bstrafe = mousebuttons[mousestrafe];
-
-        if (bstrafe != dclickstate2 && dclicktime2 > 1)
+        if ((bstrafe = mousebuttons[mousestrafe]) != dclickstate2 && dclicktime2 > 1)
         {
             dclickstate2 = bstrafe;
 
@@ -663,45 +660,51 @@ dboolean G_Responder(event_t *ev)
     // any other key pops up menu if on title screen
     if (gameaction == ga_nothing && gamestate == GS_TITLESCREEN)
     {
-        if (!menuactive && !consoleactive
-            && ((ev->type == ev_keydown
+        if (!menuactive
+            && !consoleactive
+            && ((ev->type == ev_keydown && !keydown)
+            || (ev->type == ev_mouse && mousewait < I_GetTime() && ev->data1)
+            || (ev->type == ev_gamepad
+                && gamepadwait < I_GetTime()
+                && gamepadbuttons
+                && !(gamepadbuttons &(GAMEPAD_DPAD_UP | GAMEPAD_DPAD_DOWN | GAMEPAD_DPAD_LEFT | GAMEPAD_DPAD_RIGHT)))))
+        {
+            if (ev->type == ev_keydown && ev->data1 == keyboardalwaysrun)
+            {
+                keydown = keyboardalwaysrun;
+                G_ToggleAlwaysRun(ev_keydown);
+            }
+            else if (ev->type == ev_keydown && ev->data1 == keyboardscreenshot && keyboardscreenshot == KEY_PRINTSCREEN)
+            {
+                keydown = keyboardscreenshot;
+                G_DoScreenShot();
+            }
+            else if (ev->type == ev_keydown
                 && ev->data1 != KEY_PAUSE
                 && ev->data1 != KEY_SHIFT
                 && ev->data1 != KEY_ALT
                 && ev->data1 != KEY_CTRL
                 && ev->data1 != KEY_CAPSLOCK
                 && ev->data1 != KEY_NUMLOCK
-                && ev->data1 != KEY_PRINTSCREEN
                 && (ev->data1 < KEY_F1 || ev->data1 > KEY_F11)
                 && !((ev->data1 == KEY_ENTER || ev->data1 == KEY_TAB) && altdown))
-                || (ev->type == ev_mouse && mousewait < I_GetTime() && ev->data1)
-                || (ev->type == ev_gamepad
-                    && gamepadwait < I_GetTime()
-                    && gamepadbuttons
-                    && !(gamepadbuttons & (GAMEPAD_DPAD_UP | GAMEPAD_DPAD_DOWN | GAMEPAD_DPAD_LEFT | GAMEPAD_DPAD_RIGHT))))
-            && !keydown)
-        {
-            keydown = ev->data1;
-            gamepadbuttons = 0;
-            gamepadwait = I_GetTime() + 8;
-            mousewait = I_GetTime() + 5;
-
-            logotic = MAX(77, logotic);
-
-            if (splashscreen)
-                pagetic = MIN(pagetic, 10);
-            else
             {
-                M_StartControlPanel();
-                S_StartSound(NULL, sfx_swtchn);
+                keydown = ev->data1;
+                gamepadbuttons = 0;
+                mousewait = I_GetTime() + 5;
+                gamepadwait = mousewait + 3;
+
+                logotic = MAX(77, logotic);
+
+                if (splashscreen)
+                    pagetic = MIN(pagetic, 10);
+                else
+                {
+                    M_StartControlPanel();
+                    S_StartSound(NULL, sfx_swtchn);
+                }
             }
 
-            return true;
-        }
-        else if (ev->type == ev_keydown && ev->data1 == KEY_CAPSLOCK && ev->data1 == keyboardalwaysrun && !keydown)
-        {
-            keydown = KEY_CAPSLOCK;
-            G_ToggleAlwaysRun(ev_keydown);
             return true;
         }
 
@@ -725,9 +728,9 @@ dboolean G_Responder(event_t *ev)
         case ev_keydown:
             key = ev->data1;
 
-            if (key == keyboardprevweapon && !menuactive && !paused)
+            if (key == keyboardprevweapon && !menuactive && !paused && !freeze)
                 G_PrevWeapon();
-            else if (key == keyboardnextweapon && !menuactive && !paused)
+            else if (key == keyboardnextweapon && !menuactive && !paused && !freeze)
                 G_NextWeapon();
             else if (key == KEY_PAUSE && !menuactive && !keydown && !idclevtics)
             {
@@ -750,7 +753,7 @@ dboolean G_Responder(event_t *ev)
                     C_ExecuteInputString(keyactionlist[key]);
             }
 
-            return true;        // eat key down events
+            return true;        // eat events
 
         case ev_keyup:
             keydown = 0;
@@ -767,10 +770,10 @@ dboolean G_Responder(event_t *ev)
             for (int i = 0, j = 1; i < MAX_MOUSE_BUTTONS; i++, j <<= 1)
                 mousebuttons[i] = !!(mousebutton & j);
 
-            if (mouseactionlist[mousebutton][0])
+            if (mouseactionlist[mousebutton][0] && !freeze)
                 C_ExecuteInputString(mouseactionlist[mousebutton]);
 
-            if (!automapactive && !menuactive && !paused)
+            if (!automapactive && !menuactive && !paused && !freeze)
             {
                 if (mousenextweapon < MAX_MOUSE_BUTTONS && mousebuttons[mousenextweapon])
                     G_NextWeapon();
@@ -788,7 +791,7 @@ dboolean G_Responder(event_t *ev)
         }
 
         case ev_mousewheel:
-            if (!automapactive && !menuactive && !paused)
+            if (!automapactive && !menuactive && !paused && !freeze)
             {
                 if (ev->data1 < 0)
                 {
@@ -810,38 +813,39 @@ dboolean G_Responder(event_t *ev)
                 }
             }
 
-            return true;
+            return true;        // eat events
 
         case ev_gamepad:
             if (!automapactive && !menuactive && !paused)
             {
                 static int  wait;
+                int         time = I_GetTime();
 
-                if ((gamepadbuttons & gamepadnextweapon) && wait < I_GetTime())
+                if ((gamepadbuttons & gamepadnextweapon) && wait < time && !freeze)
                 {
-                    wait = I_GetTime() + 7;
+                    wait = time + 7;
 
-                    if (!gamepadpress || gamepadwait < I_GetTime())
+                    if (!gamepadpress || gamepadwait < time)
                     {
                         G_NextWeapon();
                         gamepadpress = false;
                     }
                 }
-                else if ((gamepadbuttons & gamepadprevweapon) && wait < I_GetTime())
+                else if ((gamepadbuttons & gamepadprevweapon) && wait < time && !freeze)
                 {
-                    wait = I_GetTime() + 7;
+                    wait = time + 7;
 
-                    if (!gamepadpress || gamepadwait < I_GetTime())
+                    if (!gamepadpress || gamepadwait < time)
                     {
                         G_PrevWeapon();
                         gamepadpress = false;
                     }
                 }
-                else if ((gamepadbuttons & gamepadalwaysrun) && wait < I_GetTime())
+                else if ((gamepadbuttons & gamepadalwaysrun) && wait < time)
                 {
-                    wait = I_GetTime() + 7;
+                    wait = time + 7;
 
-                    if (!gamepadpress || gamepadwait < I_GetTime())
+                    if (!gamepadpress || gamepadwait < time)
                     {
                         G_ToggleAlwaysRun(ev_gamepad);
                         gamepadpress = false;
@@ -855,10 +859,6 @@ dboolean G_Responder(event_t *ev)
             return false;
     }
 }
-
-void D_Display(void);
-
-static char savename[256];
 
 //
 // G_Ticker

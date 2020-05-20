@@ -275,6 +275,7 @@ static void saveg_read_mobj_t(mobj_t *str)
     str->flags3 = saveg_read32();
     str->inflicter = saveg_read32();
 
+    // [BH] For future features without breaking savegame compatibility
     saveg_read32();
     saveg_read32();
     saveg_read32();
@@ -344,6 +345,7 @@ static void saveg_write_mobj_t(mobj_t *str)
     saveg_write32(str->flags3);
     saveg_write32(str->inflicter);
 
+    // [BH] For future features without breaking savegame compatibility
     saveg_write32(0);
     saveg_write32(0);
     saveg_write32(0);
@@ -513,8 +515,10 @@ static void saveg_read_player_t(void)
     viewplayer->itemspickedup_health = saveg_read32();
     viewplayer->suicides = saveg_read32();
 
-    saveg_read32();
-    saveg_read32();
+    viewplayer->bounce = saveg_read32();
+    viewplayer->bouncemax = saveg_read32();
+
+    // [BH] For future features without breaking savegame compatibility
     saveg_read32();
     saveg_read32();
     saveg_read32();
@@ -611,8 +615,10 @@ static void saveg_write_player_t(void)
     saveg_write32(viewplayer->itemspickedup_health);
     saveg_write32(viewplayer->suicides);
 
-    saveg_write32(0);
-    saveg_write32(0);
+    saveg_write32(viewplayer->bounce);
+    saveg_write32(viewplayer->bouncemax);
+
+    // [BH] For future features without breaking savegame compatibility
     saveg_write32(0);
     saveg_write32(0);
     saveg_write32(0);
@@ -1116,7 +1122,7 @@ void P_UnArchiveWorld(void)
         sector->floorpic = saveg_read16();
         sector->terraintype = terraintypes[sector->floorpic];
         sector->ceilingpic = saveg_read16();
-        sector->lightlevel = saveg_read16();
+        sector->lightlevel = sector->oldlightlevel = saveg_read16();
         sector->special = saveg_read16();
         sector->tag = saveg_read16();
         sector->ceilingdata = NULL;
@@ -1283,7 +1289,7 @@ void P_UnArchiveThinkers(void)
             }
 
             default:
-                I_Error("This savegame is invalid.");
+                I_Error("%s is invalid.", savename);
         }
     }
 }
@@ -1599,7 +1605,7 @@ void P_UnArchiveSpecials(void)
             }
 
             default:
-                I_Error("This savegame is invalid.");
+                I_Error("%s is invalid.", savename);
         }
     }
 }

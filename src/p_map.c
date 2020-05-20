@@ -2030,43 +2030,41 @@ static void PIT_ChangeSector(mobj_t *thing)
             return;
         }
 
-        if (!(flags & MF_NOBLOOD) && thing->blood)
+        if (!(flags & MF_NOBLOOD))
         {
-            int type = thing->type;
+            int radius = ((spritewidth[sprites[thing->sprite].spriteframes[0].lump[0]] >> FRACBITS) >> 1) + 12;
+            int max = M_RandomInt(50, 100) + radius;
+            int x = thing->x;
+            int y = thing->y;
+            int blood = mobjinfo[thing->blood].blood;
+            int floorz = thing->floorz;
 
-            if (!(flags & MF_FUZZ))
+            for (int i = 0; i < max; i++)
             {
-                int blood = mobjinfo[thing->blood].blood;
+                int angle = M_RandomInt(0, FINEANGLES - 1);
 
-                if (blood)
-                {
-                    int radius = ((spritewidth[sprites[thing->sprite].spriteframes[0].lump[0]] >> FRACBITS) >> 1) + 12;
-                    int max = M_RandomInt(50, 100) + radius;
-                    int x = thing->x;
-                    int y = thing->y;
-                    int floorz = thing->floorz;
-
-                    for (int i = 0; i < max; i++)
-                    {
-                        int angle = M_RandomInt(0, FINEANGLES - 1);
-                        int fx = x + FixedMul(M_RandomInt(0, radius) << FRACBITS, finecosine[angle]);
-                        int fy = y + FixedMul(M_RandomInt(0, radius) << FRACBITS, finesine[angle]);
-
-                        P_SpawnBloodSplat(fx, fy, blood, floorz, NULL);
-                    }
-                }
+                P_SpawnBloodSplat(x + FixedMul(M_RandomInt(0, radius) << FRACBITS, finecosine[angle]),
+                    y + FixedMul(M_RandomInt(0, radius) << FRACBITS, finesine[angle]), blood, floorz, NULL);
             }
 
-            P_SetMobjState(thing, S_GIBS);
+            if (thing->blood == MT_BLOOD || ((flags & MF_FUZZ) && r_blood != r_blood_nofuzz))
+            {
+                int type = thing->type;
 
-            thing->flags &= ~MF_SOLID;
+                P_SetMobjState(thing, S_GIBS);
 
-            if (r_corpses_mirrored && type != MT_CHAINGUY && type != MT_CYBORG && (type != MT_PAIN || !doom4vanilla) && (M_Random() & 1))
-                thing->flags2 |= MF2_MIRRORED;
+                thing->flags &= ~MF_SOLID;
 
-            thing->height = 0;
-            thing->radius = 0;
-            thing->shadowoffset = 0;
+                if (r_corpses_mirrored && type != MT_CHAINGUY && type != MT_CYBORG
+                    && (type != MT_PAIN || !doom4vanilla) && (M_Random() & 1))
+                    thing->flags2 |= MF2_MIRRORED;
+
+                thing->height = 0;
+                thing->radius = 0;
+                thing->shadowoffset = 0;
+            }
+            else
+                P_RemoveMobj(thing);
 
             S_StartSound(thing, sfx_slop);
         }
@@ -2098,8 +2096,8 @@ static void PIT_ChangeSector(mobj_t *thing)
 
     if (crushchange && !(leveltime & 3))
     {
-        if (!(flags & MF_NOBLOOD) && thing->blood && (thing->type != MT_PLAYER
-            || (!viewplayer->powers[pw_invulnerability] && !(viewplayer->cheats & CF_GODMODE))))
+        if (!(flags & MF_NOBLOOD) && thing->blood && r_blood != r_blood_none
+            && (thing->type != MT_PLAYER || (!viewplayer->powers[pw_invulnerability] && !(viewplayer->cheats & CF_GODMODE))))
         {
             int type = ((thing->flags & MF_FUZZ) ? MT_FUZZYBLOOD : thing->blood);
             int z = thing->z + thing->height * 2 / 3;

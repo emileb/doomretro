@@ -236,8 +236,6 @@ static struct
     { "ZELDOOR",  DOOM1AND2, redonly        }, { "",         0,         0              }
 };
 
-extern char *pwadfile;
-
 //
 // R_GetTextureColumn
 //
@@ -490,29 +488,30 @@ static void R_InitSpriteLumps(void)
                 M_SKULL1 = false;
             }
         }
+        else if (M_StringCompare(sc_String, "NOBLUEGREENBLOOD"))
+        {
+            SC_MustGetString();
+
+            if (M_StringCompare(pwadfile, sc_String))
+            {
+                mobjinfo[MT_HEAD].blood = MT_BLOOD;
+                mobjinfo[MT_BRUISER].blood = MT_BLOOD;
+                mobjinfo[MT_KNIGHT].blood = MT_BLOOD;
+            }
+        }
         else if (M_StringCompare(sc_String, "NOTRANSLUCENCY"))
         {
-            char    *temp;
-
             SC_MustGetString();
-            temp = removeext(sc_String);
 
-            if (M_StringCompare(pwadfile, temp))
+            if (M_StringCompare(pwadfile, sc_String))
                 notranslucency = true;
-
-            free(temp);
         }
         else if (M_StringCompare(sc_String, "TELEFRAGONMAP30"))
         {
-            char    *temp;
-
             SC_MustGetString();
-            temp = removeext(sc_String);
 
-            if (M_StringCompare(pwadfile, temp))
+            if (M_StringCompare(pwadfile, sc_String))
                 telefragonmap30 = true;
-
-            free(temp);
         }
     }
 
@@ -573,19 +572,53 @@ static void R_InitSpriteLumps(void)
         mobjinfo[MT_HEAD].blood = MT_BLOOD;
         mobjinfo[MT_BRUISER].blood = MT_BLOOD;
         mobjinfo[MT_KNIGHT].blood = MT_BLOOD;
+
+        M_StringCopy(weaponinfo[wp_pistol].description, "handgun", sizeof(weaponinfo[wp_pistol].description));
+        M_StringCopy(weaponinfo[wp_shotgun].description, "pump-action shotgun", sizeof(weaponinfo[wp_shotgun].description));
+        M_StringCopy(weaponinfo[wp_chaingun].description, "minigun", sizeof(weaponinfo[wp_chaingun].description));
+        M_StringCopy(weaponinfo[wp_missile].description, "missile launcher", sizeof(weaponinfo[wp_missile].description));
+        M_StringCopy(weaponinfo[wp_plasma].description, "polaric energy cannon", sizeof(weaponinfo[wp_plasma].description));
+        M_StringCopy(weaponinfo[wp_bfg].description, "SKAG 1337", sizeof(weaponinfo[wp_bfg].description));
+        M_StringCopy(weaponinfo[wp_chainsaw].description, "angle grinder", sizeof(weaponinfo[wp_chainsaw].description));
+        M_StringCopy(weaponinfo[wp_supershotgun].description, "double-barreled shotgun", sizeof(weaponinfo[wp_supershotgun].description));
+
+        M_StringCopy(mobjinfo[MT_POSSESSED].name1, "zombie", sizeof(mobjinfo[MT_POSSESSED].name1));
+        M_StringCopy(mobjinfo[MT_POSSESSED].plural1, "zombies", sizeof(mobjinfo[MT_POSSESSED].plural1));
+        M_StringCopy(mobjinfo[MT_SHOTGUY].name1, "shotgun zombie", sizeof(mobjinfo[MT_SHOTGUY].name1));
+        M_StringCopy(mobjinfo[MT_SHOTGUY].plural1, "shotgun zombies", sizeof(mobjinfo[MT_SHOTGUY].plural1));
+        M_StringCopy(mobjinfo[MT_VILE].name1, "necromancer", sizeof(mobjinfo[MT_VILE].name1));
+        M_StringCopy(mobjinfo[MT_VILE].plural1, "necromancers", sizeof(mobjinfo[MT_VILE].plural1));
+        M_StringCopy(mobjinfo[MT_UNDEAD].name1, "dark soldier", sizeof(mobjinfo[MT_UNDEAD].name1));
+        M_StringCopy(mobjinfo[MT_UNDEAD].plural1, "dark soldiers", sizeof(mobjinfo[MT_UNDEAD].plural1));
+        M_StringCopy(mobjinfo[MT_FATSO].name1, "combat slug", sizeof(mobjinfo[MT_FATSO].name1));
+        M_StringCopy(mobjinfo[MT_FATSO].plural1, "combat slugs", sizeof(mobjinfo[MT_FATSO].plural1));
+        M_StringCopy(mobjinfo[MT_CHAINGUY].name1, "minigun zombie", sizeof(mobjinfo[MT_CHAINGUY].name1));
+        M_StringCopy(mobjinfo[MT_CHAINGUY].plural1, "minigun zombies", sizeof(mobjinfo[MT_CHAINGUY].plural1));
+        M_StringCopy(mobjinfo[MT_TROOP].name1, "serpentipede", sizeof(mobjinfo[MT_TROOP].name1));
+        M_StringCopy(mobjinfo[MT_TROOP].plural1, "serpentipedes", sizeof(mobjinfo[MT_TROOP].plural1));
+        M_StringCopy(mobjinfo[MT_SERGEANT].name1, "flesh worm", sizeof(mobjinfo[MT_SERGEANT].name1));
+        M_StringCopy(mobjinfo[MT_SERGEANT].plural1, "flesh worms", sizeof(mobjinfo[MT_SERGEANT].plural1));
+        M_StringCopy(mobjinfo[MT_SHADOWS].name1, "stealth worm", sizeof(mobjinfo[MT_SHADOWS].name1));
+        M_StringCopy(mobjinfo[MT_SHADOWS].plural1, "stealth worms", sizeof(mobjinfo[MT_SHADOWS].plural1));
+        M_StringCopy(mobjinfo[MT_HEAD].name1, "trilobite", sizeof(mobjinfo[MT_HEAD].name1));
+        M_StringCopy(mobjinfo[MT_HEAD].plural1, "trilobites", sizeof(mobjinfo[MT_HEAD].plural1));
+        M_StringCopy(mobjinfo[MT_BRUISER].name1, "pain bringer", sizeof(mobjinfo[MT_BRUISER].name1));
+        M_StringCopy(mobjinfo[MT_BRUISER].plural1, "pain bringers", sizeof(mobjinfo[MT_BRUISER].plural1));
+        M_StringCopy(mobjinfo[MT_KNIGHT].name1, "pain lord", sizeof(mobjinfo[MT_KNIGHT].name1));
+        M_StringCopy(mobjinfo[MT_KNIGHT].plural1, "pain lords", sizeof(mobjinfo[MT_KNIGHT].plural1));
+        M_StringCopy(mobjinfo[MT_SKULL].name1, "deadflare", sizeof(mobjinfo[MT_SKULL].name1));
+        M_StringCopy(mobjinfo[MT_SKULL].plural1, "deadflares", sizeof(mobjinfo[MT_SKULL].plural1));
+        M_StringCopy(mobjinfo[MT_SPIDER].name1, "large technospider", sizeof(mobjinfo[MT_SPIDER].name1));
+        M_StringCopy(mobjinfo[MT_SPIDER].plural1, "large technospiders", sizeof(mobjinfo[MT_SPIDER].plural1));
+        M_StringCopy(mobjinfo[MT_BABY].name1, "technospider", sizeof(mobjinfo[MT_BABY].name1));
+        M_StringCopy(mobjinfo[MT_BABY].plural1, "technospiders", sizeof(mobjinfo[MT_BABY].plural1));
+        M_StringCopy(mobjinfo[MT_CYBORG].name1, "assault tripod", sizeof(mobjinfo[MT_CYBORG].name1));
+        M_StringCopy(mobjinfo[MT_CYBORG].plural1, "assault tripods", sizeof(mobjinfo[MT_CYBORG].plural1));
+        M_StringCopy(mobjinfo[MT_PAIN].name1, "summoner", sizeof(mobjinfo[MT_PAIN].name1));
+        M_StringCopy(mobjinfo[MT_PAIN].plural1, "summoners", sizeof(mobjinfo[MT_PAIN].plural1));
     }
     else if (chex)
-    {
-        states[S_POSS_DIE5].tics = 0;
-        states[S_POSS_XDIE9].tics = 0;
-        states[S_SPOS_DIE5].tics = 0;
-        states[S_SPOS_XDIE9].tics = 0;
-        states[S_TROO_DIE5].tics = 0;
-        states[S_TROO_XDIE8].tics = 0;
-        states[S_SARG_DIE6].tics = 0;
-        states[S_BOSS_DIE7].tics = 0;
         mobjinfo[MT_BLOOD].blood = GREENBLOOD;
-    }
     else if (hacx)
     {
         mobjinfo[MT_HEAD].flags2 |= MF2_DONTMAP;
@@ -638,7 +671,8 @@ static void R_InitSpriteLumps(void)
         M_StringCopy(mobjinfo[MT_INV].plural2, "super chainsaws", sizeof(mobjinfo[MT_INV].plural1));
         M_StringCopy(mobjinfo[MT_MEGA].name2, "mega doll", sizeof(mobjinfo[MT_MEGA].name1));
         M_StringCopy(mobjinfo[MT_MEGA].plural2, "mega dolls", sizeof(mobjinfo[MT_MEGA].plural1));
-    }}
+    }
+}
 
 //
 // R_InitColormaps
@@ -675,7 +709,8 @@ static void R_InitColormaps(void)
     colormapwad = lumpinfo[W_CheckNumForName("COLORMAP")]->wadfile;
 
     if (numcolormaps == 1)
-        C_Output("Using the <b>COLORMAP</b> lump in %s <b>%s</b>.", (colormapwad->type == IWAD ? "IWAD" : "PWAD"), colormapwad->path);
+        C_Output("Using the <b>COLORMAP</b> lump in %s <b>%s</b>.",
+            (colormapwad->type == IWAD ? "IWAD" : "PWAD"), colormapwad->path);
     else
         C_Output("Using %i colormaps from the <b>COLORMAP</b> lump in %s <b>%s</b>.",
             numcolormaps, (colormapwad->type == IWAD ? "IWAD" : "PWAD"), colormapwad->path);

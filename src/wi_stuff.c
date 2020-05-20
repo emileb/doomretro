@@ -376,16 +376,15 @@ static void WI_DrawLF(void)
     int titlepatch = P_GetMapTitlePatch(wbs->epsd * 10 + wbs->last + 1);
 
     // draw <LevelName>
-    if (titlepatch)
+    if (titlepatch > 0)
     {
         patch_t *patch = W_CacheLumpNum(titlepatch);
-        short   width = SHORT(patch->width);
         short   height = SHORT(patch->height);
 
-        if (width == ORIGINALWIDTH || height == ORIGINALHEIGHT)
+        if (height == ORIGINALHEIGHT)
             V_DrawPagePatch(patch);
         else
-            V_DrawPatchWithShadow((ORIGINALWIDTH - width) / 2 + 1, y + 1, patch, false);
+            V_DrawPatchWithShadow((ORIGINALWIDTH - SHORT(patch->width)) / 2 + 1, y + 1, patch, false);
 
         y += height + 2;
     }
@@ -401,13 +400,12 @@ static void WI_DrawLF(void)
         if (W_CheckMultipleLumps(name) > 1 && !nerve)
         {
             patch_t *patch = lnames[wbs->last];
-            short   width = SHORT(patch->width);
             short   height = SHORT(patch->height);
 
-            if (width == ORIGINALWIDTH || height == ORIGINALHEIGHT)
+            if (height == ORIGINALHEIGHT)
                 V_DrawPagePatch(patch);
             else
-                V_DrawPatchWithShadow((ORIGINALWIDTH - width) / 2 + 1, y + 1, patch, false);
+                V_DrawPatchWithShadow((ORIGINALWIDTH - SHORT(patch->width)) / 2 + 1, y + 1, patch, false);
 
             y += height + 2;
         }
@@ -438,16 +436,15 @@ static void WI_DrawEL(void)
     // draw level
     y += SHORT(entering->height) + 2;
 
-    if (titlepatch)
+    if (titlepatch > 0)
     {
         patch_t *patch = W_CacheLumpNum(titlepatch);
-        short   width = SHORT(patch->width);
         short   height = SHORT(patch->height);
 
-        if (width == ORIGINALWIDTH || height == ORIGINALHEIGHT)
+        if (height == ORIGINALHEIGHT)
             V_DrawPagePatch(patch);
         else
-            V_DrawPatchWithShadow((ORIGINALWIDTH - width) / 2 + 1, y + 1, patch, false);
+            V_DrawPatchWithShadow((ORIGINALWIDTH - SHORT(patch->width)) / 2 + 1, y + 1, patch, false);
     }
     else
     {
@@ -461,13 +458,12 @@ static void WI_DrawEL(void)
         if (W_CheckMultipleLumps(name) > 1 && !nerve)
         {
             patch_t *patch = lnames[wbs->next];
-            short   width = SHORT(patch->width);
             short   height = SHORT(patch->height);
 
-            if (width == ORIGINALWIDTH || height == ORIGINALHEIGHT)
+            if (height == ORIGINALHEIGHT)
                 V_DrawPagePatch(patch);
             else
-                V_DrawPatchWithShadow((ORIGINALWIDTH - width) / 2 + 1, y + 1, patch, false);
+                V_DrawPatchWithShadow((ORIGINALWIDTH - SHORT(patch->width)) / 2 + 1, y + 1, patch, false);
         }
         else
             WI_DrawWILV(y, nextmapname);
@@ -775,7 +771,7 @@ static void WI_DrawShowNextLoc(void)
         return;
 
     // draws which level you are entering...
-    if (gamemode != commercial || wbs->next != 30 || P_GetMapNext(wbs->last + 1))
+    if (gamemode != commercial || wbs->next != 30)
         WI_DrawEL();
 }
 
@@ -802,9 +798,11 @@ static void WI_InitStats(void)
     cnt_pause = TICRATE;
 
     if (M_StringCompare(playername, playername_default))
-        C_PlayerMessage("You have finished <b><i>%s</i></b>.", mapname);
+        C_PlayerMessage("You have finished <b><i>%s</i></b>%s",
+            mapname, (ispunctuation(mapname[strlen(mapname) - 1]) ? "" : "."));
     else
-        C_PlayerMessage("%s has finished <b><i>%s</i></b>.", playername, mapname);
+        C_PlayerMessage("%s has finished <b><i>%s</i></b>%s",
+            playername, mapname, (ispunctuation(mapname[strlen(mapname) - 1]) ? "" : "."));
 
     C_TabbedOutput(tabs, "Kills\t<b>%i%%</b>", (wbs->skills * 100) / wbs->maxkills);
     C_TabbedOutput(tabs, "Items\t<b>%i%%</b>", (wbs->sitems * 100) / wbs->maxitems);

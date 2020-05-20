@@ -45,6 +45,7 @@
 
 #include "c_cmds.h"
 #include "c_console.h"
+#include "d_main.h"
 #include "doomstat.h"
 #include "g_game.h"
 #include "i_colors.h"
@@ -149,6 +150,7 @@ static int              consolescrollbarfacecolor = 94;
 static int              consolescrollbargripcolor = 104;
 
 static byte             *consolebevel;
+static byte             *consoleautomapbevel;
 
 static int              consolecolors[STRINGTYPES];
 
@@ -159,6 +161,7 @@ extern int              framespersecond;
 extern int              refreshrate;
 extern dboolean         dowipe;
 extern dboolean         quitcmd;
+extern dboolean         vanilla;
 extern dboolean         togglingvanilla;
 
 void C_Input(const char *string, ...)
@@ -218,7 +221,7 @@ void C_IntCVAROutput(char *cvar, int value)
 {
     char    *temp = M_StringJoin(cvar, " ", NULL);
 
-    if (consolestrings && M_StringStartsWith(console[consolestrings - 1].string, temp))
+    if (consolestrings && M_StringStartsWithExact(console[consolestrings - 1].string, temp))
         consolestrings--;
 
     C_Input("%s %i", cvar, value);
@@ -229,7 +232,7 @@ void C_PctCVAROutput(char *cvar, int value)
 {
     char    *temp = M_StringJoin(cvar, " ", NULL);
 
-    if (consolestrings && M_StringStartsWith(console[consolestrings - 1].string, temp))
+    if (consolestrings && M_StringStartsWithExact(console[consolestrings - 1].string, temp))
         consolestrings--;
 
     C_Input("%s %i%%", cvar, value);
@@ -240,7 +243,7 @@ void C_StrCVAROutput(char *cvar, char *string)
 {
     char    *temp = M_StringJoin(cvar, " ", NULL);
 
-    if (consolestrings && M_StringStartsWith(console[consolestrings - 1].string, temp))
+    if (consolestrings && M_StringStartsWithExact(console[consolestrings - 1].string, temp))
         consolestrings--;
 
     C_Input("%s %s", cvar, string);
@@ -407,6 +410,7 @@ void C_PlayerMessage(const char *string, ...)
     if (i >= 0 && console[i].stringtype == playermessagestring && M_StringCompare(console[i].string, buffer))
     {
         console[i].tics = gametime;
+        console[i].timestamp[0] = '\0';
         console[i].count++;
     }
     else
@@ -417,6 +421,7 @@ void C_PlayerMessage(const char *string, ...)
         M_StringCopy(console[consolestrings].string, buffer, 1024);
         console[consolestrings].stringtype = playermessagestring;
         console[consolestrings].tics = gametime;
+        console[consolestrings].timestamp[0] = '\0';
         C_DumpConsoleStringToFile(consolestrings);
         console[consolestrings++].count = 1;
     }
@@ -437,6 +442,7 @@ void C_Obituary(const char *string, ...)
     if (i >= 0 && console[i].stringtype == obituarystring && M_StringCompare(console[i].string, buffer))
     {
         console[i].tics = gametime;
+        console[i].timestamp[0] = '\0';
         console[i].count++;
     }
     else
@@ -447,6 +453,7 @@ void C_Obituary(const char *string, ...)
         M_StringCopy(console[consolestrings].string, buffer, 1024);
         console[consolestrings].stringtype = obituarystring;
         console[consolestrings].tics = gametime;
+        console[consolestrings].timestamp[0] = '\0';
         C_DumpConsoleStringToFile(consolestrings);
         console[consolestrings++].count = 1;
     }
@@ -711,6 +718,7 @@ void C_Init(void)
     consolecolors[obituarystring] = consoleplayermessagecolor;
 
     consolebevel = &tinttab50[nearestblack << 8];
+    consoleautomapbevel = &tinttab50[nearestcolors[5] << 8];
 
     brand = W_CacheLumpName("DRBRAND");
     dot = W_CacheLumpName("DRFON046");
@@ -803,14 +811,13 @@ void C_HideConsoleFast(void)
     consoleactive = false;
 }
 
-static void C_DrawBackground(int height)
+static void C_DrawBackground(void)
 {
     static dboolean blurred;
     static byte     blurscreen[SCREENWIDTH * SCREENHEIGHT];
     int             consolebackcolor = nearestcolors[con_backcolor] << 8;
     int             consoleedgecolor = nearestcolors[con_edgecolor] << 8;
-
-    height = (height + 5) * CONSOLEWIDTH;
+    int             height = (consoleheight + 5) * CONSOLEWIDTH;
 
     if (!blurred)
     {
@@ -864,7 +871,7 @@ static void C_DrawBackground(int height)
 
     // apply corrugated glass effect to background
     for (int i = height - 2; i > 1; i -= 3)
-        screens[0][i + 1] = colormaps[0][6 * 256 + screens[0][i + (i % CONSOLEWIDTH && (i + 1) % CONSOLEWIDTH ? -1 : 1)]];
+        screens[0][i + 1] = colormaps[0][6 * 256 + screens[0][i + ((i % CONSOLEWIDTH) && (i + 1) % CONSOLEWIDTH ? -1 : 1)]];
 
     // draw branding
     V_DrawConsoleBrandingPatch(CONSOLEWIDTH - brandwidth, consoleheight - brandheight + 2, brand, consoleedgecolor);
@@ -874,11 +881,26 @@ static void C_DrawBackground(int height)
         screens[0][i] = tinttab50[consoleedgecolor + screens[0][i]];
 
     // bevel left and right edges
-    for (int i = 0; i < height; i += CONSOLEWIDTH)
+    if (automapactive && am_backcolor == am_backcolor_default)
     {
-        screens[0][i] = consolebevel[screens[0][i + 1]];
-        screens[0][i + CONSOLEWIDTH - 1] = consolebevel[screens[0][i + CONSOLEWIDTH - 2]];
+        for (int i = 0; i < height - 3 * CONSOLEWIDTH; i += CONSOLEWIDTH)
+            screens[0][i] = consoleautomapbevel[screens[0][i + 1]];
+
+        for (int i = MAX(0, height - 3 * CONSOLEWIDTH); i < height; i += CONSOLEWIDTH)
+            screens[0][i] = consolebevel[screens[0][i + 1]];
+
+        for (int i = 0; i < height - (brandheight + 3) * CONSOLEWIDTH; i += CONSOLEWIDTH)
+            screens[0][i + CONSOLEWIDTH - 1] = consoleautomapbevel[screens[0][i + CONSOLEWIDTH - 2]];
+
+        for (int i = MAX(0, height - (brandheight + 3) * CONSOLEWIDTH); i < height; i += CONSOLEWIDTH)
+            screens[0][i + CONSOLEWIDTH - 1] = consolebevel[screens[0][i + CONSOLEWIDTH - 2]];
     }
+    else
+        for (int i = 0; i < height; i += CONSOLEWIDTH)
+        {
+            screens[0][i] = consolebevel[screens[0][i + 1]];
+            screens[0][i + CONSOLEWIDTH - 1] = consolebevel[screens[0][i + CONSOLEWIDTH - 2]];
+        }
 
     // bevel bottom edge
     for (int i = height - CONSOLEWIDTH + 1; i < height - 1; i++)
@@ -1108,14 +1130,14 @@ static void C_DrawOverlayText(int x, int y, const char *text, const int color, d
     }
 }
 
-char *C_GetTimeStamp(unsigned int tics)
+char *C_CreateTimeStamp(int index)
 {
-    static char buffer[9];
-    int         hours = gamestarttime.tm_hour;
-    int         minutes = gamestarttime.tm_min;
-    int         seconds = gamestarttime.tm_sec;
+    int hours = gamestarttime.tm_hour;
+    int minutes = gamestarttime.tm_min;
+    int seconds = gamestarttime.tm_sec;
+    int tics = console[index].tics / TICRATE;
 
-    if ((seconds += ((tics /= TICRATE) % 3600) % 60) >= 60)
+    if ((seconds += (tics % 3600) % 60) >= 60)
     {
         minutes += seconds / 60;
         seconds %= 60;
@@ -1130,24 +1152,25 @@ char *C_GetTimeStamp(unsigned int tics)
     if ((hours += tics / 3600) > 12)
         hours %= 12;
 
-    M_snprintf(buffer, 9, "%i:%02i:%02i", hours, minutes, seconds);
-    return buffer;
+    M_snprintf(console[index].timestamp, 9, "%i:%02i:%02i", hours, minutes, seconds);
+    return console[index].timestamp;
 }
 
-static void C_DrawTimeStamp(int x, int y, unsigned int tics)
+static void C_DrawTimeStamp(int x, int y, int index)
 {
     char    buffer[9];
 
-    M_StringCopy(buffer, C_GetTimeStamp(tics), 9);
+    M_StringCopy(buffer, (*console[index].timestamp ? console[index].timestamp : C_CreateTimeStamp(index)), 9);
     y -= CONSOLEHEIGHT - consoleheight;
 
     for (int i = (int)strlen(buffer) - 1; i >= 0; i--)
     {
-        patch_t *patch = consolefont[buffer[i] - CONSOLEFONTSTART];
+        char    ch = buffer[i];
+        patch_t *patch = consolefont[ch - CONSOLEFONTSTART];
         int     width = SHORT(patch->width);
 
-        x -= (i && buffer[i] != ':' ? zerowidth : width);
-        V_DrawConsoleTextPatch(x + (i && buffer[i] == '1'), y, patch, width, consoletimestampcolor, NOBACKGROUNDCOLOR, false, tinttab33);
+        x -= (i && ch != ':' ? zerowidth : width);
+        V_DrawConsoleTextPatch(x + (i && ch == '1'), y, patch, width, consoletimestampcolor, NOBACKGROUNDCOLOR, false, tinttab33);
     }
 }
 
@@ -1167,7 +1190,7 @@ void C_UpdateFPS(void)
 
 void C_UpdateTimer(void)
 {
-    if (!paused && !menuactive)
+    if (!paused && !menuactive && !vanilla)
     {
         static char buffer[9];
         int         tics = countdown;
@@ -1268,7 +1291,7 @@ void C_Drawer(void)
         I_UpdateBlitFunc(false);
 
         // draw background and bottom edge
-        C_DrawBackground(consoleheight);
+        C_DrawBackground();
 
         // draw the scrollbar
         C_DrawScrollbar();
@@ -1306,7 +1329,7 @@ void C_Drawer(void)
                     free(temp);
                 }
 
-                C_DrawTimeStamp(CONSOLEWIDTH - CONSOLETEXTX * 2 - CONSOLESCROLLBARWIDTH + 3, y, console[i].tics);
+                C_DrawTimeStamp(CONSOLEWIDTH - CONSOLETEXTX * 2 - CONSOLESCROLLBARWIDTH + 3, y, i);
             }
             else if (stringtype == outputstring)
                 C_DrawConsoleText(CONSOLETEXTX, y, console[i].string, consolecolors[stringtype],
@@ -1388,7 +1411,7 @@ void C_Drawer(void)
         }
 
         // draw caret
-        if (consoledirection == 1 && windowfocused && !messagetoprint)
+        if (consoleheight == CONSOLEHEIGHT && windowfocused && !messagetoprint)
         {
             if (caretwait < I_GetTimeMS())
             {
@@ -1601,7 +1624,7 @@ dboolean C_Responder(event_t *ev)
             C_HideConsole();
             return true;
         }
-        else if (key == keyboardscreenshot)
+        else if (key == keyboardscreenshot && keyboardscreenshot == KEY_PRINTSCREEN)
         {
             G_DoScreenShot();
             return true;
@@ -1998,9 +2021,20 @@ dboolean C_Responder(event_t *ev)
                 C_HideConsole();
                 break;
 
+            case KEY_F1:
+            case KEY_F2:
+            case KEY_F3:
+            case KEY_F4:
+            case KEY_F5:
+            case KEY_F6:
+            case KEY_F7:
+            case KEY_F8:
+            case KEY_F9:
+            case KEY_F10:
             case KEY_F11:
-                // change gamma correction level
-                M_ChangeGamma(modstate & KMOD_SHIFT);
+                if (M_Responder(ev))
+                    C_HideConsoleFast();
+
                 break;
 
             case KEY_CAPSLOCK:
@@ -2098,7 +2132,7 @@ dboolean C_Responder(event_t *ev)
         scrollspeed = TICRATE;
         return false;
     }
-    else if (ev->type == ev_text)
+    else if (ev->type == ev_textinput)
     {
         char    ch = (char)ev->data1;
         char    *temp = NULL;

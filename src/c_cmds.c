@@ -90,24 +90,24 @@
 #define PRINTCMDFORMAT              "<b>\"</b><i>message</i><b>\"</b>"
 #define RESETCMDFORMAT              "<i>CVAR</i>"
 #define RESURRECTCMDFORMAT          "<b>player</b>|<b>all</b>|<i>monster</i>"
-#define SAVECMDFORMAT               LOADCMDFORMAT
+#define SAVECMDFORMAT               "<i>filename</i><b>.save</b>"
 #define SPAWNCMDFORMAT              "<i>item</i>|[<b>friendly</b> ]<i>monster</i>"
-#define TAKECMDFORMAT               GIVECMDFORMAT
+#define TAKECMDFORMAT               "<b>ammo</b>|<b>armor</b>|<b>health</b>|<b>keys</b>|<b>weapons</b>|<b>all</b>|<i>item</i>"
 #define TELEPORTCMDFORMAT           "<i>x</i> <i>y</i>[ <i>z</i>]"
 #define TIMERCMDFORMAT              "<i>minutes</i>"
 #define UNBINDCMDFORMAT             "<i>control</i>|<b>+</b><i>action</i>"
 
 #define PENDINGCHANGE               "This change won't be effective until the next map."
 
-#define INTEGERCVARWITHDEFAULT      "It is currently <b>%s</b> and its default is <b>%s</b>."
+#define INTEGERCVARWITHDEFAULT      "It is currently <b>%s</b> and is <b>%s</b> by default."
 #define INTEGERCVARWITHNODEFAULT    "It is currently <b>%s</b>."
 #define INTEGERCVARISDEFAULT        "It is currently its default of <b>%s</b>."
 #define INTEGERCVARISREADONLY       "It is currently <b>%s</b> and is read-only."
-#define PERCENTCVARWITHDEFAULT      "It is currently <b>%s%%</b> and its default is <b>%s%%</b>."
+#define PERCENTCVARWITHDEFAULT      "It is currently <b>%s%%</b> and is <b>%s%%</b> by default."
 #define PERCENTCVARWITHNODEFAULT    "It is currently <b>%s%%</b>."
 #define PERCENTCVARISDEFAULT        "It is currently its default of <b>%s%%</b>."
 #define PERCENTCVARISREADONLY       "It is currently <b>%s%%</b> and is read-only."
-#define STRINGCVARWITHDEFAULT       "It is currently <b>\"%s\"</b> and its default is <b>\"%s\"</b>."
+#define STRINGCVARWITHDEFAULT       "It is currently <b>\"%s\"</b> and is <b>\"%s\"</b> by default."
 #define STRINGCVARISDEFAULT         "It is currently its default of <b>\"%s\"</b>."
 #define STRINGCVARISREADONLY        "It is currently <b>%s%s%s</b> and is read-only."
 #define TIMECVARISREADONLY          "It is currently <b>%02i:%02i:%02i</b> and is read-only."
@@ -290,6 +290,7 @@ static void help_cmd_func2(char *cmd, char *parms);
 static void if_cmd_func2(char *cmd, char *parms);
 static dboolean kill_cmd_func1(char *cmd, char *parms);
 static void kill_cmd_func2(char *cmd, char *parms);
+static void license_cmd_func2(char *cmd, char *parms);
 static void load_cmd_func2(char *cmd, char *parms);
 static dboolean map_cmd_func1(char *cmd, char *parms);
 static void map_cmd_func2(char *cmd, char *parms);
@@ -342,7 +343,6 @@ static void alwaysrun_cvar_func2(char *cmd, char *parms);
 static void am_external_cvar_func2(char *cmd, char *parms);
 static dboolean am_followmode_cvar_func1(char *cmd, char *parms);
 static void am_gridsize_cvar_func2(char *cmd, char *parms);
-static void am_path_cvar_func2(char *cmd, char *parms);
 static dboolean armortype_cvar_func1(char *cmd, char *parms);
 static void armortype_cvar_func2(char *cmd, char *parms);
 static void autotilt_cvar_func2(char *cmd, char *parms);
@@ -425,10 +425,10 @@ static char *C_LookupAliasFromValue(const int value, const valuealias_type_t val
     { #name, #alt, cond, func, parms, CT_CMD, CF_NONE, NULL, 0, 0, 0, form, desc, 0, 0 }
 #define CMD_CHEAT(name, parms) \
     { #name, "", cheat_func1, NULL, parms, CT_CHEAT, CF_NONE, NULL, 0, 0, 0, "", "", 0, 0 }
-#define CVAR_BOOL(name, alt, cond, func, valuealiases, desc) \
-    { #name, #alt, cond, func, 1, CT_CVAR, CF_BOOLEAN, &name, valuealiases, false, true, "", desc, name##_default, 0 }
-#define CVAR_INT(name, alt, cond, func, flags, valuealiases, desc) \
-    { #name, #alt, cond, func, 1, CT_CVAR, (CF_INTEGER | flags), &name, valuealiases, name##_min, name##_max, "", desc, name##_default, 0 }
+#define CVAR_BOOL(name, alt, cond, func, aliases, desc) \
+    { #name, #alt, cond, func, 1, CT_CVAR, CF_BOOLEAN, &name, aliases, false, true, "", desc, name##_default, 0 }
+#define CVAR_INT(name, alt, cond, func, flags, aliases, desc) \
+    { #name, #alt, cond, func, 1, CT_CVAR, (CF_INTEGER | flags), &name, aliases, name##_min, name##_max, "", desc, name##_default, 0 }
 #define CVAR_FLOAT(name, alt, cond, func, flags, desc) \
     { #name, #alt, cond, func, 1, CT_CVAR, (CF_FLOAT | flags), &name, 0, 0, 0, "", desc, name##_default, 0 }
 #define CVAR_STR(name, alt, cond, func, flags, desc) \
@@ -445,13 +445,13 @@ consolecmd_t consolecmds[] =
     CVAR_BOOL(alwaysrun, "", bool_cvars_func1, alwaysrun_cvar_func2, BOOLVALUEALIAS,
         "Toggles the player to always run when they move."),
     CVAR_INT(am_allmapcdwallcolor, am_allmapcdwallcolour, color_cvars_func1, color_cvars_func2, CF_NONE, NOVALUEALIAS,
-        "The color of lines in the automap indicating a\nchange in ceiling height when the player has a\n"
+        "The color of lines in the automap indicating a\nchange in ceiling height and the player has a\n"
         "computer area map power-up (<b>0</b> to <b>255</b>)."),
     CVAR_INT(am_allmapfdwallcolor, am_allmapfdwallcolour, color_cvars_func1, color_cvars_func2, CF_NONE, NOVALUEALIAS,
-        "The color of lines in the automap indicating a\nchange in floor height when the player has a\n"
+        "The color of lines in the automap indicating a\nchange in floor height and the player has a\n"
         "computer area map power-up (<b>0</b> to <b>255</b>)."),
     CVAR_INT(am_allmapwallcolor, am_allmapwallcolour, color_cvars_func1, color_cvars_func2, CF_NONE, NOVALUEALIAS,
-        "The color of solid walls in the automap when the\nplayer has a computer area map power-up (<b>0</b> to\n<b>255</b>)."),
+        "The color of solid walls in the automap and the\nplayer has a computer area map power-up (<b>0</b> to\n<b>255</b>)."),
     CVAR_INT(am_backcolor, am_backcolour, color_cvars_func1, color_cvars_func2, CF_NONE, NOVALUEALIAS,
         "The color of the automap's background (<b>0</b> to <b>255</b>)."),
     CVAR_INT(am_cdwallcolor, am_cdwallcolour, color_cvars_func1, color_cvars_func2, CF_NONE, NOVALUEALIAS,
@@ -472,7 +472,7 @@ consolecmd_t consolecmds[] =
         "The size of the grid in the automap (<i>width</i><b>\xD7</b><i>height</i>)."),
     CVAR_INT(am_markcolor, am_markcolour, color_cvars_func1, color_cvars_func2, CF_NONE, NOVALUEALIAS,
         "The color of marks in the automap (<b>0</b> to <b>255</b>)."),
-    CVAR_BOOL(am_path, "", bool_cvars_func1, am_path_cvar_func2, BOOLVALUEALIAS,
+    CVAR_BOOL(am_path, "", bool_cvars_func1, bool_cvars_func2, BOOLVALUEALIAS,
         "Toggles the player's path in the automap."),
     CVAR_INT(am_pathcolor, am_pathcolour, color_cvars_func1, color_cvars_func2, CF_NONE, NOVALUEALIAS,
         "The color of the player's path in the automap (<b>0</b> to\n<b>255</b>)."),
@@ -487,7 +487,7 @@ consolecmd_t consolecmds[] =
     CVAR_INT(am_tswallcolor, am_tswallcolour, color_cvars_func1, color_cvars_func2, CF_NONE, NOVALUEALIAS,
         "The color of lines in the automap with no change in\nheight (<b>0</b> to <b>255</b>)."),
     CVAR_INT(am_wallcolor, am_wallcolour, color_cvars_func1, color_cvars_func2, CF_NONE, NOVALUEALIAS,
-        "The color of solid walls in the automap (<b>0</b> to <b>255</b>)."),
+        "The color of one-sided walls in the automap (<b>0</b> to\n<b>255</b>)."),
     CVAR_INT(ammo, "", player_cvars_func1, player_cvars_func2, CF_NONE, NOVALUEALIAS,
         "The amount of ammo for the player's currently\nequipped weapon."),
     CVAR_INT(armor, armour, player_cvars_func1, player_cvars_func2, CF_PERCENT, NOVALUEALIAS,
@@ -604,6 +604,8 @@ consolecmd_t consolecmds[] =
         "The folder where an IWAD was last opened."),
     CMD(kill, explode, kill_cmd_func1, kill_cmd_func2, true, KILLCMDFORMAT,
         "Kills the <b>player</b>, <b>all</b> monsters, a type of\n<i>monster</i>, or explodes all <b>barrels</b> or <b>missiles</b>."),
+    CMD(license, "", null_func1, license_cmd_func2, false, "",
+        "Displays the <i><b>" PACKAGE_LICENSE ".</b></i>"),
     CMD(load, "", null_func1, load_cmd_func2, true, LOADCMDFORMAT,
         "Loads a game from a file."),
     CVAR_BOOL(m_acceleration, "", bool_cvars_func1, bool_cvars_func2, BOOLVALUEALIAS,
@@ -717,7 +719,7 @@ consolecmd_t consolecmds[] =
     CVAR_BOOL(r_liquid_swirl, "", bool_cvars_func1, bool_cvars_func2, BOOLVALUEALIAS,
         "Toggles the swirl of liquid sectors."),
     CVAR_OTHER(r_lowpixelsize, "", null_func1, r_lowpixelsize_cvar_func2,
-        "The size of pixels when the graphic detail is low\n(<i>width</i><b>\xD7</b><i>height</i>)."),
+        "The size of each pixel when the graphic detail is low\n(<i>width</i><b>\xD7</b><i>height</i>)."),
     CVAR_BOOL(r_mirroredweapons, "", bool_cvars_func1, bool_cvars_func2, BOOLVALUEALIAS,
         "Toggles randomly mirroring the weapons dropped\nby monsters."),
     CVAR_BOOL(r_playersprites, "", bool_cvars_func1, bool_cvars_func2, BOOLVALUEALIAS,
@@ -736,6 +738,8 @@ consolecmd_t consolecmds[] =
         "The amount the screen shakes when the player is\nattacked (<b>0%</b> to <b>100%</b>)."),
     CVAR_INT(r_skycolor, r_skycolour, r_skycolor_cvar_func1, r_skycolor_cvar_func2, CF_NONE, SKYVALUEALIAS,
         "The color of the sky (<b>none</b>, or <b>0</b> to <b>255</b>)."),
+    CVAR_BOOL(r_supersampling, "", bool_cvars_func1, bool_cvars_func2, BOOLVALUEALIAS,
+        "Toggles supersampling anti-aliasing (SSAA) when\nthe graphic detail is low."),
     CVAR_BOOL(r_textures, "", bool_cvars_func1, r_textures_cvar_func2, BOOLVALUEALIAS,
         "Toggles displaying all textures."),
     CVAR_BOOL(r_translucency, "", bool_cvars_func1, r_translucency_cvar_func2, BOOLVALUEALIAS,
@@ -852,7 +856,7 @@ consolecmd_t consolecmds[] =
     CVAR_BOOL(weaponrecoil, "", bool_cvars_func1, bool_cvars_func2, BOOLVALUEALIAS,
         "Toggles the recoiling of the player's weapon when\nfired."),
     CVAR_BOOL(wipe, "", bool_cvars_func1, bool_cvars_func2, BOOLVALUEALIAS,
-        "Toggles the wipe effect when transitioning between\nscreens."),
+        "Toggles wiping when transitioning between screens."),
 
     { "", "", null_func1, NULL, 0, 0, CF_NONE, NULL, 0, 0, 0, "", "" }
 };
@@ -1727,12 +1731,12 @@ void C_DumpConsoleStringToFile(int index)
             for (unsigned int spaces = 0; spaces < 92 - outpos; spaces++)
                 fputc(' ', condumpfile);
 
-            M_StringCopy(buffer, C_GetTimeStamp(console[index].tics), 9);
+            M_StringCopy(buffer, C_CreateTimeStamp(index), 9);
 
             if (strlen(buffer) == 7)
                 fputc(' ', condumpfile);
 
-            fputs(C_GetTimeStamp(console[index].tics), condumpfile);
+            fputs(C_CreateTimeStamp(index), condumpfile);
         }
 
         fputc('\n', condumpfile);
@@ -2409,14 +2413,11 @@ static void god_cmd_func2(char *cmd, char *parms)
 static void help_cmd_func2(char *cmd, char *parms)
 {
 #if defined(_WIN32)
-    ShellExecute(NULL, "open", PACKAGE_WIKIHELPURL, NULL, NULL, SW_SHOWNORMAL);
+    ShellExecute(NULL, "open", PACKAGE_WIKIURL, NULL, NULL, SW_SHOWNORMAL);
 #elif defined(__linux__)
-    system("xdg-open " PACKAGE_WIKIHELPURL);
+    system("xdg-open " PACKAGE_WIKIURL);
 #elif defined(__APPLE__)
-    system("open " PACKAGE_WIKIHELPURL);
-#else
-    C_HideConsoleFast();
-    M_ShowHelp(0);
+    system("open " PACKAGE_WIKIURL);
 #endif
 }
 
@@ -2727,7 +2728,7 @@ void kill_cmd_func2(char *cmd, char *parms)
                 {
                     char    *temp = commify(kills);
 
-                    M_snprintf(buffer, sizeof(buffer), "%s%s %smonster%s in this map %s been killed.", (kills == 1 ? "The " : "All "),
+                    M_snprintf(buffer, sizeof(buffer), "%s %s %smonster%s in this map %s been killed.", (kills == 1 ? "The" : "All"),
                         temp, (kills < prevkills ? "remaining " : ""), (kills == 1 ? "" : "s"), (kills == 1 ? "has" : "have"));
                     C_Output(buffer);
                     C_HideConsole();
@@ -2893,6 +2894,20 @@ void kill_cmd_func2(char *cmd, char *parms)
 
         free(parm);
     }
+}
+
+//
+// license CCMD
+//
+static void license_cmd_func2(char *cmd, char *parms)
+{
+#if defined(_WIN32)
+    ShellExecute(NULL, "open", PACKAGE_WIKILICENSEURL, NULL, NULL, SW_SHOWNORMAL);
+#elif defined(__linux__)
+    system("xdg-open " PACKAGE_WIKILICENSEURL);
+#elif defined(__APPLE__)
+    system("open " PACKAGE_WIKILICENSEURL);
+#endif
 }
 
 //
@@ -3105,7 +3120,7 @@ static dboolean map_cmd_func1(char *cmd, char *parms)
             {
                 mapcmdepisode = (gamemode == shareware || chex ? 1 :
                     M_RandomIntNoRepeat(1, (gamemode == retail ? (sigil ? 5 : 4) : 3), gameepisode));
-                mapcmdmap = M_RandomIntNoRepeat(1, 8, gamemap);
+                mapcmdmap = M_RandomIntNoRepeat(1, (chex ? 5 : 8), gamemap);
                 M_snprintf(mapcmdlump, sizeof(mapcmdlump), "E%iM%i", mapcmdepisode, mapcmdmap);
                 result = true;
             }
@@ -3368,6 +3383,21 @@ static void map_cmd_func2(char *cmd, char *parms)
 //
 extern int  dehcount;
 
+void removemapnum(char *title)
+{
+    char *pos = strchr(title, ':');
+
+    if (pos)
+    {
+        int index = (int)(pos - title) + 1;
+
+        memmove(title, title + index, strlen(title) - index + 1);
+
+        if (title[0] == ' ')
+            memmove(title, title + 1, strlen(title));
+    }
+}
+
 static void maplist_cmd_func2(char *cmd, char *parms)
 {
     const int   tabs[4] = { 40, 93, 370, 0 };
@@ -3392,6 +3422,8 @@ static void maplist_cmd_func2(char *cmd, char *parms)
         M_StringCopy(lump, temp, sizeof(lump));
         free(temp);
 
+        speciallumpname[0] = '\0';
+
         if (gamemode == commercial)
         {
             ep = 1;
@@ -3413,7 +3445,9 @@ static void maplist_cmd_func2(char *cmd, char *parms)
         if (ep-- == -1 || map-- == -1 || mapfound[ep * 10 + map + 1])
             continue;
 
-        mapfound[ep * 10 + map + 1] = true;
+        if (!*speciallumpname)
+            mapfound[ep * 10 + map + 1] = true;
+
         M_StringCopy(wadname, leafname(lumpinfo[i]->wadfile->path), sizeof(wadname));
         replaced = (W_CheckMultipleLumps(lump) > 1 && !chex && !FREEDOOM);
         pwad = (lumpinfo[i]->wadfile->type == PWAD);
@@ -3426,6 +3460,7 @@ static void maplist_cmd_func2(char *cmd, char *parms)
                 if (!replaced || pwad)
                 {
                     temp = titlecase(*mapinfoname ? mapinfoname : *mapnames[ep * 9 + map]);
+                    removemapnum(temp);
                     M_snprintf(maplist[count++], 256, "%s\t<i><b>%s</b></i>\t%s", lump,
                         (replaced && dehcount == 1 && !*mapinfoname ? "-" : temp), wadname);
                     free(temp);
@@ -3441,6 +3476,7 @@ static void maplist_cmd_func2(char *cmd, char *parms)
                         if (!M_StringCompare(wadname, "DOOM2.WAD"))
                         {
                             temp = titlecase(M_StringReplace(*mapnames2[map], ": ", "\t<i><b>"));
+                            removemapnum(temp);
                             M_snprintf(maplist[count++], 256, "%s</b></i>\t%s", temp, wadname);
                             free(temp);
                         }
@@ -3448,6 +3484,7 @@ static void maplist_cmd_func2(char *cmd, char *parms)
                     else
                     {
                         temp = titlecase(*mapinfoname ? mapinfoname : (bfgedition ? *mapnames2_bfg[map] : *mapnames2[map]));
+                        removemapnum(temp);
                         M_snprintf(maplist[count++], 256, "%s\t<i><b>%s</b></i>\t%s", lump,
                             (replaced && dehcount == 1 && !nerve && !*mapinfoname ? "-" : temp), wadname);
                         free(temp);
@@ -3460,6 +3497,7 @@ static void maplist_cmd_func2(char *cmd, char *parms)
                 if (M_StringCompare(wadname, "NERVE.WAD"))
                 {
                     temp = titlecase(*mapinfoname ? mapinfoname : *mapnamesn[map]);
+                    removemapnum(temp);
                     M_snprintf(maplist[count++], 256, "%s\t<i><b>%s</b></i>\t%s", lump, temp, wadname);
                     free(temp);
                 }
@@ -3470,6 +3508,7 @@ static void maplist_cmd_func2(char *cmd, char *parms)
                 if (!replaced || pwad)
                 {
                     temp = titlecase(*mapinfoname ? mapinfoname : *mapnamesp[map]);
+                    removemapnum(temp);
                     M_snprintf(maplist[count++], 256, "%s\t<i><b>%s</b></i>\t%s", lump,
                         (replaced && dehcount == 1 && !*mapinfoname ? "-" : temp), wadname);
                     free(temp);
@@ -3481,6 +3520,7 @@ static void maplist_cmd_func2(char *cmd, char *parms)
                 if (!replaced || pwad)
                 {
                     temp = titlecase(*mapinfoname ? mapinfoname : *mapnamest[map]);
+                    removemapnum(temp);
                     M_snprintf(maplist[count++], 256, "%s\t<i><b>%s</b></i>\t%s", lump,
                         (replaced && dehcount == 1 && !*mapinfoname ? "-" : temp), wadname);
                     free(temp);
@@ -3704,7 +3744,7 @@ static void mapstats_cmd_func2(char *cmd, char *parms)
                 C_TabbedOutput(tabs, "Release date\t<b>September 30, 1994</b>");
         }
         else if (M_StringCompare(wadname, "NERVE.WAD"))
-            C_TabbedOutput(tabs, "Release date\t<b>September 27, 2006</b>");
+            C_TabbedOutput(tabs, "Release date\t<b>May 26, 2010</b>");
         else if (M_StringCompare(wadname, "PLUTONIA.WAD") || M_StringCompare(wadname, "TNT.WAD"))
             C_TabbedOutput(tabs, "Release date\t<b>June 17, 1996</b>");
 
@@ -5938,6 +5978,7 @@ static void spawn_cmd_func2(char *cmd, char *parms)
                     int     flags = thing->flags;
 
                     thing->angle = angle;
+                    thing->id = thingid++;
 
                     if (flags & MF_SHOOTABLE)
                     {
@@ -6914,19 +6955,6 @@ static void am_gridsize_cvar_func2(char *cmd, char *parms)
         else
             C_Output(INTEGERCVARWITHDEFAULT, am_gridsize, am_gridsize_default);
     }
-}
-
-//
-// am_path CVAR
-//
-static void am_path_cvar_func2(char *cmd, char *parms)
-{
-    const dboolean  am_path_old = am_path;
-
-    bool_cvars_func2(cmd, parms);
-
-    if (!am_path && am_path_old)
-        pathpointnum = 0;
 }
 
 //

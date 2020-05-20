@@ -1,3 +1,72 @@
+### DOOM Retro v3.5.8
+
+* Optimizations have been made to further improve the overall performance and stability of *DOOM Retro*.
+* Minor changes have been made to text that is output to the console.
+* When both the automap and menu are open, the grid will now still rotate in the background if the `am_rotatemode` CVAR is `off`.
+* The menu background will no longer be affected if the `r_detail` CVAR is `low` and the `r_lowpixelsize` CVAR is not `2×2`.
+* The player’s path in the automap is no longer reset when vanilla mode is enabled and the `am_path` CVAR is `on`.
+* The timer shown when the `timer` CCMD is used is no longer displayed while vanilla mode is enabled.
+* Only one sound is now heard when confirming the selection of the *Nightmare!* skill level.
+* A bug has been fixed whereby the “entering” intermission screen would be displayed when exiting MAP30 in some instances.
+* When to update the savegame description while saving a game has now been improved.
+* Improvements have been made to the left and right edges of the console when it’s open over the automap.
+* Minor improvements have been made to the widescreen HUD when god mode is enabled.
+* When the player tries to open a *BOOM*-compatible door that requires more than one (or any) keycard or skull key that they don’t have, all of those keys will now flash in the widescreen HUD.
+* The gamepad can now be used again to change monsters during *DOOM II’s* cast sequence.
+* The `2`, `3` and `4` digits used for marks in the automap are now consistent with those displayed in the console.
+* All function keys may now be used while the console is open.
+* A bug has been fixed whereby the widescreen HUD would momentarily disappear when pressing the <kbd>F8</kbd> key to toggle player messages.
+
+---
+
+###### Friday, May 8, 2020
+
+### DOOM Retro v3.5.7
+
+* Optimizations have been made to further improve the overall performance and stability of *DOOM Retro*.
+* Minor changes have been made to text that is output to the console.
+* Things spawned using the `spawn` CCMD are now given an ID that is displayed by the `thinglist` CCMD.
+* The mouse and gamepad can now be used to open the menu from the title screen again.
+* A bug has been fixed whereby an incomplete `MAPINFO` lump in a PWAD could cause a crash.
+* The names of the monsters displayed during *DOOM II’s* cast sequence can now be specified in `DEHACKED` lumps.
+* The player’s weapon can no longer be changed while freeze mode is on.
+* The horizontal offset of the player’s weapon sprite will no longer be fixed when the `r_fixspriteoffsets` CVAR is `off`.
+* The effects of both the `r_graduallighting` and `weaponbounce` CVARs are now better remembered in savegames.
+* Screenshots may now be taken again while playing a game and the `+screenshot` action has been bound to something other than the <kbd>PRINTSCREEN</kbd> key.
+* When a PWAD is loaded with [*Freedoom: Phase 1*](http://freedoom.github.io/) or [*Freedoom: Phase 2*](http://freedoom.github.io/), if a `STBAR` lump is present in that PWAD, it will now be used.
+* Fixing a bug present in *Vanilla DOOM*, monsters will now always be alerted if attacked during the second frame of their idle animation.
+
+---
+
+###### Saturday, May 2, 2020
+
+### DOOM Retro v3.5.6
+
+* Optimizations have been made to further improve the overall performance and stability of *DOOM Retro*.
+* Minor changes have been made to text that is output to the console.
+* The name of the PWAD is no longer displayed in the automap if the current map has no title.
+* Several improvements have been made to the support of [*Chex Quest*](https://doomwiki.org/wiki/Chex_Quest), [*Freedoom: Phase 1*](http://freedoom.github.io/) and [*Freedoom: Phase 2*](http://freedoom.github.io/).
+* A bug has been fixed whereby the wrong music could be played in some rare instances.
+* The randomness of the music chosen when the `s_randommusic` CVAR is `on` has been improved.
+* A new `license` CCMD has been implemented that displays the [*GNU General Public License*](https://github.com/bradharding/doomretro/wiki/LICENSE) in the default browser.
+* A message is now displayed in the console whenever an item or monster respawns.
+* A new `r_supersampling` CVAR has been implemented that applies supersampling to the player’s view when the `r_detail` CVAR is `low` and the `r_lowpixelsize` CVAR is `2×2`. This CVAR is `on` by default and `off` when vanilla mode is on.
+* Corpses can now trigger teleporter line specials.
+* When using the `kill` CCMD, the items dropped by monsters will no longer trigger teleporter line specials.
+* A bug has been fixed whereby some hanging decorations would be positioned incorrectly in some instances.
+* Those monsters that don’t have red blood will no longer leave gibs if crushed.
+* Blood will no longer be spawned while a monster is being crushed and the `r_blood` CVAR is `none`.
+* A bug has been fixed whereby certain power-ups wouldn’t stop moving once off the edge of a *BOOM*-compatible scrolling sector and the `r_floatbob` CVAR was `on`.
+* Improvements have been made to how gradual lighting is applied to doors and crushing ceilings when the `r_graduallighting` CVAR is `on`.
+* The `STEP2` texture now appears correctly in *MAP01: Entryway* again.
+* Minor improvements have been made to the support of `DEHACKED` lumps.
+* The sky will now be rendered correctly when the `r_screensize` CVAR is less than `7`.
+* Screenshots may now only be taken when not playing a game if the `+screenshot` action is still bound to the <kbd>PRINTSCREEN</kbd> key.
+
+---
+
+###### Saturday, April 18, 2020
+
 ### DOOM Retro v3.5.5
 
 * Optimizations have been made to further improve the overall performance and stability of *DOOM Retro*.

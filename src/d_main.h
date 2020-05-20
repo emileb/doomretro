@@ -41,9 +41,13 @@
 
 #include "d_event.h"
 
-extern char **episodes[];
-extern char **expansions[];
-extern char **skilllevels[];
+extern char     **episodes[];
+extern char     **expansions[];
+extern char     **skilllevels[];
+extern char     *pwadfile;
+extern dboolean splashscreen;
+
+void D_Display(void);
 
 //
 // D_DoomMain()

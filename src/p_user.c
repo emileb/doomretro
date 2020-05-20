@@ -109,8 +109,7 @@ void P_CalcHeight(void)
     if (viewplayer->playerstate == PST_LIVE)
     {
         // Regular movement bobbing
-        // (needs to be calculated for gun swing
-        // even if not on ground)
+        // (needs to be calculated for gun swing even if not on ground)
         fixed_t momx = viewplayer->momx;
         fixed_t momy = viewplayer->momy;
         fixed_t bob = (MAXBOB * stillbob / 400) / 2;
@@ -601,7 +600,7 @@ void P_PlayerThink(void)
 
     // [BH] regenerate health by 1% every second up to 100%
     if (regenhealth && mo->health < initial_health && !(leveltime % TICRATE) && !viewplayer->damagecount)
-        P_GiveBody(1, false);
+        P_GiveBody(1, MAXHEALTH, false);
 
     // [BH] Check all sectors player is touching are special
     for (const struct msecnode_s *seclist = mo->touching_sectorlist; seclist; seclist = seclist->m_tnext)

@@ -2330,10 +2330,6 @@ static void deh_procThing(DEHFILE *fpin, char *line)
 
                             value |= deh_mobjflags[iy].value;
 
-                            // [BH] hack to use vanilla height of dehacked hanging decorations
-                            if (deh_mobjflags[iy].value == MF_SPAWNCEILING && (mobjinfo[indexnum].flags2 & MF2_DECORATION))
-                                mobjinfo[indexnum].height = 16 * FRACUNIT;
-
                             // [BH] no blood splats if thing is dehacked...
                             mobjinfo[indexnum].blood = 0;
                             break;
@@ -2979,6 +2975,9 @@ static void deh_procCheat(DEHFILE *fpin, char *line)
             while (*p == ' ')
                 p++;
 
+            if (devparm)
+                C_Output("Assigned new cheat '%s' to cheat '%s' at index %i", p, cheat_mus.sequence, iy);
+
             cheat_mus.sequence = M_StringDuplicate(p);
             cheat_mus_xy.sequence = M_StringDuplicate(p);
             success = true;
@@ -2993,6 +2992,9 @@ static void deh_procCheat(DEHFILE *fpin, char *line)
             while (*p == ' ')
                 p++;
 
+            if (devparm)
+                C_Output("Assigned new cheat '%s' to cheat '%s' at index %i", p, cheat_choppers.sequence, iy);
+
             cheat_choppers.sequence = M_StringDuplicate(p);
             success = true;
         }
@@ -3005,6 +3007,9 @@ static void deh_procCheat(DEHFILE *fpin, char *line)
 
             while (*p == ' ')
                 p++;
+
+            if (devparm)
+                C_Output("Assigned new cheat '%s' to cheat '%s' at index %i", p, cheat_god.sequence, iy);
 
             cheat_god.sequence = M_StringDuplicate(p);
             success = true;
@@ -3019,6 +3024,9 @@ static void deh_procCheat(DEHFILE *fpin, char *line)
             while (*p == ' ')
                 p++;
 
+            if (devparm)
+                C_Output("Assigned new cheat '%s' to cheat '%s' at index %i", p, cheat_ammo.sequence, iy);
+
             cheat_ammo.sequence = M_StringDuplicate(p);
             success = true;
         }
@@ -3031,6 +3039,9 @@ static void deh_procCheat(DEHFILE *fpin, char *line)
 
             while (*p == ' ')
                 p++;
+
+            if (devparm)
+                C_Output("Assigned new cheat '%s' to cheat '%s' at index %i", p, cheat_ammonokey.sequence, iy);
 
             cheat_ammonokey.sequence = M_StringDuplicate(p);
             success = true;
@@ -3045,6 +3056,9 @@ static void deh_procCheat(DEHFILE *fpin, char *line)
             while (*p == ' ')
                 p++;
 
+            if (devparm)
+                C_Output("Assigned new cheat '%s' to cheat '%s' at index %i", p, cheat_noclip.sequence, iy);
+
             cheat_noclip.sequence = M_StringDuplicate(p);
             success = true;
         }
@@ -3057,6 +3071,9 @@ static void deh_procCheat(DEHFILE *fpin, char *line)
 
             while (*p == ' ')
                 p++;
+
+            if (devparm)
+                C_Output("Assigned new cheat '%s' to cheat '%s' at index %i", p, cheat_commercial_noclip.sequence, iy);
 
             cheat_commercial_noclip.sequence = M_StringDuplicate(p);
             success = true;
@@ -3071,6 +3088,9 @@ static void deh_procCheat(DEHFILE *fpin, char *line)
             while (*p == ' ')
                 p++;
 
+            if (devparm)
+                C_Output("Assigned new cheat '%s' to cheat '%s' at index %i", p, cheat_powerup[0].sequence, iy);
+
             cheat_powerup[0].sequence = M_StringDuplicate(p);
             success = true;
         }
@@ -3083,6 +3103,9 @@ static void deh_procCheat(DEHFILE *fpin, char *line)
 
             while (*p == ' ')
                 p++;
+
+            if (devparm)
+                C_Output("Assigned new cheat '%s' to cheat '%s' at index %i", p, cheat_powerup[1].sequence, iy);
 
             cheat_powerup[1].sequence = M_StringDuplicate(p);
             success = true;
@@ -3097,6 +3120,9 @@ static void deh_procCheat(DEHFILE *fpin, char *line)
             while (*p == ' ')
                 p++;
 
+            if (devparm)
+                C_Output("Assigned new cheat '%s' to cheat '%s' at index %i", p, cheat_powerup[2].sequence, iy);
+
             cheat_powerup[2].sequence = M_StringDuplicate(p);
             success = true;
         }
@@ -3109,6 +3135,9 @@ static void deh_procCheat(DEHFILE *fpin, char *line)
 
             while (*p == ' ')
                 p++;
+
+            if (devparm)
+                C_Output("Assigned new cheat '%s' to cheat '%s' at index %i", p, cheat_powerup[3].sequence, iy);
 
             cheat_powerup[3].sequence = M_StringDuplicate(p);
             success = true;
@@ -3123,6 +3152,9 @@ static void deh_procCheat(DEHFILE *fpin, char *line)
             while (*p == ' ')
                 p++;
 
+            if (devparm)
+                C_Output("Assigned new cheat '%s' to cheat '%s' at index %i", p, cheat_powerup[4].sequence, iy);
+
             cheat_powerup[4].sequence = M_StringDuplicate(p);
             success = true;
         }
@@ -3135,6 +3167,9 @@ static void deh_procCheat(DEHFILE *fpin, char *line)
 
             while (*p == ' ')
                 p++;
+
+            if (devparm)
+                C_Output("Assigned new cheat '%s' to cheat '%s' at index %i", p, cheat_powerup[5].sequence, iy);
 
             cheat_powerup[5].sequence = M_StringDuplicate(p);
             success = true;
@@ -3149,6 +3184,9 @@ static void deh_procCheat(DEHFILE *fpin, char *line)
             while (*p == ' ')
                 p++;
 
+            if (devparm)
+                C_Output("Assigned new cheat '%s' to cheat '%s' at index %i", p, cheat_powerup[6].sequence, iy);
+
             cheat_powerup[6].sequence = M_StringDuplicate(p);
             success = true;
         }
@@ -3161,6 +3199,9 @@ static void deh_procCheat(DEHFILE *fpin, char *line)
 
             while (*p == ' ')
                 p++;
+
+            if (devparm)
+                C_Output("Assigned new cheat '%s' to cheat '%s' at index %i", p, cheat_clev.sequence, iy);
 
             cheat_clev.sequence = M_StringDuplicate(p);
             cheat_clev_xy.sequence = M_StringDuplicate(p);
@@ -3176,12 +3217,12 @@ static void deh_procCheat(DEHFILE *fpin, char *line)
             while (*p == ' ')
                 p++;
 
+            if (devparm)
+                C_Output("Assigned new cheat '%s' to cheat '%s' at index %i", p, cheat_mypos.sequence, iy);
+
             cheat_mypos.sequence = M_StringDuplicate(p);
             success = true;
         }
-
-        if (success && devparm)
-            C_Output("Assigned new cheat '%s' to cheat '%s' at index %i", p, cheat_mus.sequence, iy);
 
         if (devparm)
             C_Output("- %s", inbuffer);

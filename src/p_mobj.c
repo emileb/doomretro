@@ -633,6 +633,9 @@ static void P_NightmareRespawn(mobj_t *mobj)
 
     // remove the old monster
     P_RemoveMobj(mobj);
+
+    if (con_obituaries)
+        C_Obituary("%s %s has respawned.", (isvowel(mo->info->name1[0]) ? "An" : "A"), mo->info->name1);
 }
 
 //
@@ -677,10 +680,12 @@ void P_MobjThinker(mobj_t *mobj)
         && !sector->heightsec && r_liquid_bob)
         mobj->z += animatedliquiddiffs[(mobj->floatbob + leveltime) & 63];
 
-    // [BH] otherwise bob certain power-ups
+    // [BH] bob certain power-ups
     else if ((flags2 & MF2_FLOATBOB) && !(flags & MF_CORPSE) && r_floatbob)
+    {
         mobj->z = BETWEEN(mobj->floorz - 1, mobj->z + floatbobdiffs[(mobj->floatbob + leveltime) & 63], mobj->ceilingz);
-
+        P_ZMovement(mobj);
+    }
     else if (mobj->z != mobj->floorz || mobj->momz)
     {
         if ((flags2 & MF2_PASSMOBJ) && !infiniteheight)
@@ -745,9 +750,9 @@ void P_MobjThinker(mobj_t *mobj)
     else
     {
         // check for nightmare respawn
-        if ((flags & MF_COUNTKILL) && (gameskill == sk_nightmare || respawnmonsters))
-            if (++mobj->movecount >= 12 * TICRATE && !(leveltime & 31) && M_Random() <= 4)
-                P_NightmareRespawn(mobj);
+        if ((flags & MF_COUNTKILL) && (gameskill == sk_nightmare || respawnmonsters)
+            && ++mobj->movecount >= 12 * TICRATE && !(leveltime & 31) && M_Random() <= 4)
+            P_NightmareRespawn(mobj);
     }
 }
 
@@ -981,6 +986,9 @@ void P_RespawnSpecials(void)
     mo = P_SpawnMobj(x, y, z, i);
     mo->spawnpoint = *mthing;
     mo->angle = ANG45 * (mthing->angle / 45);
+
+    if (con_obituaries)
+        C_Obituary("%s %s has respawned.", (isvowel(mo->info->name1[0]) ? "An" : "A"), mo->info->name1);
 
     // pull it from the queue
     iquetail = (iquetail + 1) & (ITEMQUEUESIZE - 1);

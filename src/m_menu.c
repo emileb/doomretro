@@ -126,13 +126,10 @@ int             spindirection;
 static angle_t  playerangle;
 
 extern patch_t  *hu_font[HU_FONTSIZE];
-extern dboolean message_menu;
 
 extern int      st_palette;
 
 extern dboolean dowipe;
-
-extern dboolean splashscreen;
 
 extern dboolean skippsprinterp;
 
@@ -559,7 +556,7 @@ void M_DarkBackground(void)
         memcpy(mapscreen, blurscreen2, (SCREENHEIGHT - SBARHEIGHT) * SCREENWIDTH);
 
     if (r_detail == r_detail_low)
-        V_LowGraphicDetail();
+        V_LowGraphicDetail(0, 0, SCREENWIDTH, blurheight, 2, 2 * SCREENWIDTH);
 }
 
 static byte blues[] =
@@ -789,10 +786,7 @@ static void M_SplitString(char *string)
 //
 static void M_DrawPatchWithShadow(int x, int y, patch_t *patch)
 {
-    short   width = SHORT(patch->width);
-    short   height = SHORT(patch->height);
-
-    if (width == ORIGINALWIDTH || height == ORIGINALHEIGHT)
+    if (SHORT(patch->height) == ORIGINALHEIGHT)
         V_DrawPagePatch(patch);
     else
         V_DrawPatchWithShadow(x, y, patch, false);
@@ -804,13 +798,10 @@ static void M_DrawPatchWithShadow(int x, int y, patch_t *patch)
 //
 static void M_DrawCenteredPatchWithShadow(int y, patch_t *patch)
 {
-    short   width = SHORT(patch->width);
-    short   height = SHORT(patch->height);
-
-    if (width == ORIGINALWIDTH || height == ORIGINALHEIGHT)
+    if (SHORT(patch->height) == ORIGINALHEIGHT)
         V_DrawPagePatch(patch);
     else
-        V_DrawPatchWithShadow((ORIGINALWIDTH - width) / 2 + SHORT(patch->leftoffset), y, patch, false);
+        V_DrawPatchWithShadow((ORIGINALWIDTH - SHORT(patch->width)) / 2 + SHORT(patch->leftoffset), y, patch, false);
 }
 
 //
@@ -866,10 +857,9 @@ static byte saveg_read8(FILE *file)
 //
 // M_CheckSaveGame
 //
-static dboolean M_CheckSaveGame(void)
+static dboolean M_CheckSaveGame(int *ep, int *map)
 {
     FILE    *file = fopen(P_SaveGameFile(itemOn), "rb");
-    int     ep;
     int     mission;
 
     if (!file)
@@ -878,8 +868,8 @@ static dboolean M_CheckSaveGame(void)
     for (int i = 0; i < SAVESTRINGSIZE + VERSIONSIZE + 1; i++)
         saveg_read8(file);
 
-    ep = saveg_read8(file);
-    saveg_read8(file);
+    *ep = saveg_read8(file);
+    *map = saveg_read8(file);
     mission = saveg_read8(file);
     fclose(file);
 
@@ -918,10 +908,10 @@ static dboolean M_CheckSaveGame(void)
     if (mission != gamemission)
         return false;
 
-    if (ep > 1 && gamemode == shareware)
+    if (*ep > 1 && gamemode == shareware)
         return false;
 
-    if (ep > 3 && gamemode == registered)
+    if (*ep > 3 && gamemode == registered)
         return false;
 
     return true;
@@ -1012,7 +1002,10 @@ static void M_DrawSaveLoadBorder(int x, int y)
 //
 static void M_LoadSelect(int choice)
 {
-    if (M_CheckSaveGame())
+    int ep;
+    int map;
+
+    if (M_CheckSaveGame(&ep, &map))
     {
         char    name[SAVESTRINGSIZE];
 
@@ -1187,75 +1180,73 @@ void M_UpdateSaveGameName(int i)
             match = true;
         else
         {
-            switch (gamemission)
-            {
-                case doom:
-                    for (int j = 0; j < 9 * 5; j++)
-                        if (M_StringCompare(savegamestrings[i], RemoveMapNum(*mapnames[j]))
-                            || M_StringCompare(savegamestrings[i], s_CAPTION_E1M4B)
-                            || M_StringCompare(savegamestrings[i], s_CAPTION_E1M8B))
+            int ep;
+            int map;
+
+            if (M_CheckSaveGame(&ep, &map))
+                switch (gamemission)
+                {
+                    case doom:
+                        if ((map == 10 && M_StringCompare(savegamestrings[i], s_CAPTION_E1M4B))
+                            || (map == 11 && M_StringCompare(savegamestrings[i], s_CAPTION_E1M8B))
+                            || M_StringCompare(savegamestrings[i], RemoveMapNum(*mapnames[(ep - 1) * 9 + map - 1])))
                         {
                             match = true;
                             break;
                         }
 
-                    break;
+                        break;
 
-                case doom2:
-                    if (bfgedition)
-                    {
-                        for (int j = 0; j < 33; j++)
-                            if (M_StringCompare(savegamestrings[i], RemoveMapNum(*mapnames2_bfg[j])))
+                    case doom2:
+                        if (bfgedition)
+                        {
+                            if (M_StringCompare(savegamestrings[i], RemoveMapNum(*mapnames2_bfg[map - 1])))
                             {
                                 match = true;
                                 break;
                             }
-                    }
-                    else
-                    {
-                        for (int j = 0; j < 32; j++)
-                            if (M_StringCompare(savegamestrings[i], RemoveMapNum(*mapnames2[j])))
+                        }
+                        else
+                        {
+                            if (M_StringCompare(savegamestrings[i], RemoveMapNum(*mapnames2[map - 1])))
                             {
                                 match = true;
                                 break;
                             }
-                    }
+                        }
 
-                    break;
+                        break;
 
-                case pack_nerve:
-                    for (int j = 0; j < 9; j++)
-                        if (M_StringCompare(savegamestrings[i], RemoveMapNum(*mapnamesn[j])))
+                    case pack_nerve:
+                        if (M_StringCompare(savegamestrings[i], RemoveMapNum(*mapnamesn[map - 1])))
                         {
                             match = true;
                             break;
                         }
 
-                    break;
+                        break;
 
-                case pack_plut:
-                    for (int j = 0; j < 32; j++)
-                        if (M_StringCompare(savegamestrings[i], RemoveMapNum(*mapnamesp[j])))
+                    case pack_plut:
+                        if (M_StringCompare(savegamestrings[i], RemoveMapNum(*mapnamesp[map - 1])))
                         {
                             match = true;
                             break;
                         }
 
-                    break;
+                        break;
 
-                case pack_tnt:
-                    for (int j = 0; j < 32; j++)
-                        if (M_StringCompare(savegamestrings[i], RemoveMapNum(*mapnamest[j])))
+                    case pack_tnt:
+                        if (M_StringCompare(savegamestrings[i], RemoveMapNum(*mapnamest[map - 1])))
                         {
                             match = true;
                             break;
                         }
 
-                    break;
+                        break;
 
-                default:
-                    break;
-            }
+                    default:
+                        break;
+                }
         }
     }
 
@@ -1733,8 +1724,6 @@ static void M_VerifyNightmare(int key)
         M_SetupNextMenu(&NewDef);
     else
     {
-        S_StartSound(NULL, sfx_swtchx);
-        I_Sleep(1000);
         quickSaveSlot = -1;
         M_ClearMenus();
         G_DeferredInitNew((skill_t)nightmare, epi + 1, 1);
@@ -1872,23 +1861,26 @@ static void M_Options(int choice)
 static void M_ChangeMessages(int choice)
 {
     messages = !messages;
+    C_StrCVAROutput(stringize(messages), (messages ? "on" : "off"));
 
-    if (messages)
+    if (!menuactive)
     {
-        C_StrCVAROutput(stringize(messages), "on");
-        C_Output(s_MSGON);
-        message_menu = true;
-        HU_SetPlayerMessage(s_MSGON, false, false);
+        if (messages)
+        {
+            C_Output(s_MSGON);
+            HU_SetPlayerMessage(s_MSGON, false, false);
+        }
+        else
+        {
+            C_Output(s_MSGOFF);
+            HU_SetPlayerMessage(s_MSGOFF, false, false);
+        }
+
+        message_dontfuckwithme = true;
     }
     else
-    {
-        C_StrCVAROutput(stringize(messages), "off");
-        C_Output(s_MSGOFF);
-        message_menu = true;
-        HU_SetPlayerMessage(s_MSGOFF, false, false);
-    }
+        C_Output(messages ? s_MSGON : s_MSGOFF);
 
-    message_dontfuckwithme = true;
     M_SaveCVARs();
 }
 
@@ -2685,7 +2677,7 @@ dboolean M_Responder(event_t *ev)
     // Save Game string input
     if (saveStringEnter)
     {
-        if (ev->type == ev_text)
+        if (ev->type == ev_textinput)
         {
             ch = toupper(ev->data1);
 
@@ -2932,7 +2924,7 @@ dboolean M_Responder(event_t *ev)
             else
                 M_ShowHelp(0);
 
-            return false;
+            return true;
         }
 
         // Save
@@ -2957,7 +2949,7 @@ dboolean M_Responder(event_t *ev)
                 M_SaveGame(0);
             }
 
-            return false;
+            return true;
         }
 
         // Load
@@ -2981,7 +2973,7 @@ dboolean M_Responder(event_t *ev)
                 M_LoadGame(0);
             }
 
-            return false;
+            return true;
         }
 
         else if (key == KEY_F4 && (!functionkey || functionkey == KEY_F4) && !keydown)
@@ -3005,7 +2997,7 @@ dboolean M_Responder(event_t *ev)
                 S_StartSound(NULL, sfx_swtchn);
             }
 
-            return false;
+            return true;
         }
 
         // Toggle graphic detail
@@ -3029,7 +3021,7 @@ dboolean M_Responder(event_t *ev)
                 functionkey = KEY_F6;
 
             M_QuickSave();
-            return false;
+            return true;
         }
 
         // End game
@@ -3040,7 +3032,7 @@ dboolean M_Responder(event_t *ev)
             M_StartControlPanel();
             S_StartSound(NULL, sfx_swtchn);
             M_EndGame(0);
-            return false;
+            return true;
         }
 
         // Toggle messages
@@ -3060,7 +3052,7 @@ dboolean M_Responder(event_t *ev)
             keydown = key;
             functionkey = KEY_F9;
             M_QuickLoad();
-            return false;
+            return true;
         }
 
         // Quit DOOM Retro
@@ -3071,7 +3063,7 @@ dboolean M_Responder(event_t *ev)
             M_StartControlPanel();
             S_StartSound(NULL, sfx_swtchn);
             M_QuitDOOM(0);
-            return false;
+            return true;
         }
     }
 
@@ -3083,7 +3075,7 @@ dboolean M_Responder(event_t *ev)
     }
 
     // screenshot
-    if (key == keyboardscreenshot)
+    if (key == keyboardscreenshot && (keyboardscreenshot == KEY_PRINTSCREEN || gamestate == GS_LEVEL))
     {
         G_ScreenShot();
         return false;
@@ -3763,7 +3755,6 @@ void M_ClearMenus(void)
         return;
 
     menuactive = false;
-    message_menu = false;
     blurtic = -1;
 
     if (gp_vibrate_barrels || gp_vibrate_damage || gp_vibrate_weapons)

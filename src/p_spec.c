@@ -980,6 +980,12 @@ dboolean P_CanUnlockGenDoor(line_t *line)
                 && viewplayer->cards[it_bluecard] <= 0 && viewplayer->cards[it_blueskull] <= 0
                 && viewplayer->cards[it_yellowcard] <= 0 && viewplayer->cards[it_yellowskull] <= 0)
             {
+                if (vid_widescreen && r_hud && (!viewplayer->neededcardflash || viewplayer->neededcard != it_allkeys))
+                {
+                    viewplayer->neededcard = it_allkeys;
+                    viewplayer->neededcardflash = NEEDEDCARDFLASH;
+                }
+
                 M_snprintf(buffer, sizeof(buffer), s_PD_ANY, playername,
                     (M_StringCompare(playername, playername_default) ? "" : "s"));
                 HU_PlayerMessage(buffer, false, false);
@@ -1108,6 +1114,12 @@ dboolean P_CanUnlockGenDoor(line_t *line)
                 || viewplayer->cards[it_bluecard] <= 0 || viewplayer->cards[it_blueskull] <= 0
                 || viewplayer->cards[it_yellowcard] <= 0 || viewplayer->cards[it_yellowskull] <= 0))
             {
+                if (vid_widescreen && r_hud && (!viewplayer->neededcardflash || viewplayer->neededcard != it_allkeys))
+                {
+                    viewplayer->neededcard = it_allkeys;
+                    viewplayer->neededcardflash = NEEDEDCARDFLASH;
+                }
+
                 M_snprintf(buffer, sizeof(buffer), s_PD_ALL6, playername,
                     (M_StringCompare(playername, playername_default) ? "" : "s"));
                 HU_PlayerMessage(buffer, false, false);
@@ -1119,6 +1131,12 @@ dboolean P_CanUnlockGenDoor(line_t *line)
                 || (viewplayer->cards[it_bluecard] <= 0 && viewplayer->cards[it_blueskull] <= 0)
                 || (viewplayer->cards[it_yellowcard] <= 0 && viewplayer->cards[it_yellowskull] <= 0)))
             {
+                if (vid_widescreen && r_hud && (!viewplayer->neededcardflash || viewplayer->neededcard != it_allkeys))
+                {
+                    viewplayer->neededcard = it_allkeys;
+                    viewplayer->neededcardflash = NEEDEDCARDFLASH;
+                }
+
                 M_snprintf(buffer, sizeof(buffer), s_PD_ALL3, playername,
                     (M_StringCompare(playername, playername_default) ? "" : "s"));
                 HU_PlayerMessage(buffer, false, false);
@@ -1257,10 +1275,6 @@ void P_CrossSpecialLine(line_t *line, int side, mobj_t *thing)
             default:
                 break;
         }
-
-        // [BH] Corpses can't trigger specials
-        if ((thing->flags & MF_CORPSE) && thing->type != MT_BARREL)
-            return;
     }
 
     // jff 02/04/98 add check here for generalized linedef types
@@ -1276,17 +1290,15 @@ void P_CrossSpecialLine(line_t *line, int side, mobj_t *thing)
         }
         else if (line->special >= GenFloorBase)
         {
-            if (!thing->player)
-                if ((line->special & FloorChange) || !(line->special & FloorModel))
-                    return;                     // FloorModel is "Allow Monsters" if FloorChange is 0
+            if (!thing->player && ((line->special & FloorChange) || !(line->special & FloorModel)))
+                return;                         // FloorModel is "Allow Monsters" if FloorChange is 0
 
             linefunc = EV_DoGenFloor;
         }
         else if (line->special >= GenCeilingBase)
         {
-            if (!thing->player)
-                if ((line->special & CeilingChange) || !(line->special & CeilingModel))
-                    return;                     // CeilingModel is "Allow Monsters" if CeilingChange is 0
+            if (!thing->player && ((line->special & CeilingChange) || !(line->special & CeilingModel)))
+                return;                         // CeilingModel is "Allow Monsters" if CeilingChange is 0
 
             linefunc = EV_DoGenCeiling;
         }
@@ -1321,25 +1333,22 @@ void P_CrossSpecialLine(line_t *line, int side, mobj_t *thing)
         }
         else if (line->special >= GenLiftBase)
         {
-            if (!thing->player)
-                if (!(line->special & LiftMonster))
-                    return;                     // monsters disallowed
+            if (!thing->player && !(line->special & LiftMonster))
+                return;                         // monsters disallowed
 
             linefunc = EV_DoGenLift;
         }
         else if (line->special >= GenStairsBase)
         {
-            if (!thing->player)
-                if (!(line->special & StairMonster))
-                    return;                     // monsters disallowed
+            if (!thing->player && !(line->special & StairMonster))
+                return;                         // monsters disallowed
 
             linefunc = EV_DoGenStairs;
         }
         else if (line->special >= GenCrusherBase)
         {
-            if (!thing->player)
-                if (!(line->special & CrusherMonster))
-                    return;                     // monsters disallowed
+            if (!thing->player && !(line->special & CrusherMonster))
+                return;                         // monsters disallowed
 
             linefunc = EV_DoGenCrusher;
         }
@@ -1544,7 +1553,7 @@ void P_CrossSpecialLine(line_t *line, int side, mobj_t *thing)
             break;
 
         case W1_Teleport:
-            if (EV_Teleport(line, side, thing))
+            if (EV_Teleport(line, side, thing) && !(thing->flags & MF_CORPSE))
                 line->special = 0;
 
             break;
@@ -1648,7 +1657,7 @@ void P_CrossSpecialLine(line_t *line, int side, mobj_t *thing)
             break;
 
         case W1_Teleport_MonstersOnly:
-            if (!thing->player && EV_Teleport(line, side, thing))
+            if (!thing->player && EV_Teleport(line, side, thing) && !(thing->flags & MF_CORPSE))
                 line->special = 0;
 
             break;
@@ -1840,7 +1849,7 @@ void P_CrossSpecialLine(line_t *line, int side, mobj_t *thing)
             break;
 
         case W1_Teleport_AlsoMonsters_Silent_SameAngle:
-            if (EV_SilentTeleport(line, side, thing))
+            if (EV_SilentTeleport(line, side, thing) && !(thing->flags & MF_CORPSE))
                 line->special = 0;
 
             break;
@@ -1882,31 +1891,31 @@ void P_CrossSpecialLine(line_t *line, int side, mobj_t *thing)
             break;
 
         case W1_TeleportToLineWithSameTag_Silent_SameAngle:
-            if (EV_SilentLineTeleport(line, side, thing, false))
+            if (EV_SilentLineTeleport(line, side, thing, false) && !(thing->flags & MF_CORPSE))
                 line->special = 0;
 
             break;
 
         case W1_TeleportToLineWithSameTag_Silent_ReversedAngle:
-            if (EV_SilentLineTeleport(line, side, thing, true))
+            if (EV_SilentLineTeleport(line, side, thing, true) && !(thing->flags & MF_CORPSE))
                 line->special = 0;
 
             break;
 
         case W1_TeleportToLineWithSameTag_MonstersOnly_Silent_ReversedAngle:
-            if (!thing->player && EV_SilentLineTeleport(line, side, thing, true))
+            if (!thing->player && EV_SilentLineTeleport(line, side, thing, true) && !(thing->flags & MF_CORPSE))
                 line->special = 0;
 
             break;
 
         case W1_TeleportToLineWithSameTag_MonstersOnly_Silent:
-            if (!thing->player && EV_SilentLineTeleport(line, side, thing, false))
+            if (!thing->player && EV_SilentLineTeleport(line, side, thing, false) && !(thing->flags & MF_CORPSE))
                 line->special = 0;
 
             break;
 
         case W1_Teleport_MonstersOnly_Silent:
-            if (!thing->player && EV_SilentTeleport(line, side, thing))
+            if (!thing->player && EV_SilentTeleport(line, side, thing) && !(thing->flags & MF_CORPSE))
                 line->special = 0;
 
             break;
@@ -2043,17 +2052,15 @@ void P_ShootSpecialLine(mobj_t *thing, line_t *line)
     }
     else if (line->special >= GenFloorBase)
     {
-        if (!thing->player)
-            if ((line->special & FloorChange) || !(line->special & FloorModel))
-                return;                     // FloorModel is "Allow Monsters" if FloorChange is 0
+        if (!thing->player && ((line->special & FloorChange) || !(line->special & FloorModel)))
+            return;                         // FloorModel is "Allow Monsters" if FloorChange is 0
 
         linefunc = EV_DoGenFloor;
     }
     else if (line->special >= GenCeilingBase)
     {
-        if (!thing->player)
-            if ((line->special & CeilingChange) || !(line->special & CeilingModel))
-                return;                     // CeilingModel is "Allow Monsters" if CeilingChange is 0
+        if (!thing->player && ((line->special & CeilingChange) || !(line->special & CeilingModel)))
+            return;                         // CeilingModel is "Allow Monsters" if CeilingChange is 0
 
         linefunc = EV_DoGenCeiling;
     }
@@ -2088,25 +2095,22 @@ void P_ShootSpecialLine(mobj_t *thing, line_t *line)
     }
     else if (line->special >= GenLiftBase)
     {
-        if (!thing->player)
-            if (!(line->special & LiftMonster))
-                return;                     // monsters disallowed
+        if (!thing->player && !(line->special & LiftMonster))
+            return;                         // monsters disallowed
 
         linefunc = EV_DoGenLift;
     }
     else if (line->special >= GenStairsBase)
     {
-        if (!thing->player)
-            if (!(line->special & StairMonster))
-                return;                     // monsters disallowed
+        if (!thing->player && !(line->special & StairMonster))
+            return;                         // monsters disallowed
 
         linefunc = EV_DoGenStairs;
     }
     else if (line->special >= GenCrusherBase)
     {
-        if (!thing->player)
-            if (!(line->special & CrusherMonster))
-                return;                     // monsters disallowed
+        if (!thing->player && !(line->special & CrusherMonster))
+            return;                         // monsters disallowed
 
         linefunc = EV_DoGenCrusher;
     }
@@ -2197,24 +2201,21 @@ void P_PlayerInSpecialSector(sector_t *sector)
         switch (sector->special)
         {
             case DamageNegative5Or10PercentHealth:
-                if (!viewplayer->powers[pw_ironfeet])
-                    if (!(leveltime & 0x1F))
-                        P_DamageMobj(viewplayer->mo, NULL, NULL, 10, true);
+                if (!viewplayer->powers[pw_ironfeet] && !(leveltime & 0x1F))
+                    P_DamageMobj(viewplayer->mo, NULL, NULL, 10, true);
 
                 break;
 
             case DamageNegative2Or5PercentHealth:
-                if (!viewplayer->powers[pw_ironfeet])
-                    if (!(leveltime & 0x1F))
-                        P_DamageMobj(viewplayer->mo, NULL, NULL, 5, true);
+                if (!viewplayer->powers[pw_ironfeet] && !(leveltime & 0x1F))
+                    P_DamageMobj(viewplayer->mo, NULL, NULL, 5, true);
 
                 break;
 
             case DamageNegative10Or20PercentHealth:
             case DamageNegative10Or20PercentHealthAndLightBlinks_2Hz:
-                if (!viewplayer->powers[pw_ironfeet] || M_Random() < 5)
-                    if (!(leveltime & 0x1F))
-                        P_DamageMobj(viewplayer->mo, NULL, NULL, 20, true);
+                if ((!viewplayer->powers[pw_ironfeet] || M_Random() < 5) && !(leveltime & 0x1F))
+                    P_DamageMobj(viewplayer->mo, NULL, NULL, 20, true);
 
                 break;
 
@@ -2252,25 +2253,22 @@ void P_PlayerInSpecialSector(sector_t *sector)
 
             case 1:
                 // 2/5 damage per 31 tics
-                if (!viewplayer->powers[pw_ironfeet])
-                    if (!(leveltime & 0x1F))
-                        P_DamageMobj(viewplayer->mo, NULL, NULL, 5, true);
+                if (!viewplayer->powers[pw_ironfeet] && !(leveltime & 0x1F))
+                    P_DamageMobj(viewplayer->mo, NULL, NULL, 5, true);
 
                 break;
 
             case 2:
                 // 5/10 damage per 31 tics
-                if (!viewplayer->powers[pw_ironfeet])
-                    if (!(leveltime & 0x1F))
-                        P_DamageMobj(viewplayer->mo, NULL, NULL, 10, true);
+                if (!viewplayer->powers[pw_ironfeet] && !(leveltime & 0x1F))
+                    P_DamageMobj(viewplayer->mo, NULL, NULL, 10, true);
 
                 break;
 
             case 3:
                 // 10/20 damage per 31 tics
-                if (!viewplayer->powers[pw_ironfeet] || M_Random() < 5) // take damage even with suit
-                    if (!(leveltime & 0x1F))
-                        P_DamageMobj(viewplayer->mo, NULL, NULL, 20, true);
+                if ((!viewplayer->powers[pw_ironfeet] || M_Random() < 5) && !(leveltime & 0x1F))
+                    P_DamageMobj(viewplayer->mo, NULL, NULL, 20, true);
 
                 break;
         }
@@ -2295,9 +2293,8 @@ int countdown;
 
 void P_UpdateSpecials(void)
 {
-    if (timer)
-        if (!--countdown)
-            G_ExitLevel();
+    if (timer && !--countdown)
+        G_ExitLevel();
 
     // ANIMATE FLATS AND TEXTURES GLOBALLY
     for (anim_t *anim = anims; anim < lastanim; anim++)
@@ -2326,59 +2323,58 @@ void P_UpdateSpecials(void)
 
     // DO BUTTONS
     for (int i = 0; i < maxbuttons; i++)
-        if (buttonlist[i].btimer)
-            if (!--buttonlist[i].btimer)
+        if (buttonlist[i].btimer && !--buttonlist[i].btimer)
+        {
+            line_t      *line = buttonlist[i].line;
+            sector_t    *sector = line->backsector;
+            int         sidenum = line->sidenum[0];
+            short       toptexture = sides[sidenum].toptexture;
+            short       midtexture = sides[sidenum].midtexture;
+            short       bottomtexture = sides[sidenum].bottomtexture;
+            int         btexture = buttonlist[i].btexture;
+
+            switch (buttonlist[i].where)
             {
-                line_t      *line = buttonlist[i].line;
-                sector_t    *sector = line->backsector;
-                int         sidenum = line->sidenum[0];
-                short       toptexture = sides[sidenum].toptexture;
-                short       midtexture = sides[sidenum].midtexture;
-                short       bottomtexture = sides[sidenum].bottomtexture;
-                int         btexture = buttonlist[i].btexture;
+                case top:
+                    sides[sidenum].toptexture = btexture;
 
-                switch (buttonlist[i].where)
-                {
-                    case top:
-                        sides[sidenum].toptexture = btexture;
-
-                        if (midtexture == toptexture)
-                            sides[sidenum].midtexture = btexture;
-
-                        if (bottomtexture == toptexture)
-                            sides[sidenum].bottomtexture = btexture;
-
-                        break;
-
-                    case middle:
+                    if (midtexture == toptexture)
                         sides[sidenum].midtexture = btexture;
 
-                        if (toptexture == midtexture)
-                            sides[sidenum].toptexture = btexture;
-
-                        if (bottomtexture == midtexture)
-                            sides[sidenum].bottomtexture = btexture;
-
-                        break;
-
-                    case bottom:
+                    if (bottomtexture == toptexture)
                         sides[sidenum].bottomtexture = btexture;
 
-                        if (toptexture == bottomtexture)
-                            sides[sidenum].toptexture = btexture;
+                    break;
 
-                        if (midtexture == bottomtexture)
-                            sides[sidenum].midtexture = btexture;
+                case middle:
+                    sides[sidenum].midtexture = btexture;
 
-                        break;
+                    if (toptexture == midtexture)
+                        sides[sidenum].toptexture = btexture;
 
-                    case nowhere:
-                        break;
-                }
+                    if (bottomtexture == midtexture)
+                        sides[sidenum].bottomtexture = btexture;
 
-                if (!sector || (!sector->floordata && !sector->ceilingdata) || line->tag != sector->tag)
-                    S_StartSectorSound(buttonlist[i].soundorg, sfx_swtchn);
+                    break;
+
+                case bottom:
+                    sides[sidenum].bottomtexture = btexture;
+
+                    if (toptexture == bottomtexture)
+                        sides[sidenum].toptexture = btexture;
+
+                    if (midtexture == bottomtexture)
+                        sides[sidenum].midtexture = btexture;
+
+                    break;
+
+                case nowhere:
+                    break;
             }
+
+            if (!sector || (!sector->floordata && !sector->ceilingdata) || line->tag != sector->tag)
+                S_StartSectorSound(buttonlist[i].soundorg, sfx_swtchn);
+        }
 }
 
 //

@@ -190,7 +190,7 @@ dboolean            skipblstart;            // MaxW: Skip initial blocklist shor
 static int          rejectlump = -1;        // cph - store reject lump num if cached
 const byte          *rejectmatrix;          // cph - const*
 
-static mapinfo_t    mapinfo[MAXMAPINFO + 1];
+static mapinfo_t    mapinfo[MAXMAPINFO];
 
 static char *mapcmdnames[] =
 {
@@ -1498,7 +1498,7 @@ static void P_LoadZSegs(const byte *data)
             free(temp);
         }
 
-        if ((ldef->flags & ML_TWOSIDED) && (ldef->sidenum[side ^ 1] != NO_INDEX))
+        if ((ldef->flags & ML_TWOSIDED) && ldef->sidenum[side ^ 1] != NO_INDEX)
             li->backsector = sides[ldef->sidenum[side ^ 1]].sector;
         else
         {
@@ -1701,8 +1701,8 @@ static void P_LoadThings(int lump)
                     if (thingfix[j].newx == REMOVE && thingfix[j].newy == REMOVE)
                     {
                         C_Warning(2, "Thing %s has been removed.", temp);
+
                         spawn = false;
-                        break;
                     }
                     else
                     {
@@ -1711,20 +1711,22 @@ static void P_LoadThings(int lump)
 
                         mt.x = SHORT(thingfix[j].newx);
                         mt.y = SHORT(thingfix[j].newy);
-                    }
 
-                    if (thingfix[j].angle != DEFAULT)
-                    {
-                        C_Warning(2, "The angle of thing %s has been changed from %i\xB0 to %i\xB0.", temp, mt.angle, thingfix[j].angle);
+                        if (thingfix[j].angle != DEFAULT)
+                        {
+                            C_Warning(2, "The angle of thing %s has been changed from %i\xB0 to %i\xB0.",
+                                temp, mt.angle, thingfix[j].angle);
 
-                        mt.angle = SHORT(thingfix[j].angle);
-                    }
+                            mt.angle = SHORT(thingfix[j].angle);
+                        }
 
-                    if (thingfix[j].options != DEFAULT)
-                    {
-                        C_Warning(2, "The flags of thing %s have been changed from %i to %i.", temp, mt.options, thingfix[j].options);
+                        if (thingfix[j].options != DEFAULT)
+                        {
+                            C_Warning(2, "The flags of thing %s have been changed from %i to %i.",
+                                temp, mt.options, thingfix[j].options);
 
-                        mt.options = thingfix[j].options;
+                            mt.options = thingfix[j].options;
+                        }
                     }
 
                     free(temp);
@@ -2586,16 +2588,13 @@ void P_MapName(int ep, int map)
                 || ((E1M8B || *speciallumpname) && ep == 1 && map == 8) ? "B" : ""));
 
             if (*mapinfoname)
-                M_snprintf(maptitle, sizeof(maptitle), "%s: %s", mapnum, mapinfoname);
+                M_StringCopy(maptitle, mapinfoname, sizeof(maptitle));
             else if (W_CheckMultipleLumps(mapnum) > 1 && dehcount == 1)
             {
-                char    *temp = uppercase(leafname(lumpinfo[W_GetNumForName(mapnum)]->wadfile->path));
-
                 mapnumonly = true;
                 M_StringCopy(maptitle, mapnum, sizeof(maptitle));
                 M_StringCopy(mapnumandtitle, mapnum, sizeof(mapnumandtitle));
-                M_snprintf(automaptitle, sizeof(automaptitle), "%s: %s", temp, mapnum);
-                free(temp);
+                M_StringCopy(automaptitle, mapnum, sizeof(mapnumandtitle));
             }
             else
                 M_StringCopy(maptitle, trimwhitespace(*mapnames[(ep - 1) * 9 + map - 1]), sizeof(maptitle));
@@ -2606,16 +2605,13 @@ void P_MapName(int ep, int map)
             M_snprintf(mapnum, sizeof(mapnum), "MAP%02i", map);
 
             if (*mapinfoname && !BTSX)
-                M_snprintf(maptitle, sizeof(maptitle), "%s: %s", mapnum, mapinfoname);
+                M_StringCopy(maptitle, mapinfoname, sizeof(maptitle));
             else if (W_CheckMultipleLumps(mapnum) > 1 && (!nerve || map > 9) && dehcount == 1)
             {
-                char    *temp = uppercase(leafname(lumpinfo[W_GetNumForName(mapnum)]->wadfile->path));
-
                 mapnumonly = true;
                 M_StringCopy(maptitle, mapnum, sizeof(maptitle));
                 M_StringCopy(mapnumandtitle, mapnum, sizeof(mapnumandtitle));
-                M_snprintf(automaptitle, sizeof(automaptitle), "%s: %s", temp, mapnum);
-                free(temp);
+                M_StringCopy(automaptitle, mapnum, sizeof(mapnumandtitle));
             }
             else
                 M_StringCopy(maptitle, trimwhitespace(bfgedition && (!modifiedgame || nerve) ?
@@ -2627,7 +2623,7 @@ void P_MapName(int ep, int map)
             M_snprintf(mapnum, sizeof(mapnum), "MAP%02i", map);
 
             if (*mapinfoname)
-                M_snprintf(maptitle, sizeof(maptitle), "%s: %s", mapnum, mapinfoname);
+                M_StringCopy(maptitle, mapinfoname, sizeof(maptitle));
             else
                 M_StringCopy(maptitle, trimwhitespace(*mapnamesn[map - 1]), sizeof(maptitle));
 
@@ -2637,16 +2633,13 @@ void P_MapName(int ep, int map)
             M_snprintf(mapnum, sizeof(mapnum), "MAP%02i", map);
 
             if (*mapinfoname)
-                M_snprintf(maptitle, sizeof(maptitle), "%s: %s", mapnum, mapinfoname);
+                M_StringCopy(maptitle, mapinfoname, sizeof(maptitle));
             else if (W_CheckMultipleLumps(mapnum) > 1 && dehcount == 1)
             {
-                char    *temp = uppercase(leafname(lumpinfo[W_GetNumForName(mapnum)]->wadfile->path));
-
                 mapnumonly = true;
                 M_StringCopy(maptitle, mapnum, sizeof(maptitle));
                 M_StringCopy(mapnumandtitle, mapnum, sizeof(mapnumandtitle));
-                M_snprintf(automaptitle, sizeof(automaptitle), "%s: %s", temp, mapnum);
-                free(temp);
+                M_StringCopy(automaptitle, mapnum, sizeof(mapnumandtitle));
             }
             else
                 M_StringCopy(maptitle, trimwhitespace(*mapnamesp[map - 1]), sizeof(maptitle));
@@ -2657,16 +2650,13 @@ void P_MapName(int ep, int map)
             M_snprintf(mapnum, sizeof(mapnum), "MAP%02i", map);
 
             if (*mapinfoname)
-                M_snprintf(maptitle, sizeof(maptitle), "%s: %s", mapnum, mapinfoname);
+                M_StringCopy(maptitle, mapinfoname, sizeof(maptitle));
             else if (W_CheckMultipleLumps(mapnum) > 1 && dehcount == 1)
             {
-                char    *temp = uppercase(leafname(lumpinfo[W_GetNumForName(mapnum)]->wadfile->path));
-
                 mapnumonly = true;
                 M_StringCopy(maptitle, mapnum, sizeof(maptitle));
                 M_StringCopy(mapnumandtitle, mapnum, sizeof(mapnumandtitle));
-                M_snprintf(automaptitle, sizeof(automaptitle), "%s: %s", temp, mapnum);
-                free(temp);
+                M_StringCopy(automaptitle, mapnum, sizeof(mapnumandtitle));
             }
             else
                 M_StringCopy(maptitle, trimwhitespace(*mapnamest[map - 1]), sizeof(maptitle));
@@ -2855,9 +2845,11 @@ void P_SetupLevel(int ep, int map)
     temp = titlecase(maptitle);
 
     if (M_StringCompare(playername, playername_default))
-        C_PlayerMessage("You have %s <b><i>%s</i></b>.", (samelevel ? "reentered": "entered"), temp);
+        C_PlayerMessage("You have %s <b><i>%s</i></b>%s",
+            (samelevel ? "reentered": "entered"), temp, (ispunctuation(temp[strlen(temp) - 1]) ? "" : "."));
     else
-        C_PlayerMessage("%s has %s <b><i>%s</i></b>.", playername, (samelevel ? "reentered" : "entered"), temp);
+        C_PlayerMessage("%s has %s <b><i>%s</i></b>%s",
+            playername, (samelevel ? "reentered" : "entered"), temp, (ispunctuation(temp[strlen(temp) - 1]) ? "" : "."));
 
     free(temp);
 
@@ -2971,13 +2963,30 @@ static void P_InitMapInfo(void)
         if ((MAPINFO = W_CheckNumForName(MAPINFO_SCRIPT_NAME)) < 0)
             return;
 
-    info = mapinfo;
-    memset(info, 0, sizeof(mapinfo_t) * (MAXMAPINFO + 1));
-
-    for (int i = 0; i < NUMLIQUIDS; i++)
+    for (int i = 0; i < MAXMAPINFO; i++)
     {
-        info->liquid[i] = -1;
-        info->noliquid[i] = -1;
+        mapinfo[i].author[0] = '\0';
+        mapinfo[i].cluster = 0;
+
+        for (int j = 0; j < NUMLIQUIDS; j++)
+        {
+            mapinfo[i].liquid[j] = -1;
+            mapinfo[i].noliquid[j] = -1;
+        }
+
+        mapinfo[i].music = 0;
+        mapinfo[i].musiccomposer[0] = '\0';
+        mapinfo[i].musictitle[0] = '\0';
+        mapinfo[i].name[0] = '\0';
+        mapinfo[i].next = 0;
+        mapinfo[i].nojump = false;
+        mapinfo[i].nomouselook = false;
+        mapinfo[i].par = 0;
+        mapinfo[i].pistolstart = false;
+        mapinfo[i].secretnext = 0;
+        mapinfo[i].sky1texture = 0;
+        mapinfo[i].sky1scrolldelta = 0;
+        mapinfo[i].titlepatch = 0;
     }
 
     SC_Open(RMAPINFO >= 0 ? RMAPINFO_SCRIPT_NAME : MAPINFO_SCRIPT_NAME);
@@ -3043,7 +3052,7 @@ static void P_InitMapInfo(void)
             // Process optional tokens
             while (SC_GetString())
             {
-                if (SC_Compare("MAP") || SC_Compare("DEFAULTMAP"))
+                if (SC_Compare("MAP") || SC_Compare("DEFAULTMAP") || SC_Compare("CLUSTERDEF"))
                 {
                     SC_UnGet();
                     break;
@@ -3234,93 +3243,88 @@ static void P_InitMapInfo(void)
         C_Warning(1, "This PWAD has disabled use of the <b>mouselook</b> CVAR and <b>+mouselook</b> action.");
 }
 
-static int QualifyMap(int map)
-{
-    return (map < 0 || map > mapcount ? 100 : map);
-}
-
 char *P_GetMapAuthor(int map)
 {
-    return (MAPINFO >= 0 && mapinfo[QualifyMap(map)].author[0] ? mapinfo[QualifyMap(map)].author :
+    return (MAPINFO >= 0 && mapinfo[map].author[0] ? mapinfo[map].author :
         (((E1M4B || *speciallumpname) && map == 4) || ((E1M8B || *speciallumpname) && map == 8) ? s_AUTHOR_ROMERO : ""));
 }
 
 void P_GetMapLiquids(int map)
 {
     for (int i = 0; i < liquidlumps; i++)
-        terraintypes[mapinfo[QualifyMap(map)].liquid[i]] = LIQUID;
+        terraintypes[mapinfo[map].liquid[i]] = LIQUID;
 }
 
 int P_GetMapMusic(int map)
 {
-    return (MAPINFO >= 0 ? mapinfo[QualifyMap(map)].music : 0);
+    return mapinfo[map].music;
 }
 
 char *P_GetMapMusicComposer(int map)
 {
-    return (MAPINFO >= 0 && mapinfo[QualifyMap(map)].musiccomposer[0] ? mapinfo[QualifyMap(map)].musiccomposer : "");
+    return mapinfo[map].musiccomposer;
 }
 
 char *P_GetMapMusicTitle(int map)
 {
-    return (MAPINFO >= 0 && mapinfo[QualifyMap(map)].musictitle[0] ? mapinfo[QualifyMap(map)].musictitle : "");
+    return mapinfo[map].musictitle;
 }
 
 char *P_GetMapName(int map)
 {
-    return (MAPINFO >= 0 && !sigil ? mapinfo[QualifyMap(map)].name : ((E1M4B || *speciallumpname) && map == 4 ? s_CAPTION_E1M4B :
+    return (MAPINFO >= 0 && !sigil ? mapinfo[map].name : ((E1M4B || *speciallumpname) && map == 4 ? s_CAPTION_E1M4B :
         ((E1M8B || *speciallumpname) && map == 8 ? s_CAPTION_E1M8B : "")));
 }
 
 int P_GetMapNext(int map)
 {
-    return (MAPINFO >= 0 ? mapinfo[QualifyMap(map)].next : 0);
+    return mapinfo[map].next;
 }
 
 dboolean P_GetMapNoJump(int map)
 {
-    return (MAPINFO >= 0 ? mapinfo[QualifyMap(map)].nojump : nojump);
+    return (MAPINFO >= 0 ? mapinfo[map].nojump : nojump);
 }
 
 void P_GetMapNoLiquids(int map)
 {
     for (int i = 0; i < noliquidlumps; i++)
-        terraintypes[mapinfo[QualifyMap(map)].liquid[i]] = SOLID;
+        terraintypes[mapinfo[map].liquid[i]] = SOLID;
 }
 
 dboolean P_GetMapNoMouselook(int map)
 {
-    return (MAPINFO >= 0 ? mapinfo[QualifyMap(map)].nomouselook : nomouselook);
+    return (MAPINFO >= 0 ? mapinfo[map].nomouselook : nomouselook);
 }
 
 int P_GetMapPar(int map)
 {
-    return (MAPINFO >= 0 ? mapinfo[QualifyMap(map)].par : 0);
+    return mapinfo[map].par;
 }
 
 dboolean P_GetMapPistolStart(int map)
 {
-    return (MAPINFO >= 0 ? mapinfo[QualifyMap(map)].pistolstart : false);
+    return mapinfo[map].pistolstart;
 }
 
 int P_GetMapSecretNext(int map)
 {
-    return (MAPINFO >= 0 ? mapinfo[QualifyMap(map)].secretnext : 0);
+    return mapinfo[map].secretnext;
 }
 
 int P_GetMapSky1Texture(int map)
 {
-    return (MAPINFO >= 0 ? mapinfo[QualifyMap(map)].sky1texture : 0);
+    return mapinfo[map].sky1texture;
 }
 
 int P_GetMapSky1ScrollDelta(int map)
 {
-    return (MAPINFO >= 0 ? mapinfo[QualifyMap(map)].sky1scrolldelta : 0);
+    return mapinfo[map].sky1scrolldelta;
 }
 
 int P_GetMapTitlePatch(int map)
 {
-    return (MAPINFO >= 0 ? mapinfo[QualifyMap(map)].titlepatch : 0);
+    return mapinfo[map].titlepatch;
 }
 
 //
