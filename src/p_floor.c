@@ -61,22 +61,12 @@
 result_e T_MovePlane(sector_t *sector, fixed_t speed, fixed_t dest, dboolean crush,
     int floororceiling, int direction, dboolean elevator)
 {
-    fixed_t lastpos;
-    fixed_t destheight;
-
-    if (!elevator || floororceiling == FLOOR)
-        sector->oldfloorheight = sector->floorheight;
-
-    if (!elevator || floororceiling == CEILING)
-        sector->oldceilingheight = sector->ceilingheight;
-
-    sector->oldgametime = gametime;
+    fixed_t oldfloorheight = sector->floorheight;
+    fixed_t oldceilingheight = sector->ceilingheight;
 
     switch (floororceiling)
     {
         case FLOOR:
-            lastpos = sector->floorheight;
-
             switch (direction)
             {
                 case DOWN:
@@ -86,7 +76,7 @@ result_e T_MovePlane(sector_t *sector, fixed_t speed, fixed_t dest, dboolean cru
 
                         if (P_ChangeSector(sector, crush))
                         {
-                            sector->floorheight = lastpos;
+                            sector->floorheight = oldfloorheight;
                             P_ChangeSector(sector, crush);
                         }
 
@@ -101,15 +91,15 @@ result_e T_MovePlane(sector_t *sector, fixed_t speed, fixed_t dest, dboolean cru
                     break;
 
                 case UP:
-                    destheight = MIN(dest, sector->ceilingheight);
+                    dest = MIN(dest, sector->ceilingheight);
 
-                    if (sector->floorheight + speed > destheight)
+                    if (sector->floorheight + speed > dest)
                     {
-                        sector->floorheight = destheight;
+                        sector->floorheight = dest;
 
                         if (P_ChangeSector(sector, crush))
                         {
-                            sector->floorheight = lastpos;
+                            sector->floorheight = oldfloorheight;
                             P_ChangeSector(sector, crush);
                         }
 
@@ -122,7 +112,7 @@ result_e T_MovePlane(sector_t *sector, fixed_t speed, fixed_t dest, dboolean cru
 
                         if (P_ChangeSector(sector, crush))
                         {
-                            sector->floorheight = lastpos;
+                            sector->floorheight = oldfloorheight;
                             P_ChangeSector(sector, crush);
                             return crushed;
                         }
@@ -134,20 +124,18 @@ result_e T_MovePlane(sector_t *sector, fixed_t speed, fixed_t dest, dboolean cru
             break;
 
         case CEILING:
-            lastpos = sector->ceilingheight;
-
             switch (direction)
             {
                 case DOWN:
-                    destheight = MAX(dest, sector->floorheight);
+                    dest = MAX(dest, sector->floorheight);
 
-                    if (sector->ceilingheight - speed < destheight)
+                    if (sector->ceilingheight - speed < dest)
                     {
-                        sector->ceilingheight = destheight;
+                        sector->ceilingheight = dest;
 
                         if (P_ChangeSector(sector, crush))
                         {
-                            sector->ceilingheight = lastpos;
+                            sector->ceilingheight = oldceilingheight;
                             P_ChangeSector(sector, crush);
                         }
 
@@ -160,11 +148,12 @@ result_e T_MovePlane(sector_t *sector, fixed_t speed, fixed_t dest, dboolean cru
 
                         if (P_ChangeSector(sector, crush))
                         {
-                            if (crush)
-                                return crushed;
+                            if (!crush)
+                            {
+                                sector->ceilingheight = oldceilingheight;
+                                P_ChangeSector(sector, false);
+                            }
 
-                            sector->ceilingheight = lastpos;
-                            P_ChangeSector(sector, crush);
                             return crushed;
                         }
                     }
@@ -178,7 +167,7 @@ result_e T_MovePlane(sector_t *sector, fixed_t speed, fixed_t dest, dboolean cru
 
                         if (P_ChangeSector(sector, crush))
                         {
-                            sector->ceilingheight = lastpos;
+                            sector->ceilingheight = oldceilingheight;
                             P_ChangeSector(sector, crush);
                         }
 
@@ -196,6 +185,17 @@ result_e T_MovePlane(sector_t *sector, fixed_t speed, fixed_t dest, dboolean cru
             break;
     }
 
+    if (!elevator)
+    {
+        sector->oldfloorheight = oldfloorheight;
+        sector->oldceilingheight = oldceilingheight;
+    }
+    else if (floororceiling == FLOOR)
+        sector->oldfloorheight = oldfloorheight;
+    else
+        sector->oldceilingheight = oldceilingheight;
+
+    sector->oldgametime = gametime;
     return ok;
 }
 
@@ -308,38 +308,41 @@ void T_MoveFloor(floormove_t *floor)
 void T_MoveElevator(elevator_t *elevator)
 {
     result_e    res;
+    sector_t    *sec = elevator->sector;
 
-    if (elevator->direction < 0)                // moving down
+    if (elevator->direction == DOWN)            // moving down
     {
         // jff 4/7/98 reverse order of ceiling/floor
-        res = T_MovePlane(elevator->sector, elevator->speed, elevator->ceilingdestheight, false, 1, elevator->direction, true);
+        res = T_MovePlane(sec, elevator->speed, elevator->ceilingdestheight, false, 1, elevator->direction, true);
 
-        // jff 4/7/98 don't move ceil if blocked
+        // jff 4/7/98 don't move ceiling if blocked
         if (res == ok || res == pastdest)
-            T_MovePlane(elevator->sector, elevator->speed, elevator->floordestheight, false, 0, elevator->direction, true);
+            T_MovePlane(sec, elevator->speed, elevator->floordestheight, false, 0, elevator->direction, true);
     }
     else                                        // up
     {
         // jff 4/7/98 reverse order of ceiling/floor
-        res = T_MovePlane(elevator->sector, elevator->speed, elevator->floordestheight, false, 0, elevator->direction, true);
+        res = T_MovePlane(sec, elevator->speed, elevator->floordestheight, false, 0, elevator->direction, true);
 
         // jff 4/7/98 don't move floor if blocked
         if (res == ok || res == pastdest)
-            T_MovePlane(elevator->sector, elevator->speed, elevator->ceilingdestheight, false, 1, elevator->direction, true);
+            T_MovePlane(sec, elevator->speed, elevator->ceilingdestheight, false, 1, elevator->direction, true);
     }
 
     // make floor move sound
-    if (!(leveltime & 7))
-        S_StartSectorSound(&elevator->sector->soundorg, sfx_stnmov);
+    if (!(leveltime & 7)
+        // [BH] don't make sound once elevator is at its destination height
+        && sec->floorheight != elevator->floordestheight)
+        S_StartSectorSound(&sec->soundorg, sfx_stnmov);
 
     if (res == pastdest)                        // if destination height achieved
     {
-        elevator->sector->floordata = NULL;
-        elevator->sector->ceilingdata = NULL;
+        sec->floordata = NULL;
+        sec->ceilingdata = NULL;
         P_RemoveThinker(&elevator->thinker);    // remove elevator from actives
 
         // make floor stop sound
-        S_StartSectorSound(&elevator->sector->soundorg, sfx_pstop);
+        S_StartSectorSound(&sec->soundorg, sfx_pstop);
     }
 }
 

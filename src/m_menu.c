@@ -1526,7 +1526,13 @@ static void M_MusicVol(int choice)
         case 0:
             if (musicVolume > 0)
             {
-                S_SetMusicVolume(--musicVolume * MAX_MUSIC_VOLUME / 31 / (gamestate == GS_LEVEL ? LOWER_MUSIC_VOLUME_FACTOR : 1));
+                musicVolume--;
+
+                if (gamestate == GS_LEVEL)
+                    S_LowerMusicVolume();
+                else
+                    S_SetMusicVolume(musicVolume * MAX_MUSIC_VOLUME / 31);
+
                 S_StartSound(NULL, sfx_stnmov);
                 s_musicvolume = musicVolume * 100 / 31;
                 C_PctCVAROutput(stringize(s_musicvolume), s_musicvolume);
@@ -1538,7 +1544,13 @@ static void M_MusicVol(int choice)
         case 1:
             if (musicVolume < 31)
             {
-                S_SetMusicVolume(++musicVolume * MAX_MUSIC_VOLUME / 31 / (gamestate == GS_LEVEL ? LOWER_MUSIC_VOLUME_FACTOR : 1));
+                musicVolume++;
+
+                if (gamestate == GS_LEVEL)
+                    S_LowerMusicVolume();
+                else
+                    S_SetMusicVolume(musicVolume * MAX_MUSIC_VOLUME / 31);
+
                 S_StartSound(NULL, sfx_stnmov);
                 s_musicvolume = musicVolume * 100 / 31;
                 C_PctCVAROutput(stringize(s_musicvolume), s_musicvolume);
@@ -2515,14 +2527,12 @@ void M_ChangeGamma(dboolean shift)
 //
 // M_Responder
 //
-int         gamepadwait;
-int         mousewait;
-dboolean    gamepadpress;
+int         gamepadwait = 0;
+int         mousewait = 0;
+dboolean    gamepadpress = false;
 
 dboolean M_Responder(event_t *ev)
 {
-    // key is the key pressed, ch is the actual character typed
-    int         ch = 0;
     int         key = -1;
     static int  keywait;
 
@@ -2536,7 +2546,7 @@ dboolean M_Responder(event_t *ev)
             // activate menu item
             if (gamepadbuttons & GAMEPAD_A)
             {
-                key = (messagetoprint && messageNeedsInput ? (ch = 'y') : KEY_ENTER);
+                key = (messagetoprint && messageNeedsInput ? 'y' : KEY_ENTER);
                 gamepadwait = I_GetTime() + 8 * !(currentMenu == &OptionsDef && itemOn == 5);
                 usinggamepad = true;
             }
@@ -2544,7 +2554,7 @@ dboolean M_Responder(event_t *ev)
             // previous/exit menu
             else if (gamepadbuttons & GAMEPAD_B)
             {
-                key = (messagetoprint && messageNeedsInput ? (ch = 'n') : KEY_BACKSPACE);
+                key = (messagetoprint && messageNeedsInput ? 'n' : KEY_BACKSPACE);
                 gamepadwait = I_GetTime() + 8;
                 gamepadpress = true;
                 usinggamepad = true;
@@ -2665,7 +2675,6 @@ dboolean M_Responder(event_t *ev)
     else if (ev->type == ev_keydown)
     {
         key = ev->data1;
-        ch = ev->data2;
         usinggamepad = false;
     }
     else if (ev->type == ev_keyup)
@@ -2679,7 +2688,7 @@ dboolean M_Responder(event_t *ev)
     {
         if (ev->type == ev_textinput)
         {
-            ch = toupper(ev->data1);
+            int ch = toupper(ev->data1);
 
             if (ch >= ' ' && ch <= '_' && M_StringWidth(savegamestrings[saveSlot]) + M_CharacterWidth(ch, 0) <= SAVESTRINGPIXELWIDTH)
             {
@@ -2833,7 +2842,7 @@ dboolean M_Responder(event_t *ev)
     // Take care of any messages that need input
     if (messagetoprint && !keydown)
     {
-        ch = (key == KEY_ENTER ? 'y' : tolower(ch));
+        int ch = (key == KEY_ENTER ? 'y' : tolower(key));
 
         if (messageNeedsInput && key != keyboardmenu && ch != 'y' && ch != 'n'
             && !(SDL_GetModState() & (KMOD_ALT | KMOD_CTRL)) && key != functionkey)
@@ -3091,7 +3100,7 @@ dboolean M_Responder(event_t *ev)
             if (paused)
             {
                 paused = false;
-                S_ResumeSound();
+                S_ResumeMusic();
                 S_StartSound(NULL, sfx_swtchx);
             }
             else
@@ -3404,12 +3413,12 @@ dboolean M_Responder(event_t *ev)
         }
 
         // Keyboard shortcut?
-        else if (ch && !(SDL_GetModState() & (KMOD_ALT | KMOD_CTRL)))
+        else if (key && !(SDL_GetModState() & (KMOD_ALT | KMOD_CTRL)))
         {
             for (int i = itemOn + 1; i < currentMenu->numitems; i++)
             {
-                if (((currentMenu == &LoadDef || currentMenu == &SaveDef) && ch == i + '1')
-                    || (currentMenu->menuitems[i].text && toupper(*currentMenu->menuitems[i].text[0]) == toupper(ch)))
+                if (((currentMenu == &LoadDef || currentMenu == &SaveDef) && key == i + '1')
+                    || (currentMenu->menuitems[i].text && toupper(*currentMenu->menuitems[i].text[0]) == toupper(key)))
                 {
                     if (currentMenu == &MainDef && i == 3 && (gamestate != GS_LEVEL || viewplayer->health <= 0))
                         return true;
@@ -3472,8 +3481,8 @@ dboolean M_Responder(event_t *ev)
 
             for (int i = 0; i <= itemOn; i++)
             {
-                if (((currentMenu == &LoadDef || currentMenu == &SaveDef) && ch == i + '1')
-                    || (currentMenu->menuitems[i].text && toupper(*currentMenu->menuitems[i].text[0]) == toupper(ch)))
+                if (((currentMenu == &LoadDef || currentMenu == &SaveDef) && key == i + '1')
+                    || (currentMenu->menuitems[i].text && toupper(*currentMenu->menuitems[i].text[0]) == toupper(key)))
                 {
                     if (currentMenu == &MainDef && i == 3 && (gamestate != GS_LEVEL || viewplayer->health <= 0))
                         return true;
@@ -3553,8 +3562,6 @@ void M_StartControlPanel(void)
 
     itemOn = currentMenu->lastOn;
 
-    S_StopSounds();
-
     if (gp_vibrate_barrels || gp_vibrate_damage || gp_vibrate_weapons)
     {
         restorevibrationstrength = idlevibrationstrength;
@@ -3584,7 +3591,7 @@ void M_StartControlPanel(void)
                 viewplayer->mo->angle = ANG90;
         }
 
-        S_SetMusicVolume(musicVolume * MAX_MUSIC_VOLUME / 31 / LOWER_MUSIC_VOLUME_FACTOR);
+        S_LowerMusicVolume();
     }
 }
 

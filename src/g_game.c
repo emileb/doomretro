@@ -326,11 +326,11 @@ void G_BuildTiccmd(ticcmd_t *cmd)
         forward -= (int)(forwardmove[run] * gamepadthumbLYdown);
 
     if (gamekeydown[keyboardstraferight] || gamekeydown[keyboardstraferight2] || (gamepadbuttons & gamepadstraferight))
-        side = sidemove[run];
+        side += sidemove[run];
     else if (gamepadthumbLX > 0)
     {
         if (gp_thumbsticks == 2)
-            side = (int)(sidemove[run] * gamepadthumbLXright);
+            side += (int)(sidemove[run] * gamepadthumbLXright);
         else
             cmd->angleturn -= (int)(gamepadangleturn[run] * gamepadthumbLXright * gamepadhorizontalsensitivity);
     }
@@ -474,13 +474,13 @@ void G_BuildTiccmd(ticcmd_t *cmd)
     if (sendpause)
     {
         sendpause = false;
-        cmd->buttons = (BT_SPECIAL | BTS_PAUSE);
+        cmd->buttons = BT_SPECIAL | BTS_PAUSE;
     }
 
     if (sendsave)
     {
         sendsave = false;
-        cmd->buttons = (BT_SPECIAL | BTS_SAVEGAME | (savegameslot << BTS_SAVESHIFT));
+        cmd->buttons = BT_SPECIAL | BTS_SAVEGAME | (savegameslot << BTS_SAVESHIFT);
     }
 
     if (cmd->angleturn && !menuactive)
@@ -662,7 +662,16 @@ dboolean G_Responder(event_t *ev)
     {
         if (!menuactive
             && !consoleactive
-            && ((ev->type == ev_keydown && !keydown)
+            && ((ev->type == ev_keydown
+                && !keydown
+                && ev->data1 != KEY_PAUSE
+                && ev->data1 != KEY_SHIFT
+                && ev->data1 != KEY_ALT
+                && ev->data1 != KEY_CTRL
+                && ev->data1 != KEY_CAPSLOCK
+                && ev->data1 != KEY_NUMLOCK
+                && (ev->data1 < KEY_F1 || ev->data1 > KEY_F11)
+                && !((ev->data1 == KEY_ENTER || ev->data1 == KEY_TAB) && altdown))
             || (ev->type == ev_mouse && mousewait < I_GetTime() && ev->data1)
             || (ev->type == ev_gamepad
                 && gamepadwait < I_GetTime()
@@ -679,15 +688,7 @@ dboolean G_Responder(event_t *ev)
                 keydown = keyboardscreenshot;
                 G_DoScreenShot();
             }
-            else if (ev->type == ev_keydown
-                && ev->data1 != KEY_PAUSE
-                && ev->data1 != KEY_SHIFT
-                && ev->data1 != KEY_ALT
-                && ev->data1 != KEY_CTRL
-                && ev->data1 != KEY_CAPSLOCK
-                && ev->data1 != KEY_NUMLOCK
-                && (ev->data1 < KEY_F1 || ev->data1 > KEY_F11)
-                && !((ev->data1 == KEY_ENTER || ev->data1 == KEY_TAB) && altdown))
+            else
             {
                 keydown = ev->data1;
                 gamepadbuttons = 0;
@@ -933,7 +934,7 @@ void G_Ticker(void)
             case BTS_PAUSE:
                 if ((paused = !paused))
                 {
-                    S_PauseSound();
+                    S_PauseMusic();
                     S_StartSound(NULL, sfx_swtchn);
                     viewplayer->fixedcolormap = 0;
                     I_SetPalette(PLAYPAL);
@@ -942,7 +943,7 @@ void G_Ticker(void)
                 }
                 else
                 {
-                    S_ResumeSound();
+                    S_ResumeMusic();
                     S_StartSound(NULL, sfx_swtchx);
                     I_SetPalette(&PLAYPAL[st_palette * 768]);
                 }
@@ -1702,7 +1703,7 @@ void G_InitNew(skill_t skill, int ep, int map)
     if (paused)
     {
         paused = false;
-        S_ResumeSound();
+        S_ResumeMusic();
     }
 
     if (skill > sk_nightmare)

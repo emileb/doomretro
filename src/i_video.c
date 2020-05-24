@@ -533,6 +533,7 @@ static void I_GetEvent(void)
                 if (event.data1 == KEY_ENTER)
                     enterdown = false;
 #endif
+
                 if (event.data1)
                     D_PostEvent(&event);
 
@@ -563,8 +564,6 @@ static void I_GetEvent(void)
                 keydown = 0;
                 event.type = ev_mousewheel;
                 event.data1 = Event->wheel.y;
-                event.data2 = 0;
-                event.data3 = 0;
                 D_PostEvent(&event);
                 break;
 
@@ -674,7 +673,7 @@ static void I_GetEvent(void)
                             windowfocused = true;
 
                             if (menuactive || consoleactive)
-                                S_ResumeSound();
+                                S_ResumeMusic();
 
                             I_InitKeyboard();
                             break;
@@ -685,7 +684,7 @@ static void I_GetEvent(void)
                             if (gamestate == GS_LEVEL && !paused)
                             {
                                 if (menuactive || consoleactive)
-                                    S_PauseSound();
+                                    S_PauseMusic();
                                 else
                                     sendpause = true;
                             }
@@ -1331,8 +1330,8 @@ void GetScreenResolution(void)
     }
     else
     {
-        int width = -1;
-        int height = -1;
+        int width;
+        int height;
 
         if (sscanf(vid_screenresolution, "%10dx%10d", &width, &height) != 2 || !ValidScreenMode(width, height))
         {
@@ -1371,11 +1370,11 @@ static void PositionOnCurrentDisplay(void)
 {
     manuallypositioning = true;
 
-    if (!windowx && !windowy)
+    if (windowx || windowy)
+        SDL_SetWindowPosition(window, windowx, windowy);
+    else
         SDL_SetWindowPosition(window, displays[displayindex].x + (displays[displayindex].w - windowwidth) / 2,
             displays[displayindex].y + (displays[displayindex].h - windowheight) / 2);
-    else
-        SDL_SetWindowPosition(window, windowx, windowy);
 }
 
 void I_SetMotionBlur(int percent)

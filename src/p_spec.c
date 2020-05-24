@@ -2608,7 +2608,7 @@ void P_SpawnSpecials(void)
             case TransferSkyTextureToTaggedSectors:
             case TransferSkyTextureToTaggedSectors_Flipped:
                 for (int s = -1; (s = P_FindSectorFromLineTag(line, s)) >= 0;)
-                    sectors[s].sky = (i | PL_SKYFLAT);
+                    sectors[s].sky = i | PL_SKYFLAT;
 
                 break;
         }
@@ -2636,6 +2636,19 @@ void T_Scroll(scroll_t *s)
 {
     fixed_t dx = s->dx;
     fixed_t dy = s->dy;
+
+    // [BH] only allow wall scrollers to update once per tic
+    if (s->type == sc_side)
+    {
+        static int  prevaffectee = -1;
+        static int  prevtime = -1;
+
+        if (prevaffectee == s->affectee && prevtime == gametime)
+            return;
+
+        prevaffectee = s->affectee;
+        prevtime = gametime;
+    }
 
     if (s->control != -1)
     {

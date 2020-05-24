@@ -273,16 +273,6 @@ static void S_StopChannel(int cnum)
     }
 }
 
-void S_StopSounds(void)
-{
-    if (nosfx)
-        return;
-
-    for (int cnum = 0; cnum < s_channels; cnum++)
-        if (channels[cnum].sfxinfo)
-            S_StopChannel(cnum);
-}
-
 static int S_GetMusicNum(void)
 {
     int mnum;
@@ -557,7 +547,7 @@ void S_StartSoundOnce(void *origin, int sfx_id)
 //
 // Stop and resume music, during game PAUSE.
 //
-void S_PauseSound(void)
+void S_PauseMusic(void)
 {
     if (mus_playing && !mus_paused)
     {
@@ -566,7 +556,7 @@ void S_PauseSound(void)
     }
 }
 
-void S_ResumeSound(void)
+void S_ResumeMusic(void)
 {
     if (mus_playing && mus_paused)
     {
@@ -630,6 +620,16 @@ void S_UpdateSounds(void)
 void S_SetMusicVolume(int volume)
 {
     I_SetMusicVolume(volume);
+}
+
+void S_LowerMusicVolume(void)
+{
+#if defined(_WIN32)
+    if (!serverMidiPlaying && (musmusictype || midimusictype || Mix_GetMusicType(NULL) == MUS_MID))
+        return;
+#endif
+
+    S_SetMusicVolume(musicVolume * MAX_MUSIC_VOLUME / 31 / LOWER_MUSIC_VOLUME_FACTOR);
 }
 
 void S_SetSfxVolume(int volume)

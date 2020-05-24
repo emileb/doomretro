@@ -40,6 +40,7 @@
 #define __V_VIDEO_H__
 
 #include "r_data.h"
+#include "w_file.h"
 
 //
 // VIDEO
@@ -54,6 +55,8 @@ extern byte *hudhighlight;
 
 extern int  lowpixelwidth;
 extern int  lowpixelheight;
+
+extern char screenshotfolder[MAX_PATH];
 
 // Allocates buffer screens, call before R_Init.
 void V_Init(void);

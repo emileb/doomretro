@@ -71,6 +71,7 @@ void *I_RegisterSong(void *data, int size);
 void I_UnRegisterSong(void *handle);
 void I_PlaySong(void *handle, dboolean looping);
 void I_StopSong(void);
+dboolean I_AnySoundStillPlaying(void);
 
 //
 // Initializes sound stuff, including volume
@@ -97,8 +98,6 @@ void S_StartSound(mobj_t *mobj, int sfx_id);
 void S_StartSectorSound(degenmobj_t *degenmobj, int sfx_id);
 void S_StartSoundOnce(void *origin, int sfx_id);
 
-void S_StopSounds(void);
-
 void S_UnlinkSound(mobj_t *origin);
 
 // Start music using <music_id> from sounds.h
@@ -112,8 +111,8 @@ void S_ChangeMusic(int music_id, dboolean looping, dboolean allowrestart, dboole
 void S_StopMusic(void);
 
 // Stop and resume music, during game PAUSE.
-void S_PauseSound(void);
-void S_ResumeSound(void);
+void S_PauseMusic(void);
+void S_ResumeMusic(void);
 
 //
 // Updates music & sounds
@@ -121,9 +120,8 @@ void S_ResumeSound(void);
 void S_UpdateSounds(void);
 
 void S_SetMusicVolume(int volume);
+void S_LowerMusicVolume(void);
 void S_SetSfxVolume(int volume);
-
-dboolean I_AnySoundStillPlaying(void);
 
 #define MAX_MUS_ENTRIES 64
 
