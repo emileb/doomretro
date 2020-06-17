@@ -74,12 +74,6 @@ int                         weaponvibrationtics = 0;
 int                         idlevibrationstrength;
 int                         restorevibrationstrength;
 
-extern dboolean             idclev;
-extern dboolean             idmus;
-extern dboolean             idbehold;
-extern dboolean             menuactive;
-extern evtype_t             lasteventtype;
-
 void I_InitGamepad(void)
 {
 

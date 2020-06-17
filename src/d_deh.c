@@ -259,6 +259,7 @@ char    *s_HUSTR_E3M4 = HUSTR_E3M4;
 char    *s_HUSTR_E3M5 = HUSTR_E3M5;
 char    *s_HUSTR_E3M6 = HUSTR_E3M6;
 char    *s_HUSTR_E3M7 = HUSTR_E3M7;
+char    *s_HUSTR_E3M7_ALT = "";
 char    *s_HUSTR_E3M8 = HUSTR_E3M8;
 char    *s_HUSTR_E3M9 = HUSTR_E3M9;
 char    *s_HUSTR_E4M1 = HUSTR_E4M1;
@@ -290,6 +291,7 @@ char    *s_HUSTR_8 = HUSTR_8;
 char    *s_HUSTR_9 = HUSTR_9;
 char    *s_HUSTR_10 = HUSTR_10;
 char    *s_HUSTR_11 = HUSTR_11;
+char    *s_HUSTR_11_ALT = "";
 char    *s_HUSTR_12 = HUSTR_12;
 char    *s_HUSTR_13 = HUSTR_13;
 char    *s_HUSTR_14 = HUSTR_14;
@@ -828,6 +830,7 @@ deh_strs deh_strlookup[] =
     { &s_HUSTR_E3M5,                 "HUSTR_E3M5"                 },
     { &s_HUSTR_E3M6,                 "HUSTR_E3M6"                 },
     { &s_HUSTR_E3M7,                 "HUSTR_E3M7"                 },
+    { &s_HUSTR_E3M7_ALT,             "HUSTR_E3M7_ALT"             },
     { &s_HUSTR_E3M8,                 "HUSTR_E3M8"                 },
     { &s_HUSTR_E3M9,                 "HUSTR_E3M9"                 },
     { &s_HUSTR_E4M1,                 "HUSTR_E4M1"                 },
@@ -859,6 +862,7 @@ deh_strs deh_strlookup[] =
     { &s_HUSTR_9,                    "HUSTR_9"                    },
     { &s_HUSTR_10,                   "HUSTR_10"                   },
     { &s_HUSTR_11,                   "HUSTR_11"                   },
+    { &s_HUSTR_11_ALT,               "HUSTR_11_ALT"               },
     { &s_HUSTR_12,                   "HUSTR_12"                   },
     { &s_HUSTR_13,                   "HUSTR_13"                   },
     { &s_HUSTR_14,                   "HUSTR_14"                   },
@@ -2851,7 +2855,6 @@ static void deh_procPars(DEHFILE *fpin, char *line) // extension
     int     episode;
     int     level;
     int     partime;
-    int     oldpar;
 
     boomcompatible = true;
 
@@ -2896,10 +2899,8 @@ static void deh_procPars(DEHFILE *fpin, char *line) // extension
                     C_Warning(1, "Invalid MAPxy value MAP%i.", level);
                 else
                 {
-                    oldpar = cpars[level - 1];
-
                     if (devparm)
-                        C_Output("Changed par time for MAP%02d from %i to %i seconds", level, oldpar, partime);
+                        C_Output("Changed par time for MAP%02d from %i to %i seconds", level, cpars[level - 1], partime);
 
                     cpars[level - 1] = partime;
                 }
@@ -2914,11 +2915,10 @@ static void deh_procPars(DEHFILE *fpin, char *line) // extension
                 C_Warning(1, "Invalid ExMy values E%iM%i.", episode, level);
             else
             {
-                oldpar = pars[episode][level];
-                pars[episode][level] = partime;
-
                 if (devparm)
-                    C_Output("Changed par time for E%iM%i from %i to %i seconds", episode, level, oldpar, partime);
+                    C_Output("Changed par time for E%iM%i from %i to %i seconds", episode, level, pars[episode][level], partime);
+
+                pars[episode][level] = partime;
             }
         }
     }

@@ -230,7 +230,7 @@ static void AM_ActivateNewScale(void)
     m_h = FTOM(mapheight);
     m_x -= m_w / 2;
     m_y -= m_h / 2;
-    putbigdot = (scale_mtof >= FRACUNIT + FRACUNIT / 2 ? PUTBIGDOT : PUTDOT);
+    putbigdot = (scale_mtof >= FRACUNIT + FRACUNIT / 2 ? &PUTBIGDOT : &PUTDOT);
 }
 
 static void AM_SaveScaleAndLoc(void)
@@ -255,7 +255,7 @@ static void AM_RestoreScaleAndLoc(void)
     // Change the scaling multipliers
     scale_mtof = FixedDiv(mapwidth << FRACBITS, m_w);
     scale_ftom = FixedDiv(FRACUNIT, scale_mtof);
-    putbigdot = (scale_mtof >= FRACUNIT + FRACUNIT / 2 ? PUTBIGDOT : PUTDOT);
+    putbigdot = (scale_mtof >= FRACUNIT + FRACUNIT / 2 ? &PUTBIGDOT : &PUTDOT);
 }
 
 //
@@ -433,7 +433,7 @@ static void AM_LevelInit(void)
     if (scale_mtof > max_scale_mtof)
         scale_mtof = min_scale_mtof;
 
-    putbigdot = (scale_mtof >= FRACUNIT + FRACUNIT / 2 ? PUTBIGDOT : PUTDOT);
+    putbigdot = (scale_mtof >= FRACUNIT + FRACUNIT / 2 ? &PUTBIGDOT : &PUTDOT);
     scale_ftom = FixedDiv(FRACUNIT, scale_mtof);
 
     // for saving & restoring
@@ -498,14 +498,14 @@ static dboolean AM_GetSpeedToggle(void)
     return ((!!(gamepadbuttons & GAMEPAD_LEFT_TRIGGER)) ^ (!!(modstate & KMOD_SHIFT)));
 }
 
-void AM_ToggleZoomOut(void)
+static void AM_ToggleZoomOut(void)
 {
     speedtoggle = AM_GetSpeedToggle();
     mtof_zoommul = M_ZOOMOUT;
     ftom_zoommul = M_ZOOMIN;
 }
 
-void AM_ToggleZoomIn(void)
+static void AM_ToggleZoomIn(void)
 {
     speedtoggle = AM_GetSpeedToggle();
     mtof_zoommul = M_ZOOMIN;
@@ -1486,7 +1486,7 @@ static void AM_DrawGrid(void)
         mline_t mline = { { x, starty }, { x, starty + minlen } };
 
         mline = rotatelinefunc(mline);
-        AM_DrawFline(mline.a.x, mline.a.y, mline.b.x, mline.b.y, gridcolor, PUTDOT);
+        AM_DrawFline(mline.a.x, mline.a.y, mline.b.x, mline.b.y, gridcolor, &PUTDOT);
     }
 
     end = starty + minlen;
@@ -1497,7 +1497,7 @@ static void AM_DrawGrid(void)
         mline_t mline = { { startx, y }, { startx + minlen, y } };
 
         mline = rotatelinefunc(mline);
-        AM_DrawFline(mline.a.x, mline.a.y, mline.b.x, mline.b.y, gridcolor, PUTDOT);
+        AM_DrawFline(mline.a.x, mline.a.y, mline.b.x, mline.b.y, gridcolor, &PUTDOT);
     }
 }
 
@@ -1528,7 +1528,7 @@ static void AM_DrawWalls(void)
 
                 if (isteleportline[line.special] && back && back->ceilingheight != back->floorheight
                     && ((flags & ML_TELEPORTTRIGGERED) || isteleport[back->floorpic]) && !(flags & ML_SECRET))
-                    AM_DrawFline(mline.a.x, mline.a.y, mline.b.x, mline.b.y, teleportercolor, PUTDOT);
+                    AM_DrawFline(mline.a.x, mline.a.y, mline.b.x, mline.b.y, teleportercolor, &PUTDOT);
                 else if (!back || (flags & ML_SECRET))
                     AM_DrawFline(mline.a.x, mline.a.y, mline.b.x, mline.b.y, wallcolor, putbigdot);
                 else
@@ -1536,9 +1536,9 @@ static void AM_DrawWalls(void)
                     const sector_t  *front = line.frontsector;
 
                     if (back->floorheight != front->floorheight)
-                        AM_DrawFline(mline.a.x, mline.a.y, mline.b.x, mline.b.y, fdwallcolor, PUTDOT);
+                        AM_DrawFline(mline.a.x, mline.a.y, mline.b.x, mline.b.y, fdwallcolor, &PUTDOT);
                     else if (back->ceilingheight != front->ceilingheight)
-                        AM_DrawFline(mline.a.x, mline.a.y, mline.b.x, mline.b.y, cdwallcolor, PUTDOT);
+                        AM_DrawFline(mline.a.x, mline.a.y, mline.b.x, mline.b.y, cdwallcolor, &PUTDOT);
                 }
             }
         }
@@ -1574,7 +1574,7 @@ static void AM_DrawWalls_AllMap(void)
 
                 if (isteleportline[line.special] && ((flags & ML_TELEPORTTRIGGERED) || (back && isteleport[back->floorpic])))
                     AM_DrawFline(mline.a.x, mline.a.y, mline.b.x, mline.b.y,
-                        ((flags & ML_MAPPED) ? teleportercolor : allmapfdwallcolor), PUTDOT);
+                        ((flags & ML_MAPPED) ? teleportercolor : allmapfdwallcolor), &PUTDOT);
                 else if (!back || (flags & ML_SECRET))
                     AM_DrawFline(mline.a.x, mline.a.y, mline.b.x, mline.b.y,
                         ((flags & ML_MAPPED) ? wallcolor : allmapwallcolor), putbigdot);
@@ -1584,12 +1584,12 @@ static void AM_DrawWalls_AllMap(void)
 
                     if (back->floorheight != front->floorheight)
                         AM_DrawFline(mline.a.x, mline.a.y, mline.b.x, mline.b.y,
-                            ((flags & ML_MAPPED) ? fdwallcolor : allmapfdwallcolor), PUTDOT);
+                            ((flags & ML_MAPPED) ? fdwallcolor : allmapfdwallcolor), &PUTDOT);
                     else if (back->ceilingheight != front->ceilingheight)
                         AM_DrawFline(mline.a.x, mline.a.y, mline.b.x, mline.b.y,
-                            ((flags & ML_MAPPED) ? cdwallcolor : allmapcdwallcolor), PUTDOT);
+                            ((flags & ML_MAPPED) ? cdwallcolor : allmapcdwallcolor), &PUTDOT);
                     else
-                        AM_DrawFline(mline.a.x, mline.a.y, mline.b.x, mline.b.y, tswallcolor, PUTDOT);
+                        AM_DrawFline(mline.a.x, mline.a.y, mline.b.x, mline.b.y, tswallcolor, &PUTDOT);
                 }
             }
         }
@@ -1619,7 +1619,7 @@ static void AM_DrawWalls_Cheating(void)
             mline = rotatelinefunc(mline);
 
             if (isteleportline[line.special])
-                AM_DrawFline(mline.a.x, mline.a.y, mline.b.x, mline.b.y, teleportercolor, PUTDOT);
+                AM_DrawFline(mline.a.x, mline.a.y, mline.b.x, mline.b.y, teleportercolor, &PUTDOT);
             else
             {
                 const sector_t  *back = line.backsector;
@@ -1631,11 +1631,11 @@ static void AM_DrawWalls_Cheating(void)
                     const sector_t *front = line.frontsector;
 
                     if (back->floorheight != front->floorheight)
-                        AM_DrawFline(mline.a.x, mline.a.y, mline.b.x, mline.b.y, fdwallcolor, PUTDOT);
+                        AM_DrawFline(mline.a.x, mline.a.y, mline.b.x, mline.b.y, fdwallcolor, &PUTDOT);
                     else if (back->ceilingheight != front->ceilingheight)
-                        AM_DrawFline(mline.a.x, mline.a.y, mline.b.x, mline.b.y, cdwallcolor, PUTDOT);
+                        AM_DrawFline(mline.a.x, mline.a.y, mline.b.x, mline.b.y, cdwallcolor, &PUTDOT);
                     else
-                        AM_DrawFline(mline.a.x, mline.a.y, mline.b.x, mline.b.y, tswallcolor, PUTDOT);
+                        AM_DrawFline(mline.a.x, mline.a.y, mline.b.x, mline.b.y, tswallcolor, &PUTDOT);
                 }
             }
         }
@@ -1669,7 +1669,7 @@ static void AM_DrawLineCharacter(const mline_t *lineguy, const int lineguylines,
         AM_Rotate(&x1, &y1, angle);
         AM_Rotate(&x2, &y2, angle);
 
-        AM_DrawFline(x + x1, y + y1, x + x2, y + y2, &color, PUTDOT2);
+        AM_DrawFline(x + x1, y + y1, x + x2, y + y2, &color, &PUTDOT2);
     }
 }
 
@@ -1700,7 +1700,7 @@ static void AM_DrawTransLineCharacter(const mline_t *lineguy, const int lineguyl
         AM_Rotate(&x1, &y1, angle);
         AM_Rotate(&x2, &y2, angle);
 
-        AM_DrawFline(x + x1, y + y1, x + x2, y + y2, color, PUTTRANSDOT);
+        AM_DrawFline(x + x1, y + y1, x + x2, y + y2, color, &PUTTRANSDOT);
     }
 }
 
@@ -2055,7 +2055,7 @@ static void AM_SetFrameVariables(void)
         am_frame.bbox[BOXBOTTOM] = y - r;
         am_frame.bbox[BOXTOP] = y + r;
 
-        rotatelinefunc = AM_RotateLine;
+        rotatelinefunc = &AM_RotateLine;
     }
     else
     {
@@ -2064,7 +2064,7 @@ static void AM_SetFrameVariables(void)
         am_frame.bbox[BOXBOTTOM] = m_y;
         am_frame.bbox[BOXTOP] = m_y + m_h;
 
-        rotatelinefunc = AM_DoNotRotateLine;
+        rotatelinefunc = &AM_DoNotRotateLine;
     }
 }
 

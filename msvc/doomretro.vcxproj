@@ -455,6 +455,7 @@
     <ClCompile Include="..\src\m_controls.c" />
     <ClCompile Include="..\src\m_menu.c" />
     <ClCompile Include="..\src\m_misc.c" />
+    <ClCompile Include="..\src\m_random.c" />
     <ClCompile Include="..\src\mmus2mid.c" />
     <ClCompile Include="..\src\p_ceilng.c" />
     <ClCompile Include="..\src\p_doors.c" />
@@ -512,6 +513,8 @@
     <None Include="..\res\DRCOMPAT" />
     <None Include="..\res\VANILLA" />
     <None Include="..\src\doomretro.manifest" />
+    <None Include="..\src\Makefile" />
+    <None Include="..\src\Makefile.osx" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets" />

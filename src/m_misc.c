@@ -177,7 +177,7 @@ char *M_GetAppDataFolder(void)
         closedir(resourcedir);
 
 #if defined(__APPLE__)
-        // On OSX, store generated application files in ~/Library/Application Support/DOOM Retro.
+        // On macOS, store generated application files in ~/Library/Application Support/DOOM Retro.
         NSFileManager   *manager = [NSFileManager defaultManager];
         NSURL           *baseAppSupportURL = [manager URLsForDirectory : NSApplicationSupportDirectory
                             inDomains : NSUserDomainMask].firstObject;
@@ -220,7 +220,7 @@ char *M_GetResourceFolder(void)
     }
 
 #if defined(__APPLE__)
-    // On OSX, load resources from the Contents/Resources folder within the application bundle
+    // On macOS, load resources from the Contents/Resources folder within the application bundle
     // if ../share/doomretro is not available.
     NSURL   *resourceURL = [NSBundle mainBundle].resourceURL;
 
@@ -494,39 +494,30 @@ dboolean M_StringEndsWith(const char *s, const char *suffix)
 }
 
 // Safe, portable vsnprintf().
-int M_vsnprintf(char *buf, int buf_len, const char *s, va_list args)
+void M_vsnprintf(char *buf, int buf_len, const char *s, va_list args)
 {
-    int result;
-
-    if (buf_len < 1)
-        return 0;
-
-    // Windows (and other OSes?) has a vsnprintf() that doesn't always
-    // append a trailing \0. So we must do it, and write into a buffer
-    // that is one byte shorter; otherwise this function is unsafe.
-    result = vsnprintf(buf, buf_len, s, args);
-
-    // If truncated, change the final char in the buffer to a \0.
-    // A negative result indicates a truncated buffer on Windows.
-    if (result < 0 || result >= buf_len)
+    if (buf_len >= 1)
     {
-        buf[buf_len - 1] = '\0';
-        result = buf_len - 1;
-    }
+        // Windows (and other OSes?) has a vsnprintf() that doesn't always
+        // append a trailing \0. So we must do it, and write into a buffer
+        // that is one byte shorter; otherwise this function is unsafe.
+        int result = vsnprintf(buf, buf_len, s, args);
 
-    return result;
+        // If truncated, change the final char in the buffer to a \0.
+        // A negative result indicates a truncated buffer on Windows.
+        if (result < 0 || result >= buf_len)
+            buf[buf_len - 1] = '\0';
+    }
 }
 
 // Safe, portable snprintf().
-int M_snprintf(char *buf, int buf_len, const char *s, ...)
+void M_snprintf(char *buf, int buf_len, const char *s, ...)
 {
     va_list args;
-    int     result;
 
     va_start(args, s);
-    result = M_vsnprintf(buf, buf_len, s, args);
+    M_vsnprintf(buf, buf_len, s, args);
     va_end(args);
-    return result;
 }
 
 #if !defined(strndup)

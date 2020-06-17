@@ -53,8 +53,6 @@ extern int64_t  sprtopscreen;
 extern fixed_t  pspritescale;
 extern fixed_t  pspriteiscale;
 
-extern dboolean r_playersprites;
-
 extern short    firstbloodsplatlump;
 
 extern dboolean allowwolfensteinss;
@@ -62,7 +60,6 @@ extern dboolean allowwolfensteinss;
 void R_AddSprites(sector_t *sec, int lightlevel);
 void R_InitSprites(void);
 void R_ClearSprites(void);
-void R_DrawPlayerSprites(void);
 void R_DrawMasked(void);
 
 #endif

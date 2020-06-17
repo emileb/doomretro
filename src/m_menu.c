@@ -57,6 +57,7 @@
 #include "m_random.h"
 #include "p_local.h"
 #include "p_saveg.h"
+#include "p_setup.h"
 #include "s_sound.h"
 #include "st_lib.h"
 #include "st_stuff.h"
@@ -125,14 +126,6 @@ static menu_t   *currentMenu;
 int             spindirection;
 static angle_t  playerangle;
 
-extern patch_t  *hu_font[HU_FONTSIZE];
-
-extern int      st_palette;
-
-extern dboolean dowipe;
-
-extern dboolean skippsprinterp;
-
 //
 // PROTOTYPES
 //
@@ -144,8 +137,6 @@ static void M_LoadGame(int choice);
 static void M_SaveGame(int choice);
 static void M_Options(int choice);
 static void M_EndGame(int choice);
-
-void M_QuitDOOM(int choice);
 
 static void M_ChangeMessages(int choice);
 static void M_ChangeSensitivity(int choice);
@@ -177,10 +168,6 @@ static void M_SetupNextMenu(menu_t *menudef);
 static void M_DrawThermo(int x, int y, int thermWidth, float thermDot, float factor, int offset);
 static void M_WriteText(int x, int y, char *string, dboolean shadow);
 static int M_StringHeight(char *string);
-void M_ClearMenus(void);
-
-int M_StringWidth(char *string);
-void M_StartMessage(char *string, void *routine, dboolean input);
 
 //
 // DOOM MENU
@@ -822,7 +809,7 @@ static void M_ReadSaveStrings(void)
 
         if (!(handle = fopen(name, "rb")))
         {
-            M_StringCopy(&savegamestrings[i][0], s_EMPTYSTRING, SAVESTRINGSIZE);
+            M_StringCopy(&savegamestrings[i][0], s_EMPTYSTRING, sizeof(savegamestrings[i]));
             LoadGameMenu[i].status = 0;
             continue;
         }
@@ -836,7 +823,7 @@ static void M_ReadSaveStrings(void)
         }
         else
         {
-            M_StringCopy(&savegamestrings[i][0], s_EMPTYSTRING, SAVESTRINGSIZE);
+            M_StringCopy(&savegamestrings[i][0], s_EMPTYSTRING, sizeof(savegamestrings[i]));
             LoadGameMenu[i].status = 0;
         }
 
@@ -1134,14 +1121,6 @@ static void M_DoSave(int slot)
 //
 // User wants to save. Start string input for M_Responder
 //
-extern char maptitle[];
-extern char **mapnames[];
-extern char **mapnames2[];
-extern char **mapnames2_bfg[];
-extern char **mapnamesp[];
-extern char **mapnamest[];
-extern char **mapnamesn[];
-
 static char *RemoveMapNum(char *string)
 {
     char    *newstr = M_StringDuplicate(string);
@@ -1252,7 +1231,7 @@ void M_UpdateSaveGameName(int i)
 
     if (match)
     {
-        M_StringCopy(savegamestrings[i], maptitle, SAVESTRINGSIZE);
+        M_StringCopy(savegamestrings[i], maptitle, sizeof(savegamestrings[i]));
         len = (int)strlen(savegamestrings[i]);
 
         while (M_StringWidth(savegamestrings[i]) > SAVESTRINGPIXELWIDTH)
@@ -1283,7 +1262,7 @@ static void M_SaveSelect(int choice)
     SDL_StartTextInput();
     saveStringEnter = true;
     saveSlot = choice;
-    M_StringCopy(saveOldString, savegamestrings[saveSlot], SAVESTRINGSIZE);
+    M_StringCopy(saveOldString, savegamestrings[saveSlot], sizeof(saveOldString));
     M_UpdateSaveGameName(saveSlot);
     saveCharIndex = (int)strlen(savegamestrings[saveSlot]);
     showcaret = !showcaret;
@@ -1353,7 +1332,7 @@ static void M_QuickLoad(void)
     S_StartSound(NULL, sfx_swtchn);
 
     if (M_StringEndsWith(s_QLPROMPT, s_PRESSYN))
-        M_StartMessage(s_QLPROMPT, M_QuickLoadResponse, true);
+        M_StartMessage(s_QLPROMPT, &M_QuickLoadResponse, true);
     else
     {
         static char buffer[160];
@@ -1361,7 +1340,7 @@ static void M_QuickLoad(void)
         M_snprintf(buffer, sizeof(buffer), s_QLPROMPT, savegamestrings[quickSaveSlot]);
         M_SplitString(buffer);
         M_snprintf(buffer, sizeof(buffer), "%s\n\n%s", buffer, (usinggamepad ? s_PRESSA : s_PRESSYN));
-        M_StartMessage(buffer, M_QuickLoadResponse, true);
+        M_StartMessage(buffer, &M_QuickLoadResponse, true);
     }
 }
 
@@ -1415,7 +1394,7 @@ static void M_DeleteSavegame(void)
     M_snprintf(buffer, sizeof(buffer), s_DELPROMPT, savegamestrings[saveSlot]);
     M_SplitString(buffer);
     M_snprintf(buffer, sizeof(buffer), "%s\n\n%s", buffer, (usinggamepad ? s_PRESSA : s_PRESSYN));
-    M_StartMessage(buffer, M_DeleteSavegameResponse, true);
+    M_StartMessage(buffer, &M_DeleteSavegameResponse, true);
 }
 
 //
@@ -1747,13 +1726,13 @@ static void M_ChooseSkill(int choice)
     if (choice == nightmare && gameskill != sk_nightmare && !nomonsters)
     {
         if (M_StringEndsWith(s_NIGHTMARE, s_PRESSYN))
-            M_StartMessage(s_NIGHTMARE, M_VerifyNightmare, true);
+            M_StartMessage(s_NIGHTMARE, &M_VerifyNightmare, true);
         else
         {
             static char buffer[160];
 
             M_snprintf(buffer, sizeof(buffer), "%s\n\n%s", s_NIGHTMARE, (usinggamepad ? s_PRESSA : s_PRESSYN));
-            M_StartMessage(buffer, M_VerifyNightmare, true);
+            M_StartMessage(buffer, &M_VerifyNightmare, true);
         }
 
         return;
@@ -1953,13 +1932,13 @@ static void M_EndGame(int choice)
         return;
 
     if (M_StringEndsWith(s_ENDGAME, s_PRESSYN))
-        M_StartMessage(s_ENDGAME, M_EndGameResponse, true);
+        M_StartMessage(s_ENDGAME, &M_EndGameResponse, true);
     else
     {
         static char buffer[160];
 
         M_snprintf(buffer, sizeof(buffer), "%s\n\n%s", s_ENDGAME, (usinggamepad ? s_PRESSA : s_PRESSYN));
-        M_StartMessage(buffer, M_EndGameResponse, true);
+        M_StartMessage(buffer, &M_EndGameResponse, true);
     }
 }
 
@@ -2057,11 +2036,13 @@ void M_QuitDOOM(int choice)
 
     M_snprintf(line2, sizeof(line2), (usinggamepad ? s_DOSA : s_DOSY), OPERATINGSYSTEM);
     M_snprintf(endstring, sizeof(endstring), "%s\n\n%s", line1, line2);
+
 #ifndef __ANDROID__
-    M_StartMessage(endstring, M_QuitResponse, true);
+    M_StartMessage(endstring, &M_QuitResponse, true);
 #else
     M_QuitResponse( 'y' ); // Don't bother with confirmation
 #endif
+
 }
 
 static void M_SliderSound(void)
@@ -2756,7 +2737,7 @@ dboolean M_Responder(event_t *ev)
                     saveStringEnter = false;
                     caretwait = 0;
                     showcaret = false;
-                    M_StringCopy(&savegamestrings[saveSlot][0], saveOldString, SAVESTRINGSIZE);
+                    M_StringCopy(&savegamestrings[saveSlot][0], saveOldString, sizeof(savegamestrings[saveSlot]));
                     S_StartSound(NULL, sfx_swtchx);
                 }
 

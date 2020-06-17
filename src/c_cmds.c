@@ -137,10 +137,6 @@ dboolean            vanilla = false;
 
 char                *version = version_default;
 
-extern char         *packageconfig;
-extern int          st_palette;
-extern int          timer;
-
 const control_t controls[] =
 {
     { "1",             keyboardcontrol, '1'                    }, { "2",             keyboardcontrol, '2'                    },
@@ -269,8 +265,6 @@ static dboolean cheat_func1(char *cmd, char *parms);
 static dboolean game_func1(char *cmd, char *parms);
 static dboolean null_func1(char *cmd, char *parms);
 
-void alias_cmd_func2(char *cmd, char *parms);
-void bind_cmd_func2(char *cmd, char *parms);
 static void bindlist_cmd_func2(char *cmd, char *parms);
 static void clear_cmd_func2(char *cmd, char *parms);
 static void cmdlist_cmd_func2(char *cmd, char *parms);
@@ -804,7 +798,7 @@ consolecmd_t consolecmds[] =
     CVAR_BOOL(vid_borderlesswindow, "", bool_cvars_func1, vid_borderlesswindow_cvar_func2, BOOLVALUEALIAS,
         "Toggles using a borderless window when fullscreen."),
     CVAR_INT(vid_capfps, "", vid_capfps_cvar_func1, vid_capfps_cvar_func2, CF_NONE, CAPVALUEALIAS,
-        "The number of frames per second at which to cap\nthe framerate (<b>off</b>, or <b>1</b> to <b>1,000</b>). Interpolation is\n"
+        "The number of frames per second at which to cap\nthe framerate (<b>off</b>, or <b>10</b> to <b>1,000</b>). Interpolation is\n"
         "disabled when this CVAR is <b>35</b>."),
     CVAR_INT(vid_display, "", int_cvars_func1, vid_display_cvar_func2, CF_NONE, NOVALUEALIAS,
         "The display used to render the game."),
@@ -817,7 +811,7 @@ consolecmd_t consolecmds[] =
     CVAR_INT(vid_motionblur, "", int_cvars_func1, int_cvars_func2, CF_PERCENT, NOVALUEALIAS,
         "The amount of motion blur when the player turns\nquickly (<b>0%</b> to <b>100%</b>)."),
     CVAR_BOOL(vid_pillarboxes, "", bool_cvars_func1, vid_pillarboxes_cvar_func2, BOOLVALUEALIAS,
-        "Toggles using the black pillarboxes either side of\nthe screen for palette effects."),
+        "Toggles using the pillarboxes either side of the\nscreen for palette effects."),
 #if defined(_WIN32)
     CVAR_STR(vid_scaleapi, "", vid_scaleapi_cvar_func1, vid_scaleapi_cvar_func2, CF_NONE,
         "The API used to scale each frame (<b>\"direct3d\"</b>,\n<b>\"opengl\"</b> or <b>\"software\"</b>)."),
@@ -1440,6 +1434,22 @@ void bind_cmd_func2(char *cmd, char *parms)
 
                             bound = true;
                             C_UnbindDuplicates(action, keyboardcontrol, controls[i].value);
+
+#if defined(_WIN32)
+                            if (M_StringCompare(actions[action].action, "+screenshot"))
+                            {
+                                if (keyboardscreenshot == KEY_PRINTSCREEN)
+                                {
+                                    RegisterHotKey(NULL, 1, MOD_ALT, VK_SNAPSHOT);
+                                    RegisterHotKey(NULL, 2, 0, VK_SNAPSHOT);
+                                }
+                                else
+                                {
+                                    UnregisterHotKey(NULL, 1);
+                                    UnregisterHotKey(NULL, 2);
+                                }
+                            }
+#endif
                         }
 
                         break;
@@ -1731,7 +1741,7 @@ void C_DumpConsoleStringToFile(int index)
             for (unsigned int spaces = 0; spaces < 92 - outpos; spaces++)
                 fputc(' ', condumpfile);
 
-            M_StringCopy(buffer, C_CreateTimeStamp(index), 9);
+            M_StringCopy(buffer, C_CreateTimeStamp(index), sizeof(buffer));
 
             if (strlen(buffer) == 7)
                 fputc(' ', condumpfile);
@@ -1767,8 +1777,7 @@ static void condump_cmd_func2(char *cmd, char *parms)
         {
             char    *temp = commify(++count);
 
-            M_snprintf(filename, sizeof(filename), "%s" DIR_SEPARATOR_S "%s" DIR_SEPARATOR_S "condump (%s).txt",
-                appdatafolder, consolefolder, temp);
+            M_snprintf(filename, sizeof(filename), "%s" DIR_SEPARATOR_S "condump (%s).txt", consolefolder, temp);
             free(temp);
         }
     }
@@ -1779,7 +1788,7 @@ static void condump_cmd_func2(char *cmd, char *parms)
     {
         char    *temp = commify((int64_t)consolestrings - 2);
 
-        for (int i = 1; i < consolestrings - 1; i++)
+        for (int i = 1; i < consolestrings; i++)
             C_DumpConsoleStringToFile(i);
 
         C_Output("Dumped %s lines from the console to <b>%s</b>.", temp, filename);
@@ -2710,12 +2719,7 @@ void kill_cmd_func2(char *cmd, char *parms)
                                     P_DamageMobj(thing, NULL, NULL, thing->health, false);
 
                                     if (!(flags & MF_NOBLOOD))
-                                    {
-                                        const int   r = M_RandomInt(-1, 1);
-
-                                        thing->momx += FRACUNIT * r;
-                                        thing->momy += FRACUNIT * (!r ? M_RandomIntNoRepeat(-1, 1, 0) : M_RandomInt(-1, 1));
-                                    }
+                                        P_SpawnMoreBlood(thing);
 
                                     kills++;
                                 }
@@ -2934,13 +2938,6 @@ static void load_cmd_func2(char *cmd, char *parms)
 //
 // map CCMD
 //
-extern char **mapnames[];
-extern char **mapnames2[];
-extern char **mapnames2_bfg[];
-extern char **mapnamesp[];
-extern char **mapnamest[];
-extern char **mapnamesn[];
-
 static dboolean map_cmd_func1(char *cmd, char *parms)
 {
     if (!*parms)
@@ -3131,16 +3128,16 @@ static dboolean map_cmd_func1(char *cmd, char *parms)
         {
             mapcmdepisode = 1;
             mapcmdmap = 4;
-            M_StringCopy(speciallumpname, "E1M4B", 6);
-            M_StringCopy(mapcmdlump, "E1M4B", 6);
+            M_StringCopy(speciallumpname, "E1M4B", sizeof(speciallumpname));
+            M_StringCopy(mapcmdlump, "E1M4B", sizeof(mapcmdlump));
             result = true;
         }
         else if (M_StringCompare(parm, "E1M8B") && gamemission == doom && gamemode != shareware && !chex)
         {
             mapcmdepisode = 1;
             mapcmdmap = 8;
-            M_StringCopy(speciallumpname, "E1M8B", 6);
-            M_StringCopy(mapcmdlump, "E1M8B", 6);
+            M_StringCopy(speciallumpname, "E1M8B", sizeof(speciallumpname));
+            M_StringCopy(mapcmdlump, "E1M8B", sizeof(mapcmdlump));
             result = true;
         }
         else
@@ -3224,7 +3221,7 @@ static dboolean map_cmd_func1(char *cmd, char *parms)
                     sscanf(mapcmdlump, "E%1iM%1iB", &mapcmdepisode, &mapcmdmap);
 
                     if (gamemode != shareware && strlen(mapcmdlump) == 5 && mapcmdepisode != -1 && mapcmdmap != -1)
-                        M_StringCopy(speciallumpname, mapcmdlump, 6);
+                        M_StringCopy(speciallumpname, mapcmdlump, sizeof(speciallumpname));
                     else
                         sscanf(mapcmdlump, "E%1iM%1i", &mapcmdepisode, &mapcmdmap);
                 }
@@ -3383,9 +3380,7 @@ static void map_cmd_func2(char *cmd, char *parms)
 //
 // maplist CCMD
 //
-extern int  dehcount;
-
-void removemapnum(char *title)
+static void removemapnum(char *title)
 {
     char *pos = strchr(title, ':');
 
@@ -3439,7 +3434,7 @@ static void maplist_cmd_func2(char *cmd, char *parms)
             sscanf(lump, "E%1iM%1iB", &ep, &map);
 
             if (gamemode != shareware && strlen(lump) == 5 && ep != -1 && map != -1)
-                M_StringCopy(speciallumpname, lump, 6);
+                M_StringCopy(speciallumpname, lump, sizeof(speciallumpname));
             else
                 sscanf(lump, "E%1iM%1i", &ep, &map);
         }
@@ -3542,9 +3537,9 @@ static void maplist_cmd_func2(char *cmd, char *parms)
             {
                 char    temp[256];
 
-                M_StringCopy(temp, maplist[i], 256);
-                M_StringCopy(maplist[i], maplist[j], 256);
-                M_StringCopy(maplist[j], temp, 256);
+                M_StringCopy(temp, maplist[i], sizeof(temp));
+                M_StringCopy(maplist[i], maplist[j], sizeof(maplist[i]));
+                M_StringCopy(maplist[j], temp, sizeof(maplist[j]));
             }
 
     // display the map list
@@ -3637,6 +3632,34 @@ static void mapstats_cmd_func2(char *cmd, char *parms)
         temp = titlecase(maptitle);
         C_TabbedOutput(tabs, "Title\t<b><i>%s</i></b>", temp);
         free(temp);
+
+        if (gamemode == commercial)
+        {
+            if (gamemap == 11)
+            {
+                if (M_StringCompare(maptitle, s_HUSTR_11))
+                    C_TabbedOutput(tabs, "Alternate Title\t<b><i>%s</i></b>", s_HUSTR_11_ALT);
+            }
+            else if (gamemap == 31)
+            {
+                if (M_StringCompare(maptitle, s_HUSTR_31))
+                    C_TabbedOutput(tabs, "Alternate Title\t<b><i>%s</i></b>", s_HUSTR_31_BFG);
+                else if (M_StringCompare(maptitle, s_HUSTR_31_BFG))
+                    C_TabbedOutput(tabs, "Alternate Title\t<b><i>%s</i></b>", s_HUSTR_31);
+            }
+            else if (gamemap == 32)
+            {
+                if (M_StringCompare(maptitle, s_HUSTR_32))
+                    C_TabbedOutput(tabs, "Alternate Title\t<b><i>%s</i></b>", s_HUSTR_32_BFG);
+                else if (M_StringCompare(maptitle, s_HUSTR_32_BFG))
+                    C_TabbedOutput(tabs, "Alternate Title\t<b><i>%s</i></b>", s_HUSTR_32);
+            }
+        }
+        else if (gameepisode == 3 && gamemap == 7)
+        {
+            if (M_StringCompare(maptitle, s_HUSTR_E3M7))
+                C_TabbedOutput(tabs, "Alternate Title\t<b><i>%s</i></b>", s_HUSTR_E3M7_ALT);
+        }
     }
 
     {
@@ -3719,7 +3742,7 @@ static void mapstats_cmd_func2(char *cmd, char *parms)
         char    wadname[MAX_PATH];
         int     wadtype = lumpinfo[i]->wadfile->type;
 
-        M_StringCopy(wadname, leafname(lumpinfo[i]->wadfile->path), MAX_PATH);
+        M_StringCopy(wadname, leafname(lumpinfo[i]->wadfile->path), sizeof(wadname));
 
         C_TabbedOutput(tabs, "%s\t<b>%s%s</b>", (wadtype == IWAD ? "IWAD" : "PWAD"), wadname,
             (wadtype == IWAD && bfgedition ? " <i>(BFG Edition)</i>" : ""));
@@ -5469,7 +5492,7 @@ static void resetall_cmd_func2(char *cmd, char *parms)
 
     M_snprintf(buffer, sizeof(buffer), "Are you sure you want to reset all CVARs\nand bound controls to their defaults?\n\n%s",
         s_PRESSYN);
-    M_StartMessage(buffer, C_VerifyResetAll, true);
+    M_StartMessage(buffer, &C_VerifyResetAll, true);
     SDL_StopTextInput();
     S_StartSound(NULL, sfx_swtchn);
 }
@@ -6429,7 +6452,7 @@ static void thinglist_cmd_func2(char *cmd, char *parms)
     {
         mobj_t  *mobj = (mobj_t *)th;
         char    name[100];
-        char    *temp1;
+        char    *temp1 = commify(mobj->id);
         char    *temp2;
 
         if (*mobj->name)
@@ -6437,9 +6460,8 @@ static void thinglist_cmd_func2(char *cmd, char *parms)
         else
             M_snprintf(name, sizeof(name), "%s%s", ((mobj->flags & MF_CORPSE) && !(mobj->flags2 & MF2_DECORATION) ? "dead " :
                 ((mobj->flags & MF_FRIEND) && mobj->type != MT_PLAYER ? "friendly " : ((mobj->flags & MF_DROPPED) ? "dropped " : ""))),
-                (mobj->type == MT_PLAYER && mobj != viewplayer->mo ? "voodoo doll" : mobj->info->name1));
+                (mobj->type == MT_PLAYER && mobj != viewplayer->mo ? "voodoo doll" : (*mobj->info->name1 ? mobj->info->name1 : "-")));
 
-        temp1 = commify(mobj->id);
         temp2 = sentencecase(name);
         C_TabbedOutput(tabs, "%s%s\t%s\t(%i,%i,%i)", (mobj->id >= 0 ? temp1 : "-"), (mobj->id >= 0 ? "." : ""),
             temp2, mobj->x >> FRACBITS, mobj->y >> FRACBITS, mobj->z >> FRACBITS);
@@ -7203,8 +7225,6 @@ static void mouselook_cvar_func2(char *cmd, char *parms)
 //
 // ammo, armor and health CVARs
 //
-dboolean P_CheckAmmo(weapontype_t weapon);
-
 static dboolean player_cvars_func1(char *cmd, char *parms)
 {
     return (!*parms || (int_cvars_func1(cmd, parms) && gamestate == GS_LEVEL));
@@ -8196,7 +8216,15 @@ static void vid_capfps_cvar_func2(char *cmd, char *parms)
         int_cvars_func2(cmd, parms);
 
         if (vid_capfps != vid_capfps_old)
-            I_CapFPS(vid_capfps);
+        {
+            if (vid_capfps < 10)
+            {
+                vid_capfps = vid_capfps_old;
+                M_SaveCVARs();
+            }
+            else
+                I_CapFPS(vid_capfps);
+        }
     }
 }
 

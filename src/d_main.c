@@ -166,7 +166,7 @@ unsigned int        stat_runs = 0;
 
 skill_t             startskill;
 int                 startepisode;
-int                 startmap;
+static int          startmap;
 dboolean            autostart;
 
 dboolean            advancetitle;
@@ -181,9 +181,6 @@ dboolean            realframe;
 static dboolean     error;
 
 struct tm           gamestarttime;
-
-extern int          countdown;
-extern evtype_t     lasteventtype;
 
 #if defined(_WIN32)
 extern HANDLE       CapFPSEvent;
@@ -708,7 +705,7 @@ static void LoadDehFile(char *path)
     char    *dehpath;
 
     for (int i = 0; i < 8; i++)
-        if (M_StringCompare(leafname(path), loaddehlast[i].filename))
+        if (M_StringEndsWith(path, loaddehlast[i].filename))
         {
             loaddehlast[i].present = true;
             return;
@@ -724,7 +721,10 @@ static void LoadDehFile(char *path)
                 ProcessDehFile(dehpath, 0, true);
 
             if (dehfilecount < MAXDEHFILES)
-                M_StringCopy(dehfiles[dehfilecount++], dehpath, MAX_PATH);
+            {
+                M_StringCopy(dehfiles[dehfilecount], dehpath, sizeof(dehfiles[dehfilecount]));
+                dehfilecount++;
+            }
         }
     }
     else
@@ -739,7 +739,10 @@ static void LoadDehFile(char *path)
                 ProcessDehFile(dehpath, 0, true);
 
             if (dehfilecount < MAXDEHFILES)
-                M_StringCopy(dehfiles[dehfilecount++], dehpath, MAX_PATH);
+            {
+                M_StringCopy(dehfiles[dehfilecount], dehpath, sizeof(dehfiles[dehfilecount]));
+                dehfilecount++;
+            }
         }
     }
 }
@@ -858,7 +861,7 @@ static void D_CheckSupportedPWAD(char *filename)
 
 static dboolean D_IsUnsupportedPWAD(char *filename)
 {
-    return (M_StringCompare(leafname(filename), PACKAGE_WAD) || M_StringCompare(leafname(filename), "voices.wad"));
+    return (M_StringEndsWith(filename, PACKAGE_WAD) || M_StringEndsWith(filename, "voices.wad"));
 }
 
 static dboolean D_CheckParms(void)
@@ -880,7 +883,7 @@ static dboolean D_CheckParms(void)
                 iwadfolder = M_StringDuplicate(folder);
 
                 // if DOOM.WAD is selected, load SIGIL.WAD automatically if present
-                if (M_StringCompare(leafname(myargv[1]), "DOOM.WAD") && IsUltimateDOOM(myargv[1]))
+                if (M_StringEndsWith(myargv[1], "DOOM.WAD") && IsUltimateDOOM(myargv[1]))
                 {
                     char    fullpath[MAX_PATH];
 
@@ -922,7 +925,7 @@ static dboolean D_CheckParms(void)
                     }
                 }
                 // if DOOM2.WAD is selected, load NERVE.WAD automatically if present
-                else if (M_StringCompare(leafname(myargv[1]), "DOOM2.WAD"))
+                else if (M_StringEndsWith(myargv[1], "DOOM2.WAD"))
                 {
                     char    fullpath[MAX_PATH];
 
@@ -1154,7 +1157,7 @@ static int D_OpenWADLauncher(void)
             {
                 char    *temp = W_NearestFilename(folder, leafname(file));
 
-                if (!M_StringCompare(leafname(temp), leafname(file)))
+                if (!M_StringEndsWith(temp, leafname(file)))
                     C_Warning(1, "<b>%s</b> couldn't be found. Did you mean <b>%s</b>?", leafname(file), leafname(temp));
 
                 file = M_StringDuplicate(temp);
@@ -1180,7 +1183,7 @@ static int D_OpenWADLauncher(void)
                     iwadfolder = M_StringDuplicate(folder);
 
                     // if DOOM.WAD is selected, load SIGIL.WAD automatically if present
-                    if (M_StringCompare(leafname(file), "DOOM.WAD") && IsUltimateDOOM(file))
+                    if (M_StringEndsWith(file, "DOOM.WAD") && IsUltimateDOOM(file))
                     {
                         char    fullpath[MAX_PATH];
 
@@ -1222,7 +1225,7 @@ static int D_OpenWADLauncher(void)
                         }
                     }
                     // if DOOM2.WAD is selected, load NERVE.WAD automatically if present
-                    else if (M_StringCompare(leafname(file), "DOOM2.WAD"))
+                    else if (M_StringEndsWith(file, "DOOM2.WAD"))
                     {
                         char    fullpath[MAX_PATH];
 
@@ -1708,25 +1711,25 @@ static void D_ProcessDehInWad(void)
         for (int i = 0; i < numlumps; i++)
             if (M_StringCompare(lumpinfo[i]->name, "DEHACKED")
                 && process
-                && !M_StringCompare(leafname(lumpinfo[i]->wadfile->path), PACKAGE_WAD)
-                && !M_StringCompare(leafname(lumpinfo[i]->wadfile->path), "D4V.WAD"))
+                && !M_StringEndsWith(lumpinfo[i]->wadfile->path, PACKAGE_WAD)
+                && !M_StringEndsWith(lumpinfo[i]->wadfile->path, "D4V.WAD"))
                 ProcessDehFile(NULL, i, false);
 
         for (int i = 0; i < numlumps; i++)
             if (M_StringCompare(lumpinfo[i]->name, "DEHACKED")
-                && M_StringCompare(leafname(lumpinfo[i]->wadfile->path), "D4V.WAD"))
+                && M_StringEndsWith(lumpinfo[i]->wadfile->path, "D4V.WAD"))
                 ProcessDehFile(NULL, i, false);
 
         for (int i = 0; i < numlumps; i++)
             if (M_StringCompare(lumpinfo[i]->name, "DEHACKED")
-                && M_StringCompare(leafname(lumpinfo[i]->wadfile->path), PACKAGE_WAD))
+                && M_StringEndsWith(lumpinfo[i]->wadfile->path, PACKAGE_WAD))
                 ProcessDehFile(NULL, i, false);
     }
     else if (hacx || FREEDOOM)
     {
         for (int i = 0; i < numlumps; i++)
             if (M_StringCompare(lumpinfo[i]->name, "DEHACKED")
-                && (process || M_StringCompare(leafname(lumpinfo[i]->wadfile->path), PACKAGE_WAD)))
+                && (process || M_StringEndsWith(lumpinfo[i]->wadfile->path, PACKAGE_WAD)))
                 ProcessDehFile(NULL, i, false);
     }
     else
@@ -1736,8 +1739,8 @@ static void D_ProcessDehInWad(void)
 
         for (int i = numlumps - 1; i >= 0; i--)
             if (M_StringCompare(lumpinfo[i]->name, "DEHACKED")
-                && !M_StringCompare(leafname(lumpinfo[i]->wadfile->path), "SIGIL_v1_2.wad")
-                && (process || M_StringCompare(leafname(lumpinfo[i]->wadfile->path), PACKAGE_WAD)))
+                && !M_StringEndsWith(lumpinfo[i]->wadfile->path, "SIGIL_v1_2.wad")
+                && (process || M_StringEndsWith(lumpinfo[i]->wadfile->path, PACKAGE_WAD)))
                 ProcessDehFile(NULL, i, false);
     }
 
@@ -1910,7 +1913,7 @@ static void D_DoomMainSetup(void)
                     I_Quit(false);
 #if defined(_WIN32)
                 else if (!choseniwad && !error
-                    && (!*wad || (M_StringEndsWith(wad, ".wad") && !M_StringCompare(leafname(wad), PACKAGE_WAD))))
+                    && (!*wad || (M_StringEndsWith(wad, ".wad") && !M_StringEndsWith(wad, PACKAGE_WAD))))
 #else
                 else if (!choseniwad && !error)
 #endif
@@ -1936,6 +1939,14 @@ static void D_DoomMainSetup(void)
     }
 
     M_SaveCVARs();
+
+#if defined(_WIN32)
+    if (keyboardscreenshot == KEY_PRINTSCREEN)
+    {
+        RegisterHotKey(NULL, 1, MOD_ALT, VK_SNAPSHOT);
+        RegisterHotKey(NULL, 2, 0, VK_SNAPSHOT);
+    }
+#endif
 
     if (p > 0)
         do

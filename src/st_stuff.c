@@ -52,6 +52,7 @@
 #include "m_random.h"
 #include "p_inter.h"
 #include "p_local.h"
+#include "p_setup.h"
 #include "s_sound.h"
 #include "st_lib.h"
 #include "st_stuff.h"
@@ -241,9 +242,6 @@ static int                  st_shotguns;
 // holds key-type for each key box on bar
 static int                  keyboxes[3];
 
-// a random number per tic
-static int                  st_randomnumber;
-
 int                         oldhealth = 100;
 
 dboolean                    idclev;
@@ -410,8 +408,6 @@ static void ST_RefreshBackground(void)
 #endif
     }
 }
-
-extern char cheatkey;
 
 static int ST_CalcPainOffset(void);
 
@@ -1193,7 +1189,7 @@ static void ST_UpdateFaceWidget(void)
     if (!st_facecount)
     {
         priority = 0;
-        faceindex = st_randomnumber % 3;
+        faceindex = M_Random() % 3;
         st_facecount = ST_STRAIGHTFACECOUNT;
     }
 
@@ -1233,13 +1229,11 @@ void ST_Ticker(void)
     {
         if (!vid_widescreen)
         {
-            st_randomnumber = M_Random();
             ST_UpdateWidgets();
             st_oldhealth = viewplayer->health;
         }
-        else if (r_hud)
+        else if (r_hud && !r_althud)
         {
-            st_randomnumber = M_Random();
             ST_UpdateFaceWidget();
             st_oldhealth = viewplayer->health;
         }
@@ -1258,26 +1252,34 @@ void ST_Ticker(void)
 static void ST_DoPaletteStuff(void)
 {
     int palette = 0;
-    int count = viewplayer->damagecount;
 
     if (viewplayer->powers[pw_strength]
         && (viewplayer->pendingweapon == wp_fist
             || (viewplayer->readyweapon == wp_fist && viewplayer->pendingweapon == wp_nochange))
         && viewplayer->health > 0 && r_berserkintensity)
     {
-        if (viewplayer->bonuscount)
-            palette = STARTBONUSPALS - 1 + MIN((viewplayer->bonuscount + 7) >> 3, NUMBONUSPALS);
+        int bonuscount = viewplayer->bonuscount;
+
+        if (bonuscount)
+            palette = STARTBONUSPALS + MIN((bonuscount + 7) >> 3, NUMBONUSPALS) - 1;
         else
-            palette = MIN((count >> 3) + (doom4vanilla ? r_berserkintensity + 3 : r_berserkintensity), NUMREDPALS);
+            palette = MIN((viewplayer->damagecount >> 3) + r_berserkintensity + 3 * doom4vanilla, NUMREDPALS);
     }
-    else if (count)
-        palette = (chex ? RADIATIONPAL : STARTREDPALS + MIN((count + 7) >> 3, NUMREDPALS - 1));
-    else if (viewplayer->health > 0)
+    else
     {
-        if (viewplayer->bonuscount)
-            palette = STARTBONUSPALS - 1 + MIN((viewplayer->bonuscount + 7) >> 3, NUMBONUSPALS);
-        else if (viewplayer->powers[pw_ironfeet] > STARTFLASHING || (viewplayer->powers[pw_ironfeet] & 8))
-            palette = RADIATIONPAL;
+        int damagecount = viewplayer->damagecount;
+
+        if (damagecount)
+            palette = (chex ? RADIATIONPAL : STARTREDPALS + MIN((damagecount + 7) >> 3, NUMREDPALS - 1));
+        else if (viewplayer->health > 0)
+        {
+            int bonuscount = viewplayer->bonuscount;
+
+            if (bonuscount)
+                palette = STARTBONUSPALS + MIN((bonuscount + 7) >> 3, NUMBONUSPALS) - 1;
+            else if (viewplayer->powers[pw_ironfeet] > STARTFLASHING || (viewplayer->powers[pw_ironfeet] & 8))
+                palette = RADIATIONPAL;
+        }
     }
 
     if (palette != st_palette)
@@ -1469,17 +1471,15 @@ static void ST_LoadUnloadGraphics(load_callback_t callback)
 
 static void ST_LoadCallback(char *lumpname, patch_t **variable)
 {
-    if (M_StringCompare(lumpname, "STARMS"))
-        *variable = ((FREEDOOM && !modifiedgame) || hacx ? W_CacheLastLumpName("STARMS") : W_CacheLumpName("STARMS"));
-    else if (M_StringCompare(lumpname, "STBAR"))
-        *variable = ((FREEDOOM && !modifiedgame) || hacx ? W_CacheLastLumpName("STBAR") : W_CacheLumpName("STBAR"));
+    if (M_StringCompare(lumpname, "STARMS") || M_StringCompare(lumpname, "STBAR") || M_StringCompare(lumpname, "STFGOD0"))
+        *variable = ((FREEDOOM && !modifiedgame) || hacx ? W_CacheLastLumpName(lumpname) : W_CacheLumpName(lumpname));
     else
         *variable = W_CacheLumpName(lumpname);
 }
 
 static void ST_LoadGraphics(void)
 {
-    ST_LoadUnloadGraphics(ST_LoadCallback);
+    ST_LoadUnloadGraphics(&ST_LoadCallback);
 }
 
 static void ST_LoadData(void)

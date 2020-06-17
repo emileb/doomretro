@@ -58,7 +58,7 @@
 // Whether an object is "sentient" or not. Used for environmental influences.
 #define sentient(mobj)      (mobj->health > 0 && mobj->info->seestate)
 
-#define CORPSEBLOODSPLATS   256
+#define CORPSEBLOODSPLATS   512
 
 //
 // NOTES: mobj_t
@@ -461,5 +461,8 @@ typedef struct bloodsplat_s
     int                 blood;
     void                (*colfunc)(void);
 } bloodsplat_t;
+
+extern int  prevthingx, prevthingy;
+extern int  prevthingbob;
 
 #endif

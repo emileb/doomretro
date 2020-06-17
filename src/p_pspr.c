@@ -37,6 +37,7 @@
 */
 
 #include "doomstat.h"
+#include "g_game.h"
 #include "hu_stuff.h"
 #include "i_gamepad.h"
 #include "i_system.h"
@@ -64,7 +65,6 @@ dboolean        successfulshot;
 dboolean        skippsprinterp;
 
 extern dboolean hitwall;
-extern dboolean usemouselook;
 
 //
 // A_Recoil
@@ -188,12 +188,6 @@ dboolean P_CheckAmmo(weapontype_t weapon)
         P_EquipWeapon(wp_pistol);
     else if (viewplayer->weaponowned[wp_chainsaw])
         P_EquipWeapon(wp_chainsaw);
-    else if (viewplayer->weaponowned[wp_missile]
-        && viewplayer->ammo[am_misl] >= weaponinfo[wp_missile].minammo)
-        P_EquipWeapon(wp_missile);
-    else if (viewplayer->weaponowned[wp_bfg]
-        && viewplayer->ammo[am_cell] >= weaponinfo[wp_bfg].minammo)
-        P_EquipWeapon(wp_bfg);
     else
         P_EquipWeapon(wp_fist);
 
@@ -879,7 +873,7 @@ void P_MovePsprites(void)
     if (flash->tics != -1 && !--flash->tics)
         P_SetPsprite(ps_flash, flash->state->nextstate);
 
-    if (weapon->state->action == A_WeaponReady)
+    if (weapon->state->action == &A_WeaponReady)
     {
         // bob the weapon based on movement speed
         fixed_t momx = viewplayer->momx;

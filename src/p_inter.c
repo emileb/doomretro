@@ -37,6 +37,7 @@
 */
 
 #include "am_map.h"
+#include "c_cmds.h"
 #include "c_console.h"
 #include "d_deh.h"
 #include "doomstat.h"
@@ -51,6 +52,7 @@
 #include "p_setup.h"
 #include "p_tick.h"
 #include "s_sound.h"
+#include "st_stuff.h"
 
 // Ty 03/07/98 - add deh externals
 // Maximums and such were hardcoded values. Need to externalize those for
@@ -77,8 +79,6 @@ dboolean        species_infighting = false;
 // a big item has five clip loads
 int             maxammo[NUMAMMO] =  { 200, 50, 300, 50 };
 int             clipammo[NUMAMMO] = {  10,  4,  20,  1 };
-
-static int      cardsprites[NUMCARDS] = { SPR_BKEY, SPR_YKEY, SPR_RKEY, SPR_BSKU, SPR_YSKU, SPR_RSKU };
 
 dboolean        con_obituaries = con_obituaries_default;
 dboolean        r_mirroredweapons = r_mirroredweapons_default;
@@ -116,7 +116,6 @@ unsigned int    stat_monsterskilled_zombiemen = 0;
 unsigned int    stat_suicides = 0;
 
 extern dboolean healthcvar;
-extern int      idclevtics;
 
 void P_UpdateAmmoStat(ammotype_t ammotype, int num)
 {
@@ -352,7 +351,9 @@ static dboolean P_GiveWeapon(weapontype_t weapon, dboolean dropped, dboolean sta
     {
         gaveweapon = true;
         viewplayer->weaponowned[weapon] = true;
-        P_EquipWeapon(weapon);
+
+        if (weapon != wp_missile && weapon != wp_bfg)
+            P_EquipWeapon(weapon);
     }
 
     return (gaveweapon || gaveammo);
@@ -511,6 +512,8 @@ int cardsfound;
 //
 void P_InitCards(void)
 {
+    int cardsprites[NUMCARDS] = { SPR_BKEY, SPR_YKEY, SPR_RKEY, SPR_BSKU, SPR_YSKU, SPR_RSKU };
+
     for (int i = 0; i < NUMCARDS; i++)
         viewplayer->cards[i] = CARDNOTINMAP;
 
@@ -1919,7 +1922,6 @@ static void P_WriteObituary(mobj_t *target, mobj_t *inflicter, mobj_t *source, d
 void P_KillMobj(mobj_t *target, mobj_t *inflicter, mobj_t *source)
 {
     dboolean    gibbed;
-    dboolean    massacre = target->flags2 & MF2_MASSACRE;
     mobjtype_t  type = target->type;
     mobjinfo_t  *info = &mobjinfo[type];
     int         gibhealth = info->gibhealth;

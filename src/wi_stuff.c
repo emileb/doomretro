@@ -272,9 +272,6 @@ static patch_t          *colon;
 // 0-9 graphic
 static patch_t          *num[10];
 
-// minus sign
-static patch_t          *wiminus;
-
 // "Finished!" graphics
 static patch_t          *finished;
 
@@ -601,7 +598,6 @@ static int WI_DrawNum(int x, int y, int n, int digits)
     else
     {
         int fontwidth = SHORT(num[0]->width);
-        int neg;
 
         if (digits < 0)
         {
@@ -623,9 +619,6 @@ static int WI_DrawNum(int x, int y, int n, int digits)
             }
         }
 
-        if ((neg = (n < 0)))
-            n = -n;
-
         // draw the new number
         while (digits--)
         {
@@ -635,10 +628,6 @@ static int WI_DrawNum(int x, int y, int n, int digits)
             x -= 2 * (n % 10 == 1);
             n /= 10;
         }
-
-        // draw a minus sign if necessary
-        if (neg)
-            V_DrawPatch((x -= 8), y, 0, wiminus);
 
         return x;
     }
@@ -942,7 +931,7 @@ static void WI_UpdateStats(void)
     }
 }
 
-void M_DrawString(int x, int y, char *str);
+void M_DrawString(int x, int y, char *string);
 
 static void WI_DrawStats(void)
 {
@@ -1090,9 +1079,6 @@ static void WI_LoadUnloadData(load_callback_t callback)
             }
     }
 
-    // More hacks on minus sign.
-    callback("WIMINUS", &wiminus);
-
     for (int i = 0; i < 10; i++)
     {
         // numbers 0-9
@@ -1148,7 +1134,7 @@ static void WI_LoadData(void)
     else
         lnames = Z_Malloc(sizeof(patch_t *) * NUMMAPS, PU_STATIC, NULL);
 
-    WI_LoadUnloadData(WI_LoadCallback);
+    WI_LoadUnloadData(&WI_LoadCallback);
 
     // These two graphics are special cased because we're sharing
     // them with the status bar code
@@ -1172,7 +1158,7 @@ static void WI_UnloadCallback(char *name, patch_t **variable)
 
 static void WI_UnloadData(void)
 {
-    WI_LoadUnloadData(WI_UnloadCallback);
+    WI_LoadUnloadData(&WI_UnloadCallback);
 }
 
 void WI_Drawer(void)
@@ -1215,11 +1201,11 @@ static void WI_InitVariables(wbstartstruct_t *wbstartstruct)
     if (gamemode != retail && wbs->epsd > 2)
         wbs->epsd -= 3;
 
-    M_StringCopy(mapname, temp, 128);
+    M_StringCopy(mapname, temp, sizeof(mapname));
     free(temp);
 
     P_MapName(wbs->epsd + 1, wbs->next + 1);
-    M_StringCopy(nextmapname, maptitle, 128);
+    M_StringCopy(nextmapname, maptitle, sizeof(nextmapname));
 }
 
 void WI_Start(wbstartstruct_t *wbstartstruct)

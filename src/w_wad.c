@@ -107,7 +107,7 @@ static dboolean IsFreedoom(const char *iwadname)
     return result;
 }
 
-dboolean IsBFGEdition(const char *iwadname)
+static dboolean IsBFGEdition(const char *iwadname)
 {
     FILE        *fp = fopen(iwadname, "rb");
     wadinfo_t   header;
@@ -278,7 +278,7 @@ dboolean W_AddFile(char *filename, dboolean automatic)
 {
     static dboolean packagewadadded;
     wadinfo_t       header;
-    int             length;
+    size_t          length;
     int             startlump;
     filelump_t      *fileinfo;
     filelump_t      *filerover;
@@ -303,10 +303,13 @@ dboolean W_AddFile(char *filename, dboolean automatic)
     if (strncmp(header.id, "IWAD", 4) && strncmp(header.id, "PWAD", 4))
         I_Error("%s doesn't have an IWAD or PWAD id.", filename);
 
-    wadfile->type = (!strncmp(header.id, "IWAD", 4) || M_StringCompare(leafname(filename), "DOOM2.WAD") ? IWAD : PWAD);
-
-    if (wadfile->type == IWAD)
+    if (!strncmp(header.id, "IWAD", 4) || M_StringEndsWith(filename, "DOOM2.WAD"))
+    {
+        wadfile->type = IWAD;
         bfgedition = IsBFGEdition(filename);
+    }
+    else
+        wadfile->type = PWAD;
 
     header.numlumps = LONG(header.numlumps);
     header.infotableofs = LONG(header.infotableofs);
@@ -342,24 +345,23 @@ dboolean W_AddFile(char *filename, dboolean automatic)
         (numlumps - startlump == 1 ? "" : "s"), (wadfile->type == IWAD ? "IWAD" : "PWAD"), wadfile->path);
     free(temp);
 
-    if (M_StringCompare(leafname(filename), "SIGIL_v1_21.wad")
-        || M_StringCompare(leafname(filename), "SIGIL_v1_2.wad")
-        || M_StringCompare(leafname(filename), "SIGIL_v1_1.wad")
-        || M_StringCompare(leafname(filename), "SIGIL.wad"))
+    if (M_StringEndsWith(filename, "SIGIL_v1_21.wad")
+        || M_StringEndsWith(filename, "SIGIL_v1_2.wad")
+        || M_StringEndsWith(filename, "SIGIL_v1_1.wad")
+        || M_StringEndsWith(filename, "SIGIL.wad"))
     {
         autosigil = automatic;
         C_Output("<i><b>SIGIL</b></i> is now available to play from the episode menu.");
     }
-    else if (M_StringCompare(leafname(filename), "SIGIL_SHREDS.WAD")
-        || M_StringCompare(leafname(filename), "SIGIL_SHREDS_COMPAT.wad"))
+    else if (M_StringEndsWith(filename, "SIGIL_SHREDS.WAD") || M_StringEndsWith(filename, "SIGIL_SHREDS_COMPAT.wad"))
     {
         buckethead = true;
         C_Output("Buckethead's soundtrack will now be used when playing <i><b>SIGIL.</b></i>");
     }
-    else if (M_StringCompare(leafname(filename), "DOOM.WAD"))
+    else if (M_StringEndsWith(filename, "DOOM.WAD"))
         C_Output("<i><b>E1M4B: Phobos Mission Control</b></i> and <i><b>E1M8B: Tech Gone Bad</b></i> "
             "are now available to play using the <b>map</b> CCMD.");
-    else if (M_StringCompare(leafname(filename), "NERVE.WAD"))
+    else if (M_StringEndsWith(filename, "NERVE.WAD"))
         C_Output("<i><b>No Rest For The Living</b></i> is now available to play from the expansion menu.");
 
     if (!packagewadadded)
@@ -473,7 +475,7 @@ int W_WadType(char *filename)
     W_Read(wadfile, 0, &header, sizeof(header));
     W_CloseFile(wadfile);
 
-    if (!strncmp(header.id, "IWAD", 4) || M_StringCompare(leafname(filename), "DOOM2.WAD"))
+    if (!strncmp(header.id, "IWAD", 4) || M_StringEndsWith(filename, "DOOM2.WAD"))
         return IWAD;
     else if (!strncmp(header.id, "PWAD", 4))
         return PWAD;
@@ -529,8 +531,7 @@ int W_CheckMultipleLumps(const char *name)
 
 //
 // W_RangeCheckNumForName
-// Linear Search that checks for a lump number ONLY
-// inside a range, not all lumps.
+// Linear Search that checks for a lump number ONLY inside a range, not all lumps.
 //
 int W_RangeCheckNumForName(int min, int max, const char *name)
 {
@@ -594,9 +595,8 @@ int W_GetSecondNumForName(const char *name)
     int i;
 
     for (i = 0; i < numlumps; i++)
-        if (!strncasecmp(lumpinfo[i]->name, name, 8))
-            if (++count == 2)
-                break;
+        if (!strncasecmp(lumpinfo[i]->name, name, 8) && ++count == 2)
+            break;
 
     if (i == numlumps)
         I_Error("W_GetSecondNumForName: %s not found!", name);
@@ -618,10 +618,9 @@ int W_LumpLength(int lump)
 
 //
 // W_ReadLump
-// Loads the lump into the given buffer,
-//  which must be >= W_LumpLength().
+// Loads the lump into the given buffer, which must be >= W_LumpLength().
 //
-void W_ReadLump(int lump, void *dest)
+static void W_ReadLump(int lump, void *dest)
 {
     size_t      c;
     lumpinfo_t  *l = lumpinfo[lump];
@@ -629,9 +628,7 @@ void W_ReadLump(int lump, void *dest)
     if (!l->size || !dest)
         return;
 
-    c = W_Read(l->wadfile, l->position, dest, l->size);
-
-    if (c < (size_t)l->size)
+    if ((c = W_Read(l->wadfile, l->position, dest, l->size)) < (size_t)l->size)
         I_Error("W_ReadLump: only read %zd of %i on lump %i", c, l->size, lump);
 }
 

@@ -72,7 +72,6 @@
 
 // Called by main loop.
 dboolean ST_Responder(event_t *ev);
-void ST_AutomapEvent(int type);
 
 // Called by main loop.
 void ST_Ticker(void);
@@ -86,7 +85,11 @@ void ST_Start(void);
 // Called by startup code.
 void ST_Init(void);
 
+extern dboolean idclev;
 extern int      idclevtics;
+extern dboolean idmus;
+extern int      st_palette;
+extern dboolean oldweaponsowned[NUMWEAPONS];
 
 extern patch_t  *grnrock;
 extern patch_t  *brdr_t;

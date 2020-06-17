@@ -342,7 +342,9 @@ void T_MoveElevator(elevator_t *elevator)
         P_RemoveThinker(&elevator->thinker);    // remove elevator from actives
 
         // make floor stop sound
-        S_StartSectorSound(&sec->soundorg, sfx_pstop);
+        // [BH] don't make stop sound if floor already at its destination height
+        if (elevator->stopsound)
+            S_StartSectorSound(&sec->soundorg, sfx_pstop);
     }
 }
 
@@ -383,7 +385,7 @@ manual_floor:
         rtn = true;
         floor = Z_Calloc(1, sizeof(*floor), PU_LEVSPEC, NULL);
 
-        floor->thinker.function = T_MoveFloor;
+        floor->thinker.function = &T_MoveFloor;
         P_AddThinker(&floor->thinker);
 
         sec->floordata = floor;
@@ -723,7 +725,7 @@ manual_stair:
         rtn = true;
         floor = Z_Calloc(1, sizeof(*floor), PU_LEVSPEC, NULL);
 
-        floor->thinker.function = T_MoveFloor;
+        floor->thinker.function = &T_MoveFloor;
         P_AddThinker(&floor->thinker);
 
         sec->floordata = floor;
@@ -771,7 +773,7 @@ manual_stair:
                 secnum = tsec->id;
                 floor = Z_Calloc(1, sizeof(*floor), PU_LEVSPEC, NULL);
 
-                floor->thinker.function = T_MoveFloor;
+                floor->thinker.function = &T_MoveFloor;
                 P_AddThinker(&floor->thinker);
 
                 sec->floordata = floor;
@@ -818,7 +820,7 @@ dboolean EV_DoElevator(line_t *line, elevator_e elevtype)
         rtn = true;
         elevator = Z_Calloc(1, sizeof(*elevator), PU_LEVSPEC, NULL);
 
-        elevator->thinker.function = T_MoveElevator;
+        elevator->thinker.function = &T_MoveElevator;
         P_AddThinker(&elevator->thinker);
 
         sec->floordata = elevator;
@@ -855,6 +857,8 @@ dboolean EV_DoElevator(line_t *line, elevator_e elevtype)
                 elevator->direction = (elevator->floordestheight > sec->floorheight ? UP : DOWN);
                 break;
         }
+
+        elevator->stopsound = (sec->floorheight != elevator->floordestheight);
     }
 
     return rtn;

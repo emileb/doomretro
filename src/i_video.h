@@ -77,9 +77,6 @@ void I_ToggleFullscreen(void);
 void I_SetPillarboxes(void);
 void I_SetMotionBlur(int percent);
 
-void M_QuitDOOM(int choice);
-void R_SetViewSize(int blocks);
-
 void I_SetGamma(float value);
 
 #if defined(_WIN32)
@@ -93,10 +90,6 @@ extern dboolean     sendpause;
 extern dboolean     quitting;
 
 extern int          keydown;
-
-extern dboolean     idclev;
-extern dboolean     idmus;
-extern dboolean     idbehold;
 
 extern int          gammaindex;
 extern const float  gammalevels[GAMMALEVELS];

@@ -186,6 +186,7 @@ extern char     *s_HUSTR_E3M4;
 extern char     *s_HUSTR_E3M5;
 extern char     *s_HUSTR_E3M6;
 extern char     *s_HUSTR_E3M7;
+extern char     *s_HUSTR_E3M7_ALT;
 extern char     *s_HUSTR_E3M8;
 extern char     *s_HUSTR_E3M9;
 extern char     *s_HUSTR_E4M1;
@@ -208,6 +209,7 @@ extern char     *s_HUSTR_8;
 extern char     *s_HUSTR_9;
 extern char     *s_HUSTR_10;
 extern char     *s_HUSTR_11;
+extern char     *s_HUSTR_11_ALT;
 extern char     *s_HUSTR_12;
 extern char     *s_HUSTR_13;
 extern char     *s_HUSTR_14;
@@ -490,6 +492,15 @@ extern char     *startup2;
 extern char     *startup3;
 extern char     *startup4;
 extern char     *startup5;
+
+extern char     **mapnames[];
+extern char     **mapnames2[];
+extern char     **mapnames2_bfg[];
+extern char     **mapnamesp[];
+extern char     **mapnamest[];
+extern char     **mapnamesn[];
+
+extern int      dehcount;
 
 void ProcessDehFile(char *filename, int lumpnum, dboolean automatic);
 

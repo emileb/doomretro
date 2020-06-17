@@ -77,7 +77,6 @@ extern dboolean         modifiedgame;
 // Defaults for menu, methinks.
 extern skill_t          startskill;
 extern int              startepisode;
-extern int              startmap;
 
 extern dboolean         autostart;
 
@@ -198,7 +197,6 @@ extern gamestate_t      gamestate;
 extern int              gametime;
 extern struct tm        gamestarttime;
 
-extern int              vid_capfps;
 extern dboolean         realframe;
 
 // Intermission stats.

@@ -47,6 +47,8 @@ typedef enum
     lighting_special
 } special_e;
 
+extern int              timer;
+extern int              countdown;
 extern fixed_t          animatedliquiddiff;
 extern fixed_t          animatedliquidxdir;
 extern fixed_t          animatedliquidydir;
@@ -545,6 +547,7 @@ typedef struct
     fixed_t     floordestheight;
     fixed_t     ceilingdestheight;
     fixed_t     speed;
+    dboolean    stopsound;
 } elevator_t;
 
 #define ELEVATORSPEED   (FRACUNIT * 4)

@@ -39,6 +39,7 @@
 #include <ctype.h>
 
 #include "am_map.h"
+#include "c_cmds.h"
 #include "c_console.h"
 #include "d_deh.h"
 #include "doomstat.h"
@@ -53,6 +54,7 @@
 #include "m_menu.h"
 #include "m_misc.h"
 #include "p_local.h"
+#include "p_setup.h"
 #include "st_stuff.h"
 #include "v_video.h"
 #include "w_wad.h"
@@ -87,8 +89,6 @@ static int              message_counter;
 
 static dboolean         headsupactive;
 
-byte                    tempscreen[SCREENWIDTH * SCREENHEIGHT];
-
 static patch_t          *minuspatch;
 static short            minuspatchwidth;
 static int              minuspatchy;
@@ -116,10 +116,6 @@ extern dboolean         emptytallpercent;
 extern int              caretcolor;
 extern patch_t          *faces[ST_NUMFACES];
 extern int              st_faceindex;
-extern dboolean         usemouselook;
-extern dboolean         vanilla;
-
-int M_StringWidth(char *string);
 
 void A_Raise(mobj_t *actor, player_t *player, pspdef_t *psp);
 void A_Lower(mobj_t *actor, player_t *player, pspdef_t *psp);
@@ -186,22 +182,22 @@ void HU_SetTranslucency(void)
 {
     if (r_hud_translucency)
     {
-        hudfunc = V_DrawTranslucentHUDPatch;
-        hudnumfunc = V_DrawTranslucentHUDNumberPatch;
-        althudfunc = V_DrawTranslucentAltHUDPatch;
-        althudtextfunc =  V_DrawTranslucentAltHUDText;
-        fillrectfunc = V_FillSoftTransRect;
-        fillrectfunc2 = V_FillTransRect;
+        hudfunc = &V_DrawTranslucentHUDPatch;
+        hudnumfunc = &V_DrawTranslucentHUDNumberPatch;
+        althudfunc = &V_DrawTranslucentAltHUDPatch;
+        althudtextfunc =  &V_DrawTranslucentAltHUDText;
+        fillrectfunc = &V_FillSoftTransRect;
+        fillrectfunc2 = &V_FillTransRect;
         coloroffset = 0;
     }
     else
     {
-        hudfunc = V_DrawHUDPatch;
-        hudnumfunc = V_DrawHUDPatch;
-        althudfunc = V_DrawAltHUDPatch;
-        althudtextfunc = V_DrawAltHUDText;
-        fillrectfunc = V_FillRect;
-        fillrectfunc2 = V_FillRect;
+        hudfunc = &V_DrawHUDPatch;
+        hudnumfunc = &V_DrawHUDPatch;
+        althudfunc = &V_DrawAltHUDPatch;
+        althudtextfunc = &V_DrawAltHUDText;
+        fillrectfunc = &V_FillRect;
+        fillrectfunc2 = &V_FillRect;
         coloroffset = 4;
     }
 }
@@ -287,7 +283,7 @@ void HU_Start(void)
     // create the map title widget
     HUlib_InitTextLine(&w_title, w_title.x, w_title.y, hu_font, HU_FONTSTART);
 
-    while (M_StringWidth(s) > (vid_widescreen ? (SCREENWIDTH - 12) : (ORIGINALWIDTH - 6)))
+    while (M_StringWidth(s) > (vid_widescreen ? SCREENWIDTH - 12 : ORIGINALWIDTH - 6))
     {
         if (len >= 2 && s[len - 2] == ' ')
         {
@@ -489,7 +485,7 @@ static void HU_DrawHUD(void)
     {
         if (healthhighlight > currenttime)
         {
-            DrawHUDNumber(&health_x, HUD_HEALTH_Y, health, translucency, V_DrawHighlightedHUDNumberPatch);
+            DrawHUDNumber(&health_x, HUD_HEALTH_Y, health, translucency, &V_DrawHighlightedHUDNumberPatch);
 
             if (!emptytallpercent)
                 V_DrawHighlightedHUDNumberPatch(health_x, HUD_HEALTH_Y, tallpercent, translucency);
@@ -533,7 +529,7 @@ static void HU_DrawHUD(void)
 
         if (armorhighlight > currenttime)
         {
-            DrawHUDNumber(&armor_x, HUD_ARMOR_Y, armor, tinttab66, V_DrawHighlightedHUDNumberPatch);
+            DrawHUDNumber(&armor_x, HUD_ARMOR_Y, armor, tinttab66, &V_DrawHighlightedHUDNumberPatch);
 
             if (!emptytallpercent)
                 V_DrawHighlightedHUDNumberPatch(armor_x, HUD_ARMOR_Y, tallpercent, tinttab66);
@@ -616,7 +612,7 @@ static void HU_DrawHUD(void)
 
             if (r_hud_translucency || !ammoanim)
                 DrawHUDNumber(&ammo_x, HUD_AMMO_Y, ammo, translucency,
-                    (ammohighlight > currenttime ? V_DrawHighlightedHUDNumberPatch : hudnumfunc));
+                    (ammohighlight > currenttime ? &V_DrawHighlightedHUDNumberPatch : hudnumfunc));
 
             if (!gamepaused)
             {
@@ -678,9 +674,10 @@ static int      yellow;
 
 static void HU_AltInit(void)
 {
-    char    buffer[9];
-    patch_t *altkeypatch;
-    patch_t *altskullpatch;
+    char        buffer[9];
+    patch_t     *altkeypatch;
+    patch_t     *altskullpatch;
+    dboolean    weaponschanged = false;
 
     for (int i = 0; i < 10; i++)
     {
@@ -720,9 +717,21 @@ static void HU_AltInit(void)
 
     for (int i = 1; i < NUMWEAPONS; i++)
     {
-        M_snprintf(buffer, sizeof(buffer), "DRHUDWP%i", i);
-        altweapon[i] = W_CacheLumpName(buffer);
+        int lump = W_CheckNumForName(weaponinfo[i].spritename);
+
+        if (lump >= 0 && lumpinfo[lump]->wadfile->type == PWAD)
+        {
+            weaponschanged = true;
+            break;
+        }
     }
+
+    if (!weaponschanged)
+        for (int i = 1; i < NUMWEAPONS; i++)
+        {
+            M_snprintf(buffer, sizeof(buffer), "DRHUDWP%i", i);
+            altweapon[i] = W_CacheLumpName(buffer);
+        }
 
     altleftpatch = W_CacheLumpName("DRHUDL");
     altrightpatch = W_CacheLumpName("DRHUDR");
@@ -1075,7 +1084,7 @@ void HU_Drawer(void)
             actionf_t   action;
 
             if (ammotype != am_noammo && viewplayer->ammo[ammotype]
-                && (action = viewplayer->psprites[ps_weapon].state->action) != A_Raise && action != A_Lower)
+                && (action = viewplayer->psprites[ps_weapon].state->action) != &A_Raise && action != &A_Lower)
             {
                 if (r_hud_translucency)
                     HU_DrawCrosshair();

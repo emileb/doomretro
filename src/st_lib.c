@@ -44,7 +44,7 @@
 
 dboolean    usesmallnums;
 
-void (*statbarnumfunc)(int, int, int, int, int, patch_t *);
+static void (*statbarnumfunc)(int, int, int, int, int, patch_t *);
 
 void STlib_InitNum(st_number_t *n, int x, int y, patch_t **pl, int *num, int width)
 {
@@ -209,5 +209,5 @@ void STlib_UpdateArmsIcon(st_multicon_t *mi, dboolean refresh, int i)
 
 void STLib_Init(void)
 {
-    statbarnumfunc = (!usesmallnums ? STlib_DrawLowNumPatch : (r_detail == r_detail_high ? STlib_DrawHighNum : STlib_DrawLowNum));
+    statbarnumfunc = (!usesmallnums ? &STlib_DrawLowNumPatch : (r_detail == r_detail_high ? &STlib_DrawHighNum : &STlib_DrawLowNum));
 }

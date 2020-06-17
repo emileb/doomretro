@@ -45,8 +45,10 @@
 #include "m_misc.h"
 #include "p_local.h"
 #include "p_saveg.h"
+#include "p_setup.h"
 #include "p_tick.h"
 #include "s_sound.h"
+#include "st_stuff.h"
 #include "version.h"
 #include "z_zone.h"
 
@@ -734,7 +736,7 @@ static void saveg_write_floormove_t(floormove_t *str)
 //
 static void saveg_read_plat_t(plat_t *str)
 {
-    str->thinker.function = (saveg_read_bool() ? T_PlatRaise : NULL);
+    str->thinker.function = (saveg_read_bool() ? &T_PlatRaise : NULL);
     str->sector = sectors + saveg_read32();
     str->speed = saveg_read32();
     str->low = saveg_read32();
@@ -853,6 +855,7 @@ static void saveg_read_elevator_t(elevator_t *str)
     str->floordestheight = saveg_read32();
     str->ceilingdestheight = saveg_read32();
     str->speed = saveg_read32();
+    //str->stopsound = saveg_read32();
 }
 
 static void saveg_write_elevator_t(elevator_t *str)
@@ -863,6 +866,7 @@ static void saveg_write_elevator_t(elevator_t *str)
     saveg_write32(str->floordestheight);
     saveg_write32(str->ceilingdestheight);
     saveg_write32(str->speed);
+    //saveg_write32(str->stopsound);
 }
 
 static void saveg_read_scroll_t(scroll_t *str)
@@ -987,11 +991,11 @@ dboolean P_ReadSaveGameHeader(char *description)
     memset(vcheck, 0, sizeof(vcheck));
     strcpy(vcheck, PACKAGE_SAVEGAMEVERSIONSTRING);
 
-    if (strcmp(read_vcheck, vcheck))
+    if (!M_StringCompare(read_vcheck, vcheck))
     {
         menuactive = false;
         C_ShowConsole();
-        C_Warning(1, "This savegame requires <i>%s</i>.", read_vcheck);
+        C_Warning(1, "This savegame is incompatible with <i>" PACKAGE_NAMEANDVERSIONSTRING "</i>.");
         return false;   // bad version
     }
 
@@ -1004,16 +1008,16 @@ dboolean P_ReadSaveGameHeader(char *description)
         if (gamemap == 10)
         {
             gamemap = 4;
-            M_StringCopy(speciallumpname, "E1M4B", 6);
+            M_StringCopy(speciallumpname, "E1M4B", sizeof(speciallumpname));
         }
         else if (gamemap == 11)
         {
             gamemap = 8;
-            M_StringCopy(speciallumpname, "E1M8B", 6);
+            M_StringCopy(speciallumpname, "E1M8B", sizeof(speciallumpname));
         }
     }
 
-    saveg_read8();
+    saveg_read8();      // gamemission
 
     // get the times
     a = saveg_read8();
@@ -1212,7 +1216,7 @@ void P_UnArchiveThinkers(void)
     {
         thinker_t   *next = currentthinker->next;
 
-        if (currentthinker->function == P_MobjThinker || currentthinker->function == MusInfoThinker)
+        if (currentthinker->function == &P_MobjThinker || currentthinker->function == &MusInfoThinker)
         {
             P_RemoveMobj((mobj_t *)currentthinker);
             P_RemoveThinkerDelayed(currentthinker);
@@ -1261,7 +1265,7 @@ void P_UnArchiveThinkers(void)
                 mobj->info = &mobjinfo[mobj->type];
                 P_SetThingPosition(mobj);
 
-                mobj->thinker.function = (mobj->type == MT_MUSICSOURCE ? MusInfoThinker : P_MobjThinker);
+                mobj->thinker.function = (mobj->type == MT_MUSICSOURCE ? &MusInfoThinker : &P_MobjThinker);
                 P_AddThinker(&mobj->thinker);
                 mobj->colfunc = mobj->info->colfunc;
                 mobj->altcolfunc = mobj->info->altcolfunc;
@@ -1369,77 +1373,77 @@ void P_ArchiveSpecials(void)
                 continue;
         }
 
-        if (th->function == T_MoveCeiling)
+        if (th->function == &T_MoveCeiling)
         {
             saveg_write8(tc_ceiling);
             saveg_write_ceiling_t((ceiling_t *)th);
             continue;
         }
 
-        if (th->function == T_VerticalDoor)
+        if (th->function == &T_VerticalDoor)
         {
             saveg_write8(tc_door);
             saveg_write_vldoor_t((vldoor_t *)th);
             continue;
         }
 
-        if (th->function == T_MoveFloor)
+        if (th->function == &T_MoveFloor)
         {
             saveg_write8(tc_floor);
             saveg_write_floormove_t((floormove_t *)th);
             continue;
         }
 
-        if (th->function == T_PlatRaise)
+        if (th->function == &T_PlatRaise)
         {
             saveg_write8(tc_plat);
             saveg_write_plat_t((plat_t *)th);
             continue;
         }
 
-        if (th->function == T_LightFlash)
+        if (th->function == &T_LightFlash)
         {
             saveg_write8(tc_flash);
             saveg_write_lightflash_t((lightflash_t *)th);
             continue;
         }
 
-        if (th->function == T_StrobeFlash)
+        if (th->function == &T_StrobeFlash)
         {
             saveg_write8(tc_strobe);
             saveg_write_strobe_t((strobe_t *)th);
             continue;
         }
 
-        if (th->function == T_Glow)
+        if (th->function == &T_Glow)
         {
             saveg_write8(tc_glow);
             saveg_write_glow_t((glow_t *)th);
             continue;
         }
 
-        if (th->function == T_FireFlicker)
+        if (th->function == &T_FireFlicker)
         {
             saveg_write8(tc_fireflicker);
             saveg_write_fireflicker_t((fireflicker_t *)th);
             continue;
         }
 
-        if (th->function == T_MoveElevator)
+        if (th->function == &T_MoveElevator)
         {
             saveg_write8(tc_elevator);
             saveg_write_elevator_t((elevator_t *)th);
             continue;
         }
 
-        if (th->function == T_Scroll)
+        if (th->function == &T_Scroll)
         {
             saveg_write8(tc_scroll);
             saveg_write_scroll_t((scroll_t *)th);
             continue;
         }
 
-        if (th->function == T_Pusher)
+        if (th->function == &T_Pusher)
         {
             saveg_write8(tc_pusher);
             saveg_write_pusher_t((pusher_t *)th);
@@ -1484,7 +1488,7 @@ void P_UnArchiveSpecials(void)
 
                 saveg_read_ceiling_t(ceiling);
                 ceiling->sector->ceilingdata = ceiling;
-                ceiling->thinker.function = T_MoveCeiling;
+                ceiling->thinker.function = &T_MoveCeiling;
                 P_AddThinker(&ceiling->thinker);
                 P_AddActiveCeiling(ceiling);
                 break;
@@ -1496,7 +1500,7 @@ void P_UnArchiveSpecials(void)
 
                 saveg_read_vldoor_t(door);
                 door->sector->ceilingdata = door;
-                door->thinker.function = T_VerticalDoor;
+                door->thinker.function = &T_VerticalDoor;
                 P_AddThinker(&door->thinker);
                 break;
             }
@@ -1507,7 +1511,7 @@ void P_UnArchiveSpecials(void)
 
                 saveg_read_floormove_t(floor);
                 floor->sector->floordata = floor;
-                floor->thinker.function = T_MoveFloor;
+                floor->thinker.function = &T_MoveFloor;
                 P_AddThinker(&floor->thinker);
                 break;
             }
@@ -1518,6 +1522,7 @@ void P_UnArchiveSpecials(void)
 
                 saveg_read_plat_t(plat);
                 plat->sector->floordata = plat;
+                plat->thinker.function = &T_PlatRaise;
                 P_AddThinker(&plat->thinker);
                 P_AddActivePlat(plat);
                 break;
@@ -1528,7 +1533,7 @@ void P_UnArchiveSpecials(void)
                 lightflash_t    *flash = Z_Malloc(sizeof(*flash), PU_LEVEL, NULL);
 
                 saveg_read_lightflash_t(flash);
-                flash->thinker.function = T_LightFlash;
+                flash->thinker.function = &T_LightFlash;
                 P_AddThinker(&flash->thinker);
                 break;
             }
@@ -1538,7 +1543,7 @@ void P_UnArchiveSpecials(void)
                 strobe_t    *strobe = Z_Malloc(sizeof(*strobe), PU_LEVEL, NULL);
 
                 saveg_read_strobe_t(strobe);
-                strobe->thinker.function = T_StrobeFlash;
+                strobe->thinker.function = &T_StrobeFlash;
                 P_AddThinker(&strobe->thinker);
                 break;
             }
@@ -1548,7 +1553,7 @@ void P_UnArchiveSpecials(void)
                 glow_t  *glow = Z_Malloc(sizeof(*glow), PU_LEVEL, NULL);
 
                 saveg_read_glow_t(glow);
-                glow->thinker.function = T_Glow;
+                glow->thinker.function = &T_Glow;
                 P_AddThinker(&glow->thinker);
                 break;
             }
@@ -1558,7 +1563,7 @@ void P_UnArchiveSpecials(void)
                 fireflicker_t   *fireflicker = Z_Malloc(sizeof(*fireflicker), PU_LEVEL, NULL);
 
                 saveg_read_fireflicker_t(fireflicker);
-                fireflicker->thinker.function = T_FireFlicker;
+                fireflicker->thinker.function = &T_FireFlicker;
                 P_AddThinker(&fireflicker->thinker);
                 break;
             }
@@ -1569,7 +1574,7 @@ void P_UnArchiveSpecials(void)
 
                 saveg_read_elevator_t(elevator);
                 elevator->sector->ceilingdata = elevator;
-                elevator->thinker.function = T_MoveElevator;
+                elevator->thinker.function = &T_MoveElevator;
                 P_AddThinker(&elevator->thinker);
                 break;
             }
@@ -1579,7 +1584,7 @@ void P_UnArchiveSpecials(void)
                 scroll_t    *scroll = Z_Malloc(sizeof(*scroll), PU_LEVEL, NULL);
 
                 saveg_read_scroll_t(scroll);
-                scroll->thinker.function = T_Scroll;
+                scroll->thinker.function = &T_Scroll;
                 P_AddThinker(&scroll->thinker);
                 break;
             }
@@ -1589,7 +1594,7 @@ void P_UnArchiveSpecials(void)
                 pusher_t    *pusher = Z_Malloc(sizeof(*pusher), PU_LEVEL, NULL);
 
                 saveg_read_pusher_t(pusher);
-                pusher->thinker.function = T_Pusher;
+                pusher->thinker.function = &T_Pusher;
                 pusher->source = P_GetPushThing(pusher->affectee);
                 P_AddThinker(&pusher->thinker);
                 break;

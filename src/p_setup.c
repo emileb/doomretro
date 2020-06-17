@@ -39,6 +39,7 @@
 #include <ctype.h>
 
 #include "am_map.h"
+#include "c_cmds.h"
 #include "c_console.h"
 #include "d_deh.h"
 #include "doomstat.h"
@@ -56,6 +57,7 @@
 #include "p_tick.h"
 #include "s_sound.h"
 #include "sc_man.h"
+#include "st_stuff.h"
 #include "w_wad.h"
 #include "z_zone.h"
 
@@ -556,8 +558,6 @@ static const char *sectorspecials[] =
     "Light flickers (randomly)"
 };
 
-extern texture_t    **textures;
-
 static fixed_t GetOffset(vertex_t *v1, vertex_t *v2)
 {
     fixed_t dx = (v1->x - v2->x) >> FRACBITS;
@@ -649,9 +649,9 @@ static void P_CheckLinedefs(void)
                 char    *temp2 = commify(ld->tag);
 
                 if (ld->tag < 0 || P_FindSectorFromLineTag(ld, -1) == -1)
-                    C_Warning(2, "Linedef %s has no special and an unknown tag of %s.", temp1, temp2);
+                    C_Warning(2, "Linedef %s has no line special and an unknown tag of %s.", temp1, temp2);
                 else
-                    C_Warning(2, "Linedef %s has no special but has tag %s.", temp1, temp2);
+                    C_Warning(2, "Linedef %s has no line special but has a tag of %s.", temp1, temp2);
 
                 free(temp1);
                 free(temp2);
@@ -663,7 +663,7 @@ static void P_CheckLinedefs(void)
             {
                 char    *temp = commify(ld->id);
 
-                C_Warning(2, "Linedef %s has special %i (\"%s\") but no tag.", temp, ld->special, linespecials[ld->special]);
+                C_Warning(2, "Linedef %s has line special %i (\"%s\") but no tag.", temp, ld->special, linespecials[ld->special]);
                 free(temp);
             }
             else if (ld->tag < 0 || P_FindSectorFromLineTag(ld, -1) == -1)
@@ -671,7 +671,7 @@ static void P_CheckLinedefs(void)
                 char    *temp1 = commify(ld->id);
                 char    *temp2 = commify(ld->tag);
 
-                C_Warning(2, "Linedef %s has special %i (\"%s\") but an unknown tag of %s.",
+                C_Warning(2, "Linedef %s has line special %i (\"%s\") but an unknown tag of %s.",
                     temp1, ld->special, linespecials[ld->special], temp2);
                 free(temp1);
                 free(temp2);
@@ -833,7 +833,7 @@ static void P_LoadSegs(int lump)
                         else
                         {
                             if (!li->sidedef->toptexture)
-                                C_Warning(2, "The missing top texture of linedef %s has been changed to <b>%.8s</b>.",
+                                C_Warning(2, "The missing top texture of linedef %s is now <b>%.8s</b>.",
                                     temp, linefix[j].toptexture);
                             else
                                 C_Warning(2, "The top texture of linedef %s has been changed from <b>%.8s</b> to <b>%.8s</b>.",
@@ -854,7 +854,7 @@ static void P_LoadSegs(int lump)
                         else
                         {
                             if (!li->sidedef->midtexture)
-                                C_Warning(2, "The missing middle texture of linedef %s has been changed to <b>%.8s</b>.",
+                                C_Warning(2, "The missing middle texture of linedef %s is now <b>%.8s</b>.",
                                     temp, linefix[j].middletexture);
                             else
                                 C_Warning(2, "The middle texture of linedef %s has been changed from <b>%.8s</b> to <b>%.8s</b>.",
@@ -875,7 +875,7 @@ static void P_LoadSegs(int lump)
                         else
                         {
                             if (!li->sidedef->bottomtexture)
-                                C_Warning(2, "The missing bottom texture of linedef %s has been changed to <b>%.8s</b>.",
+                                C_Warning(2, "The missing bottom texture of linedef %s is now <b>%.8s</b>.",
                                     temp, linefix[j].bottomtexture);
                             else
                                 C_Warning(2, "The bottom texture of linedef %s has been changed from <b>%.8s</b> to <b>%.8s</b>.",
@@ -938,11 +938,11 @@ static void P_LoadSegs(int lump)
                         char    *temp = commify(linedefnum);
 
                         if (linefix[j].special)
-                            C_Warning(2, "The special of linedef %s has been changed from %i (\"%s\") to %i (\"%s\").",
+                            C_Warning(2, "The line special of linedef %s has been changed from %i (\"%s\") to %i (\"%s\").",
                                 temp, li->linedef->special, linespecials[li->linedef->special],
                                 linefix[j].special, linespecials[linefix[j].special]);
                         else
-                            C_Warning(2, "The special of linedef %s has been removed.", temp);
+                            C_Warning(2, "The line special of linedef %s has been removed.", temp);
 
                         li->linedef->special = linefix[j].special;
                         free(temp);
@@ -992,7 +992,7 @@ static void P_LoadSegs_V4(int lump)
     segs = calloc_IfSameLevel(segs, numsegs, sizeof(seg_t));
 
     if (!data || !numsegs)
-        I_Error("This map has no segs.");
+        I_Error("There are no segs in this map.");
 
     for (int i = 0; i < numsegs; i++)
     {
@@ -1140,7 +1140,7 @@ static void P_LoadSubsectors(int lump)
     subsectors = calloc_IfSameLevel(subsectors, numsubsectors, sizeof(subsector_t));
 
     if (!data || !numsubsectors)
-        I_Error("This map has no subsectors.");
+        I_Error("There are no subsectors in this map.");
     else
     {
         for (int i = 0; i < numsubsectors; i++)
@@ -1161,7 +1161,7 @@ static void P_LoadSubsectors_V4(int lump)
     subsectors = calloc_IfSameLevel(subsectors, numsubsectors, sizeof(subsector_t));
 
     if (!data || !numsubsectors)
-        I_Error("This map has no subsectors.");
+        I_Error("There are no subsectors in this map.");
     else
     {
         for (int i = 0; i < numsubsectors; i++)
@@ -1334,9 +1334,9 @@ static void P_LoadNodes(int lump)
     if (!data || !numnodes)
     {
         if (numsubsectors == 1)
-            C_Warning(2, "This map has no nodes and only one subsector.");
+            C_Warning(2, "There are no nodes and only one subsector in this map.");
         else
-            I_Error("This map has no nodes.");
+            I_Error("There are no nodes in this map.");
     }
     else
     {
@@ -1398,9 +1398,9 @@ static void P_LoadNodes_V4(int lump)
     if (!data || !numnodes)
     {
         if (numsubsectors == 1)
-            C_Warning(2, "This map has no nodes and only one subsector.");
+            C_Warning(2, "There are no nodes and only one subsector in this map.");
         else
-            I_Error("This map has no nodes.");
+            I_Error("There are no nodes in this map.");
     }
 
     for (int i = 0; i < numnodes; i++)
@@ -1587,7 +1587,7 @@ static void P_LoadZNodes(int lump)
     numsubsectors = numSubs;
 
     if (numsubsectors <= 0)
-        I_Error("This map has no subsectors.");
+        I_Error("There are no subsectors in this map.");
 
     subsectors = calloc_IfSameLevel(subsectors, numsubsectors, sizeof(subsector_t));
 
@@ -1609,7 +1609,7 @@ static void P_LoadZNodes(int lump)
     // The number of segs stored should match the number of
     // segs used by subsectors.
     if (numSegs != currSeg)
-        I_Error("There are an incorrect number of segs in the nodes.");
+        I_Error("There are an incorrect number of segs in the nodes in this map.");
 
     numsegs = numSegs;
     segs = calloc_IfSameLevel(segs, numsegs, sizeof(seg_t));
@@ -1660,6 +1660,10 @@ static void P_LoadThings(int lump)
     M_Seed(numthings);
     numspawnedthings = 0;
     numdecorations = 0;
+
+    prevthingx = 0;
+    prevthingy = 0;
+    prevthingbob = 0;
 
     for (thingid = 0; thingid < numthings; thingid++)
     {
@@ -1745,10 +1749,10 @@ static void P_LoadThings(int lump)
             {
                 int flags = thing->flags;
 
-                thing->id = thingid;
-
                 if ((flags & MF_TOUCHY) || (flags & MF_BOUNCES) || (flags & MF_FRIEND))
                     mbfcompatible = true;
+
+                thing->id = thingid;
             }
         }
     }
@@ -2248,12 +2252,12 @@ static void P_LoadBlockMap(int lump)
     if (lump >= numlumps || (lumplen = W_LumpLength(lump)) < 8 || (count = lumplen / 2) >= 0x10000)
     {
         P_CreateBlockMap();
-        C_Warning(2, "This map's <b>BLOCKMAP</b> lump was rebuilt.");
+        C_Warning(2, "The <b>BLOCKMAP</b> lump was rebuilt.");
     }
     else if (M_CheckParm("-blockmap"))
     {
         P_CreateBlockMap();
-        C_Warning(2, "A <b>-blockmap</b> parameter was found on the command-line. This map's <b>BLOCKMAP</b> lump was rebuilt.");
+        C_Warning(2, "A <b>-blockmap</b> parameter was found on the command-line. The <b>BLOCKMAP</b> lump was rebuilt.");
     }
     else
     {
@@ -2287,7 +2291,7 @@ static void P_LoadBlockMap(int lump)
         if (!P_VerifyBlockMap(count))
         {
             P_CreateBlockMap();
-            C_Warning(2, "This map's <b>BLOCKMAP</b> lump was rebuilt.");
+            C_Warning(2, "The <b>BLOCKMAP</b> lump was rebuilt.");
         }
     }
 
@@ -2561,19 +2565,10 @@ static void P_CalcSegsLength(void)
     }
 }
 
-char        mapnum[6];
-char        maptitle[256];
-char        mapnumandtitle[512];
-char        automaptitle[512];
-
-extern char **mapnames[45];
-extern char **mapnames2[32];
-extern char **mapnames2_bfg[33];
-extern char **mapnamesp[32];
-extern char **mapnamest[32];
-extern char **mapnamesn[9];
-
-extern int  dehcount;
+char    mapnum[6];
+char    maptitle[256];
+char    mapnumandtitle[512];
+char    automaptitle[512];
 
 // Determine map name to use
 void P_MapName(int ep, int map)
@@ -2752,9 +2747,6 @@ static mapformat_t P_CheckMapFormat(int lumpnum)
 
     return format;
 }
-
-extern dboolean idclev;
-extern dboolean massacre;
 
 //
 // P_SetupLevel
@@ -3026,7 +3018,7 @@ static void P_InitMapInfo(void)
 
             if (map < 0 || map > 99)
             {
-                if (M_StringCompare(leafname(lumpinfo[MAPINFO]->wadfile->path), "NERVE.WAD"))
+                if (M_StringEndsWith(lumpinfo[MAPINFO]->wadfile->path, "NERVE.WAD"))
                 {
                     C_Warning(0, "The map markers in PWAD <b>%s</b> are invalid.", lumpinfo[MAPINFO]->wadfile->path);
                     nerve = false;

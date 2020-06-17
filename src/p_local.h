@@ -127,7 +127,7 @@ void P_ChangeWeapon(weapontype_t newweapon);
 
 void P_RespawnSpecials(void);
 
-void P_SetPlayerViewheight(void);
+void P_SetPlayerViewHeight(void);
 
 void P_InitCards(void);
 
@@ -140,6 +140,7 @@ void P_RemoveBloodMobj(mobj_t *mobj);
 dboolean P_SetMobjState(mobj_t *mobj, statenum_t state);
 void P_MobjThinker(mobj_t *mobj);
 
+void P_SpawnMoreBlood(mobj_t *mobj);
 mobj_t *P_SpawnMapThing(mapthing_t *mthing, dboolean spawnmonsters);
 void P_SpawnPuff(fixed_t x, fixed_t y, fixed_t z, angle_t angle);
 void P_SpawnSmokeTrail(fixed_t x, fixed_t y, fixed_t z, angle_t angle);
@@ -154,6 +155,8 @@ void P_ExplodeMissile(mobj_t *mo);
 // P_ENEMY.C
 //
 #define BARRELMS    1500
+
+extern int  barrelms;
 
 void P_NoiseAlert(mobj_t *target);
 dboolean P_CheckMeleeRange(mobj_t *actor);
@@ -184,7 +187,6 @@ typedef dboolean (*traverser_t)(intercept_t *in);
 fixed_t P_ApproxDistance(fixed_t dx, fixed_t dy);
 int P_PointOnLineSide(fixed_t x, fixed_t y, line_t *line);
 int P_BoxOnLineSide(fixed_t *tmbox, line_t *ld);
-void P_MakeDivline(line_t *li, divline_t *dl);
 fixed_t P_InterceptVector(divline_t *v2, divline_t *v1);
 
 // MAES: support 512x512 blockmaps.
@@ -221,22 +223,21 @@ void P_CheckIntercepts(void);
 
 // If "floatok" true, move would be ok
 // if within "tmfloorz - tmceilingz".
-extern fixed_t  attackrange;
-extern dboolean floatok;
-extern dboolean felldown;       // killough 11/98: indicates object pushed off ledge
-extern fixed_t  tmfloorz;
-extern fixed_t  tmceilingz;
-extern fixed_t  tmbbox[4];      // phares 3/20/98
+extern fixed_t      attackrange;
+extern dboolean     floatok;
+extern dboolean     felldown;       // killough 11/98: indicates object pushed off ledge
+extern fixed_t      tmfloorz;
+extern fixed_t      tmceilingz;
+extern fixed_t      tmbbox[4];      // phares 3/20/98
+extern msecnode_t   *sector_list;
+extern line_t       *ceilingline;
+extern line_t       *blockline;
 
-extern line_t   *ceilingline;
-extern line_t   *blockline;
-
-extern dboolean infight;
+extern dboolean     infight;
 
 void P_CheckSpechits(void);
 dboolean P_CheckPosition(mobj_t *thing, fixed_t x, fixed_t y);
 mobj_t *P_CheckOnMobj(mobj_t *thing);
-void P_FakeZMovement(mobj_t *mo);
 dboolean P_IsInLiquid(mobj_t *thing);
 dboolean P_TryMove(mobj_t *thing, fixed_t x, fixed_t y, int dropoff);
 dboolean P_CheckLineSide(mobj_t *actor, fixed_t x, fixed_t y);

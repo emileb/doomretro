@@ -44,8 +44,10 @@
 extern char     **episodes[];
 extern char     **expansions[];
 extern char     **skilllevels[];
+extern char     *packageconfig;
 extern char     *pwadfile;
 extern dboolean splashscreen;
+extern dboolean dowipe;
 
 void D_Display(void);
 

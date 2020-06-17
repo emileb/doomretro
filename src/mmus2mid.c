@@ -41,6 +41,9 @@
 #include "i_system.h"
 #include "mmus2mid.h"
 
+// initial track size allocation
+#define TRACKBUFFERSIZE 1024L
+
 // some macros to decode mus event bit fields
 #define last(e)         ((uint8_t)((e) & 0x80))
 #define event_type(e)   ((uint8_t)(((e) & 0x7F) >> 4))
@@ -94,9 +97,6 @@ typedef struct
 
 // array of info about tracks
 static TrackInfo track[MIDI_TRACKS];
-
-// initial track size allocation
-static uint32_t TRACKBUFFERSIZE = 1024L;
 
 // lookup table MUS -> MID controls
 static uint8_t MUS2MIDcontrol[15] =
@@ -224,9 +224,9 @@ static uint32_t ReadTime(uint8_t **musptrp)
 // Returns the maximum channel number unassigned unless that is 9 in which
 // case 10 is returned.
 //
-static char FirstChannelAvailable(char MUS2MIDchannel[MIDI_TRACKS])
+static char FirstChannelAvailable(signed char MUS2MIDchannel[MIDI_TRACKS])
 {
-    char    max = -1;
+    signed char max = -1;
 
     // find the largest MIDI channel assigned so far
     for (int i = 0; i < 15; i++)
@@ -306,7 +306,7 @@ dboolean mmus2mid(uint8_t *mus, size_t size, MIDI *mididata)
     size_t              muslen;
     static MUSheader    MUSh;
     uint8_t             MIDIchan2track[MIDI_TRACKS];
-    char                MUS2MIDchannel[MIDI_TRACKS];
+    signed char         MUS2MIDchannel[MIDI_TRACKS];
 
     // haleyjd 04/04/10: don't bite off more than you can chew
     if (size < sizeof(MUSheader))

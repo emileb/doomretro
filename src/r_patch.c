@@ -84,17 +84,15 @@
 //
 
 // Re-engineered patch support
-static rpatch_t     *patches;
-static rpatch_t     *texture_composites;
+static rpatch_t *patches;
+static rpatch_t *texture_composites;
 
-static short        BIGDOOR7;
-static short        FIREBLU1;
-static short        SKY1;
-static short        STEP2;
+static short    BIGDOOR7;
+static short    FIREBLU1;
+static short    SKY1;
+static short    STEP2;
 
-extern int          numspritelumps;
-extern int          numtextures;
-extern texture_t    **textures;
+extern int      numspritelumps;
 
 static dboolean getIsSolidAtSpot(const column_t *column, int spot)
 {
@@ -353,7 +351,6 @@ static void createTextureCompositePatch(int id)
     int                 patchNum;
     const patch_t       *oldPatch;
     const column_t      *oldColumn;
-    int                 oy;
     int                 count;
     int                 pixelDataSize;
     int                 columnsDataSize;
@@ -458,6 +455,7 @@ static void createTextureCompositePatch(int id)
 
             while (oldColumn->topdelta != 0xFF)
             {
+                int     oy = texpatch->originy;
                 rpost_t *post = &composite_patch->columns[tx].posts[countsInColumn[tx].posts_used];
 
                 // e6y: support for DeePsea's true tall patches
@@ -470,7 +468,8 @@ static void createTextureCompositePatch(int id)
                 count = oldColumn->length;
 
                 // [BH] use incorrect y-origin for certain textures
-                oy = (id == BIGDOOR7 || id == FIREBLU1 || id == SKY1 || (id == STEP2 && modifiedgame) ? 0 : texpatch->originy);
+                if (id == BIGDOOR7 || id == FIREBLU1 || id == SKY1 || (id == STEP2 && modifiedgame))
+                    oy = 0;
 
                 // set up the post's data
                 post->topdelta = top + oy;

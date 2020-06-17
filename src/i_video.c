@@ -64,12 +64,13 @@
 #include "m_random.h"
 #include "r_main.h"
 #include "s_sound.h"
+#include "st_stuff.h"
 #include "v_video.h"
 #include "version.h"
 #include "w_wad.h"
 
-#define I_SDLError(func)    I_Error("The call to " stringize(func) "() failed in %s() on line %i of %s with the error: " \
-                                "\"%s\".", __FUNCTION__, __LINE__ - 1, leafname(__FILE__), SDL_GetError())
+#define I_SDLError(func)    I_Error("The call to " stringize(func) "() failed in %s() on line %i of %s with the error: \"%s\".", \
+                                __FUNCTION__, __LINE__ - 1, leafname(__FILE__), SDL_GetError())
 
 #define MAXDISPLAYS         8
 
@@ -199,7 +200,6 @@ static dboolean     capslock;
 
 evtype_t            lasteventtype = ev_none;
 
-extern int          st_palette;
 extern int          windowborderwidth;
 extern int          windowborderheight;
 
@@ -998,13 +998,13 @@ void I_UpdateBlitFunc(dboolean shake)
     dboolean    override = (vid_fullscreen && !(displayheight % ORIGINALHEIGHT));
 
     if (shake && !software)
-        blitfunc = (vid_showfps ? (nearestlinear && !override ? I_Blit_NearestLinear_ShowFPS_Shake :
-            I_Blit_ShowFPS_Shake) : (nearestlinear && !override ? I_Blit_NearestLinear_Shake : I_Blit_Shake));
+        blitfunc = (vid_showfps ? (nearestlinear && !override ? &I_Blit_NearestLinear_ShowFPS_Shake :
+            &I_Blit_ShowFPS_Shake) : (nearestlinear && !override ? &I_Blit_NearestLinear_Shake : &I_Blit_Shake));
     else
-        blitfunc = (vid_showfps ? (nearestlinear && !override ? I_Blit_NearestLinear_ShowFPS : I_Blit_ShowFPS) :
-            (nearestlinear && !override ? I_Blit_NearestLinear : I_Blit));
+        blitfunc = (vid_showfps ? (nearestlinear && !override ? &I_Blit_NearestLinear_ShowFPS : &I_Blit_ShowFPS) :
+            (nearestlinear && !override ? &I_Blit_NearestLinear : &I_Blit));
 
-    mapblitfunc = (mapwindow ? (nearestlinear && !override ? I_Blit_Automap_NearestLinear : I_Blit_Automap) : nullfunc);
+    mapblitfunc = (mapwindow ? (nearestlinear && !override ? &I_Blit_Automap_NearestLinear : &I_Blit_Automap) : &nullfunc);
 }
 
 //
@@ -1130,7 +1130,7 @@ void I_CreateExternalAutomap(int outputlevel)
     int         am_displayindex = !displayindex;
 
     mapscreen = *screens;
-    mapblitfunc = nullfunc;
+    mapblitfunc = &nullfunc;
 
     if (!am_external)
         return;
@@ -1192,10 +1192,10 @@ void I_CreateExternalAutomap(int outputlevel)
             SDL_TEXTUREACCESS_TARGET, upscaledwidth * SCREENWIDTH, upscaledheight * SCREENHEIGHT)))
             I_SDLError(SDL_CreateTexture);
 
-        mapblitfunc = I_Blit_Automap_NearestLinear;
+        mapblitfunc = &I_Blit_Automap_NearestLinear;
     }
     else
-        mapblitfunc = I_Blit_Automap;
+        mapblitfunc = &I_Blit_Automap;
 
     if (!(mappalette = SDL_AllocPalette(256)))
         I_SDLError(SDL_AllocPalette);
@@ -1234,7 +1234,7 @@ void I_DestroyExternalAutomap(void)
     SDL_DestroyWindow(mapwindow);
     mapwindow = NULL;
     mapscreen = NULL;
-    mapblitfunc = nullfunc;
+    mapblitfunc = &nullfunc;
 }
 
 void GetWindowPosition(void)
@@ -1750,7 +1750,7 @@ static void SetVideoMode(dboolean output)
                 if (refreshrate < vid_capfps || !vid_capfps)
                 {
                     if (output)
-                        C_Output("The framerate is synced to the display's refresh rate of %iHz.", refreshrate);
+                        C_Output("The framerate is synced with the display's refresh rate of %iHz.", refreshrate);
                 }
                 else
                 {
@@ -1768,7 +1768,7 @@ static void SetVideoMode(dboolean output)
         }
         else
         {
-            if (vid_capfps)
+            if (vid_capfps < vid_capfps_max)
                 I_CapFPS(vid_capfps);
 
             if (output)
@@ -1776,9 +1776,9 @@ static void SetVideoMode(dboolean output)
                 if (vid_vsync)
                 {
                     if (M_StringCompare(rendererinfo.name, vid_scaleapi_software))
-                        C_Warning(1, "Vertical sync can't be enabled in software.");
+                        C_Warning(1, "The framerate can't be synced with the display's refresh rate in software.");
                     else
-                        C_Warning(1, "Vertical sync can't be enabled on this video card.");
+                        C_Warning(1, "The framerate can't be synced with the display's refresh rate using this graphics card.");
                 }
 
                 if (vid_capfps)

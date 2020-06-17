@@ -55,13 +55,13 @@ char *M_ExtractFolder(char *path);
 
 // Returns the file system location where application resource files are located.
 // On Windows and Linux, this is the folder in which doomretro.exe is located;
-// on OSX, this is the Contents/Resources folder within the application bundle.
+// on macOS, this is the Contents/Resources folder within the application bundle.
 char *M_GetResourceFolder(void);
 
 // Returns the file system location where generated application
 // data (configuration files, logs, savegames etc.) should be saved.
 // On Windows and Linux, this is the folder in which doomretro.exe is located;
-// on OSX, this is ~/Library/Application Support/DOOM Retro/.
+// on macOS, this is ~/Library/Application Support/DOOM Retro/.
 char *M_GetAppDataFolder(void);
 
 char *M_GetExecutableFolder(void);
@@ -74,8 +74,8 @@ char *M_StringJoin(char *s, ...);
 dboolean M_StringStartsWith(const char *s, const char *prefix);
 dboolean M_StringStartsWithExact(const char *s, const char *prefix);
 dboolean M_StringEndsWith(const char *s, const char *suffix);
-int M_vsnprintf(char *buf, int buf_len, const char *s, va_list args);
-int M_snprintf(char *buf, int buf_len, const char *s, ...);
+void M_vsnprintf(char *buf, int buf_len, const char *s, va_list args);
+void M_snprintf(char *buf, int buf_len, const char *s, ...);
 char *M_SubString(const char *str, size_t begin, size_t len);
 char *M_StringDuplicate(const char *orig);
 dboolean M_StringCompare(const char *str1, const char *str2);

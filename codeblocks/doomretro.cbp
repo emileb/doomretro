@@ -21,7 +21,6 @@
 		</Build>
 		<Unit filename="../src/Makefile" />
 		<Unit filename="../src/Makefile.osx" />
-		<Unit filename="../src/Makefile.rpi" />
 		<Unit filename="../src/am_map.c">
 			<Option compilerVar="CC" />
 		</Unit>
@@ -162,6 +161,9 @@
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="../src/m_misc.h" />
+		<Unit filename="../src/m_random.c">	
+			<Option compilerVar="CC" />	
+		</Unit>
 		<Unit filename="../src/m_random.h" />
 		<Unit filename="../src/mmus2mid.c">
 			<Option compilerVar="CC" />

@@ -54,7 +54,6 @@
 #include "m_config.h"
 #include "m_menu.h"
 #include "m_misc.h"
-#include "m_random.h"
 #include "p_local.h"
 #include "p_saveg.h"
 #include "p_setup.h"
@@ -109,7 +108,7 @@ static fixed_t  gamepadangleturn[2] = { 640, 960 };
 
 #define NUMWEAPONKEYS   7
 
-static int *weapon_keys[] =
+static int *keyboardweapons[] =
 {
     &keyboardweapon1,
     &keyboardweapon2,
@@ -175,12 +174,8 @@ unsigned int    stat_skilllevel_hurtmeplenty = 0;
 unsigned int    stat_skilllevel_ultraviolence = 0;
 unsigned int    stat_skilllevel_nightmare = 0;
 
-extern int      barrelms;
-extern int      st_palette;
 extern int      logotic;
 extern int      pagetic;
-extern int      timer;
-extern int      countdown;
 
 void G_RemoveChoppers(void)
 {
@@ -367,7 +362,7 @@ void G_BuildTiccmd(ticcmd_t *cmd)
     if (!idclev && !idmus)
         for (int i = 0; i < NUMWEAPONKEYS; i++)
         {
-            int key = *weapon_keys[i];
+            int key = *keyboardweapons[i];
 
             if (gamekeydown[key] && !keydown)
             {
@@ -617,7 +612,7 @@ void G_DoLoadLevel(void)
     for (int i = 0; i < BACKUPTICS; i++)
         memset(&localcmds[i], 0, sizeof(ticcmd_t));
 
-    P_SetPlayerViewheight();
+    P_SetPlayerViewHeight();
 
     stat_mapsstarted = SafeAdd(stat_mapsstarted, 1);
 
@@ -1627,8 +1622,6 @@ void G_DeferredInitNew(skill_t skill, int ep, int map)
 // G_DeferredLoadLevel
 // [BH] Called when the IDCLEV cheat is used.
 //
-extern msecnode_t   *sector_list;
-
 void G_DeferredLoadLevel(skill_t skill, int ep, int map)
 {
     d_skill = skill;

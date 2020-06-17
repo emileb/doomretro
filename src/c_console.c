@@ -56,7 +56,7 @@
 #include "m_config.h"
 #include "m_menu.h"
 #include "m_misc.h"
-#include "m_random.h"
+#include "p_spec.h"
 #include "r_main.h"
 #include "s_sound.h"
 #include "st_stuff.h"
@@ -156,13 +156,9 @@ static int              consolecolors[STRINGTYPES];
 
 dboolean                scrollbardrawn;
 
-extern int              countdown;
 extern int              framespersecond;
 extern int              refreshrate;
-extern dboolean         dowipe;
 extern dboolean         quitcmd;
-extern dboolean         vanilla;
-extern dboolean         togglingvanilla;
 
 void C_Input(const char *string, ...)
 {
@@ -179,7 +175,7 @@ void C_Input(const char *string, ...)
     if (consolestrings >= (int)consolestringsmax)
         console = I_Realloc(console, (consolestringsmax += CONSOLESTRINGSMAX) * sizeof(*console));
 
-    M_StringCopy(console[consolestrings].string, buffer, 1024);
+    M_StringCopy(console[consolestrings].string, buffer, sizeof(console[consolestrings].string));
     C_DumpConsoleStringToFile(consolestrings);
     console[consolestrings++].stringtype = inputstring;
     outputhistory = -1;
@@ -206,7 +202,7 @@ void C_InputNoRepeat(const char *string, ...)
         if (consolestrings >= (int)consolestringsmax)
             console = I_Realloc(console, (consolestringsmax += CONSOLESTRINGSMAX) * sizeof(*console));
 
-        M_StringCopy(console[consolestrings].string, buffer, 1024);
+        M_StringCopy(console[consolestrings].string, buffer, sizeof(console[consolestrings].string));
         C_DumpConsoleStringToFile(consolestrings);
         console[consolestrings++].stringtype = inputstring;
         outputhistory = -1;
@@ -268,7 +264,8 @@ void C_Output(const char *string, ...)
         console = I_Realloc(console, (consolestringsmax += CONSOLESTRINGSMAX) * sizeof(*console));
 
 
-    M_StringCopy(console[consolestrings].string, buffer, 1024);
+    M_StringCopy(console[consolestrings].string, buffer, sizeof(console[consolestrings].string));
+
     C_DumpConsoleStringToFile(consolestrings);
     console[consolestrings++].stringtype = outputstring;
     outputhistory = -1;
@@ -288,7 +285,7 @@ void C_OutputNoRepeat(const char *string, ...)
         if (consolestrings >= (int)consolestringsmax)
             console = I_Realloc(console, (consolestringsmax += CONSOLESTRINGSMAX) * sizeof(*console));
 
-        M_StringCopy(console[consolestrings].string, buffer, 1024);
+        M_StringCopy(console[consolestrings].string, buffer, sizeof(console[consolestrings].string));
         C_DumpConsoleStringToFile(consolestrings);
         console[consolestrings++].stringtype = outputstring;
         outputhistory = -1;
@@ -307,7 +304,7 @@ void C_TabbedOutput(const int tabs[4], const char *string, ...)
     if (consolestrings >= (int)consolestringsmax)
         console = I_Realloc(console, (consolestringsmax += CONSOLESTRINGSMAX) * sizeof(*console));
 
-    M_StringCopy(console[consolestrings].string, buffer, 1024);
+    M_StringCopy(console[consolestrings].string, buffer, sizeof(console[consolestrings].string));
     console[consolestrings].stringtype = outputstring;
     memcpy(console[consolestrings].tabs, tabs, sizeof(console[consolestrings].tabs));
     C_DumpConsoleStringToFile(consolestrings);
@@ -323,7 +320,7 @@ void C_Header(const int tabs[4], const headertype_t headertype, const char *stri
     console[consolestrings].stringtype = headerstring;
     memcpy(console[consolestrings].tabs, tabs, sizeof(console[consolestrings].tabs));
     console[consolestrings].headertype = headertype;
-    M_StringCopy(console[consolestrings].string, string, 1024);
+    M_StringCopy(console[consolestrings].string, string, sizeof(console[consolestrings].string));
     C_DumpConsoleStringToFile(consolestrings);
     consolestrings++;
     outputhistory = -1;
@@ -350,7 +347,7 @@ void C_Warning(const int minwarninglevel, const char *string, ...)
 
         if (len <= 100 || !warningwidth)
         {
-            M_StringCopy(console[consolestrings].string, buffer, 1024);
+            M_StringCopy(console[consolestrings].string, buffer, sizeof(console[consolestrings].string));
             console[consolestrings].line = 1;
             C_DumpConsoleStringToFile(consolestrings);
             console[consolestrings++].stringtype = warningstring;
@@ -376,7 +373,7 @@ void C_Warning(const int minwarninglevel, const char *string, ...)
                 truncate--;
 
             temp = M_SubString(buffer, 0, truncate);
-            M_StringCopy(console[consolestrings].string, temp, 1024);
+            M_StringCopy(console[consolestrings].string, temp, sizeof(console[consolestrings].string));
             free(temp);
             console[consolestrings].line = 1;
             C_DumpConsoleStringToFile(consolestrings);
@@ -386,7 +383,7 @@ void C_Warning(const int minwarninglevel, const char *string, ...)
                 console = I_Realloc(console, (consolestringsmax += CONSOLESTRINGSMAX) * sizeof(*console));
 
             temp = M_SubString(buffer, truncate, (size_t)len - truncate);
-            M_StringCopy(console[consolestrings].string, temp, 1024);
+            M_StringCopy(console[consolestrings].string, temp, sizeof(console[consolestrings].string));
             free(temp);
             console[consolestrings].line = 2;
             C_DumpConsoleStringToFile(consolestrings);
@@ -418,7 +415,7 @@ void C_PlayerMessage(const char *string, ...)
         if (consolestrings >= (int)consolestringsmax)
             console = I_Realloc(console, (consolestringsmax += CONSOLESTRINGSMAX) * sizeof(*console));
 
-        M_StringCopy(console[consolestrings].string, buffer, 1024);
+        M_StringCopy(console[consolestrings].string, buffer, sizeof(console[consolestrings].string));
         console[consolestrings].stringtype = playermessagestring;
         console[consolestrings].tics = gametime;
         console[consolestrings].timestamp[0] = '\0';
@@ -450,7 +447,7 @@ void C_Obituary(const char *string, ...)
         if (consolestrings >= (int)consolestringsmax)
             console = I_Realloc(console, (consolestringsmax += CONSOLESTRINGSMAX) * sizeof(*console));
 
-        M_StringCopy(console[consolestrings].string, buffer, 1024);
+        M_StringCopy(console[consolestrings].string, buffer, sizeof(console[consolestrings].string));
         console[consolestrings].stringtype = obituarystring;
         console[consolestrings].tics = gametime;
         console[consolestrings].timestamp[0] = '\0';
@@ -808,6 +805,8 @@ void C_HideConsoleFast(void)
     consoleanim = 0;
     consoleheight = 0;
     consoleactive = false;
+
+    S_SetMusicVolume(musicVolume * MAX_MUSIC_VOLUME / 31);
 }
 
 static void C_DrawBackground(void)
@@ -1159,7 +1158,7 @@ static void C_DrawTimeStamp(int x, int y, int index)
 {
     char    buffer[9];
 
-    M_StringCopy(buffer, (*console[index].timestamp ? console[index].timestamp : C_CreateTimeStamp(index)), 9);
+    M_StringCopy(buffer, (*console[index].timestamp ? console[index].timestamp : C_CreateTimeStamp(index)), sizeof(buffer));
     y -= CONSOLEHEIGHT - consoleheight;
 
     for (int i = (int)strlen(buffer) - 1; i >= 0; i--)

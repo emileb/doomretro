@@ -254,7 +254,7 @@ dboolean P_TeleportMove(mobj_t *thing, fixed_t x, fixed_t y, fixed_t z, dboolean
 
     for (int bx = xl; bx <= xh; bx++)
         for (int by = yl; by <= yh; by++)
-            if (!P_BlockThingsIterator(bx, by, PIT_StompThing))
+            if (!P_BlockThingsIterator(bx, by, &PIT_StompThing))
                 return false;
 
     // the move is ok,
@@ -681,7 +681,7 @@ dboolean P_CheckLineSide(mobj_t *actor, fixed_t x, fixed_t y)
 
     for (int bx = xl; bx <= xh; bx++)
         for (int by = yl; by <= yh; by++)
-            if (!P_BlockLinesIterator(bx, by, PIT_CrossLine))
+            if (!P_BlockLinesIterator(bx, by, &PIT_CrossLine))
                 return true;
 
     return false;
@@ -798,7 +798,7 @@ dboolean P_CheckPosition(mobj_t *thing, fixed_t x, fixed_t y)
 
     for (int bx = xl; bx <= xh; bx++)
         for (int by = yl; by <= yh; by++)
-            if (!P_BlockThingsIterator(bx, by, PIT_CheckThing))
+            if (!P_BlockThingsIterator(bx, by, &PIT_CheckThing))
                 return false;
 
     // check lines
@@ -818,10 +818,61 @@ dboolean P_CheckPosition(mobj_t *thing, fixed_t x, fixed_t y)
 
     for (int bx = xl; bx <= xh; bx++)
         for (int by = yl; by <= yh; by++)
-            if (!P_BlockLinesIterator(bx, by, PIT_CheckLine))
+            if (!P_BlockLinesIterator(bx, by, &PIT_CheckLine))
                 return false;
 
     return true;
+}
+
+//
+// P_FakeZMovement
+//
+static void P_FakeZMovement(mobj_t *mo)
+{
+    // adjust height
+    mo->z += mo->momz;
+
+    if ((mo->flags & MF_FLOAT) && mo->target)
+        // float down towards target if too close
+        if (!(mo->flags & MF_SKULLFLY) && !(mo->flags & MF_INFLOAT))
+        {
+            fixed_t delta = (mo->target->z + (mo->height >> 1) - mo->z) * 3;
+
+            if (P_ApproxDistance(mo->x - mo->target->x, mo->y - mo->target->y) < ABS(delta))
+                mo->z += (delta < 0 ? -FLOATSPEED : FLOATSPEED);
+        }
+
+    // clip movement
+    if (mo->z <= mo->floorz)
+    {
+        // hit the floor
+        if (mo->flags & MF_SKULLFLY)
+            mo->momz = -mo->momz;       // the skull slammed into something
+
+        if (mo->momz < 0)
+            mo->momz = 0;
+
+        mo->z = mo->floorz;
+    }
+    else if (!(mo->flags & MF_NOGRAVITY))
+    {
+        if (!mo->momz)
+            mo->momz = -GRAVITY;
+
+        mo->momz -= GRAVITY;
+    }
+
+    if (mo->z + mo->height > mo->ceilingz)
+    {
+        // hit the ceiling
+        if (mo->momz > 0)
+            mo->momz = 0;
+
+        if (mo->flags & MF_SKULLFLY)
+            mo->momz = -mo->momz;       // the skull slammed into something
+
+        mo->z = mo->ceilingz - mo->height;
+    }
 }
 
 //
@@ -878,7 +929,7 @@ mobj_t *P_CheckOnMobj(mobj_t *thing)
 
     for (int bx = xl; bx <= xh; bx++)
         for (int by = yl; by <= yh; by++)
-            if (!P_BlockThingsIterator(bx, by, PIT_CheckOnMobjZ))
+            if (!P_BlockThingsIterator(bx, by, &PIT_CheckOnMobjZ))
             {
                 *tmthing = oldmo;
                 return onmobj;
@@ -886,57 +937,6 @@ mobj_t *P_CheckOnMobj(mobj_t *thing)
 
     *tmthing = oldmo;
     return NULL;
-}
-
-//
-// P_FakeZMovement
-//
-void P_FakeZMovement(mobj_t *mo)
-{
-    // adjust height
-    mo->z += mo->momz;
-
-    if ((mo->flags & MF_FLOAT) && mo->target)
-        // float down towards target if too close
-        if (!(mo->flags & MF_SKULLFLY) && !(mo->flags & MF_INFLOAT))
-        {
-            fixed_t delta = (mo->target->z + (mo->height >> 1) - mo->z) * 3;
-
-            if (P_ApproxDistance(mo->x - mo->target->x, mo->y - mo->target->y) < ABS(delta))
-                mo->z += (delta < 0 ? -FLOATSPEED : FLOATSPEED);
-        }
-
-    // clip movement
-    if (mo->z <= mo->floorz)
-    {
-        // hit the floor
-        if (mo->flags & MF_SKULLFLY)
-            mo->momz = -mo->momz;       // the skull slammed into something
-
-        if (mo->momz < 0)
-            mo->momz = 0;
-
-        mo->z = mo->floorz;
-    }
-    else if (!(mo->flags & MF_NOGRAVITY))
-    {
-        if (!mo->momz)
-            mo->momz = -GRAVITY;
-
-        mo->momz -= GRAVITY;
-    }
-
-    if (mo->z + mo->height > mo->ceilingz)
-    {
-        // hit the ceiling
-        if (mo->momz > 0)
-            mo->momz = 0;
-
-        if (mo->flags & MF_SKULLFLY)
-            mo->momz = -mo->momz;       // the skull slammed into something
-
-        mo->z = mo->ceilingz - mo->height;
-    }
 }
 
 dboolean P_IsInLiquid(mobj_t *thing)
@@ -1143,7 +1143,7 @@ void P_ApplyTorque(mobj_t *mo)
 
     for (int bx = xl; bx <= xh; bx++)
         for (int by = yl; by <= yh; by++)
-            P_BlockLinesIterator(bx, by, PIT_ApplyTorque);
+            P_BlockLinesIterator(bx, by, &PIT_ApplyTorque);
 
     // If any momentum, mark object as 'falling' using engine-internal flags
     if (mo->momx | mo->momy)
@@ -1318,8 +1318,7 @@ static void P_HitSlideLine(line_t *ld)
             deltaangle += ANG180;
 
         lineangle >>= ANGLETOFINESHIFT;
-        deltaangle >>= ANGLETOFINESHIFT;
-        newlen = FixedMul(movelen, finecosine[deltaangle]);
+        newlen = FixedMul(movelen, finecosine[deltaangle >> ANGLETOFINESHIFT]);
         tmxmove = FixedMul(newlen, finecosine[lineangle]);
         tmymove = FixedMul(newlen, finesine[lineangle]);
     }
@@ -1388,42 +1387,38 @@ void P_SlideMove(mobj_t *mo)
     {
         fixed_t leadx, leady;
         fixed_t trailx, traily;
-        int     x, y;
 
         if (!--hitcount)
             goto stairstep;     // don't loop forever
 
         // trace along the three leading corners
-        x = mo->x;
-        y = mo->y;
-
         if (mo->momx > 0)
         {
-            leadx = x + radius;
-            trailx = x - radius;
+            leadx = mo->x + radius;
+            trailx = mo->x - radius;
         }
         else
         {
-            leadx = x - radius;
-            trailx = x + radius;
+            leadx = mo->x - radius;
+            trailx = mo->x + radius;
         }
 
         if (mo->momy > 0)
         {
-            leady = y + radius;
-            traily = y - radius;
+            leady = mo->y + radius;
+            traily = mo->y - radius;
         }
         else
         {
-            leady = y - radius;
-            traily = y + radius;
+            leady = mo->y - radius;
+            traily = mo->y + radius;
         }
 
         bestslidefrac = FRACUNIT + 1;
 
-        P_PathTraverse(leadx, leady, leadx + mo->momx, leady + mo->momy, PT_ADDLINES, PTR_SlideTraverse);
-        P_PathTraverse(trailx, leady, trailx + mo->momx, leady + mo->momy, PT_ADDLINES, PTR_SlideTraverse);
-        P_PathTraverse(leadx, traily, leadx + mo->momx, traily + mo->momy, PT_ADDLINES, PTR_SlideTraverse);
+        P_PathTraverse(leadx, leady, leadx + mo->momx, leady + mo->momy, PT_ADDLINES, &PTR_SlideTraverse);
+        P_PathTraverse(trailx, leady, trailx + mo->momx, leady + mo->momy, PT_ADDLINES, &PTR_SlideTraverse);
+        P_PathTraverse(leadx, traily, leadx + mo->momx, traily + mo->momy, PT_ADDLINES, &PTR_SlideTraverse);
 
         // move up to the wall
         if (bestslidefrac == FRACUNIT + 1)
@@ -1680,7 +1675,7 @@ static dboolean PTR_ShootTraverse(intercept_t *in)
                 return false;
         }
 
-        // Spawn bullet puffs.
+        // spawn bullet puff
         P_SpawnPuff(dltrace.x + FixedMul(dltrace.dx, frac), dltrace.y + FixedMul(dltrace.dy, frac), z, shootangle);
 
         // don't go any farther
@@ -1716,8 +1711,7 @@ static dboolean PTR_ShootTraverse(intercept_t *in)
     if ((shootthing->flags2 & MF2_FEETARECLIPPED) && (shootthing->player && r_liquid_lowerview))
         z -= FOOTCLIPSIZE;
 
-    // Spawn bullet puffs or blood spots,
-    // depending on target type.
+    // Spawn bullet puff or blood, depending on target type.
     if ((th->flags & MF_NOBLOOD) || r_blood == r_blood_none)
         P_SpawnPuff(x, y, z, shootangle);
     else
@@ -1772,7 +1766,7 @@ fixed_t P_AimLineAttack(mobj_t *t1, angle_t angle, fixed_t distance, int mask)
     // killough 8/2/98: prevent friends from aiming at friends
     aim_flags_mask = mask;
 
-    P_PathTraverse(t1->x, t1->y, x2, y2, (PT_ADDLINES | PT_ADDTHINGS), PTR_AimTraverse);
+    P_PathTraverse(t1->x, t1->y, x2, y2, (PT_ADDLINES | PT_ADDTHINGS), &PTR_AimTraverse);
 
     if (linetarget)
         return aimslope;
@@ -1803,7 +1797,7 @@ void P_LineAttack(mobj_t *t1, angle_t angle, fixed_t distance, fixed_t slope, in
     attackrange = distance;
     aimslope = slope;
 
-    P_PathTraverse(t1->x, t1->y, x2, y2, (PT_ADDLINES | PT_ADDTHINGS), PTR_ShootTraverse);
+    P_PathTraverse(t1->x, t1->y, x2, y2, (PT_ADDLINES | PT_ADDTHINGS), &PTR_ShootTraverse);
 }
 
 //
@@ -1891,8 +1885,8 @@ void P_UseLines(void)
     y2 = y1 + (USERANGE >> FRACBITS) * finesine[angle];
 
     // This added test makes the "oof" sound work on 2s lines -- killough:
-    if (P_PathTraverse(x1, y1, x2, y2, PT_ADDLINES, PTR_UseTraverse))
-        if (!P_PathTraverse(x1, y1, x2, y2, PT_ADDLINES, PTR_NoWayTraverse))
+    if (P_PathTraverse(x1, y1, x2, y2, PT_ADDLINES, &PTR_UseTraverse))
+        if (!P_PathTraverse(x1, y1, x2, y2, PT_ADDLINES, &PTR_NoWayTraverse))
             if (!autousing)
                 S_StartSound(usething, sfx_noway);
 }
@@ -1995,7 +1989,7 @@ void P_RadiusAttack(mobj_t *spot, mobj_t *source, int damage, dboolean verticali
 
     for (int y = yl; y <= yh; y++)
         for (int x = xl; x <= xh; x++)
-            P_BlockThingsIterator(x, y, PIT_RadiusAttack);
+            P_BlockThingsIterator(x, y, &PIT_RadiusAttack);
 }
 
 //
@@ -2362,7 +2356,7 @@ void P_CreateSecNodeList(mobj_t *thing, fixed_t x, fixed_t y)
 
     for (int bx = xl; bx <= xh; bx++)
         for (int by = yl; by <= yh; by++)
-            P_BlockLinesIterator(bx, by, PIT_GetSectors);
+            P_BlockLinesIterator(bx, by, &PIT_GetSectors);
 
     // Add the sector of the (x,y) point to sector_list.
     sector_list = P_AddSecnode(thing->subsector->sector, thing, sector_list);
