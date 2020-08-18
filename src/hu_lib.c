@@ -50,7 +50,7 @@
 #include "v_data.h"
 #include "v_video.h"
 
-byte            tempscreen[SCREENWIDTH * SCREENHEIGHT];
+byte            tempscreen[SCREENAREA];
 
 extern patch_t  *consolefont[CONSOLEFONTSIZE];
 extern patch_t  *degree;
@@ -58,7 +58,6 @@ extern patch_t  *lsquote;
 extern patch_t  *ldquote;
 extern patch_t  *unknownchar;
 extern patch_t  *altunderscores;
-extern int      white;
 
 static void HUlib_ClearTextLine(hu_textline_t *t)
 {
@@ -100,11 +99,11 @@ static void HU_DrawDot(int x, int y, unsigned char src)
 }
 
 // [BH] draw an individual character to temporary buffer
-static void HU_DrawChar(int x, int y, int ch)
+static void HU_DrawChar(int x, int y, int ch, dboolean external)
 {
     int w = (int)strlen(smallcharset[ch]) / 10;
 
-    if (vid_widescreen)
+    if (vid_widescreen || external)
     {
         for (int y1 = 0; y1 < 10; y1++)
             for (int x1 = 0; x1 < w; x1++)
@@ -130,14 +129,14 @@ static void HUlib_DrawAltHUDTextLine(hu_textline_t *l)
 {
     unsigned char   prevletter = '\0';
     int             x = 10;
-    int             color = white;
+    int             color = nearestwhite;
     int             len = l->len;
 
     if (!automapactive)
     {
         x = HU_ALTHUDMSGX;
-        color = (r_textures ? (viewplayer->fixedcolormap == INVERSECOLORMAP ? colormaps[0][32 * 256 + white] : white) :
-            (viewplayer->fixedcolormap == INVERSECOLORMAP ? colormaps[0][32 * 256 + white] : nearestblack));
+        color = (r_textures ? (viewplayer->fixedcolormap == INVERSECOLORMAP ? colormaps[0][32 * 256 + nearestwhite] : nearestwhite) :
+            (viewplayer->fixedcolormap == INVERSECOLORMAP ? colormaps[0][32 * 256 + nearestwhite] : nearestblack));
     }
 
     if (idbehold)
@@ -226,7 +225,7 @@ void HUlib_DrawAltAutomapTextLine(hu_textline_t *l, dboolean external)
             j++;
         }
 
-        althudtextfunc(x, SCREENHEIGHT - SBARHEIGHT - 16, fb1, patch, white);
+        althudtextfunc(x, SCREENHEIGHT - SBARHEIGHT - 16, fb1, patch, nearestwhite);
         x += SHORT(patch->width);
         prevletter = letter;
     }
@@ -272,7 +271,7 @@ void HUlib_DrawTextLine(hu_textline_t *l, dboolean external)
     // draw the new stuff
     x = l->x;
     y = l->y;
-    memset(tempscreen, 251, SCREENWIDTH * SCREENHEIGHT);
+    memset(tempscreen, 251, SCREENAREA);
 
     for (int i = 0; i < len; i++)
     {
@@ -307,7 +306,7 @@ void HUlib_DrawTextLine(hu_textline_t *l, dboolean external)
                 if (prev == ' ' && c == '(' && !idmypos)
                     x -= 2;
 
-                if (vid_widescreen)
+                if (vid_widescreen || external)
                     V_DrawBigPatchToTempScreen(x, l->y, l->f[c - l->sc]);
                 else
                     V_DrawPatchToTempScreen(x, l->y, l->f[c - l->sc]);
@@ -335,7 +334,7 @@ void HUlib_DrawTextLine(hu_textline_t *l, dboolean external)
 
                 // [BH] draw individual character
                 w = (int)strlen(smallcharset[j]) / 10 - 1;
-                HU_DrawChar(x, y - 1, j);
+                HU_DrawChar(x, y - 1, j, external);
             }
 
             x += w;
@@ -357,9 +356,9 @@ void HUlib_DrawTextLine(hu_textline_t *l, dboolean external)
         int scale = (vid_widescreen ? 1 : 2);
 
         for (int y1 = 0; y1 < 4; y1++)
-            for (int x1 = 0; x1 < ORIGINALWIDTH; x1++)
+            for (int x1 = 0; x1 < VANILLAWIDTH; x1++)
             {
-                unsigned char   src = underscores[y1 * ORIGINALWIDTH + x1];
+                unsigned char   src = underscores[y1 * VANILLAWIDTH + x1];
 
                 if (src != ' ')
                     for (int y2 = 0; y2 < scale; y2++)
@@ -376,7 +375,7 @@ void HUlib_DrawTextLine(hu_textline_t *l, dboolean external)
     maxx = l->x + tw + 1;
     maxy = y + 11;
 
-    if (!vid_widescreen)
+    if (!vid_widescreen && !external)
     {
         maxx *= SCREENSCALE;
         maxy *= SCREENSCALE;
@@ -393,7 +392,7 @@ void HUlib_DrawTextLine(hu_textline_t *l, dboolean external)
                 *dest1 = tinttab50[(nearestblack << 8) + fb2[dot]];
             else if (*source != 251)
             {
-                if (vid_widescreen && r_hud_translucency && !hacx)
+                if ((vid_widescreen || external) && r_hud_translucency && !hacx)
                     *dest1 = tinttab66[(*source << 8) + fb2[dot]];
                 else
                     *dest1 = *source;

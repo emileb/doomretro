@@ -60,7 +60,9 @@ int         scaledviewwidth;
 int         viewheight;
 int         viewwindowx;
 int         viewwindowy;
-int         fuzztable[SCREENWIDTH * SCREENHEIGHT];
+
+int         fuzzpos;
+int         fuzztable[SCREENAREA];
 
 static byte *ylookup0[SCREENHEIGHT];
 static byte *ylookup1[SCREENHEIGHT];
@@ -150,8 +152,6 @@ byte            *dc_black40;
 // first pixel in a column (possibly virtual)
 byte            *dc_source;
 
-extern int      fuzzpos;
-
 //
 // A column is a vertical slice/span from a wall texture that,
 //  given the DOOM style restrictions on the view orientation,
@@ -194,12 +194,12 @@ void R_DrawColorColumn(void)
 
 void R_DrawShadowColumn(void)
 {
-    int     y = dc_yh - dc_yl + 1;
+    int     y = dc_yh - dc_yl;
     byte    *dest = ylookup0[dc_yl] + dc_x;
 
-    if (y == 1)
+    if (!y)
         *dest = *(*dest + dc_black25);
-    else if (y == 2)
+    else if (y == 1)
     {
         *dest = *(*dest + dc_black25);
         dest += SCREENWIDTH;
@@ -207,7 +207,6 @@ void R_DrawShadowColumn(void)
     }
     else
     {
-        y--;
         *dest = *(*dest + dc_black25);
         dest += SCREENWIDTH;
 
@@ -351,7 +350,7 @@ void R_DrawWallColumn(void)
     }
 }
 
-void R_DrawBrightMapWallColumn(void)
+void R_DrawBrightmapWallColumn(void)
 {
     int     y = dc_yh - dc_yl + 1;
     byte    *dest = ylookup0[dc_yl] + dc_x;
@@ -924,15 +923,17 @@ void R_DrawTranslucentBlue25Column(void)
 //
 #define NOFUZZ  251
 
-const int       fuzzrange[3] = { -SCREENWIDTH, 0, SCREENWIDTH };
+const int       fuzzrange[] = { -SCREENWIDTH, 0, SCREENWIDTH };
 
 void R_DrawFuzzColumn(void)
 {
-    byte    *dest = ylookup0[dc_yl] + dc_x;
+    byte    *dest;
     int     y = dc_yh - dc_yl;
 
     if (!y)
         return;
+
+    dest = ylookup0[dc_yl] + dc_x;;
 
     // top
     if (!dc_yl)
@@ -961,18 +962,20 @@ void R_DrawFuzzColumn(void)
 
 void R_DrawPausedFuzzColumn(void)
 {
-    byte    *dest = ylookup0[dc_yl] + dc_x;
+    byte    *dest;
     int     y = dc_yh - dc_yl;
 
     if (!y)
         return;
+
+    dest = ylookup0[dc_yl] + dc_x;;
 
     // top
     if (!dc_yl)
     {
         *dest = fullcolormap[6 * 256 + dest[MAX(0, fuzztable[fuzzpos++])]];
 
-        if (fuzzpos == SCREENWIDTH * SCREENHEIGHT)
+        if (fuzzpos == SCREENAREA)
             fuzzpos = 0;
     }
     else if (!fuzztable[fuzzpos++])
@@ -986,7 +989,7 @@ void R_DrawPausedFuzzColumn(void)
         *dest = fullcolormap[6 * 256 + dest[fuzztable[fuzzpos++]]];
         dest += SCREENWIDTH;
 
-        if (fuzzpos == SCREENWIDTH * SCREENHEIGHT)
+        if (fuzzpos == SCREENAREA)
             fuzzpos = 0;
     }
 
@@ -1219,7 +1222,7 @@ void R_InitBuffer(int width, int height)
     // Same with base row offset.
     viewwindowy = (width == SCREENWIDTH ? 0 : (SCREENHEIGHT - SBARHEIGHT - height) / 2);
 
-    for (int i = 0, y = viewwindowy * SCREENWIDTH + viewwindowx; y < SCREENWIDTH * SCREENHEIGHT; i++, y += SCREENWIDTH)
+    for (int i = 0, y = viewwindowy * SCREENWIDTH + viewwindowx; y < SCREENAREA; i++, y += SCREENWIDTH)
     {
         ylookup0[i] = screens[0] + y;
         ylookup1[i] = screens[1] + y;

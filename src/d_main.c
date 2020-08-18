@@ -58,6 +58,7 @@
 #include "f_wipe.h"
 #include "g_game.h"
 #include "hu_stuff.h"
+#include "i_colors.h"
 #include "i_gamepad.h"
 #include "i_swap.h"
 #include "i_system.h"
@@ -86,7 +87,8 @@
 #include <fnmatch.h>
 #include <libgen.h>
 
-#if !defined(__OpenBSD__) && !defined(__ANDROID__)
+
+#if !defined(__OpenBSD__) && !defined(__HAIKU__) && !defined(__ANDROID__)
 #include <wordexp.h>
 #endif
 #endif
@@ -94,6 +96,8 @@
 #if defined(__APPLE__)
 #import <Cocoa/Cocoa.h>
 #endif
+
+#define FADETICS    40
 
 char **episodes[] =
 {
@@ -134,6 +138,7 @@ char                *savegamefolder;
 
 char                *pwadfile = "";
 
+dboolean            fade = fade_default;
 char                *iwadfolder = iwadfolder_default;
 int                 turbo = turbo_default;
 int                 units = units_default;
@@ -162,7 +167,7 @@ dboolean            regenhealth;
 dboolean            respawnitems;
 dboolean            respawnmonsters;        // checkparm of -respawn
 
-unsigned int        stat_runs = 0;
+uint64_t            stat_runs = 0;
 
 skill_t             startskill;
 int                 startepisode;
@@ -173,12 +178,17 @@ dboolean            advancetitle;
 dboolean            dowipe;
 static dboolean     forcewipe;
 
+static byte         fadescreen[SCREENWIDTH * SCREENHEIGHT];
+static int          fadeheight;
+int                 fadecount = 0;
+
 dboolean            splashscreen = true;
 
 static int          startuptimer;
 
 dboolean            realframe;
 static dboolean     error;
+static dboolean     guess;
 
 struct tm           gamestarttime;
 
@@ -206,6 +216,62 @@ void D_PostEvent(event_t *ev)
 }
 
 //
+// D_FadeScreen
+//
+void D_FadeScreen(void)
+{
+    if (!fade)
+        return;
+
+    fadeheight = (SCREENHEIGHT - (vid_widescreen && gamestate == GS_LEVEL) * SBARHEIGHT) * SCREENWIDTH;
+    memcpy(fadescreen, screens[0], fadeheight);
+    fadecount = 3;
+}
+
+//
+// D_UpdateFade
+//
+static void D_UpdateFade(void)
+{
+    static byte *tinttab;
+    static int  fadewait;
+    int         tics = I_GetTimeMS();
+
+    if (fadewait < tics)
+    {
+        byte    *tinttabs[] = { NULL, tinttab75, tinttab50, tinttab25 };
+
+        fadewait = tics + FADETICS;
+        tinttab = tinttabs[fadecount--];
+    }
+
+    if (tinttab)
+        for (int i = 0; i < fadeheight; i++)
+        {
+            byte    *dot = *screens + i;
+
+            *dot = tinttab[(*dot << 8) + fadescreen[i]];
+        }
+}
+
+//
+// D_FadeScreenToBlack
+//
+void D_FadeScreenToBlack(void)
+{
+    if (!fade)
+        return;
+
+    for (double i = 0.9; i >= 0.0; i -= 0.1)
+    {
+        I_SetPaletteWithBrightness(PLAYPAL, i);
+        blitfunc();
+        I_SetExternalAutomapPalette();
+        I_Sleep(30);
+    }
+}
+
+//
 // D_Display
 //  draw current display, possibly wiping it from the previous
 //
@@ -222,7 +288,6 @@ void D_Display(void)
     static dboolean     menuactivestate;
     static dboolean     pausedstate = false;
     static gamestate_t  oldgamestate = GS_NONE;
-    static int          borderdrawcount;
     static int          saved_gametime = -1;
     int                 nowtime;
     int                 tics;
@@ -237,7 +302,6 @@ void D_Display(void)
     {
         R_ExecuteSetViewSize();
         oldgamestate = GS_NONE; // force background redraw
-        borderdrawcount = 3;
     }
 
     // save the current screen if about to wipe
@@ -303,17 +367,7 @@ void D_Display(void)
         if (!automapactive)
         {
             if (scaledviewwidth != SCREENWIDTH)
-            {
-                if (menuactive || menuactivestate || !viewactivestate || vid_showfps || countdown || paused
-                    || pausedstate || message_on || consoleheight > CONSOLETOP)
-                    borderdrawcount = 3;
-
-                if (borderdrawcount)
-                {
-                    R_DrawViewBorder();     // erase old menu stuff
-                    borderdrawcount--;
-                }
-            }
+                R_DrawViewBorder();
 
             if (r_detail == r_detail_low)
                 V_LowGraphicDetail(viewwindowx, viewwindowy * SCREENWIDTH, viewwindowx + viewwidth,
@@ -337,18 +391,18 @@ void D_Display(void)
             patch_t *patch = W_CacheLumpName("M_PAUSE");
 
             if (vid_widescreen)
-                V_DrawPatchWithShadow((ORIGINALWIDTH - SHORT(patch->width)) / 2,
+                V_DrawPatchWithShadow((VANILLAWIDTH - SHORT(patch->width)) / 2,
                     viewwindowy / 2 + (viewheight / 2 - SHORT(patch->height)) / 2, patch, false);
             else
-                V_DrawPatchWithShadow((ORIGINALWIDTH - SHORT(patch->width)) / 2,
-                    (ORIGINALHEIGHT - SHORT(patch->height)) / 2, patch, false);
+                V_DrawPatchWithShadow((VANILLAWIDTH - SHORT(patch->width)) / 2,
+                    (VANILLAHEIGHT - SHORT(patch->height)) / 2, patch, false);
         }
         else
         {
             if (vid_widescreen)
                 M_DrawCenteredString(viewwindowy / 2 + (viewheight / 2 - 16) / 2, s_M_PAUSED);
             else
-                M_DrawCenteredString((ORIGINALHEIGHT - 16) / 2, s_M_PAUSED);
+                M_DrawCenteredString((VANILLAHEIGHT - 16) / 2, s_M_PAUSED);
         }
     }
 
@@ -368,11 +422,16 @@ void D_Display(void)
         if (countdown && gamestate == GS_LEVEL)
             C_UpdateTimer();
 
+        if (fadecount)
+            D_UpdateFade();
+
         // normal update
+
 #ifdef __ANDROID__ // The touch controls change the viewport, call this to fix. This function does not exist in SDL2
         SDL_ForceupdateViewport(renderer);
 #endif
-        blitfunc();             // blit buffer
+
+        blitfunc();
         mapblitfunc();
 
 #if defined(_WIN32)
@@ -401,13 +460,14 @@ void D_Display(void)
         } while (tics <= 0);
 
         wipestart = nowtime;
-        done = wipe_ScreenWipe(tics);
+        done = wipe_ScreenWipe();
 
         M_Drawer();
+
 #ifdef __ANDROID__ // The touch controls change the viewport, call this to fix. This function does not exist in SDL2
         SDL_ForceupdateViewport(renderer);
 #endif
-        blitfunc();             // blit buffer
+        blitfunc();
         mapblitfunc();
 
 #if defined(_WIN32)
@@ -422,7 +482,7 @@ void D_Display(void)
 //
 static void D_DoomLoop(void)
 {
-    time_t      now = time(0);
+    time_t      now = time(NULL);
     player_t    player;
 
 #if defined(_WIN32)
@@ -434,7 +494,7 @@ static void D_DoomLoop(void)
     R_ExecuteSetViewSize();
 
     viewplayer = &player;
-    viewplayer->damagecount = 0;
+    memset(viewplayer, 0, sizeof(*viewplayer));
 
     while (true)
     {
@@ -455,7 +515,7 @@ int             pagetic = 3 * TICRATE;
 int             logotic = 3 * TICRATE;
 
 static patch_t  *pagelump;
-static patch_t  *splashlump;
+static patch_t  *fineprintlump;
 static patch_t  *logolump[18];
 static patch_t  *titlelump;
 static patch_t  *creditlump;
@@ -463,14 +523,13 @@ static byte     *splashpal;
 
 //
 // D_PageTicker
-// Handles timing for warped projection
 //
 void D_PageTicker(void)
 {
     static int  pagewait;
     int         pagetime;
 
-    if (menuactive || startingnewgame || consoleactive)
+    if (menuactive || consoleactive)
         return;
 
     if (pagewait < (pagetime = I_GetTime()))
@@ -483,7 +542,15 @@ void D_PageTicker(void)
     }
 
     if (pagetic < 0)
+    {
         D_AdvanceTitle();
+
+        if (splashscreen)
+        {
+            memset(screens[0], nearestblack, SCREENAREA);
+            D_FadeScreen();
+        }
+    }
 }
 
 //
@@ -504,31 +571,13 @@ void D_PageDrawer(void)
             prevtic = pagetic;
         }
     }
-    else if (pagelump)
+    else
         V_DrawPagePatch(pagelump);
 }
 
 //
-// D_FadeScreen
-//
-void D_FadeScreen(void)
-{
-    for (double i = 0.9; i >= 0.0; i -= 0.1)
-    {
-#ifdef __ANDROID__ // The touch controls change the viewport, call this to fix. This function does not exist in SDL2
-        SDL_ForceupdateViewport(renderer);
-#endif
-        I_SetPaletteWithBrightness(PLAYPAL, i);
-
-        blitfunc();
-        I_SetExternalAutomapPalette();
-        I_Sleep(30);
-    }
-}
-
-//
 // D_AdvanceTitle
-// Called after each titlesequence finishes
+// Called after each title sequence finishes
 //
 void D_AdvanceTitle(void)
 {
@@ -550,7 +599,7 @@ void D_DoAdvanceTitle(void)
     if (!titlesequence)
     {
         titlesequence = 1;
-        V_DrawBigPatch(0, 0, splashlump);
+        V_DrawBigPatch(12, 366, fineprintlump);
         V_DrawBigPatch(143, 167, logolump[0]);
         return;
     }
@@ -757,16 +806,13 @@ static void LoadCfgFile(char *path)
 
 static dboolean D_IsDOOMIWAD(char *filename)
 {
-    const char  *leaf = leafname(filename);
-
-    return (M_StringCompare(leaf, "DOOM.WAD") || M_StringCompare(leaf, "DOOM1.WAD") || M_StringCompare(leaf, "DOOM2.WAD")
-        || M_StringCompare(leaf, "PLUTONIA.WAD") || M_StringCompare(leaf, "TNT.WAD") || (hacx = M_StringCompare(leaf, "HACX.WAD")));
+    return (M_StringEndsWith(filename, "DOOM.WAD") || M_StringEndsWith(filename, "DOOM1.WAD")
+        || M_StringEndsWith(filename, "DOOM2.WAD") || M_StringEndsWith(filename, "PLUTONIA.WAD")
+        || M_StringEndsWith(filename, "TNT.WAD") || (hacx = M_StringEndsWith(filename, "HACX.WAD")));
 }
 
 static dboolean D_IsUnsupportedIWAD(char *filename)
 {
-    const char  *leaf = leafname(filename);
-
     const struct
     {
         char    *iwad;
@@ -777,11 +823,12 @@ static dboolean D_IsUnsupportedIWAD(char *filename)
         { "hexen.wad",    "Hexen"   },
         { "hexdd.wad",    "Hexen"   },
         { "strife0.wad",  "Strife"  },
-        { "strife1.wad",  "Strife"  }
+        { "strife1.wad",  "Strife"  },
+        { "voices.wad",   "Strife"  }
     };
 
     for (int i = 0; i < arrlen(unsupported); i++)
-        if (M_StringCompare(leaf, unsupported[i].iwad))
+        if (M_StringEndsWith(filename, unsupported[i].iwad))
         {
             char    buffer[1024];
 
@@ -802,66 +849,62 @@ static dboolean D_IsUnsupportedIWAD(char *filename)
 
 static dboolean D_IsCfgFile(char *filename)
 {
-    return M_StringCompare(filename + strlen(filename) - 4, ".cfg");
+    return M_StringEndsWith(filename, ".cfg");
 }
 
 static dboolean D_IsDehFile(char *filename)
 {
-    int len = (int)strlen(filename);
-
-    return (M_StringCompare(filename + len - 4, ".deh") || M_StringCompare(filename + len - 4, ".bex"));
+    return (M_StringEndsWith(filename, ".deh") || M_StringEndsWith(filename, ".bex"));
 }
 
 static void D_CheckSupportedPWAD(char *filename)
 {
-    const char  *leaf = leafname(filename);
-
-    if (M_StringCompare(leaf, "SIGIL.wad") || M_StringCompare(leaf, "SIGIL_v1_1.wad")
-        || M_StringCompare(leaf, "SIGIL_v1_2.wad") || M_StringCompare(leaf, "SIGIL_v1_21.wad"))
+    if (M_StringEndsWith(filename, "SIGIL.wad") || M_StringEndsWith(filename, "SIGIL_v1_1.wad")
+        || M_StringEndsWith(filename, "SIGIL_v1_2.wad") || M_StringEndsWith(filename, "SIGIL_v1_21.wad"))
     {
         sigil = true;
         episode = 5;
     }
-    else if (M_StringCompare(leaf, "NERVE.WAD"))
+    else if (M_StringEndsWith(filename, "NERVE.WAD"))
     {
         nerve = true;
         expansion = 2;
     }
-    else if (M_StringCompare(leaf, "chex.wad"))
+    else if (M_StringEndsWith(filename, "chex.wad"))
         chex = chex1 = true;
-    else if (M_StringCompare(leaf, "chex2.wad"))
+    else if (M_StringEndsWith(filename, "chex2.wad"))
         chex = chex2 = true;
-    else if (M_StringCompare(leaf, "btsx_e1.wad"))
+    else if (M_StringEndsWith(filename, "btsx_e1.wad"))
         BTSX = BTSXE1 = true;
-    else if (M_StringCompare(leaf, "btsx_e1a.wad"))
+    else if (M_StringEndsWith(filename, "btsx_e1a.wad"))
         BTSX = BTSXE1 = BTSXE1A = true;
-    else if (M_StringCompare(leaf, "btsx_e1b.wad"))
+    else if (M_StringEndsWith(filename, "btsx_e1b.wad"))
         BTSX = BTSXE1 = BTSXE1B = true;
-    else if (M_StringCompare(leaf, "btsx_e2a.wad"))
+    else if (M_StringEndsWith(filename, "btsx_e2a.wad"))
         BTSX = BTSXE2 = BTSXE2A = true;
-    else if (M_StringCompare(leaf, "btsx_e2b.wad"))
+    else if (M_StringEndsWith(filename, "btsx_e2b.wad"))
         BTSX = BTSXE2 = BTSXE2B = true;
-    else if (M_StringCompare(leaf, "btsx_e3a.wad"))
+    else if (M_StringEndsWith(filename, "btsx_e3a.wad"))
         BTSX = BTSXE3 = BTSXE3A = true;
-    else if (M_StringCompare(leaf, "btsx_e3b.wad"))
+    else if (M_StringEndsWith(filename, "btsx_e3b.wad"))
         BTSX = BTSXE3 = BTSXE3B = true;
-    else if (M_StringCompare(leaf, "e1m4b.wad"))
+    else if (M_StringEndsWith(filename, "e1m4b.wad"))
         E1M4B = true;
-    else if (M_StringCompare(leaf, "e1m8b.wad"))
+    else if (M_StringEndsWith(filename, "e1m8b.wad"))
         E1M8B = true;
-    else if (M_StringCompare(leaf, "d1spfx18.wad") || M_StringCompare(leaf, "d2spfx18.wad"))
+    else if (M_StringEndsWith(filename, "d1spfx18.wad") || M_StringEndsWith(filename, "d2spfx18.wad"))
         sprfix18 = true;
-    else if (M_StringCompare(leaf, "eviternity.wad"))
+    else if (M_StringEndsWith(filename, "eviternity.wad"))
         eviternity = true;
-    else if (M_StringCompare(leaf, "d4v.wad"))
+    else if (M_StringEndsWith(filename, "d4v.wad"))
         doom4vanilla = true;
-    else if (M_StringCompare(leaf, "remnant.wad"))
+    else if (M_StringEndsWith(filename, "remnant.wad"))
         remnant = true;
 }
 
 static dboolean D_IsUnsupportedPWAD(char *filename)
 {
-    return (M_StringEndsWith(filename, PACKAGE_WAD) || M_StringEndsWith(filename, "voices.wad"));
+    return (error = (M_StringEndsWith(filename, PACKAGE_WAD)));
 }
 
 static dboolean D_CheckParms(void)
@@ -972,8 +1015,8 @@ static dboolean D_CheckParms(void)
             else
             {
                 // otherwise try the iwadfolder CVAR
+#if defined(_WIN32) || defined(__OpenBSD__) || defined(__HAIKU__)  || defined(__ANDROID__)
 
-#if defined(_WIN32) || defined(__OpenBSD__) || defined(__ANDROID__)
                 M_snprintf(fullpath, sizeof(fullpath), "%s" DIR_SEPARATOR_S "%s", iwadfolder, iwadsrequired[iwadrequired]);
 #else
                 wordexp_t   p;
@@ -1111,8 +1154,6 @@ static int D_OpenWADLauncher(void)
     fileopenedok = (clicked == NSModalResponseOK);
 #endif
 
-    error = false;
-
     if (fileopenedok)
     {
         dboolean    onlyoneselected;
@@ -1157,14 +1198,21 @@ static int D_OpenWADLauncher(void)
             {
                 char    *temp = W_NearestFilename(folder, leafname(file));
 
-                if (!M_StringEndsWith(temp, leafname(file)))
-                    C_Warning(1, "<b>%s</b> couldn't be found. Did you mean <b>%s</b>?", leafname(file), leafname(temp));
+                if (!temp)
+                    error = true;
+                else
+                {
+                    guess = true;
 
-                file = M_StringDuplicate(temp);
-                free(temp);
+                    if (!M_StringEndsWith(temp, leafname(file)))
+                        C_Warning(1, "<b>%s</b> couldn't be found. Did you mean <b>%s</b>?", leafname(file), leafname(temp));
+
+                    file = M_StringDuplicate(temp);
+                    free(temp);
+                }
             }
-
-            wad = M_StringDuplicate(file);
+            else
+                wad = M_StringDuplicate(file);
 #endif
 
             // check if it's a valid and supported IWAD
@@ -1177,7 +1225,8 @@ static int D_OpenWADLauncher(void)
                     iwadfound = 1;
 
 #if defined(_WIN32)
-                    wad = M_StringDuplicate(leafname(file));
+                    if (!guess)
+                        wad = M_StringDuplicate(leafname(file));
 #endif
 
                     iwadfolder = M_StringDuplicate(folder);
@@ -1247,7 +1296,8 @@ static int D_OpenWADLauncher(void)
                     iwadrequired = doom2;
 
 #if defined(_WIN32)
-                wad = M_StringDuplicate(leafname(file));
+                if (!guess)
+                    wad = M_StringDuplicate(leafname(file));
 #endif
 
                 // try the current folder first
@@ -1405,7 +1455,8 @@ static int D_OpenWADLauncher(void)
                         isDOOM2 = M_StringCompare(iwadpass1, "DOOM2.WAD");
 
 #if defined(_WIN32)
-                        wad = M_StringDuplicate(leafname(fullpath));
+                        if (!guess)
+                            wad = M_StringDuplicate(leafname(fullpath));
 #endif
 
                         iwadfolder = M_ExtractFolder(fullpath);
@@ -1450,7 +1501,8 @@ static int D_OpenWADLauncher(void)
                             isDOOM2 = M_StringCompare(iwadpass2, "DOOM2.WAD");
 
 #if defined(_WIN32)
-                            wad = M_StringDuplicate(leafname(fullpath));
+                            if (!guess)
+                                wad = M_StringDuplicate(leafname(fullpath));
 #endif
 
                             iwadfolder = M_ExtractFolder(fullpath);
@@ -1590,7 +1642,8 @@ static int D_OpenWADLauncher(void)
                             if (W_MergeFile(fullpath, false))
                             {
 #if defined(_WIN32)
-                                wad = M_StringDuplicate(leafname(fullpath));
+                                if (!guess)
+                                    wad = M_StringDuplicate(leafname(fullpath));
 #endif
 
                                 modifiedgame = true;
@@ -1912,8 +1965,7 @@ static void D_DoomMainSetup(void)
                 if ((choseniwad = D_OpenWADLauncher()) == -1)
                     I_Quit(false);
 #if defined(_WIN32)
-                else if (!choseniwad && !error
-                    && (!*wad || (M_StringEndsWith(wad, ".wad") && !M_StringEndsWith(wad, PACKAGE_WAD))))
+                else if (!choseniwad && !error && (!*wad || M_StringEndsWith(wad, ".wad")))
 #else
                 else if (!choseniwad && !error)
 #endif
@@ -2258,7 +2310,7 @@ static void D_DoomMainSetup(void)
         G_LoadGame(P_SaveGameFile(startloadgame));
     }
 
-    splashlump = W_CacheLumpName("SPLASH");
+    fineprintlump = W_CacheLumpName("FINEPRNT");
     splashpal = W_CacheLumpName("SPLSHPAL");
 
     for (int i = 0; i < 18; i++)
@@ -2312,8 +2364,6 @@ static void D_DoomMainSetup(void)
             D_StartTitle(0);
 #endif
     }
-
-    M_Seed((unsigned int)time(NULL));
 
     seconds = striptrailingzero((I_GetTimeMS() - startuptimer) / 1000.0f, 1);
     C_Output("Startup took %s seconds to complete.", seconds);

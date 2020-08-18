@@ -218,8 +218,8 @@ typedef struct player_s
     int             damageinflicted;
     int             damagereceived;
     int             cheated;
-    int             shotshit;
-    int             shotsfired;
+    int             shotssuccessful[NUMWEAPONS];
+    int             shotsfired[NUMWEAPONS];
     int             deaths;
     int             suicides;
     int             mobjcount[NUMMOBJTYPES];

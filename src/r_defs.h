@@ -130,13 +130,12 @@ typedef struct sector_s
     bloodsplat_t        *splatlist;
 
     // thinker_t for reversible actions
-    void                *floordata;             // jff 2/22/98 make thinkers on
-    void                *ceilingdata;           // floors, ceilings, lighting,
-    void                *lightingdata;          // independent of one another
+    void                *floordata;             // jff 02/22/98 make thinkers on
+    void                *ceilingdata;           // floors and ceilings, independent of one another
 
     // list of mobjs that are at least partially in the sector
     // thinglist is a subset of touching_thinglist
-    struct msecnode_s   *touching_thinglist;    // phares 3/14/98
+    struct msecnode_s   *touching_thinglist;    // phares 03/14/98
 
     int                 linecount;
     struct line_s       **lines;                // [linecount] size
@@ -166,11 +165,11 @@ typedef struct sector_s
     int                 prevsec;        // -1 or number of sector for previous step
     int                 nextsec;        // -1 or number of next step sector
 
-    // killough 3/7/98: floor and ceiling texture offsets
+    // killough 03/07/98: floor and ceiling texture offsets
     fixed_t             floor_xoffs, floor_yoffs;
     fixed_t             ceiling_xoffs, ceiling_yoffs;
 
-    // killough 4/11/98: support for lightlevels coming from another sector
+    // killough 04/11/98: support for lightlevels coming from another sector
     struct sector_s     *floorlightsec;
     struct sector_s     *ceilinglightsec;
 
@@ -179,15 +178,15 @@ typedef struct sector_s
     short               lightlevel;
     short               oldlightlevel;
 
-    // killough 3/7/98: support flat heights drawn at another sector's heights
+    // killough 03/07/98: support flat heights drawn at another sector's heights
     struct sector_s     *heightsec;     // other sector, or NULL if no other sector
 
-    // killough 4/4/98: dynamic colormaps
+    // killough 04/04/98: dynamic colormaps
     int                 bottommap;
     int                 midmap;
     int                 topmap;
 
-    // killough 8/28/98: friction is a sector property, not an mobj property.
+    // killough 08/28/98: friction is a sector property, not an mobj property.
     // these fields used to be in mobj_t, but presented performance problems
     // when processed as mobj properties. Fix is to make them sector properties.
     int                 friction;
@@ -226,7 +225,7 @@ typedef struct
     // Sector the SideDef is facing.
     sector_t            *sector;
 
-    // killough 4/4/98, 4/11/98: highest referencing special linedef's type,
+    // killough 04/04/98, 04/11/98: highest referencing special linedef's type,
     // or lump number of special effect. Allows texture names to be overloaded
     // for other functions.
     int                 special;
@@ -251,7 +250,7 @@ typedef struct line_s
 {
     int                 id;
 
-    // Vertices, from v1 to v2.
+    // Vertexes, from v1 to v2.
     vertex_t            *v1;
     vertex_t            *v2;
 
@@ -283,7 +282,7 @@ typedef struct line_s
     // if == validcount, already checked
     int                 validcount;
 
-    int                 tranlump;       // killough 4/11/98: translucency filter, -1 == none
+    int                 tranlump;       // killough 04/11/98: translucency filter, -1 == none
 
     int                 nexttag;
     int                 firsttag;
@@ -737,7 +736,8 @@ enum
     LostSoul                                           =  3006,
     Pusher                                             =  5001,
     Puller                                             =  5002,
-    MusicSource                                        = 14164,
+    MusicSourceMin                                     = 14100,
+    MusicSourceMax                                     = 14164,
     VisualModeCamera                                   = 32000
 };
 
@@ -755,7 +755,7 @@ typedef struct subsector_s
     int                 firstline;
 } subsector_t;
 
-// phares 3/14/98
+// phares 03/14/98
 //
 // Sector list node showing all sectors an object appears in.
 //
@@ -779,7 +779,7 @@ typedef struct msecnode_s
     struct msecnode_s   *m_tnext;       // next msecnode_t for this thing
     struct msecnode_s   *m_sprev;       // prev msecnode_t for this sector
     struct msecnode_s   *m_snext;       // next msecnode_t for this sector
-    dboolean            visited;        // killough 4/4/98, 4/7/98: used in search algorithms
+    dboolean            visited;        // killough 04/04/98, 4/7/98: used in search algorithms
 } msecnode_t;
 
 //
@@ -937,7 +937,7 @@ typedef struct
     // foot clipping
     fixed_t             footclip;
 
-    // killough 3/27/98: height sector for underwater/fake ceiling support
+    // killough 03/27/98: height sector for underwater/fake ceiling support
     sector_t            *heightsec;
 
     int                 shadowpos;
@@ -1011,7 +1011,7 @@ typedef struct visplane_s
     int                 right;
     fixed_t             height;
 
-    // killough 2/28/98: Support scrolling flats
+    // killough 02/28/98: Support scrolling flats
     fixed_t             xoffset, yoffset;
 
     // leave pads for [minx - 1]/[maxx + 1]
@@ -1025,6 +1025,8 @@ typedef struct visplane_s
     unsigned int        bottom[SCREENWIDTH];
 
     unsigned int        pad4;
+
+    dboolean            modified;
 } visplane_t;
 
 #endif

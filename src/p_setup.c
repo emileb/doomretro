@@ -63,6 +63,7 @@
 
 #define RMAPINFO_SCRIPT_NAME    "RMAPINFO"
 #define MAPINFO_SCRIPT_NAME     "MAPINFO"
+#define UMAPINFO_SCRIPT_NAME    "UMAPINFO"
 
 #define MAXMAPINFO              100
 
@@ -70,21 +71,37 @@
 
 #define MCMD_AUTHOR             1
 #define MCMD_CLUSTER            2
-#define MCMD_LIQUID             3
-#define MCMD_MUSIC              4
-#define MCMD_MUSICCOMPOSER      5
-#define MCMD_MUSICTITLE         6
-#define MCMD_NEXT               7
-#define MCMD_NOBRIGHTMAP        8
-#define MCMD_NOFREELOOK         9
-#define MCMD_NOJUMP             10
-#define MCMD_NOLIQUID           11
-#define MCMD_NOMOUSELOOK        12
-#define MCMD_PAR                13
-#define MCMD_PISTOLSTART        14
-#define MCMD_SECRETNEXT         15
-#define MCMD_SKY1               16
-#define MCMD_TITLEPATCH         17
+#define MCMD_ENDBUNNY           3
+#define MCMD_ENDCAST            4
+#define MCMD_ENDGAME            5
+#define MCMD_ENDPIC             6
+#define MCMD_EPISODE            7
+#define MCMD_ENTERPIC           8
+#define MCMD_EXITPIC            9
+#define MCMD_INTERBACKDROP      10
+#define MCMD_INTERMUSIC         11
+#define MCMD_INTERTEXT          12
+#define MCMD_INTERTEXTSECRET    13
+#define MCMD_LEVELNAME          14
+#define MCMD_LEVELPIC           15
+#define MCMD_LIQUID             16
+#define MCMD_MUSIC              17
+#define MCMD_MUSICCOMPOSER      18
+#define MCMD_MUSICTITLE         19
+#define MCMD_NEXT               20
+#define MCMD_NEXTSECRET         21
+#define MCMD_NOBRIGHTMAP        22
+#define MCMD_NOFREELOOK         23
+#define MCMD_NOJUMP             24
+#define MCMD_NOLIQUID           25
+#define MCMD_NOMOUSELOOK        26
+#define MCMD_PAR                27
+#define MCMD_PARTIME            28
+#define MCMD_PISTOLSTART        29
+#define MCMD_SECRETNEXT         30
+#define MCMD_SKY1               31
+#define MCMD_SKYTEXTURE         32
+#define MCMD_TITLEPATCH         33
 
 typedef struct mapinfo_s mapinfo_t;
 
@@ -92,6 +109,16 @@ struct mapinfo_s
 {
     char        author[128];
     int         cluster;
+    dboolean    endbunny;
+    dboolean    endcast;
+    dboolean    endgame;
+    int         endpic;
+    int         enterpic;
+    int         exitpic;
+    char        interbackdrop[9];
+    int         intermusic;
+    char        intertext[1024];
+    char        intertextsecret[1024];
     int         liquid[NUMLIQUIDS];
     int         music;
     char        musiccomposer[128];
@@ -197,20 +224,36 @@ static mapinfo_t    mapinfo[MAXMAPINFO];
 static char *mapcmdnames[] =
 {
     "AUTHOR",
+    "ENDBUNNY",
+    "ENDCAST",
+    "ENDGAME",
+    "ENDPIC",
+    "ENTERPIC",
+    "EXITPIC",
+    "EPISODE",
+    "INTERBACKDROP",
+    "INTERMUSIC",
+    "INTERTEXT",
+    "INTERTEXTSECRET",
     "LIQUID",
+    "LEVELNAME",
+    "LEVELPIC",
     "MUSIC",
     "MUSICCOMPOSER",
     "MUSICTITLE",
     "NEXT",
+    "NEXTSECRET",
     "NOBRIGHTMAP",
     "NOFREELOOK",
     "NOJUMP",
     "NOLIQUID",
     "NOMOUSELOOK",
     "PAR",
+    "PARTIME",
     "PISTOLSTART",
     "SECRETNEXT",
     "SKY1",
+    "SKYTEXTURE",
     "TITLEPATCH",
     NULL
 };
@@ -218,31 +261,48 @@ static char *mapcmdnames[] =
 static int mapcmdids[] =
 {
     MCMD_AUTHOR,
+    MCMD_ENDBUNNY,
+    MCMD_ENDCAST,
+    MCMD_ENDGAME,
+    MCMD_ENDPIC,
+    MCMD_ENTERPIC,
+    MCMD_EXITPIC,
+    MCMD_EPISODE,
+    MCMD_INTERBACKDROP,
+    MCMD_INTERMUSIC,
+    MCMD_INTERTEXT,
+    MCMD_INTERTEXTSECRET,
     MCMD_LIQUID,
+    MCMD_LEVELNAME,
+    MCMD_LEVELPIC,
     MCMD_MUSIC,
     MCMD_MUSICCOMPOSER,
     MCMD_MUSICTITLE,
     MCMD_NEXT,
+    MCMD_NEXTSECRET,
     MCMD_NOBRIGHTMAP,
     MCMD_NOFREELOOK,
     MCMD_NOJUMP,
     MCMD_NOLIQUID,
     MCMD_NOMOUSELOOK,
     MCMD_PAR,
+    MCMD_PARTIME,
     MCMD_PISTOLSTART,
     MCMD_SECRETNEXT,
     MCMD_SKY1,
+    MCMD_SKYTEXTURE,
     MCMD_TITLEPATCH,
 };
 
 dboolean        canmodify;
 dboolean        transferredsky;
+static int      UMAPINFO;
 static int      RMAPINFO;
 static int      MAPINFO;
 
 dboolean        r_fixmaperrors = r_fixmaperrors_default;
 
-static dboolean samelevel;
+dboolean        samelevel;
 
 mapformat_t     mapformat;
 
@@ -542,19 +602,19 @@ static const char *sectorspecials[] =
     "Light blinks (randomly)",
     "Light blinks (0.5 sec.)",
     "Light blinks (1 sec.)",
-    "Damage -10 or 20% health and light blinks (0.5 sec.)",
-    "Damage -5 or 10% health",
+    "Damage -10% or -20% health and light blinks (0.5 sec.)",
+    "Damage -5% or -10% health",
     "",
-    "Damage -2 or 5% health",
+    "Damage -2% or -5% health",
     "Light glows (1+ sec.)",
     "Secret",
     "Door close stay (after 30 sec.)",
-    "Damage -10 or 20% health and end level",
+    "Damage -10% or -20% health and end level",
     "Light blinks (0.5 sec. synchronized)",
     "Light blinks (1 sec. synchronized)",
     "Door open close (opens after 5 min.)",
     "",
-    "Damage -10 or 20% health",
+    "Damage -10% or -20% health",
     "Light flickers (randomly)"
 };
 
@@ -599,7 +659,7 @@ static void P_LoadVertexes(int lump)
     vertexes = calloc_IfSameLevel(vertexes, numvertexes, sizeof(vertex_t));
 
     if (!data || !numvertexes)
-        I_Error("There are no vertices in this map.");
+        I_Error("There are no vertexes in this map.");
     else
     {
         // Copy and convert vertex coordinates,
@@ -612,20 +672,17 @@ static void P_LoadVertexes(int lump)
             // Apply any map-specific fixes.
             if (canmodify && r_fixmaperrors)
                 for (int j = 0; vertexfix[j].mission != -1; j++)
-                    if (i == vertexfix[j].vertex
-                        && gamemission == vertexfix[j].mission
-                        && gameepisode == vertexfix[j].epsiode
-                        && gamemap == vertexfix[j].map
-                        && vertexes[i].x == SHORT(vertexfix[j].oldx) << FRACBITS
-                        && vertexes[i].y == SHORT(vertexfix[j].oldy) << FRACBITS)
+                    if (gamemission == vertexfix[j].mission && gameepisode == vertexfix[j].episode && gamemap == vertexfix[j].map
+                        && i == vertexfix[j].vertex && vertexes[i].x == vertexfix[j].oldx << FRACBITS
+                        && vertexes[i].y == vertexfix[j].oldy << FRACBITS)
                     {
                         char    *temp = commify(vertexfix[j].vertex);
 
                         C_Warning(2, "Vertex %s has been moved from (%i,%i) to (%i,%i).",
                             temp, vertexfix[j].oldx, vertexfix[j].oldy, vertexfix[j].newx, vertexfix[j].newy);
 
-                        vertexes[i].x = SHORT(vertexfix[j].newx) << FRACBITS;
-                        vertexes[i].y = SHORT(vertexfix[j].newy) << FRACBITS;
+                        vertexes[i].x = vertexfix[j].newx << FRACBITS;
+                        vertexes[i].y = vertexfix[j].newy << FRACBITS;
                         free(temp);
                         break;
                     }
@@ -649,9 +706,9 @@ static void P_CheckLinedefs(void)
                 char    *temp2 = commify(ld->tag);
 
                 if (ld->tag < 0 || P_FindSectorFromLineTag(ld, -1) == -1)
-                    C_Warning(2, "Linedef %s has no line special and an unknown tag of %s.", temp1, temp2);
+                    C_Warning(2, "Linedef %s has an unknown tag of %s and no line special.", temp1, temp2);
                 else
-                    C_Warning(2, "Linedef %s has no line special but has a tag of %s.", temp1, temp2);
+                    C_Warning(2, "Linedef %s has a tag of %s but no line special.", temp1, temp2);
 
                 free(temp1);
                 free(temp2);
@@ -663,7 +720,9 @@ static void P_CheckLinedefs(void)
             {
                 char    *temp = commify(ld->id);
 
-                C_Warning(2, "Linedef %s has line special %i (\"%s\") but no tag.", temp, ld->special, linespecials[ld->special]);
+                C_Warning(2, "Linedef %s has the %sline special %i (\"%s\") but no tag.",
+                    temp, (ld->special < BOOMLINESPECIALS ? "" : (ld->special < MBFLINESPECIALS ? "<i>MBF</i>-compatible " :
+                    "<i>BOOM</i>-compatible ")), ld->special, linespecials[ld->special]);
                 free(temp);
             }
             else if (ld->tag < 0 || P_FindSectorFromLineTag(ld, -1) == -1)
@@ -671,8 +730,9 @@ static void P_CheckLinedefs(void)
                 char    *temp1 = commify(ld->id);
                 char    *temp2 = commify(ld->tag);
 
-                C_Warning(2, "Linedef %s has line special %i (\"%s\") but an unknown tag of %s.",
-                    temp1, ld->special, linespecials[ld->special], temp2);
+                C_Warning(2, "Linedef %s has the %sline special %i (\"%s\") but an unknown tag of %s.",
+                    temp1, (ld->special < BOOMLINESPECIALS ? "" : (ld->special < MBFLINESPECIALS ? "<i>MBF</i>-compatible " :
+                    "<i>BOOM</i>-compatible ")), ld->special, linespecials[ld->special], temp2);
                 free(temp1);
                 free(temp2);
             }
@@ -761,7 +821,7 @@ static void P_LoadSegs(int lump)
             free(temp);
         }
 
-        // killough 5/3/98: ignore 2s flag if second sidedef missing:
+        // killough 05/03/98: ignore 2s flag if second sidedef missing:
         if ((ldef->flags & ML_TWOSIDED) && ldef->sidenum[side ^ 1] != NO_INDEX)
             li->backsector = sides[ldef->sidenum[side ^ 1]].sector;
         else
@@ -818,10 +878,8 @@ static void P_LoadSegs(int lump)
         // [BH] Apply any map-specific fixes.
         if (canmodify && r_fixmaperrors)
             for (int j = 0; linefix[j].mission != -1; j++)
-            {
-                if (linedefnum == linefix[j].linedef && gamemission == linefix[j].mission
-                    && gameepisode == linefix[j].epsiode && gamemap == linefix[j].map
-                    && side == linefix[j].side)
+                if (gamemission == linefix[j].mission && gameepisode == linefix[j].episode && gamemap == linefix[j].map
+                    && linedefnum == linefix[j].linedef && side == linefix[j].side)
                 {
                     if (*linefix[j].toptexture)
                     {
@@ -894,7 +952,7 @@ static void P_LoadSegs(int lump)
 
                         C_Warning(2, "The horizontal texture offset of linedef %s has been changed from %s to %s.", temp1, temp2, temp3);
 
-                        li->offset = SHORT(linefix[j].offset) << FRACBITS;
+                        li->offset = linefix[j].offset << FRACBITS;
                         li->sidedef->textureoffset = 0;
                         free(temp1);
                         free(temp2);
@@ -909,7 +967,7 @@ static void P_LoadSegs(int lump)
 
                         C_Warning(2, "The vertical texture offset of linedef %s has been changed from %s to %s.", temp1, temp2, temp3);
 
-                        li->sidedef->rowoffset = SHORT(linefix[j].rowoffset) << FRACBITS;
+                        li->sidedef->rowoffset = linefix[j].rowoffset << FRACBITS;
                         free(temp1);
                         free(temp2);
                         free(temp3);
@@ -938,11 +996,14 @@ static void P_LoadSegs(int lump)
                         char    *temp = commify(linedefnum);
 
                         if (linefix[j].special)
-                            C_Warning(2, "The line special of linedef %s has been changed from %i (\"%s\") to %i (\"%s\").",
-                                temp, li->linedef->special, linespecials[li->linedef->special],
-                                linefix[j].special, linespecials[linefix[j].special]);
+                            C_Warning(2, "The %sline special of linedef %s has been changed from %i (\"%s\") to %i (\"%s\").",
+                                (li->linedef->special < BOOMLINESPECIALS ? "" : (li->linedef->special < MBFLINESPECIALS ?
+                                "<i>MBF</i>-compatible " : "<i>BOOM</i>-compatible ")), temp, li->linedef->special,
+                                linespecials[li->linedef->special], linefix[j].special, linespecials[linefix[j].special]);
                         else
-                            C_Warning(2, "The line special of linedef %s has been removed.", temp);
+                            C_Warning(2, "The %sline special of linedef %s has been removed.",
+                                (li->linedef->special < BOOMLINESPECIALS ? "" : (li->linedef->special < MBFLINESPECIALS ?
+                                "<i>MBF</i>-compatible " : "<i>BOOM</i>-compatible ")), temp);
 
                         li->linedef->special = linefix[j].special;
                         free(temp);
@@ -971,7 +1032,6 @@ static void P_LoadSegs(int lump)
 
                     break;
                 }
-            }
 
         if (li->linedef->special >= MBFLINESPECIALS)
             mbfcompatible = true;
@@ -1064,7 +1124,7 @@ static void P_LoadSegs_V4(int lump)
             free(temp);
         }
 
-        // killough 5/3/98: ignore 2s flag if second sidedef missing:
+        // killough 05/03/98: ignore 2s flag if second sidedef missing:
         if ((ldef->flags & ML_TWOSIDED) && ldef->sidenum[side ^ 1] != NO_INDEX)
             li->backsector = sides[ldef->sidenum[side ^ 1]].sector;
         else
@@ -1208,9 +1268,8 @@ static void P_LoadSectors(int lump)
         // [BH] Apply any level-specific fixes.
         if (canmodify && r_fixmaperrors)
             for (int j = 0; sectorfix[j].mission != -1; j++)
-            {
-                if (i == sectorfix[j].sector && gamemission == sectorfix[j].mission
-                    && gameepisode == sectorfix[j].epsiode && gamemap == sectorfix[j].map)
+                if (gamemission == sectorfix[j].mission && gameepisode == sectorfix[j].episode && gamemap == sectorfix[j].map
+                    && i == sectorfix[j].sector)
                 {
                     if (*sectorfix[j].floorpic)
                     {
@@ -1242,7 +1301,7 @@ static void P_LoadSectors(int lump)
 
                         C_Warning(2, "The floor height of sector %s has been changed from %s to %s.", temp1, temp2, temp3);
 
-                        ss->floorheight = SHORT(sectorfix[j].floorheight) << FRACBITS;
+                        ss->floorheight = sectorfix[j].floorheight << FRACBITS;
                         free(temp1);
                         free(temp2);
                         free(temp3);
@@ -1256,7 +1315,7 @@ static void P_LoadSectors(int lump)
 
                         C_Warning(2, "The ceiling height of sector %s has been changed from %s to %s.", temp1, temp2, temp3);
 
-                        ss->ceilingheight = SHORT(sectorfix[j].ceilingheight) << FRACBITS;
+                        ss->ceilingheight = sectorfix[j].ceilingheight << FRACBITS;
                         free(temp1);
                         free(temp2);
                         free(temp3);
@@ -1264,26 +1323,25 @@ static void P_LoadSectors(int lump)
 
                     if (sectorfix[j].special != DEFAULT)
                     {
-
                         char    *temp = commify(sectorfix[j].sector);
 
                         C_Warning(2, "The special of sector %s has been changed from %i (\"%s\") to %i (\"%s\").",
                             temp, ss->special, sectorspecials[ss->special],
                             sectorfix[j].special, sectorspecials[sectorfix[j].special]);
 
-                        ss->special = SHORT(sectorfix[j].special);
+                        ss->special = sectorfix[j].special;
                         free(temp);
                     }
 
-                    if (sectorfix[j].newtag != DEFAULT && (sectorfix[j].oldtag == DEFAULT || sectorfix[j].oldtag == ss->tag))
+                    if (sectorfix[j].tag != DEFAULT)
                     {
                         char    *temp1 = commify(sectorfix[j].sector);
                         char    *temp2 = commify(ss->tag);
-                        char    *temp3 = commify(sectorfix[j].newtag);
+                        char    *temp3 = commify(sectorfix[j].tag);
 
                         C_Warning(2, "The tag of sector %s has been changed from %s to %s.", temp1, temp2, temp3);
 
-                        ss->tag = SHORT(sectorfix[j].newtag) << FRACBITS;
+                        ss->tag = sectorfix[j].tag;
                         free(temp1);
                         free(temp2);
                         free(temp3);
@@ -1291,7 +1349,6 @@ static void P_LoadSectors(int lump)
 
                     break;
                 }
-            }
 
         // [AM] Sector interpolation. Even if we're
         //      not running uncapped, the renderer still
@@ -1534,7 +1591,7 @@ static void P_LoadZNodes(int lump)
     // skip header
     data += 4;
 
-    // Read extra vertices added during node building
+    // Read extra vertexes added during node building
     orgVerts = LONG(*((const unsigned int *)data));
     data += sizeof(orgVerts);
 
@@ -1657,7 +1714,7 @@ static void P_LoadThings(int lump)
     if (!data || !(numthings = W_LumpLength(lump) / sizeof(mapthing_t)))
         I_Error("There are no things in this map.");
 
-    M_Seed(numthings);
+    M_BigSeed(numthings);
     numspawnedthings = 0;
     numdecorations = 0;
 
@@ -1696,9 +1753,9 @@ static void P_LoadThings(int lump)
         // [BH] Apply any level-specific fixes.
         if (canmodify && r_fixmaperrors)
             for (int j = 0; thingfix[j].mission != -1; j++)
-                if (gamemission == thingfix[j].mission && gameepisode == thingfix[j].epsiode
-                    && gamemap == thingfix[j].map && thingid == thingfix[j].thing && mt.type == thingfix[j].type
-                    && mt.x == SHORT(thingfix[j].oldx) && mt.y == SHORT(thingfix[j].oldy))
+                if (gamemission == thingfix[j].mission && gameepisode == thingfix[j].episode && gamemap == thingfix[j].map
+                    && thingid == thingfix[j].thing && mt.type == thingfix[j].type
+                    && mt.x == thingfix[j].oldx && mt.y == thingfix[j].oldy)
                 {
                     char    *temp = commify(thingid);
 
@@ -1713,15 +1770,15 @@ static void P_LoadThings(int lump)
                         C_Warning(2, "The position of thing %s has been changed from (%i,%i) to (%i,%i).",
                             temp, mt.x, mt.y, thingfix[j].newx, thingfix[j].newy);
 
-                        mt.x = SHORT(thingfix[j].newx);
-                        mt.y = SHORT(thingfix[j].newy);
+                        mt.x = thingfix[j].newx;
+                        mt.y = thingfix[j].newy;
 
                         if (thingfix[j].angle != DEFAULT)
                         {
                             C_Warning(2, "The angle of thing %s has been changed from %i\xB0 to %i\xB0.",
                                 temp, mt.angle, thingfix[j].angle);
 
-                            mt.angle = SHORT(thingfix[j].angle);
+                            mt.angle = thingfix[j].angle;
                         }
 
                         if (thingfix[j].options != DEFAULT)
@@ -1758,13 +1815,14 @@ static void P_LoadThings(int lump)
     }
 
     M_Seed((unsigned int)time(NULL));
+    M_BigSeed((unsigned int)time(NULL));
     W_ReleaseLumpNum(lump);
 }
 
 //
 // P_LoadLineDefs
 // Also counts secret lines for intermissions.
-// killough 4/4/98: split into two functions, to allow sidedef overloading
+// killough 04/04/98: split into two functions, to allow sidedef overloading
 //
 static void P_LoadLineDefs(int lump)
 {
@@ -1789,7 +1847,7 @@ static void P_LoadLineDefs(int lump)
         ld->dx = v2->x - v1->x;
         ld->dy = v2->y - v1->y;
 
-        ld->tranlump = -1;   // killough 4/11/98: no translucency by default
+        ld->tranlump = -1;   // killough 04/11/98: no translucency by default
 
         ld->slopetype = (!ld->dx ? ST_VERTICAL : (!ld->dy ? ST_HORIZONTAL : (FixedDiv(ld->dy, ld->dx) > 0 ? ST_POSITIVE : ST_NEGATIVE)));
 
@@ -1823,7 +1881,7 @@ static void P_LoadLineDefs(int lump)
         ld->sidenum[0] = SHORT(mld->sidenum[0]);
         ld->sidenum[1] = SHORT(mld->sidenum[1]);
 
-        // killough 4/4/98: support special sidedef interpretation below
+        // killough 04/04/98: support special sidedef interpretation below
         if (ld->sidenum[0] != NO_INDEX && ld->special)
             sides[*ld->sidenum].special = ld->special;
     }
@@ -1831,7 +1889,7 @@ static void P_LoadLineDefs(int lump)
     W_ReleaseLumpNum(lump);
 }
 
-// killough 4/4/98: delay using sidedefs until they are loaded
+// killough 04/04/98: delay using sidedefs until they are loaded
 static void P_LoadLineDefs2(void)
 {
     line_t  *ld = lines;
@@ -1875,10 +1933,10 @@ static void P_LoadLineDefs2(void)
         ld->frontsector = (ld->sidenum[0] != NO_INDEX ? sides[ld->sidenum[0]].sector : NULL);
         ld->backsector = (ld->sidenum[1] != NO_INDEX ? sides[ld->sidenum[1]].sector : NULL);
 
-        // killough 4/11/98: handle special types
+        // killough 04/11/98: handle special types
         switch (ld->special)
         {
-            case Translucent_MiddleTexture:             // killough 4/11/98: translucent 2s textures
+            case Translucent_MiddleTexture:             // killough 04/11/98: translucent 2s textures
             {
                 int lump = sides[*ld->sidenum].special; // translucency from sidedef
 
@@ -1903,14 +1961,14 @@ static void P_LoadLineDefs2(void)
 //
 // P_LoadSideDefs
 //
-// killough 4/4/98: split into two functions
+// killough 04/04/98: split into two functions
 static void P_LoadSideDefs(int lump)
 {
     numsides = W_LumpLength(lump) / sizeof(mapsidedef_t);
     sides = calloc_IfSameLevel(sides, numsides, sizeof(side_t));
 }
 
-// killough 4/4/98: delay using texture names until after linedefs are loaded, to allow overloading
+// killough 04/04/98: delay using texture names until after linedefs are loaded, to allow overloading
 static void P_LoadSideDefs2(int lump)
 {
     mapsidedef_t    *data = W_CacheLumpNum(lump);
@@ -1939,7 +1997,7 @@ static void P_LoadSideDefs2(int lump)
 
         sd->sector = sec = sectors + sector_num;
 
-        // killough 4/4/98: allow sidedef texture names to be overloaded
+        // killough 04/04/98: allow sidedef texture names to be overloaded
         switch (sd->special)
         {
             case CreateFakeCeilingAndFloor:
@@ -1953,7 +2011,7 @@ static void P_LoadSideDefs2(int lump)
                 break;
 
             case Translucent_MiddleTexture:
-                // killough 4/11/98: apply translucency to 2s normal texture
+                // killough 04/11/98: apply translucency to 2s normal texture
                 sd->midtexture = (strncasecmp("TRANMAP", msd->midtexture, 8) ?
                     (sd->special = W_CheckNumForName(msd->midtexture)) < 0
                     || W_LumpLength(sd->special) != 65536 ? sd->special = 0,
@@ -2101,7 +2159,7 @@ static void P_CreateBlockMap(void)
     //
     // For each linedef:
     //
-    //   Map the starting and ending vertices to blocks.
+    //   Map the starting and ending vertexes to blocks.
     //
     //   Starting in the starting vertex's block, do:
     //
@@ -2236,10 +2294,10 @@ static void P_CreateBlockMap(void)
 //
 // P_LoadBlockMap
 //
-// killough 3/1/98: substantially modified to work
+// killough 03/01/98: substantially modified to work
 // towards removing blockmap limit (a wad limitation)
 //
-// killough 3/30/98: Rewritten to remove blockmap limit,
+// killough 03/30/98: Rewritten to remove blockmap limit,
 // though current algorithm is brute-force and non-optimal.
 //
 static void P_LoadBlockMap(int lump)
@@ -2265,7 +2323,7 @@ static void P_LoadBlockMap(int lump)
 
         blockmaplump = malloc_IfSameLevel(blockmaplump, sizeof(*blockmaplump) * count);
 
-        // killough 3/1/98: Expand wad blockmap into larger internal one,
+        // killough 03/01/98: Expand wad blockmap into larger internal one,
         // by treating all offsets except -1 as unsigned and zero-extending
         // them. This potentially doubles the size of blockmaps allowed,
         // because DOOM originally considered the offsets as always signed.
@@ -2349,7 +2407,7 @@ static void P_LoadReject(int lumpnum)
 // Builds sector line lists and subsector sector numbers.
 // Finds block bounding boxes for sectors.
 //
-// killough 5/3/98: reformatted, cleaned up
+// killough 05/03/98: reformatted, cleaned up
 // cph 18/8/99: rewritten to avoid O(numlines * numsectors) section
 // It makes things more complicated, but saves seconds on big levels
 
@@ -2495,7 +2553,7 @@ static void P_GroupLines(void)
 
 static void P_RemoveSlimeTrails(void)                   // killough 10/98
 {
-    byte    *hit = calloc(1, numvertexes);              // Hitlist for vertices
+    byte    *hit = calloc(1, numvertexes);              // Hitlist for vertexes
 
     if (!hit)
         return;
@@ -2846,9 +2904,9 @@ void P_SetupLevel(int ep, int map)
     free(temp);
 
     leveltime = 0;
-    animatedliquiddiff = FRACUNIT * 2;
-    animatedliquidxdir = M_RandomInt(-FRACUNIT / 12, FRACUNIT / 12);
-    animatedliquidydir = M_RandomInt(-FRACUNIT / 12, FRACUNIT / 12);
+    animatedliquiddiff = 2 * FRACUNIT;
+    animatedliquidxdir = M_BigRandomInt(-FRACUNIT / 12, FRACUNIT / 12);
+    animatedliquidydir = M_BigRandomInt(-FRACUNIT / 12, FRACUNIT / 12);
 
     animatedliquidxoffs = 0;
     animatedliquidyoffs = 0;
@@ -2873,7 +2931,7 @@ void P_SetupLevel(int ep, int map)
     P_LoadLineDefs(lumpnum + ML_LINEDEFS);
     P_LoadSideDefs2(lumpnum + ML_SIDEDEFS);
 
-    // killough 1/30/98: Create xref tables for tags
+    // killough 01/30/98: Create xref tables for tags
     P_InitTagLists();
 
     P_LoadLineDefs2();
@@ -2948,17 +3006,28 @@ static void P_InitMapInfo(void)
     mapinfo_t   *info;
     char        *temp;
 
-    if (M_CheckParm("-nomapinfo"))
+    if (sigil || M_CheckParm("-nomapinfo"))
         return;
 
     if ((RMAPINFO = MAPINFO = W_CheckNumForName(RMAPINFO_SCRIPT_NAME)) < 0)
-        if ((MAPINFO = W_CheckNumForName(MAPINFO_SCRIPT_NAME)) < 0)
-            return;
+        if ((UMAPINFO = MAPINFO = W_CheckNumForName(UMAPINFO_SCRIPT_NAME)) < 0)
+            if ((MAPINFO = W_CheckNumForName(MAPINFO_SCRIPT_NAME)) < 0)
+                return;
 
     for (int i = 0; i < MAXMAPINFO; i++)
     {
         mapinfo[i].author[0] = '\0';
+        mapinfo[i].endbunny = false;
+        mapinfo[i].endcast = false;
+        mapinfo[i].endgame = false;
+        mapinfo[i].endpic = 0;
+        mapinfo[i].enterpic = 0;
+        mapinfo[i].exitpic = 0;
         mapinfo[i].cluster = 0;
+        mapinfo[i].interbackdrop[0] = '\0';
+        mapinfo[i].intermusic = 0;
+        mapinfo[i].intertext[0] = '\0';
+        mapinfo[i].intertextsecret[0] = '\0';
 
         for (int j = 0; j < NUMLIQUIDS; j++)
         {
@@ -2981,7 +3050,7 @@ static void P_InitMapInfo(void)
         mapinfo[i].titlepatch = 0;
     }
 
-    SC_Open(RMAPINFO >= 0 ? RMAPINFO_SCRIPT_NAME : MAPINFO_SCRIPT_NAME);
+    SC_Open(RMAPINFO >= 0 ? RMAPINFO_SCRIPT_NAME : (UMAPINFO >= 0 ? UMAPINFO_SCRIPT_NAME : MAPINFO_SCRIPT_NAME));
 
     while (SC_GetString())
     {
@@ -3035,10 +3104,7 @@ static void P_InitMapInfo(void)
 
             info = &mapinfo[map];
 
-            // Map name must follow the number
-            SC_MustGetString();
-
-            if (!SC_Compare("LOOKUP"))
+            if (SC_GetString() && !SC_Compare("LOOKUP"))
                 M_StringCopy(info->name, sc_String, sizeof(info->name));
 
             // Process optional tokens
@@ -3063,6 +3129,127 @@ static void P_InitMapInfo(void)
                             info->cluster = sc_Number;
                             break;
 
+                        case MCMD_ENDBUNNY:
+                            SC_MustGetString();
+
+                            if (SC_Compare("true"))
+                                info->endbunny = true;
+
+                            break;
+
+                        case MCMD_ENDCAST:
+                            SC_MustGetString();
+
+                            if (SC_Compare("true"))
+                                info->endcast = true;
+
+                            break;
+
+                        case MCMD_ENDGAME:
+                            SC_MustGetString();
+
+                            if (SC_Compare("true"))
+                                info->endgame = true;
+
+                            break;
+
+                        case MCMD_ENDPIC:
+                            SC_MustGetString();
+                            info->endpic = W_GetNumForName(sc_String);
+                            break;
+
+                        case MCMD_ENTERPIC:
+                            SC_MustGetString();
+                            info->enterpic = W_GetNumForName(sc_String);
+                            break;
+
+                        case MCMD_EXITPIC:
+                            SC_MustGetString();
+                            info->exitpic = W_GetNumForName(sc_String);
+                            break;
+
+                        case MCMD_EPISODE:
+                        {
+                            char    lumpname[9];
+                            char    string[128];
+
+                            SC_MustGetString();
+
+                            if (SC_Compare("clear"))
+                            {
+                                M_AddEpisode(map, ep, "", "");
+                                break;
+                            }
+
+                            M_StringCopy(lumpname, sc_String, sizeof(lumpname));
+                            SC_MustGetString();
+                            M_StringCopy(string, sc_String, sizeof(string));
+                            SC_MustGetString(); // skip key
+
+                            M_AddEpisode(map, ep, lumpname, string);
+                            break;
+                        }
+
+                        case MCMD_INTERBACKDROP:
+                            SC_MustGetString();
+                            M_StringCopy(info->interbackdrop, sc_String, sizeof(info->interbackdrop));
+                            break;
+
+                        case MCMD_INTERMUSIC:
+                            SC_MustGetString();
+                            info->intermusic = W_CheckNumForName(sc_String);
+                            break;
+
+                        case MCMD_INTERTEXTSECRET:
+                        {
+                            char    buf[1024] = "";
+
+                            while (SC_GetString())
+                            {
+                                if (SC_MatchString(mapcmdnames) >= 0 || SC_Compare("MAP"))
+                                {
+                                    SC_UnGet();
+                                    break;
+                                }
+
+                                if (!buf[0])
+                                    M_StringCopy(buf, sc_String, sizeof(buf));
+                                else
+                                {
+                                    strcat(buf, "\n");
+                                    strcat(buf, sc_String);
+                                }
+                            }
+
+                            M_StringCopy(info->intertextsecret, buf, sizeof(info->intertextsecret));
+                            break;
+                        }
+
+                        case MCMD_INTERTEXT:
+                        {
+                            char    buf[1024] = "";
+
+                            while (SC_GetString())
+                            {
+                                if (SC_MatchString(mapcmdnames) >= 0 || SC_Compare("MAP"))
+                                {
+                                    SC_UnGet();
+                                    break;
+                                }
+
+                                if (!buf[0])
+                                    M_StringCopy(buf, sc_String, sizeof(buf));
+                                else
+                                {
+                                    strcat(buf, "\n");
+                                    strcat(buf, sc_String);
+                                }
+                            }
+
+                            M_StringCopy(info->intertext, buf, sizeof(info->intertext));
+                            break;
+                        }
+
                         case MCMD_LIQUID:
                         {
                             int lump;
@@ -3074,6 +3261,11 @@ static void P_InitMapInfo(void)
 
                             break;
                         }
+
+                        case MCMD_LEVELNAME:
+                            SC_MustGetString();
+                            M_StringCopy(info->name, sc_String, sizeof(info->name));
+                            break;
 
                         case MCMD_MUSIC:
                             SC_MustGetString();
@@ -3096,6 +3288,13 @@ static void P_InitMapInfo(void)
                             int nextmap = -1;
 
                             SC_MustGetString();
+
+                            if (SC_Compare("ENDGAMEC"))
+                            {
+                                info->endcast = true;
+                                break;
+                            }
+
                             sscanf(sc_String, "%i", &nextmap);
 
                             if (nextmap < 0 || nextmap > 99)
@@ -3153,6 +3352,7 @@ static void P_InitMapInfo(void)
                             break;
 
                         case MCMD_PAR:
+                        case MCMD_PARTIME:
                             SC_MustGetNumber();
                             info->par = sc_Number;
                             break;
@@ -3161,6 +3361,7 @@ static void P_InitMapInfo(void)
                             info->pistolstart = true;
                             break;
 
+                        case MCMD_NEXTSECRET:
                         case MCMD_SECRETNEXT:
                         {
                             int nextepisode = 1;
@@ -3202,6 +3403,12 @@ static void P_InitMapInfo(void)
 
                             break;
 
+                        case MCMD_SKYTEXTURE:
+                            SC_MustGetString();
+                            info->sky1texture = R_TextureNumForName(sc_String);
+                            break;
+
+                        case MCMD_LEVELPIC:
                         case MCMD_TITLEPATCH:
                             SC_MustGetString();
                             info->titlepatch = W_CheckNumForName(sc_String);
@@ -3224,8 +3431,9 @@ static void P_InitMapInfo(void)
     mapcount = mapmax;
 
     temp = commify(sc_Line);
-    C_Output("Parsed %s line%s in the <b>%sMAPINFO</b> lump in %s <b>%s</b>.", temp, (sc_Line > 1 ? "s" : ""),
-        (RMAPINFO >= 0 ? "R" : ""), (lumpinfo[MAPINFO]->wadfile->type == IWAD ? "IWAD" : "PWAD"), lumpinfo[MAPINFO]->wadfile->path);
+    C_Output("Parsed %s line%s in the <b>%sMAPINFO</b> lump in %s <b>%s</b>.",
+        temp, (sc_Line > 1 ? "s" : ""), (RMAPINFO >= 0 ? "R" : (UMAPINFO >= 0 ? "U" : "")),
+        (lumpinfo[MAPINFO]->wadfile->type == IWAD ? "IWAD" : "PWAD"), lumpinfo[MAPINFO]->wadfile->path);
     free(temp);
 
     if (nojump)
@@ -3239,6 +3447,51 @@ char *P_GetMapAuthor(int map)
 {
     return (MAPINFO >= 0 && mapinfo[map].author[0] ? mapinfo[map].author :
         (((E1M4B || *speciallumpname) && map == 4) || ((E1M8B || *speciallumpname) && map == 8) ? s_AUTHOR_ROMERO : ""));
+}
+
+char *P_GetInterBackrop(int map)
+{
+    return mapinfo[map].interbackdrop;
+}
+
+int P_GetInterMusic(int map)
+{
+    return mapinfo[map].intermusic;
+}
+
+char *P_GetInterText(int map)
+{
+    return mapinfo[map].intertext;
+}
+
+char *P_GetInterSecretText(int map)
+{
+    return mapinfo[map].intertextsecret;
+}
+
+dboolean P_GetMapEndBunny(int map)
+{
+    return mapinfo[map].endbunny;
+}
+
+dboolean P_GetMapEndCast(int map)
+{
+    return mapinfo[map].endcast;
+}
+
+dboolean P_GetMapEndGame(int map)
+{
+    return mapinfo[map].endgame;
+}
+
+int P_GetMapEndPic(int map)
+{
+    return mapinfo[map].endpic;
+}
+
+int P_GetMapEnterPic(int map)
+{
+    return mapinfo[map].enterpic;
 }
 
 void P_GetMapLiquids(int map)

@@ -69,7 +69,6 @@ int         firstspritelump;
 int         lastspritelump;
 int         numspritelumps;
 
-dboolean    notranslucency = false;
 dboolean    telefragonmap30 = false;
 
 int         numtextures;
@@ -94,6 +93,8 @@ fixed_t     *newspriteoffset;
 fixed_t     *newspritetopoffset;
 
 dboolean    r_fixspriteoffsets = r_fixspriteoffsets_default;
+
+byte        grays[256];
 
 static byte notgray[256] =
 {
@@ -266,7 +267,7 @@ static void R_InitTextures(void)
     int                 numpnameslumps = 0;
     const maptexture_t  *mtexture;
     texture_t           *texture;
-    int                 maptex_lump[2] = { -1, -1 };
+    int                 maptex_lump[] = { -1, -1 };
     const int           *maptex1;
     const int           *maptex2 = NULL;
     char                name[9];
@@ -336,7 +337,7 @@ static void R_InitTextures(void)
 
     numtextures = numtextures1 + numtextures2;
 
-    // killough 4/9/98: make column offsets 32-bit;
+    // killough 04/09/98: make column offsets 32-bit;
     // clean up malloc-ing to use sizeof
     textures = Z_Malloc(numtextures * sizeof(*textures), PU_STATIC, NULL);
     textureheight = Z_Malloc(numtextures * sizeof(*textureheight), PU_STATIC, NULL);
@@ -386,7 +387,7 @@ static void R_InitTextures(void)
                 I_Error("R_InitTextures: Patch %i is missing in the %.8s texture", SHORT(mpatch->patch), uppercase(texture->name));
         }
 
-        for (mask = 1; mask * 2 <= texture->width; mask <<= 1);
+        for (mask = 1; mask * 2 <= texture->width; mask *= 2);
 
         texture->widthmask = mask - 1;
         textureheight[i] = texture->height << FRACBITS;
@@ -394,21 +395,22 @@ static void R_InitTextures(void)
 
     free(patchlookup);                                          // killough
 
-    for (int i = 0; i < 2; i++)                                 // cph - release the TEXTUREx lumps
-        if (maptex_lump[i] != -1)
-            W_ReleaseLumpNum(maptex_lump[i]);
+    if (maptex_lump[0] != -1)
+        W_ReleaseLumpNum(maptex_lump[0]);
+
+    if (maptex_lump[1] != -1)
+        W_ReleaseLumpNum(maptex_lump[1]);
 
     // Create translation table for global animation.
-    // killough 4/9/98: make column offsets 32-bit;
+    // killough 04/09/98: make column offsets 32-bit;
     // clean up malloc-ing to use sizeof
     texturetranslation = Z_Malloc(((size_t)numtextures + 1) * sizeof(*texturetranslation), PU_STATIC, NULL);
 
     for (int i = 0; i < numtextures; i++)
+    {
         texturetranslation[i] = i;
-
-    // killough 1/31/98: Initialize texture hash table
-    for (int i = 0; i < numtextures; i++)
-        textures[i]->index = -1;
+        textures[i]->index = -1;                                // killough 01/31/98: Initialize texture hash table
+    }
 
     for (int i = numtextures - 1; i >= 0; i--)
     {
@@ -424,15 +426,10 @@ static void R_InitTextures(void)
 //
 static void R_InitBrightmaps(void)
 {
-    int i = 0;
-
     brightmap = Z_Calloc(numtextures, 256, PU_STATIC, NULL);
     nobrightmap = Z_Calloc(numtextures, sizeof(*nobrightmap), PU_STATIC, NULL);
 
-    while (brightmaps[i].mask)
-    {
-        int game = brightmaps[i].game;
-
+    for (int i = 0, game = brightmaps[i].game; brightmaps[i].mask; i++)
         if (*brightmaps[i].texture
             && (game == DOOM1AND2 || (gamemission == doom && game == DOOM1ONLY) || (gamemission != doom && game == DOOM2ONLY)))
         {
@@ -441,9 +438,6 @@ static void R_InitBrightmaps(void)
             if (num != -1)
                 brightmap[num] = brightmaps[i].mask;
         }
-
-        i++;
-    }
 }
 
 //
@@ -498,13 +492,6 @@ static void R_InitSpriteLumps(void)
                 mobjinfo[MT_BRUISER].blood = MT_BLOOD;
                 mobjinfo[MT_KNIGHT].blood = MT_BLOOD;
             }
-        }
-        else if (M_StringCompare(sc_String, "NOTRANSLUCENCY"))
-        {
-            SC_MustGetString();
-
-            if (M_StringCompare(pwadfile, sc_String))
-                notranslucency = true;
         }
         else if (M_StringCompare(sc_String, "TELEFRAGONMAP30"))
         {
@@ -677,13 +664,11 @@ static void R_InitSpriteLumps(void)
 //
 // R_InitColormaps
 //
-// killough 3/20/98: rewritten to allow dynamic colormaps
+// killough 03/20/98: rewritten to allow dynamic colormaps
 // and to remove unnecessary 256-byte alignment
 //
-// killough 4/4/98: Add support for C_START/C_END markers
+// killough 04/04/98: Add support for C_START/C_END markers
 //
-byte    grays[256];
-
 static void R_InitColormaps(void)
 {
     dboolean    COLORMAP = (W_CheckMultipleLumps("COLORMAP") > 1);
@@ -719,11 +704,10 @@ static void R_InitColormaps(void)
 
     for (int i = 0; i < 255; i++)
     {
-        // [BH] Fix <https://doomwiki.org/wiki/Carmack%27s_typo>.
         double  red = *palsrc++ / 256.0;
         double  green = *palsrc++ / 256.0;
         double  blue = *palsrc++ / 256.0;
-        int     gray = (int)((red * 0.299 + green * 0.587 + blue * 0.114) * 255.0);
+        int     gray = (int)((red * 0.2126 + green * 0.7152 + blue * 0.0722) * 255.0);
 
         grays[i] = FindNearestColor(palette, gray, gray, gray);
 
@@ -735,8 +719,8 @@ static void R_InitColormaps(void)
     }
 }
 
-// killough 4/4/98: get colormap number from name
-// killough 4/11/98: changed to return -1 for illegal names
+// killough 04/04/98: get colormap number from name
+// killough 04/11/98: changed to return -1 for illegal names
 int R_ColormapNumForName(char *name)
 {
     int i = 0;
@@ -776,7 +760,7 @@ int R_FlatNumForName(char *name)
 
     if (i == -1)
     {
-        if (*name != '-')
+        if (*name && *name != '-')
         {
             char    *temp = uppercase(name);
 
@@ -834,7 +818,7 @@ int R_TextureNumForName(char *name)
 
     if (i == -1)
     {
-        if (*name != '-')
+        if (*name && *name != '-')
         {
             char    *temp = uppercase(name);
 

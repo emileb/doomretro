@@ -122,7 +122,7 @@ void R_ClearClipSegs(void)
     memset(solidcol, 0, SCREENWIDTH);
 }
 
-// killough 1/18/98 -- This function is used to fix the automap bug which
+// killough 01/18/98 -- This function is used to fix the automap bug which
 // showed lines behind closed doors simply because the door had a dropoff.
 //
 // cph - converted to R_RecalcLineFlags. This recalculates all the flags for
@@ -182,8 +182,8 @@ static void R_RecalcLineFlags(line_t *line)
     }
 }
 
-// [AM] Interpolate the passed sector, if prudent.
-static void R_MaybeInterpolateSector(sector_t *sector)
+// [AM] Interpolate the passed sector.
+static void R_InterpolateSector(sector_t *sector)
 {
     sector_t    *heightsec = sector->heightsec;
 
@@ -233,7 +233,7 @@ static void R_MaybeInterpolateSector(sector_t *sector)
 }
 
 //
-// killough 3/7/98: Hack floor/ceiling heights for deep water etc.
+// killough 03/07/98: Hack floor/ceiling heights for deep water etc.
 //
 // If player's view height is underneath fake floor, lower the
 // drawn ceiling to be just under the floor height, and replace
@@ -242,7 +242,7 @@ static void R_MaybeInterpolateSector(sector_t *sector)
 //
 // Similar for ceiling, only reflected.
 //
-// killough 4/11/98, 4/13/98: fix bugs, add 'back' parameter
+// killough 04/11/98, 04/13/98: fix bugs, add 'back' parameter
 //
 sector_t *R_FakeFlat(sector_t *sec, sector_t *tempsec, int *floorlightlevel, int *ceilinglightlevel, dboolean back)
 {
@@ -382,12 +382,11 @@ static void R_AddLine(seg_t *line)
     if ((int)angle2 <= -(int)clipangle)
         angle2 = 0 - clipangle;         // Clip at right edge
 
-    // The seg is in the view range,
-    // but not necessarily visible.
+    // The seg is in the view range, but not necessarily visible.
     angle1 = (angle1 + ANG90) >> ANGLETOFINESHIFT;
     angle2 = (angle2 + ANG90) >> ANGLETOFINESHIFT;
 
-    // killough 1/31/98: Here is where "slime trails" can SOMETIMES occur:
+    // killough 01/31/98: Here is where "slime trails" can SOMETIMES occur:
     x1 = viewangletox[angle1];
     x2 = viewangletox[angle2];
 
@@ -398,14 +397,12 @@ static void R_AddLine(seg_t *line)
     // Single sided line?
     if ((backsector = line->backsector))
     {
-        sector_t    tempsec;    // killough 3/8/98: ceiling/water hack
+        sector_t    tempsec;    // killough 03/08/98: ceiling/water hack
 
-        // [AM] Interpolate sector movement before
-        //      running clipping tests. Frontsector
-        //      should already be interpolated.
-        R_MaybeInterpolateSector(backsector);
+        // [AM] Interpolate sector movement before running clipping tests. Frontsector should already be interpolated.
+        R_InterpolateSector(backsector);
 
-        // killough 3/8/98, 4/4/98: hack for invisible ceilings/deep water
+        // killough 03/08/98, 04/04/98: hack for invisible ceilings/deep water
         backsector = R_FakeFlat(backsector, &tempsec, NULL, NULL, true);
     }
 
@@ -513,42 +510,39 @@ static dboolean R_CheckBBox(const fixed_t *bspcoord)
 static void R_Subsector(int num)
 {
     subsector_t *sub = subsectors + num;
-    sector_t    tempsec;                                        // killough 3/7/98: deep water hack
+    sector_t    tempsec;                                        // killough 03/07/98: deep water hack
     sector_t    *sector = sub->sector;
-    int         floorlightlevel;                                // killough 3/16/98: set floor lightlevel
-    int         ceilinglightlevel;                              // killough 4/11/98
+    int         floorlightlevel;                                // killough 03/16/98: set floor lightlevel
+    int         ceilinglightlevel;                              // killough 04/11/98
     int         count = sub->numlines;
     seg_t       *line = segs + sub->firstline;
 
-    frontsector = sector;
+    // [AM] Interpolate sector movement. Usually only needed when player is standing inside the sector.
+    R_InterpolateSector(sector);
 
-    // [AM] Interpolate sector movement. Usually only needed
-    //      when you're standing inside the sector.
-    R_MaybeInterpolateSector(frontsector);
+    // killough 03/08/98, 04/04/98: Deep water/fake ceiling effect
+    frontsector = R_FakeFlat(sector, &tempsec, &floorlightlevel, &ceilinglightlevel, false);
 
-    // killough 3/8/98, 4/4/98: Deep water/fake ceiling effect
-    frontsector = R_FakeFlat(frontsector, &tempsec, &floorlightlevel, &ceilinglightlevel, false);
-
-    floorplane = (frontsector->interpfloorheight < viewz        // killough 3/7/98
+    floorplane = (frontsector->interpfloorheight < viewz        // killough 03/07/98
         || (frontsector->heightsec && frontsector->heightsec->ceilingpic == skyflatnum) ?
         R_FindPlane(frontsector->interpfloorheight,
             (frontsector->floorpic == skyflatnum                // killough 10/98
                 && (frontsector->sky & PL_SKYFLAT) ? frontsector->sky : frontsector->floorpic),
-            floorlightlevel,                                    // killough 3/16/98
-            frontsector->floor_xoffs,                           // killough 3/7/98
+            floorlightlevel,                                    // killough 03/16/98
+            frontsector->floor_xoffs,                           // killough 03/07/98
             frontsector->floor_yoffs) : NULL);
 
     ceilingplane = (frontsector->interpceilingheight > viewz
         || frontsector->ceilingpic == skyflatnum
         || (frontsector->heightsec && frontsector->heightsec->floorpic == skyflatnum) ?
-        R_FindPlane(frontsector->interpceilingheight,           // killough 3/8/98
+        R_FindPlane(frontsector->interpceilingheight,           // killough 03/08/98
             (frontsector->ceilingpic == skyflatnum              // killough 10/98
                 && (frontsector->sky & PL_SKYFLAT) ? frontsector->sky : frontsector->ceilingpic),
-            ceilinglightlevel,                                  // killough 4/11/98
-            frontsector->ceiling_xoffs,                         // killough 3/7/98
+            ceilinglightlevel,                                  // killough 04/11/98
+            frontsector->ceiling_xoffs,                         // killough 03/07/98
             frontsector->ceiling_yoffs) : NULL);
 
-    // killough 9/18/98: Fix underwater slowdown, by passing real sector
+    // killough 09/18/98: Fix underwater slowdown, by passing real sector
     // instead of fake one. Improve sprite lighting by basing sprite
     // lightlevels on floor & ceiling lightlevels in the surrounding area.
     //
@@ -560,12 +554,10 @@ static void R_Subsector(int num)
     // Either you must pass the fake sector and handle validcount here, on the
     // real sector, or you must account for the lighting in some other way,
     // like passing it as an argument.
-    if (sector->validcount != validcount)
+    if (sector->validcount != validcount && !menuactive)
     {
         sector->validcount = validcount;
-
-        if (!menuactive)
-            R_AddSprites(sector, (sector->heightsec ? (ceilinglightlevel + floorlightlevel) / 2 : floorlightlevel));
+        R_AddSprites(sector, (sector->heightsec ? (ceilinglightlevel + floorlightlevel) / 2 : floorlightlevel));
     }
 
     while (count--)
@@ -574,27 +566,31 @@ static void R_Subsector(int num)
 
 //
 // RenderBSPNode
-// Renders all subsectors below a given node,
-//  traversing subtree recursively.
+// Renders all subsectors below a given node, traversing subtree recursively.
 // Just call with BSP root.
 void R_RenderBSPNode(int bspnum)
 {
-    while (!(bspnum & NF_SUBSECTOR))    // Found a subsector?
+    if (bspnum & NF_SUBSECTOR)
+        R_Subsector(bspnum & ~NF_SUBSECTOR);
+    else
     {
         const node_t    *bsp = nodes + bspnum;
 
-        // Decide which side the view point is on.
-        int             side = R_PointOnSide(viewx, viewy, bsp);
+        if (((int64_t)viewy - bsp->y) * bsp->dx + ((int64_t)bsp->x - viewx) * bsp->dy <= 0)
+        {
+            if (R_CheckBBox(bsp->bbox[0]))
+                R_RenderBSPNode(bsp->children[0]);
 
-        // Recursively divide front space.
-        R_RenderBSPNode(bsp->children[side]);
+            if (R_CheckBBox(bsp->bbox[1]))
+                R_RenderBSPNode(bsp->children[1]);
+        }
+        else
+        {
+            if (R_CheckBBox(bsp->bbox[1]))
+                R_RenderBSPNode(bsp->children[1]);
 
-        // Possibly divide back space.
-        if (!R_CheckBBox(bsp->bbox[(side ^= 1)]))
-            return;
-
-        bspnum = bsp->children[side];
+            if (R_CheckBBox(bsp->bbox[0]))
+                R_RenderBSPNode(bsp->children[0]);
+        }
     }
-
-    R_Subsector(bspnum == -1 ? 0 : (bspnum & ~NF_SUBSECTOR));
 }

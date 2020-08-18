@@ -43,8 +43,7 @@
 typedef enum
 {
     floor_special,
-    ceiling_special,
-    lighting_special
+    ceiling_special
 } special_e;
 
 extern int              timer;
@@ -429,7 +428,7 @@ typedef struct
     // ID
     int                     tag;
     int                     olddirection;
-    struct ceilinglist_s    *list;          // jff 2/22/98 copied from killough's plats
+    struct ceilinglist_s    *list;          // jff 02/22/98 copied from killough's plats
 } ceiling_t;
 
 typedef struct ceilinglist_s
@@ -570,7 +569,7 @@ void T_MoveFloor(floormove_t *floor);
 void T_MoveElevator(elevator_t *elevator);
 void P_CheckTerrainType(sector_t *sector);
 
-// killough 3/7/98: Add generalized scroll effects
+// killough 03/07/98: Add generalized scroll effects
 typedef struct
 {
     thinker_t   thinker;        // Thinker structure for scrolling
@@ -592,7 +591,7 @@ typedef struct
 
 void T_Scroll(scroll_t *s);
 
-// phares 3/20/98: added new model of Pushers for push/pull effects
+// phares 03/20/98: added new model of Pushers for push/pull effects
 
 typedef struct
 {
@@ -616,7 +615,7 @@ typedef struct
     int         affectee;       // Number of affected sector
 } pusher_t;
 
-void T_Pusher(pusher_t *p);     // phares 3/20/98: Push thinker
+void T_Pusher(pusher_t *p);     // phares 03/20/98: Push thinker
 mobj_t *P_GetPushThing(int s);
 
 //
@@ -627,15 +626,13 @@ dboolean EV_SilentTeleport(line_t *line, int side, mobj_t *thing);
 dboolean EV_SilentLineTeleport(line_t *line, int side, mobj_t *thing, dboolean reverse);
 
 // jff 3/14/98 add bits and shifts for generalized sector types
-
 #define DAMAGE_MASK             0x0060
 #define DAMAGE_SHIFT            5
 #define SECRET_MASK             0x0080
 #define FRICTION_MASK           0x0100
 #define PUSH_MASK               0x0200
 
-// jff 02/04/98 Define masks, shifts, for fields in
-// generalized linedef types
+// jff 02/04/98 Define masks, shifts, for fields in generalized linedef types
 #define GenEnd                  0x8000
 #define GenFloorBase            0x6000
 #define GenCeilingBase          0x4000

@@ -53,11 +53,11 @@
 
 static dboolean cvarsloaded;
 
-#define NUMCVARS                                    184
+#define NUMCVARS                                    197
 
-#define CONFIG_VARIABLE_INT(name, set)              { #name, &name, DEFAULT_INT,           set          }
-#define CONFIG_VARIABLE_INT_UNSIGNED(name, set)     { #name, &name, DEFAULT_INT_UNSIGNED,  set          }
-#define CONFIG_VARIABLE_INT_PERCENT(name, set)      { #name, &name, DEFAULT_INT_PERCENT,   set          }
+#define CONFIG_VARIABLE_INT(name, set)              { #name, &name, DEFAULT_INT32,         set          }
+#define CONFIG_VARIABLE_INT_UNSIGNED(name, set)     { #name, &name, DEFAULT_UINT64,        set          }
+#define CONFIG_VARIABLE_INT_PERCENT(name, set)      { #name, &name, DEFAULT_INT32_PERCENT, set          }
 #define CONFIG_VARIABLE_FLOAT(name, set)            { #name, &name, DEFAULT_FLOAT,         set          }
 #define CONFIG_VARIABLE_FLOAT_PERCENT(name, set)    { #name, &name, DEFAULT_FLOAT_PERCENT, set          }
 #define CONFIG_VARIABLE_STRING(name, set)           { #name, &name, DEFAULT_STRING,        set          }
@@ -104,6 +104,7 @@ static default_t cvars[NUMCVARS] =
     CONFIG_VARIABLE_INT          (episode,                                           NOVALUEALIAS       ),
     CONFIG_VARIABLE_INT          (expansion,                                         NOVALUEALIAS       ),
     CONFIG_VARIABLE_INT          (facebackcolor,                                     FACEBACKVALUEALIAS ),
+    CONFIG_VARIABLE_INT          (fade,                                              BOOLVALUEALIAS     ),
     CONFIG_VARIABLE_INT          (gp_analog,                                         BOOLVALUEALIAS     ),
     CONFIG_VARIABLE_FLOAT_PERCENT(gp_deadzone_left,                                  NOVALUEALIAS       ),
     CONFIG_VARIABLE_FLOAT_PERCENT(gp_deadzone_right,                                 NOVALUEALIAS       ),
@@ -247,8 +248,20 @@ static default_t cvars[NUMCVARS] =
     CONFIG_VARIABLE_INT_UNSIGNED (stat_monsterskilled_zombiemen,                     NOVALUEALIAS       ),
     CONFIG_VARIABLE_INT_UNSIGNED (stat_runs,                                         NOVALUEALIAS       ),
     CONFIG_VARIABLE_INT_UNSIGNED (stat_secretsrevealed,                              NOVALUEALIAS       ),
-    CONFIG_VARIABLE_INT_UNSIGNED (stat_shotsfired,                                   NOVALUEALIAS       ),
-    CONFIG_VARIABLE_INT_UNSIGNED (stat_shotshit,                                     NOVALUEALIAS       ),
+    CONFIG_VARIABLE_INT_UNSIGNED (stat_shotsfired_pistol,                            NOVALUEALIAS       ),
+    CONFIG_VARIABLE_INT_UNSIGNED (stat_shotsfired_shotgun,                           NOVALUEALIAS       ),
+    CONFIG_VARIABLE_INT_UNSIGNED (stat_shotsfired_supershotgun,                      NOVALUEALIAS       ),
+    CONFIG_VARIABLE_INT_UNSIGNED (stat_shotsfired_chaingun,                          NOVALUEALIAS       ),
+    CONFIG_VARIABLE_INT_UNSIGNED (stat_shotsfired_rocketlauncher,                    NOVALUEALIAS       ),
+    CONFIG_VARIABLE_INT_UNSIGNED (stat_shotsfired_plasmarifle,                       NOVALUEALIAS       ),
+    CONFIG_VARIABLE_INT_UNSIGNED (stat_shotsfired_bfg9000,                           NOVALUEALIAS       ),
+    CONFIG_VARIABLE_INT_UNSIGNED (stat_shotssuccessful_pistol,                       NOVALUEALIAS       ),
+    CONFIG_VARIABLE_INT_UNSIGNED (stat_shotssuccessful_shotgun,                      NOVALUEALIAS       ),
+    CONFIG_VARIABLE_INT_UNSIGNED (stat_shotssuccessful_supershotgun,                 NOVALUEALIAS       ),
+    CONFIG_VARIABLE_INT_UNSIGNED (stat_shotssuccessful_chaingun,                     NOVALUEALIAS       ),
+    CONFIG_VARIABLE_INT_UNSIGNED (stat_shotssuccessful_rocketlauncher,               NOVALUEALIAS       ),
+    CONFIG_VARIABLE_INT_UNSIGNED (stat_shotssuccessful_plasmarifle,                  NOVALUEALIAS       ),
+    CONFIG_VARIABLE_INT_UNSIGNED (stat_shotssuccessful_bfg9000,                      NOVALUEALIAS       ),
     CONFIG_VARIABLE_INT_UNSIGNED (stat_skilllevel_heynottoorough,                    NOVALUEALIAS       ),
     CONFIG_VARIABLE_INT_UNSIGNED (stat_skilllevel_hurtmeplenty,                      NOVALUEALIAS       ),
     CONFIG_VARIABLE_INT_UNSIGNED (stat_skilllevel_imtooyoungtodie,                   NOVALUEALIAS       ),
@@ -344,7 +357,7 @@ void M_SaveCVARs(void)
         // Print the value
         switch (cvars[i].type)
         {
-            case DEFAULT_INT:
+            case DEFAULT_INT32:
             {
                 dboolean    flag = false;
                 int         v = *(int *)cvars[i].location;
@@ -368,16 +381,16 @@ void M_SaveCVARs(void)
                 break;
             }
 
-            case DEFAULT_INT_UNSIGNED:
+            case DEFAULT_UINT64:
             {
-                char    *temp = commify(*(unsigned int *)cvars[i].location);
+                char    *temp = commify(*(uint64_t *)cvars[i].location);
 
                 fputs(temp, file);
                 free(temp);
                 break;
             }
 
-            case DEFAULT_INT_PERCENT:
+            case DEFAULT_INT32_PERCENT:
             {
                 dboolean    flag = false;
                 int         v = *(int *)cvars[i].location;
@@ -644,6 +657,9 @@ static void M_CheckCVARs(void)
 
     if (facebackcolor < facebackcolor_min || facebackcolor > facebackcolor_max)
         facebackcolor = facebackcolor_default;
+
+    if (fade != false && fade != true)
+        fade = fade_default;
 
     if (gp_analog != false && gp_analog != true)
         gp_analog = gp_analog_default;
@@ -1046,7 +1062,7 @@ void M_LoadCVARs(char *filename)
                     *(char **)cvars[i].location = s;
                     break;
 
-                case DEFAULT_INT:
+                case DEFAULT_INT32:
                 {
                     char    *temp = uncommify(value);
 
@@ -1056,17 +1072,17 @@ void M_LoadCVARs(char *filename)
                     break;
                 }
 
-                case DEFAULT_INT_UNSIGNED:
+                case DEFAULT_UINT64:
                 {
                     char    *temp = uncommify(value);
 
                     M_StringCopy(value, temp, sizeof(value));
-                    sscanf(value, "%10u", (unsigned int *)cvars[i].location);
+                    sscanf(value, "%10" PRIu64, (uint64_t *)cvars[i].location);
                     free(temp);
                     break;
                 }
 
-                case DEFAULT_INT_PERCENT:
+                case DEFAULT_INT32_PERCENT:
                 {
                     char    *temp = uncommify(value);
 

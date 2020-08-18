@@ -55,14 +55,14 @@
 #define SAVEGAME_EOF    0x1D
 #define TARGETLIMIT     4192
 
-FILE        *save_stream;
+FILE            *save_stream;
 
-static int  thingindex;
-static int  targets[TARGETLIMIT];
-static int  tracers[TARGETLIMIT];
-static int  lastenemies[TARGETLIMIT];
-static int  soundtargets[TARGETLIMIT];
-static int  attacker;
+static int      thingindex;
+static int      targets[TARGETLIMIT];
+static int      tracers[TARGETLIMIT];
+static int      lastenemies[TARGETLIMIT];
+static int      soundtargets[TARGETLIMIT];
+static int      attacker;
 
 // Get the filename of a temporary file to write the savegame to. After
 // the file has been successfully saved, it will be renamed to the
@@ -113,12 +113,9 @@ static void saveg_write8(byte value)
 
 static short saveg_read16(void)
 {
-    int result;
+    int result = saveg_read8();
 
-    result = saveg_read8();
-    result |= saveg_read8() << 8;
-
-    return result;
+    return (result | (saveg_read8() << 8));
 }
 
 static void saveg_write16(short value)
@@ -129,14 +126,12 @@ static void saveg_write16(short value)
 
 static int saveg_read32(void)
 {
-    int result;
+    int result = saveg_read8();
 
-    result = saveg_read8();
     result |= saveg_read8() << 8;
     result |= saveg_read8() << 16;
-    result |= saveg_read8() << 24;
 
-    return result;
+    return (result | (saveg_read8() << 24));
 }
 
 static void saveg_write32(int value)
@@ -237,6 +232,7 @@ static void saveg_read_mobj_t(mobj_t *str)
     str->state = ((state = saveg_read32()) > 0 && state < NUMSTATES ? &states[state] : NULL);
     str->flags = saveg_read32();
     str->flags2 = saveg_read32();
+    str->flags3 = saveg_read32();
     str->health = saveg_read32();
     str->movedir = saveg_read32();
     str->movecount = saveg_read32();
@@ -270,14 +266,24 @@ static void saveg_read_mobj_t(mobj_t *str)
     str->strafecount = saveg_read16();
 
     if (str->flags & MF_SHOOTABLE)
-        for (int i = 0; i < 100; i++)
+        for (int i = 0, len = 33; i < len; i++)
             str->name[i] = saveg_read8();
 
     str->madesound = saveg_read32();
-    str->flags3 = saveg_read32();
     str->inflicter = saveg_read32();
 
     // [BH] For future features without breaking savegame compatibility
+    saveg_read32();
+    saveg_read32();
+    saveg_read32();
+    saveg_read32();
+    saveg_read32();
+    saveg_read32();
+    saveg_read32();
+    saveg_read32();
+    saveg_read32();
+    saveg_read32();
+    saveg_read32();
     saveg_read32();
     saveg_read32();
     saveg_read32();
@@ -306,6 +312,7 @@ static void saveg_write_mobj_t(mobj_t *str)
     saveg_write32((int)(str->state - states));
     saveg_write32(str->flags);
     saveg_write32(str->flags2);
+    saveg_write32(str->flags3);
     saveg_write32(str->health);
     saveg_write32(str->movedir);
     saveg_write32(str->movecount);
@@ -339,15 +346,25 @@ static void saveg_write_mobj_t(mobj_t *str)
         for (i = 0; str->name[i] != '\0'; i++)
             saveg_write8(str->name[i]);
 
-        for (; i < 100; i++)
+        for (; i < 33; i++)
             saveg_write8(0);
     }
 
     saveg_write32(str->madesound);
-    saveg_write32(str->flags3);
     saveg_write32(str->inflicter);
 
     // [BH] For future features without breaking savegame compatibility
+    saveg_write32(0);
+    saveg_write32(0);
+    saveg_write32(0);
+    saveg_write32(0);
+    saveg_write32(0);
+    saveg_write32(0);
+    saveg_write32(0);
+    saveg_write32(0);
+    saveg_write32(0);
+    saveg_write32(0);
+    saveg_write32(0);
     saveg_write32(0);
     saveg_write32(0);
     saveg_write32(0);
@@ -500,8 +517,13 @@ static void saveg_read_player_t(void)
     viewplayer->damageinflicted = saveg_read32();
     viewplayer->damagereceived = saveg_read32();
     viewplayer->cheated = saveg_read32();
-    viewplayer->shotshit = saveg_read32();
-    viewplayer->shotsfired = saveg_read32();
+
+    for (int i = 0; i < NUMWEAPONS; i++)
+        viewplayer->shotssuccessful[i] = saveg_read32();
+
+    for (int i = 0; i < NUMWEAPONS; i++)
+        viewplayer->shotsfired[i] = saveg_read32();
+
     viewplayer->deaths = saveg_read32();
 
     for (int i = 0; i < NUMMOBJTYPES; i++)
@@ -521,6 +543,9 @@ static void saveg_read_player_t(void)
     viewplayer->bouncemax = saveg_read32();
 
     // [BH] For future features without breaking savegame compatibility
+    saveg_read32();
+    saveg_read32();
+    saveg_read32();
     saveg_read32();
     saveg_read32();
     saveg_read32();
@@ -600,8 +625,13 @@ static void saveg_write_player_t(void)
     saveg_write32(viewplayer->damageinflicted);
     saveg_write32(viewplayer->damagereceived);
     saveg_write32(viewplayer->cheated);
-    saveg_write32(viewplayer->shotshit);
-    saveg_write32(viewplayer->shotsfired);
+
+    for (int i = 0; i < NUMWEAPONS; i++)
+        saveg_write32(viewplayer->shotssuccessful[i]);
+
+    for (int i = 0; i < NUMWEAPONS; i++)
+        saveg_write32(viewplayer->shotsfired[i]);
+
     saveg_write32(viewplayer->deaths);
 
     for (int i = 0; i < NUMMOBJTYPES; i++)
@@ -621,6 +651,9 @@ static void saveg_write_player_t(void)
     saveg_write32(viewplayer->bouncemax);
 
     // [BH] For future features without breaking savegame compatibility
+    saveg_write32(0);
+    saveg_write32(0);
+    saveg_write32(0);
     saveg_write32(0);
     saveg_write32(0);
     saveg_write32(0);
@@ -715,7 +748,7 @@ static void saveg_read_floormove_t(floormove_t *str)
     str->texture = saveg_read16();
     str->floordestheight = saveg_read32();
     str->speed = saveg_read32();
-    str->stopsound = saveg_read32();
+    str->stopsound = saveg_read_bool();
 }
 
 static void saveg_write_floormove_t(floormove_t *str)
@@ -728,7 +761,7 @@ static void saveg_write_floormove_t(floormove_t *str)
     saveg_write16(str->texture);
     saveg_write32(str->floordestheight);
     saveg_write32(str->speed);
-    saveg_write32(str->stopsound);
+    saveg_write_bool(str->stopsound);
 }
 
 //
@@ -855,7 +888,7 @@ static void saveg_read_elevator_t(elevator_t *str)
     str->floordestheight = saveg_read32();
     str->ceilingdestheight = saveg_read32();
     str->speed = saveg_read32();
-    //str->stopsound = saveg_read32();
+    str->stopsound = saveg_read_bool();
 }
 
 static void saveg_write_elevator_t(elevator_t *str)
@@ -866,7 +899,7 @@ static void saveg_write_elevator_t(elevator_t *str)
     saveg_write32(str->floordestheight);
     saveg_write32(str->ceilingdestheight);
     saveg_write32(str->speed);
-    //saveg_write32(str->stopsound);
+    saveg_write_bool(str->stopsound);
 }
 
 static void saveg_read_scroll_t(scroll_t *str)
@@ -931,7 +964,7 @@ static void saveg_read_button_t(button_t *str)
 
 static void saveg_write_button_t(button_t *str)
 {
-    saveg_write32((str->line ? str->line->id : -1));
+    saveg_write32(str->line ? str->line->id : -1);
     saveg_write_enum(str->where);
     saveg_write32(str->btexture);
     saveg_write32(str->btimer);
@@ -994,10 +1027,13 @@ dboolean P_ReadSaveGameHeader(char *description)
     if (!M_StringCompare(read_vcheck, vcheck))
     {
         menuactive = false;
+        quickSaveSlot = -1;
         C_ShowConsole();
         C_Warning(1, "This savegame is incompatible with <i>" PACKAGE_NAMEANDVERSIONSTRING "</i>.");
         return false;   // bad version
     }
+
+    S_StopMusic();
 
     gameskill = (skill_t)saveg_read8();
     gameepisode = saveg_read8();
@@ -1072,14 +1108,21 @@ void P_ArchiveWorld(void)
     // do sectors
     for (int i = 0; i < numsectors; i++, sector++)
     {
-        saveg_write16(sector->floorheight >> FRACBITS);
-        saveg_write16(sector->ceilingheight >> FRACBITS);
+        saveg_write32(sector->floorheight >> FRACBITS);
+        saveg_write32(sector->ceilingheight >> FRACBITS);
         saveg_write16(sector->floorpic);
         saveg_write16(sector->ceilingpic);
         saveg_write16(sector->lightlevel);
+        saveg_write16(sector->oldlightlevel);
         saveg_write16(sector->special);
         saveg_write16(sector->tag);
         saveg_write32(P_ThingToIndex(sector->soundtarget));
+
+        // [BH] For future features without breaking savegame compatibility
+        saveg_write32(0);
+        saveg_write32(0);
+        saveg_write32(0);
+        saveg_write32(0);
     }
 
     // do lines
@@ -1098,14 +1141,20 @@ void P_ArchiveWorld(void)
 
             side = sides + line->sidenum[j];
 
-            saveg_write16(side->textureoffset >> FRACBITS);
-            saveg_write16(side->rowoffset >> FRACBITS);
+            saveg_write32(side->textureoffset >> FRACBITS);
+            saveg_write32(side->rowoffset >> FRACBITS);
             saveg_write16(side->toptexture);
             saveg_write16(side->bottomtexture);
             saveg_write16(side->midtexture);
             saveg_write_bool(side->missingtoptexture);
             saveg_write_bool(side->missingbottomtexture);
             saveg_write_bool(side->missingmidtexture);
+
+            // [BH] For future features without breaking savegame compatibility
+            saveg_write32(0);
+            saveg_write32(0);
+            saveg_write32(0);
+            saveg_write32(0);
         }
     }
 }
@@ -1121,18 +1170,24 @@ void P_UnArchiveWorld(void)
     // do sectors
     for (int i = 0; i < numsectors; i++, sector++)
     {
-        sector->floorheight = saveg_read16() << FRACBITS;
-        sector->ceilingheight = saveg_read16() << FRACBITS;
+        sector->floorheight = saveg_read32() << FRACBITS;
+        sector->ceilingheight = saveg_read32() << FRACBITS;
         sector->floorpic = saveg_read16();
         sector->terraintype = terraintypes[sector->floorpic];
         sector->ceilingpic = saveg_read16();
-        sector->lightlevel = sector->oldlightlevel = saveg_read16();
+        sector->lightlevel = saveg_read16();
+        sector->oldlightlevel = saveg_read16();
         sector->special = saveg_read16();
         sector->tag = saveg_read16();
         sector->ceilingdata = NULL;
         sector->floordata = NULL;
-        sector->lightingdata = NULL;
         soundtargets[MIN(i, TARGETLIMIT - 1)] = saveg_read32();
+
+        // [BH] For future features without breaking savegame compatibility
+        saveg_read32();
+        saveg_read32();
+        saveg_read32();
+        saveg_read32();
     }
 
     // do lines
@@ -1151,14 +1206,20 @@ void P_UnArchiveWorld(void)
 
             side = sides + line->sidenum[j];
 
-            side->textureoffset = saveg_read16() << FRACBITS;
-            side->rowoffset = saveg_read16() << FRACBITS;
+            side->textureoffset = saveg_read32() << FRACBITS;
+            side->rowoffset = saveg_read32() << FRACBITS;
             side->toptexture = saveg_read16();
             side->bottomtexture = saveg_read16();
             side->midtexture = saveg_read16();
             side->missingtoptexture = saveg_read_bool();
             side->missingbottomtexture = saveg_read_bool();
             side->missingmidtexture = saveg_read_bool();
+
+            // [BH] For future features without breaking savegame compatibility
+            saveg_read32();
+            saveg_read32();
+            saveg_read32();
+            saveg_read32();
         }
     }
 }
@@ -1174,10 +1235,11 @@ void P_ArchiveThinkers(void)
 {
     // save off the current thinkers
     for (thinker_t *th = thinkers[th_mobj].cnext; th != &thinkers[th_mobj]; th = th->cnext)
-    {
-        saveg_write8(tc_mobj);
-        saveg_write_mobj_t((mobj_t *)th);
-    }
+        if (th->function != &P_RemoveThinkerDelayed)
+        {
+            saveg_write8(tc_mobj);
+            saveg_write_mobj_t((mobj_t *)th);
+        }
 
     // save off the bloodsplats
     for (int i = 0; i < numsectors; i++)
@@ -1328,7 +1390,7 @@ void P_RemoveCorruptMobjs(void)
 {
     for (thinker_t *th = thinkers[th_mobj].cnext; th != &thinkers[th_mobj]; th = th->cnext)
     {
-        mobj_t  *mo = (mobj_t *)th;
+        mobj_t *mo = (mobj_t *)th;
 
         if (!mo->state && mo->info->spawnstate != S_NULL)
             P_RemoveMobj(mo);
@@ -1377,77 +1439,56 @@ void P_ArchiveSpecials(void)
         {
             saveg_write8(tc_ceiling);
             saveg_write_ceiling_t((ceiling_t *)th);
-            continue;
         }
-
-        if (th->function == &T_VerticalDoor)
+        else if (th->function == &T_VerticalDoor)
         {
             saveg_write8(tc_door);
             saveg_write_vldoor_t((vldoor_t *)th);
-            continue;
         }
-
-        if (th->function == &T_MoveFloor)
+        else if (th->function == &T_MoveFloor)
         {
             saveg_write8(tc_floor);
             saveg_write_floormove_t((floormove_t *)th);
-            continue;
         }
-
-        if (th->function == &T_PlatRaise)
+        else if (th->function == &T_PlatRaise)
         {
             saveg_write8(tc_plat);
             saveg_write_plat_t((plat_t *)th);
-            continue;
         }
-
-        if (th->function == &T_LightFlash)
+        else if (th->function == &T_LightFlash)
         {
             saveg_write8(tc_flash);
             saveg_write_lightflash_t((lightflash_t *)th);
-            continue;
         }
-
-        if (th->function == &T_StrobeFlash)
+        else if (th->function == &T_StrobeFlash)
         {
             saveg_write8(tc_strobe);
             saveg_write_strobe_t((strobe_t *)th);
-            continue;
         }
-
-        if (th->function == &T_Glow)
+        else if (th->function == &T_Glow)
         {
             saveg_write8(tc_glow);
             saveg_write_glow_t((glow_t *)th);
-            continue;
         }
-
-        if (th->function == &T_FireFlicker)
+        else if (th->function == &T_FireFlicker)
         {
             saveg_write8(tc_fireflicker);
             saveg_write_fireflicker_t((fireflicker_t *)th);
-            continue;
         }
-
-        if (th->function == &T_MoveElevator)
+        else if (th->function == &T_MoveElevator)
         {
             saveg_write8(tc_elevator);
             saveg_write_elevator_t((elevator_t *)th);
-            continue;
         }
-
-        if (th->function == &T_Scroll)
+        else if (th->function == &T_Scroll)
         {
             saveg_write8(tc_scroll);
             saveg_write_scroll_t((scroll_t *)th);
-            continue;
         }
-
-        if (th->function == &T_Pusher)
+        else if (th->function == &T_Pusher)
         {
             saveg_write8(tc_pusher);
             saveg_write_pusher_t((pusher_t *)th);
-            continue;
         }
     }
 
@@ -1484,7 +1525,7 @@ void P_UnArchiveSpecials(void)
 
             case tc_ceiling:
             {
-                ceiling_t   *ceiling = Z_Malloc(sizeof(*ceiling), PU_LEVEL, NULL);
+                ceiling_t   *ceiling = Z_Calloc(1, sizeof(*ceiling), PU_LEVSPEC, NULL);
 
                 saveg_read_ceiling_t(ceiling);
                 ceiling->sector->ceilingdata = ceiling;
@@ -1496,7 +1537,7 @@ void P_UnArchiveSpecials(void)
 
             case tc_door:
             {
-                vldoor_t    *door = Z_Malloc(sizeof(*door), PU_LEVEL, NULL);
+                vldoor_t    *door = Z_Calloc(1, sizeof(*door), PU_LEVSPEC, NULL);
 
                 saveg_read_vldoor_t(door);
                 door->sector->ceilingdata = door;
@@ -1507,7 +1548,7 @@ void P_UnArchiveSpecials(void)
 
             case tc_floor:
             {
-                floormove_t *floor = Z_Malloc(sizeof(*floor), PU_LEVEL, NULL);
+                floormove_t *floor = Z_Calloc(1, sizeof(*floor), PU_LEVSPEC, NULL);
 
                 saveg_read_floormove_t(floor);
                 floor->sector->floordata = floor;
@@ -1518,7 +1559,7 @@ void P_UnArchiveSpecials(void)
 
             case tc_plat:
             {
-                plat_t  *plat = Z_Malloc(sizeof(*plat), PU_LEVEL, NULL);
+                plat_t  *plat = Z_Calloc(1, sizeof(*plat), PU_LEVSPEC, NULL);
 
                 saveg_read_plat_t(plat);
                 plat->sector->floordata = plat;
@@ -1530,68 +1571,74 @@ void P_UnArchiveSpecials(void)
 
             case tc_flash:
             {
-                lightflash_t    *flash = Z_Malloc(sizeof(*flash), PU_LEVEL, NULL);
+                lightflash_t    *flash = Z_Calloc(1, sizeof(*flash), PU_LEVSPEC, NULL);
 
                 saveg_read_lightflash_t(flash);
                 flash->thinker.function = &T_LightFlash;
+                flash->thinker.menu = true;
                 P_AddThinker(&flash->thinker);
                 break;
             }
 
             case tc_strobe:
             {
-                strobe_t    *strobe = Z_Malloc(sizeof(*strobe), PU_LEVEL, NULL);
+                strobe_t    *strobe = Z_Calloc(1, sizeof(*strobe), PU_LEVSPEC, NULL);
 
                 saveg_read_strobe_t(strobe);
                 strobe->thinker.function = &T_StrobeFlash;
+                strobe->thinker.menu = true;
                 P_AddThinker(&strobe->thinker);
                 break;
             }
 
             case tc_glow:
             {
-                glow_t  *glow = Z_Malloc(sizeof(*glow), PU_LEVEL, NULL);
+                glow_t  *glow = Z_Calloc(1, sizeof(*glow), PU_LEVSPEC, NULL);
 
                 saveg_read_glow_t(glow);
                 glow->thinker.function = &T_Glow;
+                glow->thinker.menu = true;
                 P_AddThinker(&glow->thinker);
                 break;
             }
 
             case tc_fireflicker:
             {
-                fireflicker_t   *fireflicker = Z_Malloc(sizeof(*fireflicker), PU_LEVEL, NULL);
+                fireflicker_t   *flick = Z_Calloc(1, sizeof(*flick), PU_LEVSPEC, NULL);
 
-                saveg_read_fireflicker_t(fireflicker);
-                fireflicker->thinker.function = &T_FireFlicker;
-                P_AddThinker(&fireflicker->thinker);
+                saveg_read_fireflicker_t(flick);
+                flick->thinker.function = &T_FireFlicker;
+                flick->thinker.menu = true;
+                P_AddThinker(&flick->thinker);
                 break;
             }
 
             case tc_elevator:
             {
-                elevator_t  *elevator = Z_Malloc(sizeof(*elevator), PU_LEVEL, NULL);
+                elevator_t  *elevator = Z_Calloc(1, sizeof(*elevator), PU_LEVSPEC, NULL);
 
                 saveg_read_elevator_t(elevator);
                 elevator->sector->ceilingdata = elevator;
                 elevator->thinker.function = &T_MoveElevator;
+                elevator->thinker.menu = false;
                 P_AddThinker(&elevator->thinker);
                 break;
             }
 
             case tc_scroll:
             {
-                scroll_t    *scroll = Z_Malloc(sizeof(*scroll), PU_LEVEL, NULL);
+                scroll_t    *scroll = Z_Calloc(1, sizeof(*scroll), PU_LEVSPEC, NULL);
 
                 saveg_read_scroll_t(scroll);
                 scroll->thinker.function = &T_Scroll;
+                scroll->thinker.menu = true;
                 P_AddThinker(&scroll->thinker);
                 break;
             }
 
             case tc_pusher:
             {
-                pusher_t    *pusher = Z_Malloc(sizeof(*pusher), PU_LEVEL, NULL);
+                pusher_t    *pusher = Z_Calloc(1, sizeof(*pusher), PU_LEVSPEC, NULL);
 
                 saveg_read_pusher_t(pusher);
                 pusher->thinker.function = &T_Pusher;
@@ -1602,7 +1649,7 @@ void P_UnArchiveSpecials(void)
 
             case tc_button:
             {
-                button_t    *button = Z_Malloc(sizeof(*button), PU_LEVEL, NULL);
+                button_t    *button = Z_Calloc(1, sizeof(*button), PU_LEVSPEC, NULL);
 
                 saveg_read_button_t(button);
                 P_StartButton(button->line, button->where, button->btexture, button->btimer);

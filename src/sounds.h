@@ -63,19 +63,14 @@ enum
 struct sfxinfo_s
 {
     // up to 6-character name
-    char            name[9];
+    char            name1[9];
+    char            name2[9];
 
     // SFX singularity (only one at a time)
     int             singularity;
 
     // SFX priority
     int             priority;
-
-    // referenced sound if a link
-    sfxinfo_t       *link;
-
-    // volume if a link
-    int             volume;
 
     // SFX lumpnum
     int             lumpnum;
@@ -87,7 +82,8 @@ struct sfxinfo_s
 typedef struct
 {
     // up to 6-character name
-    char            name[9];
+    char            name1[9];
+    char            name2[9];
 
     char            title1[32];
     char            title2[32];
@@ -118,7 +114,7 @@ extern dboolean     musmusictype;
 //
 enum
 {
-    mus_None,
+    mus_none,
     mus_e1m1,
     mus_e1m2,
     mus_e1m3,
@@ -204,7 +200,7 @@ enum
 //
 enum
 {
-    sfx_None,
+    sfx_none,
     sfx_pistol,
     sfx_shotgn,
     sfx_sgcock,
@@ -321,7 +317,10 @@ enum
     sfx_dgdth,
     sfx_dgpain,
 
+    // e6y
     sfx_secret,
+    sfx_gibdth,
+
     sfx_scrsht,
 
     NUMSFX

@@ -69,7 +69,7 @@ int P_PointOnLineSide(fixed_t x, fixed_t y, line_t *line)
 // P_BoxOnLineSide
 // Considers the line to be infinite
 // Returns side 0 or 1, -1 if box crosses the line.
-// killough 5/3/98: reformatted, cleaned up
+// killough 05/03/98: reformatted, cleaned up
 //
 int P_BoxOnLineSide(fixed_t *tmbox, line_t *ld)
 {
@@ -106,17 +106,6 @@ static int P_PointOnDivlineSide(fixed_t x, fixed_t y, divline_t *line)
         (!line->dy ? (y <= line->y ? line->dx < 0 : line->dx > 0) :
         (line->dy ^ line->dx ^ (x -= line->x) ^ (y -= line->y)) < 0 ? (line->dy ^ x) < 0 :
         FixedMul(y >> 8, line->dx >> 8) >= FixedMul(line->dy >> 8, x >> 8)));
-}
-
-//
-// P_MakeDivline
-//
-static void P_MakeDivline(line_t *li, divline_t *dl)
-{
-    dl->x = li->v1->x;
-    dl->y = li->v1->y;
-    dl->dx = li->dx;
-    dl->dy = li->dy;
 }
 
 //
@@ -199,7 +188,7 @@ void P_UnsetThingPosition(mobj_t *thing)
         // invisible things don't need to be in sector list
         // unlink from subsector
 
-        // killough 8/11/98: simpler scheme using pointers-to-pointers for prev
+        // killough 08/11/98: simpler scheme using pointers-to-pointers for prev
         // pointers, allows head node pointers to be treated like everything else
         mobj_t  **sprev = thing->sprev;
         mobj_t  *snext = thing->snext;
@@ -207,7 +196,7 @@ void P_UnsetThingPosition(mobj_t *thing)
         if ((*sprev = snext))                           // unlink from sector list
             snext->sprev = sprev;
 
-        // phares 3/14/98
+        // phares 03/14/98
         //
         // Save the sector list pointed to by touching_sectorlist.
         // In P_SetThingPosition, we'll keep any nodes that represent
@@ -227,7 +216,7 @@ void P_UnsetThingPosition(mobj_t *thing)
     {
         // inert things don't need to be in blockmap
         //
-        // killough 8/11/98: simpler scheme using pointers-to-pointers for prev
+        // killough 08/11/98: simpler scheme using pointers-to-pointers for prev
         // pointers, allows head node pointers to be treated like everything else
         //
         // Also more robust, since it doesn't depend on current position for
@@ -271,7 +260,7 @@ void P_SetThingPosition(mobj_t *thing)
     {
         // invisible things don't go into the sector links
 
-        // killough 8/11/98: simpler scheme using pointer-to-pointer prev
+        // killough 08/11/98: simpler scheme using pointer-to-pointer prev
         // pointers, allows head nodes to be treated like everything else
         mobj_t  **link = &subsector->sector->thinglist;
         mobj_t  *snext = *link;
@@ -282,7 +271,7 @@ void P_SetThingPosition(mobj_t *thing)
         thing->sprev = link;
         *link = thing;
 
-        // phares 3/16/98
+        // phares 03/16/98
         //
         // If sector_list isn't NULL, it has a collection of sector
         // nodes that were just removed from this Thing.
@@ -308,7 +297,7 @@ void P_SetThingPosition(mobj_t *thing)
 
         if (blockx >= 0 && blockx < bmapwidth && blocky >= 0 && blocky < bmapheight)
         {
-            // killough 8/11/98: simpler scheme using pointer-to-pointer prev
+            // killough 08/11/98: simpler scheme using pointer-to-pointer prev
             // pointers, allows head nodes to be treated like everything else
             mobj_t  **link = &blocklinks[blocky * bmapwidth + blockx];
             mobj_t  *bnext = *link;
@@ -404,7 +393,7 @@ dboolean P_BlockThingsIterator(int x, int y, dboolean func(mobj_t *))
 // INTERCEPT ROUTINES
 //
 
-// 1/11/98 killough: Intercept limit removed
+// killough 01/11/98: Intercept limit removed
 static intercept_t  *intercepts;
 static intercept_t  *intercept_p;
 
@@ -425,7 +414,7 @@ void P_CheckIntercepts(void)
 divline_t   dltrace;
 
 //
-// PIT_AddLineIntercepts.
+// PIT_AddLineIntercepts
 // Looks for lines in the given block
 // that intercept the given trace
 // to add to the intercepts list.
@@ -435,13 +424,12 @@ divline_t   dltrace;
 //
 static dboolean PIT_AddLineIntercepts(line_t *ld)
 {
-    int         s1;
-    int         s2;
+    int         s1, s2;
     fixed_t     frac;
     divline_t   dl;
 
     // avoid precision problems with two routines
-    if (dltrace.dx > FRACUNIT * 16 || dltrace.dy > FRACUNIT * 16 || dltrace.dx < -FRACUNIT * 16 || dltrace.dy < -FRACUNIT * 16)
+    if (dltrace.dx > 16 * FRACUNIT || dltrace.dy > 16 * FRACUNIT || dltrace.dx < -16 * FRACUNIT || dltrace.dy < -16 * FRACUNIT)
     {
         s1 = P_PointOnDivlineSide(ld->v1->x, ld->v1->y, &dltrace);
         s2 = P_PointOnDivlineSide(ld->v2->x, ld->v2->y, &dltrace);
@@ -453,22 +441,25 @@ static dboolean PIT_AddLineIntercepts(line_t *ld)
     }
 
     if (s1 == s2)
-        return true;    // line isn't crossed
+        return true;        // line isn't crossed
 
     // hit the line
-    P_MakeDivline(ld, &dl);
+    dl.x = ld->v1->x;
+    dl.y = ld->v1->y;
+    dl.dx = ld->dx;
+    dl.dy = ld->dy;
 
     if ((frac = P_InterceptVector(&dltrace, &dl)) < 0)
-        return true;    // behind source
+        return true;        // behind source
 
-    P_CheckIntercepts();  // killough
+    P_CheckIntercepts();    // killough
 
     intercept_p->frac = frac;
     intercept_p->isaline = true;
     intercept_p->d.line = ld;
     intercept_p++;
 
-    return true;        // continue
+    return true;            // continue
 }
 
 //
@@ -535,7 +526,7 @@ static dboolean PIT_AddThingIntercepts(mobj_t *thing)
                 if (frac < 0)
                     continue;
 
-                P_CheckIntercepts();  // killough
+                P_CheckIntercepts();    // killough
 
                 intercept_p->frac = frac;
                 intercept_p->isaline = false;
@@ -551,7 +542,7 @@ static dboolean PIT_AddThingIntercepts(mobj_t *thing)
     // must have started inside the box, so add it as an intercept.
     if (!numfronts)
     {
-        P_CheckIntercepts();  // killough
+        P_CheckIntercepts();    // killough
 
         intercept_p->frac = 0;
         intercept_p->isaline = false;
@@ -748,11 +739,9 @@ dboolean P_PathTraverse(fixed_t x1, fixed_t y1, fixed_t x2, fixed_t y2, int flag
 // MAES: support 512x512 blockmaps.
 int P_GetSafeBlockX(int coord)
 {
-    coord >>= MAPBLOCKSHIFT;
-
     // If x is LE than those special values, interpret as positive.
     // Otherwise, leave it as it is.
-    if (coord <= blockmapxneg)
+    if ((coord >>= MAPBLOCKSHIFT) <= blockmapxneg)
         return (coord & 0x01FF);    // Broke width boundary
 
     return coord;
@@ -761,12 +750,10 @@ int P_GetSafeBlockX(int coord)
 // MAES: support 512x512 blockmaps.
 int P_GetSafeBlockY(int coord)
 {
-    coord >>= MAPBLOCKSHIFT;
-
     // If y is LE than those special values, interpret as positive.
     // Otherwise, leave it as it is.
-    if (coord <= blockmapyneg)
-        return (coord & 0x01FF);    // Broke width boundary
+    if ((coord >>= MAPBLOCKSHIFT) <= blockmapyneg)
+        return (coord & 0x01FF);    // Broke height boundary
 
     return coord;
 }

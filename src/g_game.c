@@ -47,6 +47,7 @@
 #include "f_finale.h"
 #include "g_game.h"
 #include "hu_stuff.h"
+#include "i_colors.h"
 #include "i_gamepad.h"
 #include "i_system.h"
 #include "i_timer.h"
@@ -81,30 +82,30 @@ int             gamemap;
 char            speciallumpname[6] = "";
 
 dboolean        paused;
-dboolean        sendpause;                      // send a pause event next tic
-static dboolean sendsave;                       // send a save event next tic
+dboolean        sendpause;                          // send a pause event next tic
+static dboolean sendsave;                           // send a save event next tic
 
 dboolean        viewactive;
 
 int             gametime = 0;
-int             totalkills;                     // for intermission
+int             totalkills;                         // for intermission
 int             totalitems;
 int             totalsecret;
 int             totalpickups;
 int             monstercount[NUMMOBJTYPES];
 int             barrelcount;
 
-wbstartstruct_t wminfo;                         // parms for world map/intermission
+wbstartstruct_t wminfo;                             // parms for world map/intermission
 
 dboolean        autoload = autoload_default;
 dboolean        autosave = autosave_default;
 
 #define MAXPLMOVE       forwardmove[1]
 
-fixed_t         forwardmove[2] = { FORWARDMOVE0, FORWARDMOVE1 };
-fixed_t         sidemove[2] = { SIDEMOVE0, SIDEMOVE1 };
-fixed_t         angleturn[3] = { 640, 1280, 320 };     // + slow turn
-static fixed_t  gamepadangleturn[2] = { 640, 960 };
+fixed_t         forwardmove[] = { FORWARDMOVE0, FORWARDMOVE1 };
+fixed_t         sidemove[] = { SIDEMOVE0, SIDEMOVE1 };
+fixed_t         angleturn[] = { 640, 1280, 320 };   // + slow turn
+static fixed_t  gamepadangleturn[] = { 640, 960 };
 
 #define NUMWEAPONKEYS   7
 
@@ -165,14 +166,14 @@ char            savename[MAX_PATH];
 
 gameaction_t    loadaction = ga_nothing;
 
-unsigned int    stat_gamessaved = 0;
-unsigned int    stat_mapsstarted = 0;
-unsigned int    stat_mapscompleted = 0;
-unsigned int    stat_skilllevel_imtooyoungtodie = 0;
-unsigned int    stat_skilllevel_heynottoorough = 0;
-unsigned int    stat_skilllevel_hurtmeplenty = 0;
-unsigned int    stat_skilllevel_ultraviolence = 0;
-unsigned int    stat_skilllevel_nightmare = 0;
+uint64_t        stat_gamessaved = 0;
+uint64_t        stat_mapsstarted = 0;
+uint64_t        stat_mapscompleted = 0;
+uint64_t        stat_skilllevel_imtooyoungtodie = 0;
+uint64_t        stat_skilllevel_heynottoorough = 0;
+uint64_t        stat_skilllevel_hurtmeplenty = 0;
+uint64_t        stat_skilllevel_ultraviolence = 0;
+uint64_t        stat_skilllevel_nightmare = 0;
 
 extern int      logotic;
 extern int      pagetic;
@@ -542,15 +543,15 @@ void G_DoLoadLevel(void)
     if (viewplayer->playerstate == PST_DEAD)
         viewplayer->playerstate = PST_REBORN;
 
-    if (viewplayer->playerstate == PST_REBORN && !startingnewgame
+    if (viewplayer->playerstate == PST_REBORN
         && (M_StringCompare(mapnum, "E1M4B") || M_StringCompare(mapnum, "E1M8B")))
         M_StringCopy(speciallumpname, mapnum, sizeof(speciallumpname));
 
     viewplayer->damageinflicted = 0;
     viewplayer->damagereceived = 0;
     viewplayer->cheated = 0;
-    viewplayer->shotshit = 0;
-    viewplayer->shotsfired = 0;
+    memset(viewplayer->shotssuccessful, 0, sizeof(viewplayer->shotssuccessful));
+    memset(viewplayer->shotsfired, 0, sizeof(viewplayer->shotsfired));
     viewplayer->distancetraveled = 0;
     viewplayer->gamessaved = 0;
     viewplayer->itemspickedup_ammo_bullets = 0;
@@ -581,7 +582,7 @@ void G_DoLoadLevel(void)
         pendinggameskill = 0;
     }
 
-    // initialize the msecnode_t freelist. phares 3/25/98
+    // initialize the msecnode_t freelist. phares 03/25/98
     // any nodes in the freelist are gone by now, cleared
     // by Z_FreeTags() when the previous level ended or player
     // died.
@@ -657,6 +658,7 @@ dboolean G_Responder(event_t *ev)
     {
         if (!menuactive
             && !consoleactive
+            && !fadecount
             && ((ev->type == ev_keydown
                 && !keydown
                 && ev->data1 != KEY_PAUSE
@@ -666,7 +668,8 @@ dboolean G_Responder(event_t *ev)
                 && ev->data1 != KEY_CAPSLOCK
                 && ev->data1 != KEY_NUMLOCK
                 && (ev->data1 < KEY_F1 || ev->data1 > KEY_F11)
-                && !((ev->data1 == KEY_ENTER || ev->data1 == KEY_TAB) && altdown))
+                && !((ev->data1 == KEY_ENTER || ev->data1 == KEY_TAB) && altdown)
+                && ev->data1 != keyboardscreenshot)
             || (ev->type == ev_mouse && mousewait < I_GetTime() && ev->data1)
             || (ev->type == ev_gamepad
                 && gamepadwait < I_GetTime()
@@ -678,11 +681,6 @@ dboolean G_Responder(event_t *ev)
                 keydown = keyboardalwaysrun;
                 G_ToggleAlwaysRun(ev_keydown);
             }
-            else if (ev->type == ev_keydown && ev->data1 == keyboardscreenshot && keyboardscreenshot == KEY_PRINTSCREEN)
-            {
-                keydown = keyboardscreenshot;
-                G_DoScreenShot();
-            }
             else
             {
                 keydown = ev->data1;
@@ -690,7 +688,7 @@ dboolean G_Responder(event_t *ev)
                 mousewait = I_GetTime() + 5;
                 gamepadwait = mousewait + 3;
 
-                logotic = MAX(77, logotic);
+                logotic = MIN(logotic, 93);
 
                 if (splashscreen)
                     pagetic = MIN(pagetic, 10);
@@ -701,6 +699,13 @@ dboolean G_Responder(event_t *ev)
                 }
             }
 
+            return true;
+        }
+        else if (!menuactive && !consoleactive && ev->type == ev_keyup && ev->data1 == keyboardscreenshot)
+        {
+            S_StartSound(NULL, sfx_scrsht);
+            memset(screens[0], nearestwhite, SCREENAREA);
+            D_FadeScreen();
             return true;
         }
 
@@ -717,7 +722,7 @@ dboolean G_Responder(event_t *ev)
     }
 
     if (gamestate == GS_FINALE && F_Responder(ev))
-        return true;        // finale ate the event
+        return true;            // finale ate the event
 
     switch (ev->type)
     {
@@ -735,6 +740,8 @@ dboolean G_Responder(event_t *ev)
 
                 if (vid_motionblur)
                     I_SetMotionBlur(0);
+
+                D_FadeScreen();
             }
             else if (key == keyboardalwaysrun && !keydown)
             {
@@ -909,10 +916,6 @@ void G_Ticker(void)
                 G_DoWorldDone();
                 break;
 
-            case ga_screenshot:
-                G_DoScreenShot();
-                break;
-
             default:
                 break;
         }
@@ -1026,6 +1029,7 @@ void G_PlayerReborn(void)
     int secretcount = viewplayer->secretcount;
     int deaths = viewplayer->deaths;
     int suicides = viewplayer->suicides;
+    int cheats = viewplayer->cheats;
 
     memset(viewplayer, 0, sizeof(*viewplayer));
 
@@ -1034,6 +1038,7 @@ void G_PlayerReborn(void)
     viewplayer->secretcount = secretcount;
     viewplayer->deaths = deaths;
     viewplayer->suicides = suicides;
+    viewplayer->cheats = cheats;
 
     // don't do anything immediately
     viewplayer->usedown = true;
@@ -1066,12 +1071,6 @@ static void G_DoReborn(void)
 
 void G_ScreenShot(void)
 {
-    if (!splashscreen)
-        gameaction = ga_screenshot;
-}
-
-void G_DoScreenShot(void)
-{
     if (idbehold)
     {
         idbehold = false;
@@ -1089,21 +1088,17 @@ void G_DoScreenShot(void)
     {
         static char buffer[512];
 
-        S_StartSound(NULL, sfx_scrsht);
-
         M_snprintf(buffer, sizeof(buffer), s_GSCREENSHOT, lbmname1);
         HU_SetPlayerMessage(buffer, false, false);
         message_dontfuckwithme = true;
 
-        C_Output("<b>%s</b> saved.", lbmpath1);
+        C_Output("<b>%s</b> was saved.", lbmpath1);
 
         if (*lbmpath2)
-            C_Output("<b>%s</b> saved.", lbmpath2);
+            C_Output("<b>%s</b> was saved.", lbmpath2);
     }
     else
         C_Warning(0, "A screenshot couldn't be taken.");
-
-    gameaction = ga_nothing;
 }
 
 // DOOM Par Times
@@ -1137,7 +1132,7 @@ static const int npars[9] =
 //
 // G_DoCompleted
 //
-static dboolean secretexit;
+dboolean secretexit;
 
 void G_ExitLevel(void)
 {
@@ -1356,10 +1351,25 @@ static void G_DoCompleted(void)
 //
 void G_WorldDone(void)
 {
+    char    *intertext = P_GetInterText(gamemap);
+    char    *intersecrettext = P_GetInterSecretText(gamemap);
+
     gameaction = ga_worlddone;
 
     if (secretexit)
         viewplayer->didsecret = true;
+
+    if (*intertext || (*intersecrettext && secretexit))
+    {
+        F_StartFinale();
+        return;
+    }
+
+    if (P_GetMapEndCast(gamemap))
+    {
+        F_StartFinale();
+        return;
+    }
 
     if (gamemode == commercial)
     {
@@ -1563,7 +1573,7 @@ static void G_DoSaveGame(void)
             C_Input("save %s", savegame_file);
 
         if (consoleactive)
-            C_Output("<b>%s</b> saved.", savename);
+            C_Output("<b>%s</b> was saved.", savename);
         else
         {
             static char buffer[1024];
@@ -1601,7 +1611,6 @@ void G_DeferredInitNew(skill_t skill, int ep, int map)
     d_episode = ep;
     d_map = map;
     gameaction = ga_newgame;
-    startingnewgame = true;
     infight = false;
 
     if (skill == sk_baby)
@@ -1649,7 +1658,7 @@ static void G_DoNewGame(void)
     infight = false;
 }
 
-// killough 4/10/98: New function to fix bug which caused Doom
+// killough 04/10/98: New function to fix bug which caused Doom
 // lockups when idclev was used in conjunction with -fast.
 void G_SetFastParms(int fast_pending)
 {
@@ -1660,7 +1669,7 @@ void G_SetFastParms(int fast_pending)
         if ((fast = fast_pending))
         {
             for (int i = S_SARG_RUN1; i <= S_SARG_PAIN2; i++)
-                if (states[i].tics != 1)    // killough 4/10/98
+                if (states[i].tics != 1)    // killough 04/10/98
                     states[i].tics >>= 1;   // don't change 1->0 since it causes cycles
 
             mobjinfo[MT_BRUISERSHOT].speed = 20 * FRACUNIT;

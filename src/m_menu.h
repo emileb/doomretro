@@ -104,14 +104,14 @@ void M_StartMessage(char *string, void *routine, dboolean input);
 void M_ShowHelp(int choice);
 void M_QuitDOOM(int choice);
 
+void M_AddEpisode(int map, int ep, const char *lumpname, const char *string);
+
 extern dboolean messagetoprint;
 
 extern dboolean nomusic;
 extern dboolean nosound;
 extern dboolean nosfx;
 extern dboolean firstevent;
-extern byte     grays[256];
-extern dboolean startingnewgame;
 extern dboolean savegames;
 extern dboolean inhelpscreens;
 extern int      spindirection;

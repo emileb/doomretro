@@ -298,7 +298,115 @@ static void CheckDOSDefaults(void)
     AddIWADDir("\\dooms");      // Shareware versions
     AddIWADDir("\\doomsw");
 }
+#else
+// Add IWAD directories parsed from splitting a path string containing
+// paths separated by PATH_SEPARATOR. 'suffix' is a string to concatenate
+// to the end of the paths before adding them.
+static void AddIWADPath(const char *path, const char *suffix)
+{
+    char    *p;
+    char    *dup_path = M_StringDuplicate(path);
 
+    // Split into individual dirs within the list.
+    char    *left = dup_path;
+
+    while (true)
+        if ((p = strchr(left, PATH_SEPARATOR)))
+        {
+            // Break at the separator and use the left hand side
+            // as another iwad dir
+            *p = '\0';
+
+            AddIWADDir(M_StringJoin(left, suffix, NULL));
+            left = p + 1;
+        }
+        else
+            break;
+
+    AddIWADDir(M_StringJoin(left, suffix, NULL));
+    free(dup_path);
+}
+
+// Add standard directories where IWADs are located on Unix systems.
+// To respect the freedesktop.org specification we support overriding
+// using standard environment variables. See the XDG Base Directory
+// Specification:
+// <http://standards.freedesktop.org/basedir-spec/basedir-spec-latest.html>
+static void AddXdgDirs(void)
+{
+    // Quote:
+    // > $XDG_DATA_HOME defines the base directory relative to which
+    // > user specific data files should be stored. If $XDG_DATA_HOME
+    // > is either not set or empty, a default equal to
+    // > $HOME/.local/share should be used.
+    char    *env = getenv("XDG_DATA_HOME");
+    char    *tmp_env = NULL;
+
+    if (!env)
+    {
+        char    *homedir = getenv("HOME");
+
+        if (!homedir)
+            homedir = "/";
+
+        tmp_env = M_StringJoin(homedir, "/.local/share", NULL);
+        env = tmp_env;
+    }
+
+    // We support $XDG_DATA_HOME/games/doom (which will usually be
+    // ~/.local/share/games/doom) as a user-writable extension to
+    // the usual /usr/share/games/doom location.
+    AddIWADDir(M_StringJoin(env, "/games/doom", NULL));
+    free(tmp_env);
+
+    // Quote:
+    // > $XDG_DATA_DIRS defines the preference-ordered set of base
+    // > directories to search for data files in addition to the
+    // > $XDG_DATA_HOME base directory. The directories in $XDG_DATA_DIRS
+    // > should be seperated with a colon ':'.
+    // >
+    // > If $XDG_DATA_DIRS is either not set or empty, a value equal to
+    // > /usr/local/share/:/usr/share/ should be used.
+
+    if (!(env = getenv("XDG_DATA_DIRS")))
+        // (Trailing / omitted from paths, as it is added below)
+        env = "/usr/local/share:/usr/share";
+
+    // The "standard" location for IWADs on Unix that is supported by most
+    // source ports is /usr/share/games/doom - we support this through the
+    // XDG_DATA_DIRS mechanism, through which it can be overridden.
+    AddIWADPath(env, "/games/doom");
+    AddIWADPath(env, "/doom");
+
+    // The convention set by RBDOOM-3-BFG is to install Doom 3: BFG
+    // Edition into this directory, under which includes the Doom
+    // Classic WADs.
+    AddIWADPath(env, "/games/doom3bfg/base/wads");
+}
+
+#if !defined(__APPLE__)
+// Steam on Linux allows installing some select Windows games,
+// including the classic Doom series (running DOSBox via Wine). We
+// could parse *.vdf files to more accurately detect installation
+// locations, but the defaults are likely to be good enough for just
+// about everyone.
+static void AddSteamDirs(void)
+{
+    char    *homedir = getenv("HOME");
+    char    *steampath;
+
+    if (!homedir)
+        homedir = "/";
+
+    steampath = M_StringJoin(homedir, "/.steam/root/steamapps/common", NULL);
+
+    AddIWADPath(steampath, "/Doom 2/base");
+    AddIWADPath(steampath, "/Ultimate Doom/base");
+    AddIWADPath(steampath, "/Final Doom/base");
+    AddIWADPath(steampath, "/DOOM 3 BFG Edition/base/wads");
+    free(steampath);
+}
+#endif
 #endif
 
 typedef struct
@@ -318,6 +426,59 @@ static const iwads_t iwads[] =
     { "hacx",     doom2      },
     { "",         0          }
 };
+
+#if !defined(_WIN32) && !defined(__APPLE__)
+// Returns true if the specified path is a path to a file
+// of the specified name.
+static dboolean DirIsFile(char *path, char *filename)
+{
+    return (strchr(path, DIR_SEPARATOR) && !strcasecmp(leafname(path), filename));
+}
+
+// Check if the specified directory contains the specified IWAD
+// file, returning the full path to the IWAD if found, or NULL
+// if not found.
+static char *CheckDirectoryHasIWAD(char *dir, char *iwadname)
+{
+    char    *filename;
+    char    *probe = M_FileCaseExists(dir);
+
+    // As a special case, the "directory" may refer directly to an
+    // IWAD file if the path comes from DOOMWADDIR or DOOMWADPATH.
+    if (DirIsFile(dir, iwadname) && probe)
+        return probe;
+
+    // Construct the full path to the IWAD if it is located in
+    // this directory, and check if it exists.
+    if (!strcmp(dir, "."))
+        filename = M_StringDuplicate(iwadname);
+    else
+        filename = M_StringJoin(dir, DIR_SEPARATOR_S, iwadname, ".wad", NULL);
+
+    free(probe);
+    probe = M_FileCaseExists(filename);
+    free(filename);
+    return probe;
+}
+
+// Search a directory to try to find an IWAD
+// Returns the location of the IWAD if found, otherwise NULL.
+static char *SearchDirectoryForIWAD(char *dir)
+{
+    for (size_t i = 0; i < arrlen(iwads); ++i)
+    {
+        char    *filename = CheckDirectoryHasIWAD(dir, iwads[i].name);
+
+        if (filename)
+        {
+            gamemission = iwads[i].mission;
+            return filename;
+        }
+    }
+
+    return NULL;
+}
+#endif
 
 // When given an IWAD with the '-iwad' parameter,
 // attempt to identify it by its name.
@@ -370,7 +531,7 @@ static void AddDoomWADPath(void)
     // Split into individual dirs within the list.
     p = doomwadpath;
 
-    for (;;)
+    while (true)
     {
         if ((p = strchr(p, PATH_SEPARATOR)))
         {
@@ -409,6 +570,12 @@ static void BuildIWADDirList(void)
     CheckInstallRootPaths();
     CheckSteamEdition();
     CheckDOSDefaults();
+#else
+    AddXdgDirs();
+
+#if !defined(__APPLE__)
+    AddSteamDirs();
+#endif
 #endif
 
     // Don't run this function again.
@@ -520,6 +687,16 @@ char *D_FindIWAD(void)
 
         D_IdentifyIWADByName(result);
     }
+#if !defined(_WIN32) && !defined(__APPLE__)
+    else
+    {
+        // Search through the list and look for an IWAD
+        BuildIWADDirList();
+
+        for (int i = 0; !result && i < num_iwad_dirs; i++)
+            result = SearchDirectoryForIWAD(iwad_dirs[i]);
+    }
+#endif
 
     return result;
 }

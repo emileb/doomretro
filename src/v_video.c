@@ -59,16 +59,15 @@
 #include "version.h"
 #include "w_wad.h"
 
-#define WHITE   4
+#define WHITE       4
+#define LIGHTGRAY   82
 
-// Each screen is [SCREENWIDTH * SCREENHEIGHT];
+#define DX          ((SCREENWIDTH << FRACBITS) / VANILLAWIDTH)
+#define DXI         ((VANILLAWIDTH << FRACBITS) / SCREENWIDTH)
+#define DY          ((SCREENHEIGHT << FRACBITS) / VANILLAHEIGHT)
+#define DYI         ((VANILLAHEIGHT << FRACBITS) / SCREENHEIGHT)
+
 byte            *screens[5];
-
-byte            *menushadow;
-byte            *hudhighlight;
-
-static fixed_t  DX, DY;
-static fixed_t  DXI, DYI;
 
 int             lowpixelwidth;
 int             lowpixelheight;
@@ -213,10 +212,10 @@ void V_DrawSTBARPatch(int x, int y, patch_t *patch)
     int     w = SHORT(patch->width);
     int     col = 0;
 
-    if (w > ORIGINALWIDTH)
+    if (w > VANILLAWIDTH)
     {
-        col = (w - ORIGINALWIDTH) / 2;
-        w = ORIGINALWIDTH + col;
+        col = (w - VANILLAWIDTH) / 2;
+        w = VANILLAWIDTH + col;
     }
 
     w <<= FRACBITS;
@@ -249,34 +248,16 @@ void V_DrawSTBARPatch(int x, int y, patch_t *patch)
 
 void V_DrawPagePatch(patch_t *patch)
 {
-    const short width = SHORT(patch->width);
-    const short height = SHORT(patch->height);
-
     patch->leftoffset = 0;
     patch->topoffset = 0;
-
-    DX = (SCREENWIDTH << FRACBITS) / width;
-    DXI = (width << FRACBITS) / SCREENWIDTH;
-    DY = (SCREENHEIGHT << FRACBITS) / height;
-    DYI = (height << FRACBITS) / SCREENHEIGHT;
-
-    memset(screens[0], nearestblack, SCREENWIDTH * SCREENHEIGHT);
-
+    memset(screens[0], nearestblack, SCREENAREA);
     V_DrawPatch(0, 0, 0, patch);
-
-    DX = (SCREENWIDTH << FRACBITS) / ORIGINALWIDTH;
-    DXI = (ORIGINALWIDTH << FRACBITS) / SCREENWIDTH;
-    DY = (SCREENHEIGHT << FRACBITS) / ORIGINALHEIGHT;
-    DYI = (ORIGINALHEIGHT << FRACBITS) / SCREENHEIGHT;
 }
 
 void V_DrawShadowPatch(int x, int y, patch_t *patch)
 {
     byte        *desttop;
     const int   w = SHORT(patch->width) << FRACBITS;
-    const int   black = nearestblack << 8;
-    const byte  *body = tinttab40 + black;
-    const byte  *edge = tinttab25 + black;
 
     y -= SHORT(patch->topoffset) / 10;
     x -= SHORT(patch->leftoffset);
@@ -294,26 +275,26 @@ void V_DrawShadowPatch(int x, int y, patch_t *patch)
             int     count = ((column->length * DY / 10) >> FRACBITS) + 1;
 
             if (count == 1)
-                *dest = edge[*dest];
+                *dest = black25[*dest];
             else if (count == 2)
             {
-                *dest = edge[*dest];
+                *dest = black25[*dest];
                 dest += SCREENWIDTH;
-                *dest = edge[*dest];
+                *dest = black25[*dest];
             }
             else
             {
                 count--;
-                *dest = edge[*dest];
+                *dest = black25[*dest];
                 dest += SCREENWIDTH;
 
                 while (--count)
                 {
-                    *dest = body[*dest];
+                    *dest = black40[*dest];
                     dest += SCREENWIDTH;
                 }
 
-                *dest = edge[*dest];
+                *dest = black25[*dest];
             }
 
             column = (column_t *)((byte *)column + column->length + 4);
@@ -358,10 +339,10 @@ void V_DrawSpectreShadowPatch(int x, int y, patch_t *patch)
     byte        *desttop;
     const int   w = SHORT(patch->width) << FRACBITS;
     const byte  *shadow = &tinttab40[nearestblack << 8];
-    int         fuzzpos = 0;
 
     y -= SHORT(patch->topoffset) / 10;
     x -= SHORT(patch->leftoffset);
+    fuzzpos = 0;
 
     desttop = &screens[0][((y * DY) >> FRACBITS) * SCREENWIDTH + ((x * DX) >> FRACBITS)];
 
@@ -398,10 +379,10 @@ void V_DrawSolidSpectreShadowPatch(int x, int y, patch_t *patch)
 {
     byte        *desttop;
     const int   w = SHORT(patch->width) << FRACBITS;
-    int         fuzzpos = 0;
 
     y -= SHORT(patch->topoffset) / 10;
     x -= SHORT(patch->leftoffset);
+    fuzzpos = 0;
 
     desttop = &screens[0][((y * DY) >> FRACBITS) * SCREENWIDTH + ((x * DX) >> FRACBITS)];
 
@@ -468,11 +449,10 @@ void V_DrawBigPatch(int x, int y, patch_t *patch)
     }
 }
 
-void V_DrawConsoleTextPatch(int x, int y, patch_t *patch, int width, int color,
+void V_DrawConsoleInputTextPatch(int x, int y, patch_t *patch, int width, int color,
     int backgroundcolor, dboolean italics, byte *translucency)
 {
-    byte        *desttop = &screens[0][y * SCREENWIDTH + x];
-    const int   italicize[15] = { 0, 2, 2, 2, 1, 1, 1, 1, 0, 0, 0, 0, -1, -1, -1 };
+    byte    *desttop = &screens[0][y * SCREENWIDTH + x];
 
     for (int col = 0; col < width; col++, desttop++)
     {
@@ -484,27 +464,12 @@ void V_DrawConsoleTextPatch(int x, int y, patch_t *patch, int width, int color,
         {
             byte    *source = (byte *)column + 3;
             byte    *dest = &desttop[topdelta * SCREENWIDTH];
-            byte    length = column->length;
-            int     count = length;
 
-            while (count--)
+            for (int i = 0; i < CONSOLELINEHEIGHT; i++)
             {
-                int height = topdelta + length - count;
-
-                if (y + height > CONSOLETOP)
+                if (y + i >= CONSOLETOP)
                 {
-                    if (backgroundcolor == NOBACKGROUNDCOLOR)
-                    {
-                        if (*source)
-                        {
-                            if (italics)
-                                *(dest + italicize[height]) = (!translucency ? color :
-                                    translucency[(color << 8) + *(dest + italicize[height])]);
-                            else
-                                *dest = (!translucency ? color : translucency[(color << 8) + *dest]);
-                        }
-                    }
-                    else if (*source == WHITE)
+                    if (*source == WHITE)
                         *dest = color;
                     else if (*dest != color)
                         *dest = backgroundcolor;
@@ -514,7 +479,45 @@ void V_DrawConsoleTextPatch(int x, int y, patch_t *patch, int width, int color,
                 dest += SCREENWIDTH;
             }
 
-            column = (column_t *)((byte *)column + length + 4);
+            column = (column_t *)((byte *)column + CONSOLELINEHEIGHT + 4);
+        }
+    }
+}
+
+void V_DrawConsoleOutputTextPatch(int x, int y, patch_t *patch, int width, int color,
+    int backgroundcolor, dboolean italics, byte *translucency)
+{
+    byte        *desttop = &screens[0][y * SCREENWIDTH + x];
+    const int   italicize[] = { 2, 2, 2, 1, 1, 1, 1, 0, 0, 0, 0, -1, -1, -1 };
+
+    for (int col = 0; col < width; col++, desttop++)
+    {
+        column_t    *column = (column_t *)((byte *)patch + LONG(patch->columnofs[col]));
+        byte        topdelta;
+
+        // step through the posts in a column
+        while ((topdelta = column->topdelta) != 0xFF)
+        {
+            byte    *source = (byte *)column + 3;
+            byte    *dest = &desttop[topdelta * SCREENWIDTH];
+
+            for (int i = 0; i < CONSOLELINEHEIGHT; i++)
+            {
+                if (y + i >= CONSOLETOP && *source)
+                {
+                    byte    *dot = dest;
+
+                    if (italics)
+                        dot += italicize[i];
+
+                    *dot = (!translucency ? color : translucency[(color << 8) + *dot]);
+                }
+
+                source++;
+                dest += SCREENWIDTH;
+            }
+
+            column = (column_t *)((byte *)column + CONSOLELINEHEIGHT + 4);
         }
     }
 }
@@ -532,18 +535,20 @@ void V_DrawConsolePatch(int x, int y, patch_t *patch, int color)
         // step through the posts in a column
         while ((topdelta = column->topdelta) != 0xFF)
         {
-            byte    *source = (byte *)column + 3;
-            byte    *dest = &desttop[topdelta * SCREENWIDTH];
-            byte    length = column->length;
-            int     count = length;
+            byte        *source = (byte *)column + 3;
+            byte        *dest = &desttop[topdelta * SCREENWIDTH];
+            const byte  length = column->length;
+            int         count = length;
+            int         height = topdelta + 1;
 
             while (count--)
             {
-                if (y + topdelta + length - count > CONSOLETOP && *source)
-                    *dest = tinttab50[(*source == 4 ? (nearestwhite << 8) : color) + *dest];
+                if (y + height > CONSOLETOP)
+                    *dest = tinttab50[(nearestcolors[*source] << 8) + *dest];
 
                 source++;
                 dest += SCREENWIDTH;
+                height++;
             }
 
             column = (column_t *)((byte *)column + length + 4);
@@ -564,18 +569,20 @@ void V_DrawConsoleBrandingPatch(int x, int y, patch_t *patch, int color)
         // step through the posts in a column
         while ((topdelta = column->topdelta) != 0xFF)
         {
-            byte    *source = (byte *)column + 3;
-            byte    *dest = &desttop[topdelta * SCREENWIDTH];
-            byte    length = column->length;
-            int     count = length;
+            byte        *source = (byte *)column + 3;
+            byte        *dest = &desttop[topdelta * SCREENWIDTH];
+            const byte  length = column->length;
+            int         count = length;
+            int         height = topdelta + 1;
 
             while (count--)
             {
-                if (y + topdelta + length - count > CONSOLETOP && *source)
-                    *dest = (*source == 4 || *source == 82 ? nearestcolors[*source] : tinttab50[color + *dest]);
+                if (y + height > CONSOLETOP && *source)
+                    *dest = (*source == WHITE || *source == LIGHTGRAY ? nearestcolors[*source] : tinttab50[color + *dest]);
 
                 source++;
                 dest += SCREENWIDTH;
+                height++;
             }
 
             column = (column_t *)((byte *)column + length + 4);
@@ -779,7 +786,7 @@ void V_DrawPatchWithShadow(int x, int y, patch_t *patch, dboolean flag)
                     byte    *dot = dest + SCREENWIDTH + 2;
 
                     if (!flag || (*dot != 47 && *dot != 191))
-                        *dot = menushadow[*dot];
+                        *dot = black40[*dot];
                 }
 
                 srccol += DYI;
@@ -837,7 +844,7 @@ void V_DrawHighlightedHUDNumberPatch(int x, int y, patch_t *patch, byte *translu
             {
                 byte    dot = *source++;
 
-                *dest = (dot == 109 ? tinttab33[*dest] : hudhighlight[dot]);
+                *dest = (dot == 109 ? tinttab33[*dest] : yellow15[dot]);
                 dest += SCREENWIDTH;
             }
 
@@ -1141,10 +1148,10 @@ void V_DrawFlippedSpectreShadowPatch(int x, int y, patch_t *patch)
     byte        *desttop;
     const int   w = SHORT(patch->width) << FRACBITS;
     const byte  *shadow = &tinttab40[nearestblack << 8];
-    int         fuzzpos = 0;
 
     y -= SHORT(patch->topoffset) / 10;
     x -= SHORT(patch->leftoffset);
+    fuzzpos = 0;
 
     desttop = &screens[0][(((y + 3) * DY) >> FRACBITS) * SCREENWIDTH + ((x * DX) >> FRACBITS)];
 
@@ -1181,10 +1188,10 @@ void V_DrawFlippedSolidSpectreShadowPatch(int x, int y, patch_t *patch)
 {
     byte        *desttop;
     const int   w = SHORT(patch->width) << FRACBITS;
-    int         fuzzpos = 0;
 
     y -= SHORT(patch->topoffset) / 10;
     x -= SHORT(patch->leftoffset);
+    fuzzpos = 0;
 
     desttop = &screens[0][(((y + 3) * DY) >> FRACBITS) * SCREENWIDTH + ((x * DX) >> FRACBITS)];
 
@@ -1255,10 +1262,10 @@ void V_DrawFuzzPatch(int x, int y, patch_t *patch)
 {
     byte        *desttop;
     const int   w = SHORT(patch->width) << FRACBITS;
-    int         fuzzpos = 0;
 
     y -= SHORT(patch->topoffset);
     x -= SHORT(patch->leftoffset);
+    fuzzpos = 0;
 
     desttop = &screens[0][((y * DY) >> FRACBITS) * SCREENWIDTH + ((x * DX) >> FRACBITS)];
 
@@ -1289,10 +1296,10 @@ void V_DrawFlippedFuzzPatch(int x, int y, patch_t *patch)
 {
     byte        *desttop;
     const int   w = SHORT(patch->width) << FRACBITS;
-    int         fuzzpos = 0;
 
     y -= SHORT(patch->topoffset);
     x -= SHORT(patch->leftoffset);
+    fuzzpos = 0;
 
     desttop = &screens[0][((y * DY) >> FRACBITS) * SCREENWIDTH + ((x * DX) >> FRACBITS)];
 
@@ -1365,7 +1372,7 @@ void V_DrawNoGreenPatchWithShadow(int x, int y, patch_t *patch)
                     dot = dest + SCREENWIDTH * 2 + 2;
 
                     if (*dot != 47 && *dot != 191)
-                        *dot = menushadow[*dot];
+                        *dot = black40[*dot];
                 }
 
                 dest += SCREENWIDTH;
@@ -1424,7 +1431,7 @@ void V_DrawPixel(int x, int y, byte color, dboolean drawshadow)
         {
             byte    *dot = *screens + ((size_t)y * SCREENWIDTH + x) * 2;
 
-            color = menushadow[*dot];
+            color = black40[*dot];
             *(dot++) = color;
             *dot = color;
             *(dot += SCREENWIDTH) = color;
@@ -1453,7 +1460,7 @@ void V_DrawPixel(int x, int y, byte color, dboolean drawshadow)
                 {
                     byte    *dot = dest + yy + xx;
 
-                    *dot = menushadow[*dot];
+                    *dot = black40[*dot];
                 }
         }
     }
@@ -1551,7 +1558,7 @@ void V_InvertScreen(void)
 //
 void V_Init(void)
 {
-    byte                *base = malloc(SCREENWIDTH * SCREENHEIGHT * 4);
+    byte                *base = malloc(SCREENAREA * 4);
     const SDL_version   *linked = IMG_Linked_Version();
     int                 p;
 
@@ -1564,12 +1571,7 @@ void V_Init(void)
             SDL_IMAGE_FILENAME, PACKAGE_NAME, SDL_IMAGE_MAJOR_VERSION, SDL_IMAGE_MINOR_VERSION, SDL_IMAGE_PATCHLEVEL);
 
     for (int i = 0; i < 4; i++)
-        screens[i] = &base[i * SCREENWIDTH * SCREENHEIGHT];
-
-    DX = (SCREENWIDTH << FRACBITS) / ORIGINALWIDTH;
-    DXI = (ORIGINALWIDTH << FRACBITS) / SCREENWIDTH;
-    DY = (SCREENHEIGHT << FRACBITS) / ORIGINALHEIGHT;
-    DYI = (ORIGINALHEIGHT << FRACBITS) / SCREENHEIGHT;
+        screens[i] = &base[i * SCREENAREA];
 
     GetPixelSize(true);
 
@@ -1700,7 +1702,7 @@ dboolean V_ScreenShot(void)
 
     result = V_SavePNG(renderer, lbmpath1);
 
-    if (mapwindow && result && gamestate == GS_LEVEL)
+    if (result && mapwindow && gamestate == GS_LEVEL)
     {
         lbmpath2[0] = '\0';
 

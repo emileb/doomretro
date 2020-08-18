@@ -133,7 +133,7 @@ static struct
     char    *patchname;
     int     mobjnum;
     patch_t *patch;
-} ammopic[NUMAMMO] = {
+} ammopic[] = {
     { "CLIPA0", MT_CLIP   },
     { "SHELA0", MT_MISC22 },
     { "CELLA0", MT_MISC20 },
@@ -145,7 +145,7 @@ static struct
     char    *patchnamea;
     char    *patchnameb;
     patch_t *patch;
-} keypics[NUMCARDS] = {
+} keypics[] = {
     { "BKEYA0", "BKEYB0" },
     { "YKEYA0", "YKEYB0" },
     { "RKEYA0", "RKEYB0" },
@@ -215,7 +215,7 @@ void HU_Init(void)
         hu_font[i] = W_CacheLumpName(buffer);
     }
 
-    caretcolor = FindDominantColor(hu_font['A' - HU_FONTSTART]);
+    caretcolor = FindDominantColor(hu_font['A' - HU_FONTSTART], W_CacheLumpName("PLAYPAL"));
 
     if (W_CheckNumForName("STTMINUS") >= 0)
         if (W_CheckMultipleLumps("STTMINUS") > 1 || W_CheckMultipleLumps("STTNUM0") == 1)
@@ -283,7 +283,7 @@ void HU_Start(void)
     // create the map title widget
     HUlib_InitTextLine(&w_title, w_title.x, w_title.y, hu_font, HU_FONTSTART);
 
-    while (M_StringWidth(s) > (vid_widescreen ? SCREENWIDTH - 12 : ORIGINALWIDTH - 6))
+    while (M_StringWidth(s) > (vid_widescreen ? SCREENWIDTH - 12 : VANILLAWIDTH - 6))
     {
         if (len >= 2 && s[len - 2] == ' ')
         {
@@ -311,7 +311,6 @@ void HU_Start(void)
 
 static void DrawHUDNumber(int *x, int y, int val, byte *translucency, void (*drawhudnumfunc)(int, int, patch_t *, byte *))
 {
-    int     oldval;
     patch_t *patch;
 
     if (val < 0)
@@ -329,31 +328,31 @@ static void DrawHUDNumber(int *x, int y, int val, byte *translucency, void (*dra
             val = 0;
     }
 
-    if (val > 99)
+    if (val >= 100)
     {
-        patch = tallnum[val / 100];
-        drawhudnumfunc(*x, y, patch, translucency);
+        drawhudnumfunc(*x, y, (patch = tallnum[val / 100]), translucency);
+        *x += SHORT(patch->width);
+        drawhudnumfunc(*x, y, (patch = tallnum[(val %= 100) / 10]), translucency);
+        *x += SHORT(patch->width);
+        drawhudnumfunc(*x, y, (patch = tallnum[val % 10]), translucency);
         *x += SHORT(patch->width);
     }
-
-    oldval = val;
-    val %= 100;
-
-    if (val > 9 || oldval > 99)
+    else if (val >= 10)
     {
-        patch = tallnum[val / 10];
-        drawhudnumfunc(*x, y, patch, translucency);
+        drawhudnumfunc(*x, y, (patch = tallnum[val / 10]), translucency);
+        *x += SHORT(patch->width);
+        drawhudnumfunc(*x, y, (patch = tallnum[val % 10]), translucency);
         *x += SHORT(patch->width);
     }
-
-    patch = tallnum[val % 10];
-    drawhudnumfunc(*x, y, patch, translucency);
-    *x += SHORT(patch->width);
+    else
+    {
+        drawhudnumfunc(*x, y, (patch = tallnum[val % 10]), translucency);
+        *x += SHORT(patch->width);
+    }
 }
 
 static int HUDNumberWidth(int val)
 {
-    int oldval;
     int width = 0;
 
     if (val < 0)
@@ -370,14 +369,13 @@ static int HUDNumberWidth(int val)
             val = 0;
     }
 
-    if (val > 99)
+    if (val >= 100)
+    {
         width += SHORT(tallnum[val / 100]->width);
-
-    oldval = val;
-    val %= 100;
-
-    if (val > 9 || oldval > 99)
-        width += SHORT(tallnum[val / 10]->width);
+        width += SHORT(tallnum[(val %= 100) / 10]->width);
+    }
+    else if (val >= 10)
+        width = SHORT(tallnum[val / 10]->width);
 
     return (width + SHORT(tallnum[val % 10]->width));
 }
@@ -467,7 +465,7 @@ static void HU_DrawHUD(void)
     const int           armor = viewplayer->armorpoints;
     int                 health_x = HUDNumberWidth(health);
     static dboolean     healthanim;
-    const dboolean      gamepaused = (menuactive || paused || consoleactive || freeze);
+    const dboolean      gamepaused = (consoleactive || freeze);
     byte                *translucency = (health <= 0 || (health <= HUD_HEALTH_MIN && healthanim)
                             || health > HUD_HEALTH_MIN || gamepaused ? tinttab66 : tinttab25);
     patch_t             *patch;
@@ -664,7 +662,6 @@ static patch_t  *altrightpatch;
 static patch_t  *altmarkpatch;
 static patch_t  *altmark2patch;
 
-int             white;
 static int      gray;
 static int      darkgray;
 static int      green;
@@ -703,7 +700,7 @@ static void HU_AltInit(void)
         if (lumpinfo[i]->wadfile->type == PWAD)
         {
             if (keypics[i].patch)
-                altkeypics[i].color = FindDominantColor(keypics[i].patch);
+                altkeypics[i].color = FindDominantColor(keypics[i].patch, W_CacheLumpName("SPLSHPAL"));
         }
         else if (!BTSX)
             altkeypics[i].color = nearestcolors[altkeypics[i].color];
@@ -726,7 +723,7 @@ static void HU_AltInit(void)
         }
     }
 
-    if (!weaponschanged)
+    if (!weaponschanged || BTSX)
         for (int i = 1; i < NUMWEAPONS; i++)
         {
             M_snprintf(buffer, sizeof(buffer), "DRHUDWP%i", i);
@@ -736,7 +733,6 @@ static void HU_AltInit(void)
     altleftpatch = W_CacheLumpName("DRHUDL");
     altrightpatch = W_CacheLumpName("DRHUDR");
 
-    white = nearestcolors[WHITE];
     gray = nearestcolors[GRAY];
     darkgray = nearestcolors[DARKGRAY];
     green = nearestcolors[GREEN];
@@ -747,8 +743,6 @@ static void HU_AltInit(void)
 
 static void DrawAltHUDNumber(int x, int y, int val, int color)
 {
-    patch_t *patch;
-
     if (val < 0)
     {
         val = -val;
@@ -758,22 +752,22 @@ static void DrawAltHUDNumber(int x, int y, int val, int color)
 
     if (val >= 100)
     {
-        patch = altnum[val / 100];
-        althudfunc(x, y, patch, WHITE, color);
-        x += SHORT(patch->width) + 2;
+        patch_t *patch = altnum[val / 100];
 
-        patch = altnum[(val %= 100) / 10];
         althudfunc(x, y, patch, WHITE, color);
         x += SHORT(patch->width) + 2;
+        althudfunc(x, y, (patch = altnum[(val %= 100) / 10]), WHITE, color);
+        althudfunc(x + SHORT(patch->width) + 2, y, altnum[val % 10], WHITE, color);
     }
     else if (val >= 10)
     {
-        patch = altnum[val / 10];
-        althudfunc(x, y, patch, WHITE, color);
-        x += SHORT(patch->width) + 2;
-    }
+        patch_t *patch = altnum[val / 10];
 
-    althudfunc(x, y, altnum[val % 10], WHITE, color);
+        althudfunc(x, y, patch, WHITE, color);
+        althudfunc(x + SHORT(patch->width) + 2, y, altnum[val % 10], WHITE, color);
+    }
+    else
+        althudfunc(x, y, altnum[val % 10], WHITE, color);
 }
 
 static int AltHUDNumberWidth(int val)
@@ -793,11 +787,10 @@ static int AltHUDNumberWidth(int val)
 
 static void DrawAltHUDNumber2(int x, int y, int val, int color)
 {
-    patch_t *patch;
-
     if (val >= 100)
     {
-        patch = altnum2[val / 100];
+        patch_t *patch = altnum2[val / 100];
+
         althudfunc(x, y, patch, WHITE, color);
         x += SHORT(patch->width) + 2;
 
@@ -807,7 +800,8 @@ static void DrawAltHUDNumber2(int x, int y, int val, int color)
     }
     else if (val >= 10)
     {
-        patch = altnum2[val / 10];
+        patch_t *patch = altnum2[val / 10];
+
         althudfunc(x, y, patch, WHITE, color);
         x += SHORT(patch->width) + 2;
     }
@@ -833,7 +827,7 @@ static int AltHUDNumber2Width(int val)
 static void HU_DrawAltHUD(void)
 {
     dboolean        invert = ((viewplayer->fixedcolormap == INVERSECOLORMAP) ^ (!r_textures));
-    int             color = (invert ? colormaps[0][32 * 256 + white] : white);
+    int             color = (invert ? colormaps[0][32 * 256 + nearestwhite] : nearestwhite);
     int             health = MAX(health_min, viewplayer->health);
     int             armor = viewplayer->armorpoints;
     int             barcolor2 = (health <= 20 ? red : (health >= 100 ? green : color));
@@ -921,7 +915,7 @@ static void HU_DrawAltHUD(void)
 
     if (viewplayer->neededcardflash)
     {
-        const dboolean  gamepaused = (menuactive || paused || consoleactive || freeze);
+        const dboolean  gamepaused = (consoleactive || freeze);
         const int       neededcard = viewplayer->neededcard;
 
         if (neededcard == it_allkeys)
@@ -966,9 +960,8 @@ static void HU_DrawAltHUD(void)
             if (showkey || gamepaused)
             {
                 altkeypic_t altkeypic = altkeypics[viewplayer->neededcard];
-                patch_t     *patch = altkeypic.patch;
 
-                althudfunc(keypic_x, ALTHUD_Y, patch, WHITE, altkeypic.color);
+                althudfunc(keypic_x, ALTHUD_Y, altkeypic.patch, WHITE, altkeypic.color);
             }
         }
     }
@@ -1002,8 +995,10 @@ static void HU_DrawAltHUD(void)
         powerupbar = (powerup == -1 ? INT_MAX : powerup);
     }
 
-    if (powerupbar == INT_MAX || (!powerupbar && viewplayer->powers[pw_strength]
-        && ((viewplayer->readyweapon == wp_fist && viewplayer->pendingweapon == wp_nochange) || viewplayer->pendingweapon == wp_fist)))
+    if (powerupbar == INT_MAX
+        || (!powerupbar && viewplayer->powers[pw_strength]
+            && ((viewplayer->readyweapon == wp_fist && viewplayer->pendingweapon == wp_nochange)
+                || viewplayer->pendingweapon == wp_fist)))
     {
         max = STARTFLASHING + 1;
         powerupbar = STARTFLASHING + 1;
@@ -1024,7 +1019,7 @@ void HU_DrawDisk(void)
 
 void HU_Drawer(void)
 {
-    if (menuactive)
+    if (menuactive || paused)
         return;
 
     if (w_message.l->l[0])
@@ -1038,13 +1033,13 @@ void HU_Drawer(void)
         {
             if (r_althud)
             {
-                w_message.l->x = BETWEEN(0, HU_MSGX, ORIGINALWIDTH - M_StringWidth(w_message.l->l));
-                w_message.l->y = BETWEEN(0, HU_MSGY, ORIGINALHEIGHT - ORIGINALSBARHEIGHT - hu_font[0]->height);
+                w_message.l->x = HU_MSGX;
+                w_message.l->y = HU_MSGY;
             }
             else
             {
-                w_message.l->x = BETWEEN(0, HU_MSGX * SCREENSCALE, SCREENWIDTH - M_StringWidth(w_message.l->l)) + 9;
-                w_message.l->y = BETWEEN(0, HU_MSGY * SCREENSCALE, SCREENHEIGHT - SBARHEIGHT - hu_font[0]->height) + 4;
+                w_message.l->x = HU_MSGX * SCREENSCALE + 9;
+                w_message.l->y = HU_MSGY * SCREENSCALE + 4;
             }
         }
         else
@@ -1071,7 +1066,7 @@ void HU_Drawer(void)
         else
         {
             w_title.x = HU_TITLEX;
-            w_title.y = ORIGINALHEIGHT - ORIGINALSBARHEIGHT - hu_font[0]->height - 2;
+            w_title.y = VANILLAHEIGHT - VANILLASBARHEIGHT - hu_font[0]->height - 2;
 
             HUlib_DrawTextLine(&w_title, false);
         }
@@ -1103,6 +1098,9 @@ void HU_Drawer(void)
 
         if (mapwindow)
         {
+            w_title.x = HU_TITLEX * SCREENSCALE;
+            w_title.y = SCREENHEIGHT - SBARHEIGHT - hu_font[0]->height - 4;
+
             if (vid_widescreen && r_althud)
                 HUlib_DrawAltAutomapTextLine(&w_title, true);
             else
@@ -1144,24 +1142,26 @@ void HU_Ticker(void)
 
         if (automapactive && !am_followmode)
         {
+            char        *temp = striptrailingzero((float)direction, 1);
             mpoint_t    center = am_frame.center;
             int         x = center.x >> MAPBITS;
             int         y = center.y >> MAPBITS;
 
-            M_snprintf(buffer, sizeof(buffer), s_STSTR_MYPOS, direction, x, y,
-                R_PointInSubsector(x, y)->sector->floorheight >> FRACBITS);
+            M_snprintf(buffer, sizeof(buffer), s_STSTR_MYPOS, temp, x, y, R_PointInSubsector(x, y)->sector->floorheight >> FRACBITS);
+            free(temp);
         }
         else
         {
-            int     angle = (int)(viewangle * 90.0 / ANG90);
+            float   angle = viewangle * 90.0f / ANG90;
+            char    *temp = striptrailingzero((angle == 360.0f ? 0.0f : angle), 2);
             mobj_t  *mo = viewplayer->mo;
             int     z = mo->z;
 
             if ((mo->flags2 & MF2_FEETARECLIPPED) && r_liquid_lowerview)
                 z -= FOOTCLIPSIZE;
 
-            M_snprintf(buffer, sizeof(buffer), s_STSTR_MYPOS, (angle == 360 ? 0 : angle),
-                viewx >> FRACBITS, viewy >> FRACBITS, z >> FRACBITS);
+            M_snprintf(buffer, sizeof(buffer), s_STSTR_MYPOS, temp, viewx >> FRACBITS, viewy >> FRACBITS, z >> FRACBITS);
+            free(temp);
         }
 
         HUlib_AddMessageToSText(&w_message, buffer);
@@ -1175,7 +1175,7 @@ void HU_Ticker(void)
         {
             int     len = (int)strlen(viewplayer->message);
             char    message[133];
-            int     maxwidth = ORIGINALWIDTH - 6;
+            int     maxwidth = VANILLAWIDTH - 6;
 
             if (vid_widescreen)
                 maxwidth *= SCREENSCALE;

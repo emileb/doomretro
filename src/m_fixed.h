@@ -50,7 +50,7 @@
 // Fixed point, 32bit as 16.16.
 //
 #define FRACBITS        16
-#define FRACUNIT        (1 << FRACBITS)
+#define FRACUNIT        65536
 #define FIXED2DOUBLE(a) ((a) / (double)FRACUNIT)
 #define FIXED_MIN       INT32_MIN
 #define FIXED_MAX       INT32_MAX
@@ -101,10 +101,7 @@ static inline fixed_t FixedMul(fixed_t a, fixed_t b)
 
 static inline fixed_t FixedDiv(fixed_t a, fixed_t b)
 {
-    if ((ABS(a) >> 15) >= ABS(b))
-        return (((a ^ b) >> 31) ^ FIXED_MAX);
-    else
-        return (fixed_t)(((int64_t)a << FRACBITS) / b);
+    return ((ABS(a) >> 15) >= ABS(b) ? (((a ^ b) >> 31) ^ FIXED_MAX) : (fixed_t)(((int64_t)a << FRACBITS) / b));
 }
 
 static inline fixed_t FixedMod(fixed_t a, fixed_t b)
@@ -112,9 +109,9 @@ static inline fixed_t FixedMod(fixed_t a, fixed_t b)
     return ((b & (b - 1)) ? ((a %= b) < 0 ? a + b : a) : (a & (b - 1)));
 }
 
-static inline unsigned int SafeAdd(unsigned int a, int b)
+static inline uint64_t SafeAdd(uint64_t a, uint64_t b)
 {
-    return (b > 0 && (unsigned int)b > UINT_MAX - a ? a : a + b);
+    return (b > UINT64_MAX - a ? a : a + b);
 }
 
 #endif

@@ -1,4 +1,73 @@
-### DOOM Retro v3.5.10
+![](https://github.com/bradharding/www.doomretro.com/raw/master/releasenotes.png)
+
+#### DOOM Retro v3.6.1
+
+* Optimizations have been made to further improve the overall performance and stability of *DOOM Retro*.
+* The following changes have been made to the automap:
+  * A bug has been fixed whereby the <kbd>+</kbd> and <kbd>&ndash;</kbd> keys wouldn’t zoom in and out.
+  * The background menu effect will no longer be applied to the external automap when not in a game.
+* Minor changes have been made to text that is output to the console.
+* Navigating the options menu has now been fixed.
+* Elevators will now make a sound again when they move.
+* The player’s face in the status bar and widescreen HUD will no longer change, and armor will no longer be lost, if the player is attacked while god mode is enabled.
+* `ENDGAMEC` is now supported in `MAPINFO` lumps.
+
+![](https://github.com/bradharding/www.doomretro.com/raw/master/wiki/bigdivider.png)
+
+###### Sunday, August 9, 2020
+
+#### DOOM Retro v3.6
+
+* Optimizations have been made to further improve the overall performance and stability of *DOOM Retro*.
+* A bug has been fixed whereby a crash could occur when saving a game in some instances. Unfortunately, because of this important fix, the format of savegames has needed to change, breaking compatibility with previous versions of *DOOM Retro*.
+* The gradual lighting applied under open doors and crushing ceilings is now correctly restored in savegames when the `r_graduallighting` CVAR is `on`.
+* A subtle fade transition is now applied in certain situations, such as when toggling the menu or automap. This effect may be disabled using the new `fade` CVAR, which is `on` by default, and `off` when vanilla mode is enabled.
+* The screen will now flash white when taking a screenshot by pressing the <kbd>PRINTSCREEN</kbd> key.
+* Minor changes have been made to the console’s scrollbar.
+* The following changes have been made to the menu’s background:
+  * A subtle dithered effect is now applied.
+  * Animated textures and changes to lighting will now still update.
+  * The animation of liquid sectors when the `r_liquid_swirl` CVAR is `on` has been slowed down.
+* The following changes have been made to the text caret in the savegame menu:
+  * It now matches the height of the accompanying text.
+  * Its color now better matches that of the accompanying text in some instances.
+* The <kbd>BACKSPACE</kbd> key may now be used to cancel centered messages.
+* Minor improvements have been made when mistyping a filename in the WAD launcher.
+* The randomization of certain features (such as the amount of damage inflicted on and by the player, and the trajectories of the player’s gunshots) now more closely resembles what occurs in *Vanilla DOOM*.
+* Minor changes have been made to text that is output to the console.
+* The following changes have been made to the silhouettes of weapons in the alternate widescreen HUD:
+  * Minor changes have been made to some of them.
+  * They will now be displayed again when playing [*Back To Saturn X E1: Get Out Of My Stations*](https://www.doomworld.com/idgames/levels/doom2/megawads/btsx_e1) or [*Back To Saturn X E2: Tower In The Fountain Of Sparks*](https://www.doomworld.com/forum/topic/69960).
+* The map title in the external automap will now be positioned correctly when the `am_external` CVAR is `on`.
+* If the player picks up a rocket launcher or BFG-9000 for the first time, they will now automatically equip them as intended.
+* The following changes have been made when freeze mode is enabled:
+  * Liquid sectors will no longer animate when the `r_liquid_swirl` CVAR is `on`.
+  * Friction is no longer applied to the player’s movement when they are on a *BOOM*-compatible icy or muddy sector.
+* Minor improvements have been made to the spread and color of blood splats.
+* There is now smoother movement in the automap.
+* *DOOM Retro* now includes partial support for `UMAPINFO` lumps.
+* The following changes have been made to the support of `DEHACKED` lumps:
+  * Altering the names of SFX and music lumps will no longer affect the `play` CCMD.
+  * `Melee threshold`, `Max target range` and `Min missile chance` values have been added to `Thing` blocks.
+  * `Dropped item` values in `Thing` blocks are now 1-based rather than 0-based.
+* The following changes have been made to the `playerstats` CCMD:
+  * A `Shots successful/fired` stat is now displayed for every weapon.
+  * The `Weapon accuracy` stat has been removed, and is instead displayed for every weapon.
+  * There is a new `Favorite weapon` stat.
+* The precision of the angle the player is facing when using the `IDMYPOS` cheat has been improved.
+* Certain cheats are now still active when the player respawns after death.
+* The effect applied when the player is attacked and the `r_shake_damage` CVAR is `on` is now still applied when god mode is enabled.
+* Fixes to maps that involve changing a sector’s tag will now work as intended when the `r_fixmaperrors` CVAR is `on`.
+* A bug has been fixed whereby certain translucent things wouldn’t be translucent while the player had an invulnerability power-up.
+* The music will no longer be reset when using the `map` CCMD to restart the current map.
+* The player’s face will no longer be displayed in the widescreen HUD while paused.
+* The sound that moving platforms make will no longer be occasionally silenced when they change direction.
+
+![](https://github.com/bradharding/www.doomretro.com/raw/master/wiki/bigdivider.png)
+
+###### Sunday, June 7, 2020
+
+#### DOOM Retro v3.5.10
 
 * Optimizations have been made to further improve the overall performance and stability of *DOOM Retro*.
 * Minor changes have been made to text that is output to the console.
@@ -13,11 +82,11 @@
 * The randomization of certain features when a thing is spawned at the start of a map (such as whether a corpse is mirrored or not, or the placement of blood splats around a corpse) is now consistent if the map is restarted.
 * The `mapstats` CCMD now displays alternate titles for those few maps that have one.
 
----
+![](https://github.com/bradharding/www.doomretro.com/raw/master/wiki/bigdivider.png)
 
 ###### Saturday, May 23, 2020
 
-### DOOM Retro v3.5.9
+#### DOOM Retro v3.5.9
 
 * Optimizations have been made to further improve the overall performance and stability of *DOOM Retro*.
 * Minor changes have been made to text that is output to the console.
@@ -30,11 +99,11 @@
 * Linedefs that have the *BOOM*-compatible line special of 190 (“SR Change Texture And Effect”) now work.
 * The interpolation of floors and ceilings that move instantly has now been fixed when the `vid_capfps` CVAR is not `35`.
 
----
+![](https://github.com/bradharding/www.doomretro.com/raw/master/wiki/bigdivider.png)
 
 ###### Saturday, May 16, 2020
 
-### DOOM Retro v3.5.8
+#### DOOM Retro v3.5.8
 
 * Optimizations have been made to further improve the overall performance and stability of *DOOM Retro*.
 * Minor changes have been made to text that is output to the console.
@@ -53,11 +122,11 @@
 * All function keys may now be used while the console is open.
 * A bug has been fixed whereby the widescreen HUD would momentarily disappear when pressing the <kbd>F8</kbd> key to toggle player messages.
 
----
+![](https://github.com/bradharding/www.doomretro.com/raw/master/wiki/bigdivider.png)
 
 ###### Friday, May 8, 2020
 
-### DOOM Retro v3.5.7
+#### DOOM Retro v3.5.7
 
 * Optimizations have been made to further improve the overall performance and stability of *DOOM Retro*.
 * Minor changes have been made to text that is output to the console.
@@ -72,11 +141,11 @@
 * When a PWAD is loaded with [*Freedoom: Phase 1*](http://freedoom.github.io/) or [*Freedoom: Phase 2*](http://freedoom.github.io/), if a `STBAR` lump is present in that PWAD, it will now be used.
 * Fixing a bug present in *Vanilla DOOM*, monsters will now always be alerted if attacked during the second frame of their idle animation.
 
----
+![](https://github.com/bradharding/www.doomretro.com/raw/master/wiki/bigdivider.png)
 
 ###### Saturday, May 2, 2020
 
-### DOOM Retro v3.5.6
+#### DOOM Retro v3.5.6
 
 * Optimizations have been made to further improve the overall performance and stability of *DOOM Retro*.
 * Minor changes have been made to text that is output to the console.
@@ -99,11 +168,11 @@
 * The sky will now be rendered correctly when the `r_screensize` CVAR is less than `7`.
 * Screenshots may now only be taken when not playing a game if the `+screenshot` action is still bound to the <kbd>PRINTSCREEN</kbd> key.
 
----
+![](https://github.com/bradharding/www.doomretro.com/raw/master/wiki/bigdivider.png)
 
 ###### Saturday, April 18, 2020
 
-### DOOM Retro v3.5.5
+#### DOOM Retro v3.5.5
 
 * Optimizations have been made to further improve the overall performance and stability of *DOOM Retro*.
 * Minor changes have been made to text that is output to the console.
@@ -121,22 +190,22 @@
 * The translucency of item and teleport fogs is no longer additive when the `r_translucency` CVAR is `on`.
 * Due to a change in the latest patch of the [*Bethesda.net Launcher*](https://bethesda.net/en/game/bethesda-launcher) version of [*DOOM II*](https://bethesda.net/en/store/product/DO2GNGPCBG01), MAP04 to MAP08 in *No Rest For The Living* now use the `SKY3` texture as their skies.
 
----
+![](https://github.com/bradharding/www.doomretro.com/raw/master/wiki/bigdivider.png)
 
 ###### Friday, April 3, 2020
 
-### DOOM Retro v3.5.4
+#### DOOM Retro v3.5.4
 
 * Optimizations have been made to further improve the overall performance and stability of *DOOM Retro*.
 * Improvements have been made to the support of [*Chex Quest*](https://doomwiki.org/wiki/Chex_Quest).
 * A bug has been fixed whereby the wrong map name would be displayed on the intermission screen in some instances.
 * A brightmap is now applied to the `SLADRIP2` texture when the `r_brightmaps` CVAR is `on`.
 
----
+![](https://github.com/bradharding/www.doomretro.com/raw/master/wiki/bigdivider.png)
 
 ###### Monday, March 23, 2020
 
-### DOOM Retro v3.5.3
+#### DOOM Retro v3.5.3
 
 * Optimizations have been made to further improve the overall performance and stability of *DOOM Retro*.
 * Minor changes have been made to text that is output to the console.
@@ -152,11 +221,11 @@
 * More blood splats now appear around decorative corpses.
 * A crash will no longer occur when trying to spawn a berserk power-up using the `spawn` CCMD in *DOOM (Shareware)*.
 
----
+![](https://github.com/bradharding/www.doomretro.com/raw/master/wiki/bigdivider.png)
 
 ###### Friday, March 13, 2020
 
-### DOOM Retro v3.5.2
+#### DOOM Retro v3.5.2
 
 * *DOOM Retro* now uses [*SDL v2.0.12*](https://www.libsdl.org).
 * Optimizations have been made to further improve the overall performance and stability of *DOOM Retro*.
@@ -181,11 +250,11 @@
 * 3D bridges that use the `STEP2` wall texture are now rendered correctly.
 * The automap will now rotate correctly in the background if the menu is open and the `am_rotatemode` CVAR is `off`.
 
----
+![](https://github.com/bradharding/www.doomretro.com/raw/master/wiki/bigdivider.png)
 
 ###### Friday, February 21, 2020
 
-### DOOM Retro v3.5.1
+#### DOOM Retro v3.5.1
 
 * Optimizations have been made to further improve the overall performance and stability of *DOOM Retro*.
 * Minor changes have been made to the character set used in the console.
@@ -201,11 +270,11 @@
 * A bug has been fixed whereby the use of `LIQUID` or `NOLIQUID` in a `MAPINFO` lump would have no effect.
 * The scrollbar in the console has been widened and now includes a grip.
 
----
+![](https://github.com/bradharding/www.doomretro.com/raw/master/wiki/bigdivider.png)
 
 ###### Saturday, February 8, 2020
 
-### DOOM Retro v3.5
+#### DOOM Retro v3.5
 
 * Optimizations have been made to further improve the overall performance and stability of *DOOM Retro*.
 * Improvements have been made to the support of IWADs that contain censored Wolfenstein SS sprites.
@@ -231,11 +300,11 @@
 * Lines with special 46 (“GR Door Open Stay”) now work correctly.
 * Monsters can no longer be spawned using the `spawn` CCMD when the `nomonsters` CCMD is in effect.
 
----
+![](https://github.com/bradharding/www.doomretro.com/raw/master/wiki/bigdivider.png)
 
 ###### Saturday, January 4, 2020
 
-### DOOM Retro v3.4
+#### DOOM Retro v3.4
 
 * Optimizations have been made to further improve the overall performance and stability of *DOOM Retro*.
 * *DOOM Retro* will now only attempt to use [*Adaptive VSync*](https://www.geforce.com/hardware/technology/adaptive-vsync) if the `vid_vsync` CVAR is set to `adaptive`.
@@ -261,11 +330,11 @@
 * The title of MAP05 in *Final DOOM: TNT - Evilution* has been corrected.
 * The amount of friction applied to the player’s corpse has been increased, matching the corpses of monsters, when in a liquid sector.
 
----
+![](https://github.com/bradharding/www.doomretro.com/raw/master/wiki/bigdivider.png)
 
 ###### Saturday, December 21, 2019
 
-### DOOM Retro v3.3
+#### DOOM Retro v3.3
 
 * Optimizations have been made to further improve the overall performance and stability of *DOOM Retro*.
 * If a mistyped filename is entered in the WAD launcher (for example, `doot.wad` instead of `doom.wad`), *DOOM Retro* will now try to find the closest match.
@@ -282,11 +351,11 @@
 * The `thinglist` CCMD now indicates if a thing has been dropped by a monster.
 * A crash will no longer occur when a monster tries to make a noise and the `-nosfx` or `-nosound` parameters are specified on the command-line.
 
----
+![](https://github.com/bradharding/www.doomretro.com/raw/master/wiki/bigdivider.png)
 
 ###### Wednesday, November 27, 2019
 
-### DOOM Retro v3.2.1
+#### DOOM Retro v3.2.1
 
 * Optimizations have been made to further improve the overall performance and stability of *DOOM Retro*.
 * *DOOM Retro* will now attempt to use [*Adaptive VSync*](https://www.geforce.com/hardware/technology/adaptive-vsync) if the `vid_vsync` CVAR is `on` and the `vid_scaleapi` CVAR is `“opengl”`.
@@ -296,11 +365,11 @@
 * Minor improvements have been made to the menu’s background.
 * A bug has been fixed whereby blood splats around crushed corpses could appear black in some rare instances.
 
----
+![](https://github.com/bradharding/www.doomretro.com/raw/master/wiki/bigdivider.png)
 
 ###### Monday, November 25, 2019
 
-### DOOM Retro v3.2
+#### DOOM Retro v3.2
 
 * Optimizations have been made to further improve the overall performance and stability of *DOOM Retro*.
 * Minor changes have been made to the character set used in the console.
@@ -325,11 +394,11 @@
 * A countdown will now be displayed in the top right of the screen if a timer is set using the `timer` CCMD.
 * The number of maps started now appears alongside the number of maps completed in the `playerstats` CCMD.
 
----
+![](https://github.com/bradharding/www.doomretro.com/raw/master/wiki/bigdivider.png)
 
 ###### Saturday, November 2, 2019
 
-### DOOM Retro v3.1
+#### DOOM Retro v3.1
 
 * Optimizations have been made to further improve the overall performance and stability of *DOOM Retro*.
 * *DOOM II: Hell On Earth’s* IWAD no longer needs to be the *BFG Edition* for [`nerve.wad`](https://doomwiki.org/wiki/No_Rest_for_the_Living) to be automatically loaded if found.
@@ -352,11 +421,11 @@
 * The correct sound is now played when a *BOOM*-compatible generalized door opens or closes at normal speed.
 * Linedefs with specials but no sectors tagged are now handled better.
 
----
+![](https://github.com/bradharding/www.doomretro.com/raw/master/wiki/bigdivider.png)
 
 ###### Friday, October 11, 2019
 
-### DOOM Retro v3.0.5
+#### DOOM Retro v3.0.5
 
 * Extensive optimizations have been made to further improve the overall performance and stability of *DOOM Retro*.
 * Minor changes have been made to the character set used in the console.
@@ -365,7 +434,7 @@
 * The `-file` parameter may now be used without an `-iwad` parameter on the command-line.
 * A bug has been fixed whereby using either the `nomonsters` CCMD in the console, or `-nomonsters` on the command-line, would not stop monsters from being spawned in maps.
 * The speed the player turns is now affected by the `turbo` CVAR and `-turbo` command-line parameter.
-* The correct sky textures will now be displayed when playing [*Back To Saturn X E1: Get Out Of My Stations*](https://www.doomworld.com/idgames/levels/doom2/megawads/btsx_e1) or [*Back To Saturn X E2: Tower in the Fountain of Sparks*](https://www.doomworld.com/forum/topic/69960) and the `mouselook` CVAR is `off`.
+* The correct sky textures will now be displayed when playing [*Back To Saturn X E1: Get Out Of My Stations*](https://www.doomworld.com/idgames/levels/doom2/megawads/btsx_e1) or [*Back To Saturn X E2: Tower In The Fountain Of Sparks*](https://www.doomworld.com/forum/topic/69960) and the `mouselook` CVAR is `off`.
 * The `friendly` parameter will now work correctly with the `name` CCMD.
 * A bug has been fixed whereby using the `monster` or `monsters` parameters with the `kill` CCMD would cause a crash.
 * Minor improvements have been made to the support of `DEHACKED` lumps.
@@ -373,11 +442,11 @@
 * Obituaries that involve a friendly monster will now indicate if there’s only one of them in the map.
 * Further improvements have been made to the support for Noiser’s [*DOOM 4 VANILLA*](https://www.doomworld.com/forum/topic/108725).
 
----
+![](https://github.com/bradharding/www.doomretro.com/raw/master/wiki/bigdivider.png)
 
 ###### Tuesday, October 1, 2019
 
-### DOOM Retro v3.0.4
+#### DOOM Retro v3.0.4
 
 * Optimizations have been made to further improve the overall performance and stability of *DOOM Retro*.
 * Minor changes have been made to the character set used in the console.
@@ -393,11 +462,11 @@
 * The path of the player that appears in the automap when the `am_path` CVAR is `on` is now thicker.
 * Minor improvements have been made to the support of `DEHACKED` lumps.
 
----
+![](https://github.com/bradharding/www.doomretro.com/raw/master/wiki/bigdivider.png)
 
 ###### Saturday, September 21, 2019
 
-### DOOM Retro v3.0.3
+#### DOOM Retro v3.0.3
 
 * The behavior of the `-nodeh` command-line parameter has changed. It will still disable the automatic loading of `.deh` files, `.bex` files and `DEHACKED` lumps, but will now load `.deh` and `.bex` files if selected in the WAD launcher or specified using the `-deh` command-line parameter.
 * A bug has been fixed whereby dogs spawned in front of the player using the `spawn` CCMD in the console would always be friendly, even when the `friendly` parameter wasn’t used. This bug also affected PWADs that would replace the dog using a `DEHACKED` patch. All monsters of that type spawned at the start of a map would be friendly and therefore attack and be attacked by other monsters. (An example of this are the nightmare demons in [*Eviternity*](https://www.doomworld.com/idgames/levels/doom2/Ports/megawads/eviternity).)
@@ -415,11 +484,11 @@
 * The crosshair displayed using the `crosshair` CVAR no longer needs the `mouselook` CVAR to be `on`.
 * The correct music will now be played on the intermission screen of episodes 1 to 4 when John Romero’s megawad [*SIGIL*](https://www.romerogames.ie/si6il) has been autoloaded.
 
----
+![](https://github.com/bradharding/www.doomretro.com/raw/master/wiki/bigdivider.png)
 
 ###### Saturday, September 14, 2019
 
-### DOOM Retro v3.0.2
+#### DOOM Retro v3.0.2
 
 * Changes have been made to improve the overall stability of *DOOM Retro*.
 * A bug has been fixed whereby nearby monsters wouldn’t hear when the player fired the BFG-9000.
@@ -432,20 +501,20 @@
   * Rocket trails are disabled, regardless of the value of the `r_rockettrails` CVAR.
 * Minor changes have been made to text that is output to the console.
 
----
+![](https://github.com/bradharding/www.doomretro.com/raw/master/wiki/bigdivider.png)
 
 ###### Monday, September 9, 2019
 
-### DOOM Retro v3.0.1
+#### DOOM Retro v3.0.1
 
 * Changes have been made to improve the overall stability of *DOOM Retro*.
 * A bug has been fixed whereby the BFG-9000 wouldn’t always target monsters correctly when fired, and in some instances would kill the player themselves.
 
----
+![](https://github.com/bradharding/www.doomretro.com/raw/master/wiki/bigdivider.png)
 
 ###### Saturday, September 7, 2019
 
-### DOOM Retro v3.0
+#### DOOM Retro v3.0
 
 * *DOOM Retro* now uses [*SDL v2.0.10*](https://www.libsdl.org) and [*SDL_image v2.0.5*](https://www.libsdl.org/SDL_image).
 * When *DOOM Retro* is opened for the first time and the WAD launcher automatically navigates to a *DOOM* or *DOOM II* installation it has found, the corresponding IWAD will now also be selected.
@@ -517,22 +586,22 @@
 * If an error is found in a `MAPINFO` lump, a warning will now be displayed in the console rather than *DOOM Retro* exiting with an error.
 * The `IDFA` and `IDKFA` cheats will no longer work if the player already has all the items those cheats provide.
 
----
+![](https://github.com/bradharding/www.doomretro.com/raw/master/wiki/bigdivider.png)
 
 ###### Saturday, June 1, 2019
 
-### DOOM Retro v2.9.3
+#### DOOM Retro v2.9.3
 
 * The following changes have been made to the support for John Romero’s megawad [*SIGIL*](https://www.romerogames.ie/si6il):
   * The `SKY5_ZD` lump is now used instead of the `SKY5` lump to render the sky.
   * The `+jump` action is no longer disabled if `SIGIL.wad` is loaded automatically.
   * A bug has been fixed whereby the `SIGILINT` lump was being displayed in the intermission’s background for episodes 1 to 4.
 
----
+![](https://github.com/bradharding/www.doomretro.com/raw/master/wiki/bigdivider.png)
 
 ###### Friday, May 31, 2019
 
-### DOOM Retro v2.9.2
+#### DOOM Retro v2.9.2
 
 * Optimizations have been made to further improve the overall performance and stability of *DOOM Retro*.
 * The following changes have been made to the support for John Romero’s megawad [*SIGIL*](https://www.romerogames.ie/si6il):
@@ -546,11 +615,11 @@
 * A bug has been fixed whereby if the `-warp` command-line parameter was used, the player couldn’t access either the menu or the console.
 * The `mapstats` CCMD will now show the lump name of the current map’s music.
 
----
+![](https://github.com/bradharding/www.doomretro.com/raw/master/wiki/bigdivider.png)
 
 ###### Sunday, May 26, 2019
 
-### DOOM Retro v2.9.1
+#### DOOM Retro v2.9.1
 
 * Optimizations have been made to further improve the overall performance and stability of *DOOM Retro*.
 * The support for John Romero’s megawad [*SIGIL*](https://www.romerogames.ie/si6il) has been greatly improved.
@@ -561,11 +630,11 @@
 * A bug has been fixed whereby the player wouldn’t die as intended when exiting certain maps in [*Eviternity*](https://www.doomworld.com/idgames/levels/doom2/Ports/megawads/eviternity), causing them to erroneously retain their weapons and ammo when warping to the next map.
 * If the WAD selected in the WAD launcher causes *DOOM Retro* to exit with an error, the `wad` CVAR will not be updated.
 
----
+![](https://github.com/bradharding/www.doomretro.com/raw/master/wiki/bigdivider.png)
 
 ###### Monday, May 13, 2019
 
-### DOOM Retro v2.9
+#### DOOM Retro v2.9
 
 * *DOOM Retro* is now compiled using [*Microsoft Visual Studio Community 2019*](https://www.visualstudio.com/vs/).
 * Optimizations have been made to further improve the overall performance and stability of *DOOM Retro*.
@@ -618,14 +687,14 @@
 * The crosshair in the automap when follow mode is off is no longer translucent if the `r_hud_translucency` CVAR is also `off`.
 * The status bar is now drawn in the background as necessary when a centered message is displayed.
 * `midiproc.exe` will no longer remain open when quitting *DOOM Retro* and no MUS or MIDI music lumps have been played.
-* Elements in the alternate widescreen HUD that are meant to be blue now appear blue rather than purple when playing [*Back To Saturn X E1: Get Out Of My Stations*](https://www.doomworld.com/idgames/levels/doom2/megawads/btsx_e1) or [*Back To Saturn X E2: Tower in the Fountain of Sparks*](https://www.doomworld.com/forum/topic/69960).
+* Elements in the alternate widescreen HUD that are meant to be blue now appear blue rather than purple when playing [*Back To Saturn X E1: Get Out Of My Stations*](https://www.doomworld.com/idgames/levels/doom2/megawads/btsx_e1) or [*Back To Saturn X E2: Tower In The Fountain Of Sparks*](https://www.doomworld.com/forum/topic/69960).
 * A bug has been fixed whereby the splash damage from rockets would be doubled in some instances.
 
----
+![](https://github.com/bradharding/www.doomretro.com/raw/master/wiki/bigdivider.png)
 
 ###### Sunday, February 17, 2019
 
-### DOOM Retro v2.8.1
+#### DOOM Retro v2.8.1
 
 * Optimizations have been made to further improve the overall performance and stability of *DOOM Retro*.
 * Minor changes have been made to text that is output to the console.
@@ -640,11 +709,11 @@
 * If the `iwadfolder` CVAR is reset using either the `reset` or `resetall` CCMDs, the WAD launcher will try to find a common *DOOM* or *DOOM II* installation again the next time it is opened.
 * The value of the `facebackcolor` CVAR is no longer applied to the background of the player’s face in the widescreen HUD.
 
----
+![](https://github.com/bradharding/www.doomretro.com/raw/master/wiki/bigdivider.png)
 
 ###### Saturday, February 2, 2019
 
-### DOOM Retro v2.8
+#### DOOM Retro v2.8
 
 * Optimizations have been made to further improve the overall performance and stability of *DOOM Retro*.
 * Noise is now applied to the menu’s background. Also, if the menu is opened while playing a game, the status bar or widescreen HUD as well as all sprites will be hidden, and the player’s view will slowly rotate either left or right.
@@ -702,11 +771,11 @@
 * Barrels will now animate correctly if their sprites have been replaced in a PWAD.
 * The player’s view will now always be at the correct height when they are spawned at the start of a map.
 
----
+![](https://github.com/bradharding/www.doomretro.com/raw/master/wiki/bigdivider.png)
 
 ###### Sunday, November 18, 2018
 
-### DOOM Retro v2.7.5
+#### DOOM Retro v2.7.5
 
 * Optimizations have been made to further improve the overall performance and stability of *DOOM Retro*.
 * Minor changes have been made to text that is output to the console.
@@ -718,11 +787,11 @@
 * A bug has been fixed whereby the flash of the player’s weapon would sometimes be positioned incorrectly if the player was firing when dropping down from a higher sector and the `weaponbounce` CVAR was `on`.
 * Further improvements have been made to the support of `DEHACKED` lumps.
 
----
+![](https://github.com/bradharding/www.doomretro.com/raw/master/wiki/bigdivider.png)
 
 ###### Sunday, November 4, 2018
 
-### DOOM Retro v2.7.4
+#### DOOM Retro v2.7.4
 
 * *DOOM Retro* now uses [*SDL v2.0.9*](https://www.libsdl.org), [*SDL_mixer v2.0.4*](https://www.libsdl.org/SDL_mixer) and [*SDL_image v2.0.4*](https://www.libsdl.org/SDL_image).
 * When *DOOM Retro* is opened for the first time, the WAD launcher will now try to find a common *DOOM* or *DOOM II* installation.
@@ -763,11 +832,11 @@
 * The `+use` action can no longer be used if the `autouse` CVAR is `on`.
 * Items dropped by monsters when they are killed will now be rendered correctly if dropped on a moving platform and the `vid_capfps` CVAR is a value other than `35`.
 
----
+![](https://github.com/bradharding/www.doomretro.com/raw/master/wiki/bigdivider.png)
 
 ###### Saturday, September 8, 2018
 
-### DOOM Retro v2.7.3
+#### DOOM Retro v2.7.3
 
 * Optimizations have been made to further improve the overall performance and stability of *DOOM Retro*.
 * Minor changes have been made to text that is output to the console.
@@ -783,11 +852,11 @@
 * A gamepad’s right thumbstick can no longer be used to move forward when the `mouselook` CVAR is `off` and the `gp_thumbsticks` CVAR is `2`.
 * Looking up and down using a gamepad’s right thumbstick is now smooth when the `mouselook` CVAR is `on`.
 
----
+![](https://github.com/bradharding/www.doomretro.com/raw/master/wiki/bigdivider.png)
 
 ###### Friday, August 24, 2018
 
-### DOOM Retro v2.7.2
+#### DOOM Retro v2.7.2
 
 * Optimizations have been made to further improve the overall performance and stability of *DOOM Retro*.
 * Slightly more blood splats are now spawned when blood hits the floor.
@@ -804,11 +873,11 @@
 * A bug has been fixed whereby monsters could be spawned at an incorrect height in some rare instances.
 * Some translucency effects have been improved.
 
----
+![](https://github.com/bradharding/www.doomretro.com/raw/master/wiki/bigdivider.png)
 
 ###### Saturday, August 4, 2018
 
-### DOOM Retro v2.7.1
+#### DOOM Retro v2.7.1
 
 * The player will now move correctly when using a gamepad.
 * The `r_diskicon` CVAR will now be turned `on` when vanilla mode is enabled.
@@ -818,11 +887,11 @@
 * If the super shotgun was selected by the player more recently than the shotgun, it will now be selected when pressing the <kbd>3</kbd> key, and vice versa.
 * Improvements have been made to the gradual lighting effect under doors and crushing ceilings.
 
----
+![](https://github.com/bradharding/www.doomretro.com/raw/master/wiki/bigdivider.png)
 
 ###### Friday, August 3, 2018
 
-### DOOM Retro v2.7
+#### DOOM Retro v2.7
 
 * With John Romero’s express permission, [*E1M4B: Phobos Mission Control*](https://www.doomworld.com/idgames/levels/doom/Ports/d-f/e1m4b) and [*E1M8B: Tech Gone Bad*](https://www.doomworld.com/idgames/levels/doom/Ports/d-f/e1m8b) are now included with *DOOM Retro*. If either the *DOOM Registered* or *The Ultimate DOOM* IWADs are loaded, these maps may be played by entering `map E1M4B` or `map E1M8B` in the console.
 * *DOOM Retro’s* splash screen has been redesigned.
@@ -861,21 +930,21 @@
 * An obituary is now displayed when the player is crushed to death by a moving ceiling and the `con_obituaries` CVAR is `on`.
 * Whether sound effects are played in mono or stereo can now be changed using the new `s_stereo` CVAR. It is `on` by default and when vanilla mode is enabled.
 
----
+![](https://github.com/bradharding/www.doomretro.com/raw/master/wiki/bigdivider.png)
 
 ###### Saturday, March 31, 2018
 
-### DOOM Retro v2.6.9
+#### DOOM Retro v2.6.9
 
 * The targets of monsters will now be restored correctly when loading a savegame.
 * The player’s view will no longer go past the floor or ceiling in some rare instances.
 * A bug has been fixed whereby the player would fire their weapon when the game was unpaused using the <kbd>PAUSE</kbd> key.
 
----
+![](https://github.com/bradharding/www.doomretro.com/raw/master/wiki/bigdivider.png)
 
 ###### Thursday, March 29, 2018
 
-### DOOM Retro v2.6.8
+#### DOOM Retro v2.6.8
 
 * *DOOM Retro* now uses [*SDL v2.0.8*](http://libsdl.org) and [*SDL_image v2.0.3*](http://libsdl.org/SDL_image).
 * Optimizations have been made to further improve the overall performance and stability of *DOOM Retro*.
@@ -906,11 +975,11 @@
 * Player messages will now always be positioned correctly when the `r_messagepos` CVAR is changed from its default of `(3,2)`.
 * The map title in the automap is now always positioned correctly when the `r_messagescale` CVAR is `small`.
 
----
+![](https://github.com/bradharding/www.doomretro.com/raw/master/wiki/bigdivider.png)
 
 ###### Friday, February 23, 2018
 
-### DOOM Retro v2.6.7
+#### DOOM Retro v2.6.7
 
 * Optimizations have been made to further improve the overall performance and stability of *DOOM Retro*.
 * The format of savegames has changed, breaking compatibility with previous versions of *DOOM Retro*.
@@ -926,11 +995,11 @@
 * The AI of monsters has been improved when on or next to a lift.
 * How far away a monster is vertically from the player during its melee attack is no longer taken into account if the `infiniteheight` CVAR is `on`.
 
----
+![](https://github.com/bradharding/www.doomretro.com/raw/master/wiki/bigdivider.png)
 
 ###### Friday, February 9, 2018
 
-### DOOM Retro v2.6.6
+#### DOOM Retro v2.6.6
 
 * Optimizations have been made to further improve the overall performance and stability of *DOOM Retro*.
 * A bug has been fixed whereby the wall textures visible beyond a moving sector would shift slightly.
@@ -946,11 +1015,11 @@
 * A bug has been fixed whereby a monster’s position would be interpolated when teleporting if the `vid_capfps` CVAR was a value other than `35`.
 * Giving the player and monsters infinite height can now be toggled on or off using the new `infiniteheight` CVAR. This CVAR is `off` by default and `on` when vanilla mode is enabled.
 
----
+![](https://github.com/bradharding/www.doomretro.com/raw/master/wiki/bigdivider.png)
 
 ###### Friday, January 26, 2018
 
-### DOOM Retro v2.6.5
+#### DOOM Retro v2.6.5
 
 * Optimizations have been made to further improve the overall performance and stability of *DOOM Retro*.
 * A bug has been fixed whereby the wrong description would be displayed when entering a CVAR without a value in the console.
@@ -961,11 +1030,11 @@
 * A crash will no longer occur when picking up an invulnerability power-up on the same map after loading a savegame.
 * The `playername` CVAR is now used instead of “OUR HERO” when displaying the player in *DOOM II’s* cast sequence.
 
----
+![](https://github.com/bradharding/www.doomretro.com/raw/master/wiki/bigdivider.png)
 
 ###### Friday, January 19, 2018
 
-### DOOM Retro v2.6.4
+#### DOOM Retro v2.6.4
 
 * Optimizations have been made to further improve the overall performance and stability of *DOOM Retro*.
 * A bug has been fixed whereby an error would be displayed when trying to load `doom1.wad`.
@@ -981,11 +1050,11 @@
 * The vertical axis of a *DirectInput* gamepad’s right thumbstick when looking up and down will now be inverted when the `gp_invertyaxis` CVAR is `on`.
 * The shadows cast by the monsters in *DOOM II’s* cast sequence are now more consistent with how they appear during a game.
 
----
+![](https://github.com/bradharding/www.doomretro.com/raw/master/wiki/bigdivider.png)
 
 ###### Friday, January 5, 2018
 
-### DOOM Retro v2.6.3
+#### DOOM Retro v2.6.3
 
 * Optimizations have been made to further improve the overall performance and stability of *DOOM Retro*.
 * The following changes have been made to the boss in *MAP30: Icon Of Sin* at the end of *DOOM II: Hell On Earth*:
@@ -1014,11 +1083,11 @@
 * The brightmaps for several wall textures are now fixed.
 * A bug present in *Vanilla DOOM* has been fixed whereby [Mancubi projectiles would sometimes pass through walls](https://doomwiki.org/wiki/Mancubus_fireball_clipping).
 
----
+![](https://github.com/bradharding/www.doomretro.com/raw/master/wiki/bigdivider.png)
 
 ###### Saturday, December 16, 2017
 
-### DOOM Retro v2.6.2
+#### DOOM Retro v2.6.2
 
 * Optimizations have been made to further improve the overall performance and stability of *DOOM Retro*.
 * The effects of changing the `gp_swapthumbsticks` CVAR are now immediate.
@@ -1029,11 +1098,11 @@
 * Both player messages and the map title in the automap are no longer truncated in the middle of the screen in some instances.
 * Sprites that are replaced in PWADs will now be offset correctly.
 
----
+![](https://github.com/bradharding/www.doomretro.com/raw/master/wiki/bigdivider.png)
 
 ###### Thursday, December 7, 2017
 
-### DOOM Retro v2.6.1
+#### DOOM Retro v2.6.1
 
 * Optimizations have been made to further improve the overall performance and stability of *DOOM Retro*.
 * A bug has been fixed whereby sound effects weren’t playing correctly for some users.
@@ -1047,11 +1116,11 @@
 * The infighting among monsters once the player dies can now be toggled on or off using the new `infighting` CVAR. This CVAR is `on` by default and `off` when vanilla mode is enabled.
 * An incorrect obituary is no longer displayed in the console when the player uses the `kill` CCMD to kill themselves.
 
----
+![](https://github.com/bradharding/www.doomretro.com/raw/master/wiki/bigdivider.png)
 
 ###### Saturday, November 25, 2017
 
-### DOOM Retro v2.6
+#### DOOM Retro v2.6
 
 * *DOOM Retro* now uses [*SDL v2.0.7*](http://libsdl.org), [*SDL_mixer v2.0.2*](http://libsdl.org/SDL_mixer) and [*SDL_image v2.0.2*](http://libsdl.org/SDL_image).
 * Extensive optimizations have been made to further improve the overall performance and stability of *DOOM Retro*.
@@ -1088,11 +1157,11 @@
 * The `m_doubleclick_use` CVAR is now turned `on` and the `vid_showfps` CVAR `off` when vanilla mode is enabled.
 * An obituary is now displayed in the console when the player is killed by an exploding barrel or a damaging sector, and the `con_obituaries` CVAR is `on`.
 
----
+![](https://github.com/bradharding/www.doomretro.com/raw/master/wiki/bigdivider.png)
 
 ###### Wednesday, October 11, 2017
 
-### DOOM Retro v2.5.7
+#### DOOM Retro v2.5.7
 
 * Optimizations have been made to further improve the overall performance and stability of *DOOM Retro*.
 * The icon of `doomretro.exe` has been redesigned.
@@ -1113,11 +1182,11 @@
 * Any lumps in a PWAD between `HI_START` and `HI_END` markers will now be ignored.
 * A bug has been fixed whereby when unbinding certain controls using the `unbind` CCMD, that control would then be bound again the next time *DOOM Retro* was run.
 
----
+![](https://github.com/bradharding/www.doomretro.com/raw/master/wiki/bigdivider.png)
 
 ###### Saturday, September 30, 2017
 
-### DOOM Retro v2.5.6
+#### DOOM Retro v2.5.6
 
 * Optimizations have been made to further improve the overall performance and stability of *DOOM Retro*.
 * The effects of changing the `r_corpses_color` CVAR are now immediate.
@@ -1133,11 +1202,11 @@
 * When using the `idclip` cheat, `idclip` will now be displayed in the console rather than `idspispopd`.
 * A crash will no longer occur when trying to display the spectre in *DOOM II’s* cast sequence.
 
----
+![](https://github.com/bradharding/www.doomretro.com/raw/master/wiki/bigdivider.png)
 
 ###### Friday, September 8, 2017
 
-### DOOM Retro v2.5.5
+#### DOOM Retro v2.5.5
 
 * Optimizations have been made to further improve the overall performance and stability of *DOOM Retro*.
 * Some stray dark pixels have been removed from the top of the super shotgun’s muzzle when firing.
@@ -1150,11 +1219,11 @@
 * Further improvements have been made to lowering the player’s view in liquid sectors when the `r_liquid_lowerview` CVAR is `on`.
 * A bug has been fixed whereby the slight current enabled using the `r_liquid_current` CVAR wasn’t being applied to some liquid sectors.
 
----
+![](https://github.com/bradharding/www.doomretro.com/raw/master/wiki/bigdivider.png)
 
 ###### Saturday, August 26, 2017
 
-### DOOM Retro v2.5.4
+#### DOOM Retro v2.5.4
 
 * Optimizations have been made to further improve the overall performance and stability of *DOOM Retro*.
 * The behavior of lost souls has been restored to better resemble *Vanilla DOOM*.
@@ -1174,11 +1243,11 @@
 * Reducing the `health` CVAR will now work correctly when playing the *I’m too young to die* skill level.
 * If no IWAD is specified, *DOOM Retro* will now also check for an installation of *DOOM 3: BFG Edition* purchased through [*GOG.com*](https://www.gog.com/game/doom_3_bfg_edition).
 
----
+![](https://github.com/bradharding/www.doomretro.com/raw/master/wiki/bigdivider.png)
 
 ###### Monday, July 31, 2017
 
-### DOOM Retro v2.5.3
+#### DOOM Retro v2.5.3
 
 * Extensive optimizations have been made to further improve the overall performance and stability of *DOOM Retro*.
 * The power-up bar is now displayed in the alternate widescreen HUD when the player has the berserk power-up and their fist selected, and when the `IDBEHOLDx` cheat is used.
@@ -1191,11 +1260,11 @@
 * Pain elementals can no longer spawn lost souls behind their target when directly in front of them.
 * The Hall of Mirrors indicator enabled using the `r_homindicator` CVAR will now work when in no clipping mode and freeze mode.
 
----
+![](https://github.com/bradharding/www.doomretro.com/raw/master/wiki/bigdivider.png)
 
 ###### Sunday, July 16, 2017
 
-### DOOM Retro v2.5.2
+#### DOOM Retro v2.5.2
 
 * Optimizations have been made to further improve the overall performance and stability of *DOOM Retro*.
 * Savegames for *DOOM II: No Rest For The Living* are now saved in the correct folder, rather than in the same folder as *DOOM II: Hell On Earth* savegames.
@@ -1207,11 +1276,11 @@
 * A bug has been fixed whereby the player’s rocket launcher would shift to the left when fired.
 * Frames from *DOOM’s* rocket launcher are no longer shown when firing the missile launcher in [*Freedoom*](http://freedoom.github.io/).
 
----
+![](https://github.com/bradharding/www.doomretro.com/raw/master/wiki/bigdivider.png)
 
 ###### Wednesday, July 5, 2017
 
-### DOOM Retro v2.5.1
+#### DOOM Retro v2.5.1
 
 * Optimizations have been made to further improve the overall performance and stability of *DOOM Retro*.
 * If no IWAD is found when loading a PWAD using the WAD launcher (either in the same folder as the PWAD or the folder specified by the `iwadfolder` CVAR), several common installation folders will now be checked.
@@ -1219,11 +1288,11 @@
 * Minor changes have been made to text that is output to the console.
 * A bug has been fixed whereby a crash could occur when exiting a map in some instances.
 
----
+![](https://github.com/bradharding/www.doomretro.com/raw/master/wiki/bigdivider.png)
 
 ###### Friday, June 30, 2017
 
-### DOOM Retro v2.5
+#### DOOM Retro v2.5
 
 * Extensive optimizations have been made to further improve the overall performance and stability of *DOOM Retro*.
 * Minor improvements have been made to *DOOM Retro’s* renderer.
@@ -1244,7 +1313,7 @@
 * Several compatibility fixes have been implemented for:
   * [*Ancient Aliens*](https://www.doomworld.com/idgames/levels/doom2/Ports/megawads/aaliens),
   * [*Back To Saturn X E1: Get Out Of My Stations*](https://www.doomworld.com/idgames/levels/doom2/megawads/btsx_e1),
-  * [*Back To Saturn X E2: Tower in the Fountain of Sparks*](https://www.doomworld.com/forum/topic/69960),
+  * [*Back To Saturn X E2: Tower In The Fountain Of Sparks*](https://www.doomworld.com/forum/topic/69960),
   * [*TNT: Revilution*](https://www.doomworld.com/files/file/18810-tnt-revilution/).
 * Three new CVARs have been implemented to individually toggle the translucency of certain elements: `r_bloodsplats_translucency`, `r_hud_translucency` and `r_shadows_translucency`. They are all `on` by default. (The `r_translucency` CVAR remains to toggle the translucency of sprites and *BOOM*-compatible wall textures.)
 * The console’s background is now always translucent.
@@ -1281,11 +1350,11 @@
 * The effects of changing the `r_fixspriteoffsets` CVAR are now immediate.
 * The grid in the automap is now slightly darker.
 
----
+![](https://github.com/bradharding/www.doomretro.com/raw/master/wiki/bigdivider.png)
 
 ###### Friday, April 7, 2017
 
-### DOOM Retro v2.4.5
+#### DOOM Retro v2.4.5
 
 * Optimizations have been made to further improve the overall performance and stability of *DOOM Retro*.
 * Sprites taller than 255 pixels are now supported.
@@ -1302,21 +1371,21 @@
 * A bug has been fixed whereby translucent sprites would become less bright when the player had the light amplification visor power-up.
 * A bug present in *Vanilla DOOM* has been fixed whereby homing rockets fired by revenants would randomly become non-homing, and vice versa, when loading a savegame or when pausing then unpausing a game.
 
----
+![](https://github.com/bradharding/www.doomretro.com/raw/master/wiki/bigdivider.png)
 
 ###### Monday, March 27, 2017
 
-### DOOM Retro v2.4.4
+#### DOOM Retro v2.4.4
 
 * A bug has been fixed whereby a crash would often occur when the player died and the `vid_widescreen` CVAR was `off`.
 * The value of the `r_messagescale` CVAR is now displayed correctly in `doomretro.cfg`.
 * Over 200 additional map-specific fixes, enabled using the `r_fixmaperrors` CVAR, have been applied to maps in `doom.wad`.
 
----
+![](https://github.com/bradharding/www.doomretro.com/raw/master/wiki/bigdivider.png)
 
 ###### Sunday, March 26, 2017
 
-### DOOM Retro v2.4.3
+#### DOOM Retro v2.4.3
 
 * Optimizations have been made to further improve the overall performance and stability of *DOOM Retro*.
 * The <kbd>ENTER</kbd> key may now be used as an alternative to the <kbd>Y</kbd> key when responding to messages requiring a yes/no answer.
@@ -1338,11 +1407,11 @@
 * The maximum value the `r_screensize` CVAR can be set to is now `7` rather than `8`. Setting the CVAR to `8` previously had no effect.
 * The player can no longer trigger secrets when in freeze mode.
 
----
+![](https://github.com/bradharding/www.doomretro.com/raw/master/wiki/bigdivider.png)
 
 ###### Wednesday, March 8, 2017
 
-### DOOM Retro v2.4.2
+#### DOOM Retro v2.4.2
 
 * *DOOM Retro* is now compiled using [*Microsoft Visual Studio Community 2017*](https://www.visualstudio.com/vs/).
 * Optimizations have been made to further improve the overall performance and stability of *DOOM Retro*.
@@ -1354,11 +1423,11 @@
 * Minor changes have been made to text that is output to the console.
 * A bug has been fixed whereby it was possible for some controls to be bound twice to the same action in `doomretro.cfg`.
 
----
+![](https://github.com/bradharding/www.doomretro.com/raw/master/wiki/bigdivider.png)
 
 ###### Tuesday, February 28, 2017
 
-### DOOM Retro v2.4.1
+#### DOOM Retro v2.4.1
 
 * Optimizations have been made to further improve the overall performance and stability of *DOOM Retro*.
 * The following changes have been made to accommodate for the release of [*Back To Saturn X E1: Get Out Of My Stations v1.0*](https://www.doomworld.com/idgames/levels/doom2/megawads/btsx_e1):
@@ -1367,11 +1436,11 @@
 * The header of WADs specified on the command-line using the `-file` parameter will no longer be checked.
 * A bug has been fixed whereby the super shotgun would appear entirely translucent when the player fired it.
 
----
+![](https://github.com/bradharding/www.doomretro.com/raw/master/wiki/bigdivider.png)
 
 ###### Monday, February 27, 2017
 
-### DOOM Retro v2.4
+#### DOOM Retro v2.4
 
 * Extensive optimizations have been made to further improve the overall performance and stability of *DOOM Retro*, particularly when rendering blood splats and shadows.
 * Improvements have been made to *DOOM Retro’s* renderer.
@@ -1425,22 +1494,22 @@
 * A bug has been fixed whereby the individual monster stats in the `playerstats` CCMD would be recalculated incorrectly when an arch-vile resurrected another monster.
 * Fixes have been applied to three locked doors in E2M2 and E2M6 of `doom.wad` so that monsters can’t open them from the other side.
 
----
+![](https://github.com/bradharding/www.doomretro.com/raw/master/wiki/bigdivider.png)
 
 ###### Friday, January 13, 2017
 
-### DOOM Retro v2.3.9
+#### DOOM Retro v2.3.9
 
 * Optimizations have been made to further improve the overall performance and stability of *DOOM Retro*.
 * A bug has been fixed whereby multiple files couldn’t be loaded using *DOOM Retro’s* WAD launcher.
 * Improvements have been made to translucent wall textures when the `r_dither` CVAR is `on`.
 * Savegames no longer become corrupted in some instances. Consequently, savegames created using previous versions of *DOOM Retro* are not compatible with this version.
 
----
+![](https://github.com/bradharding/www.doomretro.com/raw/master/wiki/bigdivider.png)
 
 ###### Friday, January 6, 2017
 
-### DOOM Retro v2.3.8
+#### DOOM Retro v2.3.8
 
 * Optimizations have been made to further improve the overall performance and stability of *DOOM Retro*, particularly in the handling of large numbers of blood splats.
 * *DOOM Retro’s* splash screen has been redesigned.
@@ -1468,11 +1537,11 @@
 * A bug has been fixed whereby the <kbd>,</kbd> key couldn’t be bound nor unbound in the console.
 * The bound controls displayed by the `bindlist` CCMD are now enumerated correctly.
 
----
+![](https://github.com/bradharding/www.doomretro.com/raw/master/wiki/bigdivider.png)
 
 ###### Friday, December 2, 2016
 
-### DOOM Retro v2.3.7
+#### DOOM Retro v2.3.7
 
 * Optimizations have been made to further improve the overall performance and stability of *DOOM Retro*.
 * Minor changes have been made to text that is output to the console.
@@ -1499,11 +1568,11 @@
 * A bug has been fixed whereby when the `s_randommusic` CVAR was `on`, random music would attempt to start playing at the start of a map but then stop, and the game would become almost completely unresponsive.
 * When the `s_randommusic` CVAR is `on`, the random music chosen at the start of a map will now loop rather than different music starting to play after the first finishes.
 
----
+![](https://github.com/bradharding/www.doomretro.com/raw/master/wiki/bigdivider.png)
 
 ###### Saturday, November 19, 2016
 
-### DOOM Retro v2.3.6
+#### DOOM Retro v2.3.6
 
 * *DOOM Retro* is now compiled using [*Microsoft Visual Studio Community 2017 RC*](https://www.visualstudio.com/vs/visual-studio-2017-rc/).
 * Optimizations have been made to further improve the overall performance and stability of *DOOM Retro*.
@@ -1517,11 +1586,11 @@
 * Music will now be paused if either the menu or console is open and the window loses focus.
 * A crash will no longer occur when trying to spawn a spider mastermind using the `spawn` CCMD in *DOOM Shareware*.
 
----
+![](https://github.com/bradharding/www.doomretro.com/raw/master/wiki/bigdivider.png)
 
 ###### Tuesday, November 15, 2016
 
-### DOOM Retro v2.3.5
+#### DOOM Retro v2.3.5
 
 * Optimizations have been made to further improve the overall performance and stability of *DOOM Retro*.
 * Minor changes have been made to text that is output to the console.
@@ -1535,11 +1604,11 @@
 * The console now opens and closes at a consistent speed, slowing down as it is almost completely opened.
 * The title of the currently playing music track, as well as the number of secret sectors, are now displayed in the output of the `mapstats` CCMD.
 
----
+![](https://github.com/bradharding/www.doomretro.com/raw/master/wiki/bigdivider.png)
 
 ###### Thursday, November 10, 2016
 
-### DOOM Retro v2.3.4
+#### DOOM Retro v2.3.4
 
 * Optimizations have been made to further improve the overall performance and stability of *DOOM Retro*.
 * Minor changes have been made to text that is output to the console.
@@ -1563,11 +1632,11 @@
 * Sectors with multiple effects in some *BOOM*-compatible maps will now behave correctly.
 * The weapon keys <kbd>1</kbd> to <kbd>7</kbd> will no longer momentarily fail to work after entering an invalid parameter for the `IDMUSxy` cheat.
 
----
+![](https://github.com/bradharding/www.doomretro.com/raw/master/wiki/bigdivider.png)
 
 ###### Saturday, October 29, 2016
 
-### DOOM Retro v2.3.3
+#### DOOM Retro v2.3.3
 
 * Optimizations have been made to further improve the overall performance and stability of *DOOM Retro*.
 * The limited MIDI support in *Windows Vista* and above has now been overcome, allowing the music volume to be adjusted independently of the sound effects volume. To allow this to happen, an additional file called `midiproc.exe` is now included and needs to remain in the same folder as `doomretro.exe`.
@@ -1582,11 +1651,11 @@
 * The player will now be thrust away with the correct amount of force when attacked by an Arch-vile, or within the blast radius of a rocket or barrel explosion.
 * A time limit for each map can now be set using the `-timer` command-line parameter.
 
----
+![](https://github.com/bradharding/www.doomretro.com/raw/master/wiki/bigdivider.png)
 
 ###### Saturday, October 22, 2016
 
-### DOOM Retro v2.3.2
+#### DOOM Retro v2.3.2
 
 * *DOOM Retro* now uses version 2.0.5 of the [*SDL (Simple DirectMedia Layer)*](http://www.libsdl.org/) library.
 * Optimizations have been made to further improve the overall performance and stability of *DOOM Retro*.
@@ -1623,11 +1692,11 @@
 * Pressing a gamepad button bound to the `+clearmark`, `+followmode`, `+grid`, `+mark`, `+maxzoom` or `+rotatemode` actions now works as intended in the automap.
 * The `vid_scaleapi` and `vid_widescreen` CVARs will now be reset correctly when using either the `reset` or `resetall` CCMDs.
 
----
+![](https://github.com/bradharding/www.doomretro.com/raw/master/wiki/bigdivider.png)
 
 ###### Thursday, October 6, 2016
 
-### DOOM Retro v2.3.1
+#### DOOM Retro v2.3.1
 
 * The correct value of the `ammo` CVAR is now displayed when the player has their fists or chainsaw selected.
 * A bug has been fixed whereby lost souls wouldn’t be fullbright at certain angles.
@@ -1640,11 +1709,11 @@
 * A bug has been fixed whereby the player’s death sound wasn’t being played when they died.
 * Blood splats are no longer spawned around corpse decorations that are in a liquid sector.
 
----
+![](https://github.com/bradharding/www.doomretro.com/raw/master/wiki/bigdivider.png)
 
 ###### Friday, September 30, 2016
 
-### DOOM Retro v2.3
+#### DOOM Retro v2.3
 
 * Optimizations have been made to further improve the overall performance and stability of *DOOM Retro*.
 * Changes have been made to the format of savegames and so are not compatible with previous versions of *DOOM Retro*.
@@ -1687,7 +1756,7 @@
 * The values of the `r_detail` CVAR are now displayed correctly in the output of the `cvarlist` CCMD.
 * The `+use` and `+fire` actions will now respawn a dead player when in the automap.
 * A bug has been fixed that stopped some string CVARs from being able to be changed in the console.
-* The digits in the status bar are no longer lowered by 1 pixel in [*Back To Saturn X E1: Get Out Of My Stations*](https://www.doomworld.com/idgames/levels/doom2/megawads/btsx_e1) and [*Back To Saturn X E2: Tower in the Fountain of Sparks*](https://www.doomworld.com/forum/topic/69960).
+* The digits in the status bar are no longer lowered by 1 pixel in [*Back To Saturn X E1: Get Out Of My Stations*](https://www.doomworld.com/idgames/levels/doom2/megawads/btsx_e1) and [*Back To Saturn X E2: Tower In The Fountain Of Sparks*](https://www.doomworld.com/forum/topic/69960).
 * The “Cheated” stat in the `playerstats` CCMD now increases when using some CCMDs and command-line parameters that would be considered cheating.
 * The console is now automatically closed when the `ammo`, `armor` and `health` CVARs are changed.
 * If the `health` CVAR is changed to a smaller value, the effects of the damage to the player will now be shown.
@@ -1708,11 +1777,11 @@
 * The suicide bombers in [*Valiant*](https://www.doomworld.com/idgames/levels/doom2/Ports/megawads/valiant) will now explode as intended.
 * If a `TITLEPIC` lump exists in a PWAD, and there is no `CREDIT` lump to accompany it, then the `CREDIT` lump in the IWAD won’t be displayed during the title sequence.
 
----
+![](https://github.com/bradharding/www.doomretro.com/raw/master/wiki/bigdivider.png)
 
 ###### Saturday, July 30, 2016
 
-### DOOM Retro v2.2.5
+#### DOOM Retro v2.2.5
 
 * Optimizations have been made to further improve the overall performance and stability of *DOOM Retro*.
 * The shadows of mancubi have been raised slightly.
@@ -1729,11 +1798,11 @@
 * A `respawnitems` CCMD has been implemented that allows most items to be respawned 30 seconds after the player picks them up, replicating what happens in *DOOM* multiplayer.
 * The contents of `doomretro.cfg` have been rearranged slightly and commented.
 
----
+![](https://github.com/bradharding/www.doomretro.com/raw/master/wiki/bigdivider.png)
 
 ###### Saturday, July 16, 2016
 
-### DOOM Retro v2.2.4
+#### DOOM Retro v2.2.4
 
 * Blood splats and shadows are now drawn at greater distances.
 * Minor changes have been made to some elements of the console.
@@ -1749,11 +1818,11 @@
 * A bug has been fixed whereby rocket launcher frames would be shown when firing the photon ’zooka in [*HacX: Twitch ’n Kill*](http://www.drnostromo.com/hacx/).
 * The text caret’s animation now resets each time the console is open, and is hidden when the console closes.
 
----
+![](https://github.com/bradharding/www.doomretro.com/raw/master/wiki/bigdivider.png)
 
 ###### Tuesday, July 5, 2016
 
-### DOOM Retro v2.2.3
+#### DOOM Retro v2.2.3
 
 * *DOOM Retro* is now completely portable. The configuration file, `doomretro.cfg`, is now saved in the same folder as the executable, savegames are saved in a `savegames\` folder and screenshots are saved in a `screenshots\` folder.
 * Optimizations have been made to further improve the overall performance and stability of *DOOM Retro*.
@@ -1767,17 +1836,17 @@
 * The player’s view will no longer jump slightly when dead and their corpse is sliding down stairs.
 * A `teleport` CCMD has been implemented that allows the player to be teleported to another location in the current map.
 * Fuzzy shadows are now applied to any thing whose `SHADOW` bit has been set in a `DEHACKED` lump.
-* The map number in the console and automap is now shown in the format `E2Mxy` in [*Back To Saturn X E2: Tower in the Fountain of Sparks*](https://www.doomworld.com/forum/topic/69960).
+* The map number in the console and automap is now shown in the format `E2Mxy` in [*Back To Saturn X E2: Tower In The Fountain Of Sparks*](https://www.doomworld.com/forum/topic/69960).
 * The `r_bloodsplats_total` CVAR is now calculated correctly once it reaches `r_bloodsplats_max`.
 * A bug has been fixed whereby palette effects from power-ups would remain on the screen after ending a game from the options menu in some instances.
 * The value of `r_lowpixelsize` will no longer affect the display of the title screen when the menu is open.
 * The <kbd>F5</kbd> key can no longer be used to change the graphic detail when the automap is open.
 
----
+![](https://github.com/bradharding/www.doomretro.com/raw/master/wiki/bigdivider.png)
 
 ###### Saturday, June 18, 2016
 
-### DOOM Retro v2.2.2
+#### DOOM Retro v2.2.2
 
 * One IWAD or PWAD may now be specified on the command-line without the need for the `-iwad` or `-file` command-line parameters.
 * Optimizations have been made to further improve the overall performance and stability of *DOOM Retro*.
@@ -1796,11 +1865,11 @@
 * Parameters can no longer be entered at the end of CCMDs that don’t use them.
 * The player’s view will no longer jump slightly when dropping down between two liquid sectors greater than 24 units apart.
 
----
+![](https://github.com/bradharding/www.doomretro.com/raw/master/wiki/bigdivider.png)
 
 ###### Thursday, June 9, 2016
 
-### DOOM Retro v2.2.1
+#### DOOM Retro v2.2.1
 
 * *DOOM Retro* is now back to supporting *Windows XP* again.
 * A crash will no longer occur when pressing the <kbd>PRINTSCREEN</kbd> key to take a screenshot on a display with an aspect ratio less than 4:3 (such as 1280×1024).
@@ -1812,11 +1881,11 @@
 * The `centerweapon` CVAR can now also be entered as `centreweapon`.
 * The `centered` value for the `vid_windowpos` CVAR can now also be entered as `centred`.
 
----
+![](https://github.com/bradharding/www.doomretro.com/raw/master/wiki/bigdivider.png)
 
 ###### Saturday, June 4, 2016
 
-### DOOM Retro v2.2
+#### DOOM Retro v2.2
 
 * Optimizations have been made to further improve the overall performance and stability of *DOOM Retro*.
 * *DOOM Retro’s* settings and savegames are now placed in `C:\<username>\DOOM Retro\`.
@@ -1859,11 +1928,11 @@
 * [*ZDoom’s*](http://zdoom.org/) obituary strings are now ignored in `DEHACKED` patches so warnings aren’t displayed in the console at startup.
 * A bug has been fixed whereby a frame would be skipped when rotating monsters in the *DOOM II* cast sequence.
 
----
+![](https://github.com/bradharding/www.doomretro.com/raw/master/wiki/bigdivider.png)
 
 ###### Tuesday, May 3, 2016
 
-### DOOM Retro v2.1.3
+#### DOOM Retro v2.1.3
 
 * Optimizations have been made to further improve the overall performance and stability of *DOOM Retro*.
 * Scrolling up in the options menu now works correctly.
@@ -1881,11 +1950,11 @@
 * Improvements have been made to the accuracy of “Weapon accuracy” in the output of the `playerstats` CCMD.
 * The corpses of monsters are no longer spawned if “No monsters” has been set.
 
----
+![](https://github.com/bradharding/www.doomretro.com/raw/master/wiki/bigdivider.png)
 
 ###### Sunday, April 24, 2016
 
-### DOOM Retro v2.1.2
+#### DOOM Retro v2.1.2
 
 * Optimizations have been made to further improve the overall performance and stability of *DOOM Retro*.
 * Changes have been made to the format of savegames that breaks compatibility with previous versions of *DOOM Retro*.
@@ -1902,11 +1971,11 @@
 * The <kbd>WINDOWS</kbd> key can no longer be pressed when fullscreen, as intended.
 * The *Windows* screensaver is now disabled while *DOOM Retro* is running.
 
----
+![](https://github.com/bradharding/www.doomretro.com/raw/master/wiki/bigdivider.png)
 
 ###### Saturday, April 9, 2016
 
-### DOOM Retro v2.1.1
+#### DOOM Retro v2.1.1
 
 * Pain elementals can now shoot lost souls through two-sided walls that have the `ML_BLOCKMONSTERS` flag, as is possible in *Vanilla DOOM*. (An example of this is at the end of MAP04 in [`requiem.wad`](https://www.doomworld.com/idgames/levels/doom2/megawads/requiem).)
 * The screen will no longer briefly flash if the player has a berserk or radiation shielding suit power-up and then loads a savegame or starts a new game from the menu.
@@ -1917,11 +1986,11 @@
 * Double-resolution yellow and gray digits will no longer be displayed in the status bar if a `STBAR` lump from a PWAD is used.
 * The correct WAD is displayed in the output of the `mapstats` in *DOOM II: Hell On Earth* if `nerve.wad` is also present.
 
----
+![](https://github.com/bradharding/www.doomretro.com/raw/master/wiki/bigdivider.png)
 
 ###### Saturday, April 2, 2016
 
-### DOOM Retro v2.1
+#### DOOM Retro v2.1
 
 * Optimizations have been made to further improve the overall performance and stability of *DOOM Retro*.
 * Support has been added for the `SWITCHES` lump.
@@ -1964,11 +2033,11 @@
 * The <kbd>E</kbd> key may now be pressed as an alternative to <kbd>SPACE</kbd> to use doors, switches, etc. It is bound to the `+use2` action.
 * When the `vid_showfps` CVAR is enabled, the frames per second is now displayed correctly while the screen shakes when the player is injured.
 
----
+![](https://github.com/bradharding/www.doomretro.com/raw/master/wiki/bigdivider.png)
 
 ###### Thursday, February 18, 2016
 
-### DOOM Retro v2.0.5
+#### DOOM Retro v2.0.5
 
 * Bugs have been fixed whereby using `map next` in the console would warp the player to the next episode rather than the next map, and `map ExMy` wouldn’t warp at all.
 * 100 additional sprites, named `SP00` to `SP99` and numbered 145 to 244, have been added for use in *DeHackEd* lumps.
@@ -1976,11 +2045,11 @@
 * An invalid character will no longer be displayed in the console when changing the music or SFX volume in the menu.
 * A bug has been fixed whereby when adjusting the SFX volume in the menu, the music volume was being displayed in the console instead.
 
----
+![](https://github.com/bradharding/www.doomretro.com/raw/master/wiki/bigdivider.png)
 
 ###### Wednesday, February 10, 2016
 
-### DOOM Retro v2.0.4
+#### DOOM Retro v2.0.4
 
 * Using an `A_FireOldBFG` code pointer in a *DeHackEd* lump will no longer cause the game to freeze.
 * The following improvements have been made to [*HacX: Twitch ’n Kill*](http://www.drnostromo.com/hacx/) support:
@@ -2000,11 +2069,11 @@
 * A bug has been fixed whereby using the `map` CCMD would cause the game to crash in some instances.
 * The selected episode or expansion in the menu is set as necessary when using the `map` CCMD.
 
----
+![](https://github.com/bradharding/www.doomretro.com/raw/master/wiki/bigdivider.png)
 
 ###### Saturday, January 30, 2016
 
-### DOOM Retro v2.0.3
+#### DOOM Retro v2.0.3
 
 * “Pistol start” gameplay is now supported. By using the `pistolstart` CCMD, (or specifying `-pistolstart` on the command-line), the player’s health, armor, weapons and ammo will be reset at the start of each map. Also, a `PISTOLSTART` definition may now be used in `MAPINFO` lumps.
 * The muzzle flash of the player’s rocket launcher has been fixed.
@@ -2022,11 +2091,11 @@
 * A random static effect has been applied to the console’s background.
 * The effects of changing the `vid_windowpos` and `vid_windowsize` CVARs while in the console and in a window are now immediate.
 
----
+![](https://github.com/bradharding/www.doomretro.com/raw/master/wiki/bigdivider.png)
 
 ###### Sunday, January 17, 2016
 
-### DOOM Retro v2.0.2
+#### DOOM Retro v2.0.2
 
 * A rare bug has been fixed whereby the player’s view would continuously move or turn in one direction by itself.
 * The `+run` action now works correctly when bound to a mouse button.
@@ -2035,21 +2104,21 @@
 * A bug has been fixed whereby the muzzle flash of some weapons could be offset from the muzzle in some rare instances.
 * The file `smpeg2.dll` is now included with *DOOM Retro* again.
 
----
+![](https://github.com/bradharding/www.doomretro.com/raw/master/wiki/bigdivider.png)
 
 ###### Sunday, January 10, 2016
 
-### DOOM Retro v2.0.1
+#### DOOM Retro v2.0.1
 
 * A bug has been fixed whereby the screen wouldn’t stop shaking after the player was killed in some instances.
 * The `+run` action may now be bound to a mouse button.
 * The player’s weapon will no longer be fullbright while the player is injured.
 
----
+![](https://github.com/bradharding/www.doomretro.com/raw/master/wiki/bigdivider.png)
 
 ###### Saturday, January 9, 2016
 
-### DOOM Retro v2.0
+#### DOOM Retro v2.0
 
 * Optimizations have been made to further improve the overall performance and stability of *DOOM Retro*.
 * *DOOM Retro* now uses the official releases of [*SDL v2.0.4*](http://libsdl.org) and [*SDL_mixer v2.0.1*](http://libsdl.org/SDL_mixer).
@@ -2137,11 +2206,11 @@
 * The small digits used in the status bar and for marks in the automap are now consistent with those used in the console.
 * A bug has been fixed whereby if the `r_gamma` CVAR was set to `2.0`, the gamma correction level would still be set to the default of `0.75` at startup.
 
----
+![](https://github.com/bradharding/www.doomretro.com/raw/master/wiki/bigdivider.png)
 
 ###### Wednesday, October 21, 2015
 
-### DOOM Retro v1.9
+#### DOOM Retro v1.9
 
 * *DOOM Retro* now allows the automap to be shown on a second display. This feature may be enabled using the `am_external` CVAR, and will display a fullscreen 16:10 automap in the first display it finds that is not the main display set by the `vid_display` CVAR. While this external automap is displayed, the <kbd>TAB</kbd> key is disabled, and the `IDDT` cheat can be entered at any time. Also, the automap’s usual controls are unavailable, but the grid and rotate mode may still be toggled in the console using the relevant CVARs.
 * Optimizations have been made to further improve the overall performance of *DOOM Retro*.
@@ -2205,11 +2274,11 @@
 * A warning is now displayed in the console when a music lump can’t be played.
 * Tilde characters are now removed from the files saved using the `condump` CCMD.
 
----
+![](https://github.com/bradharding/www.doomretro.com/raw/master/wiki/bigdivider.png)
 
 ###### Saturday, September 5, 2015
 
-### DOOM Retro v1.8.5
+#### DOOM Retro v1.8.5
 
 * More than one instance of `-file` may now appear on the command-line.
 * The amount of “map revealed” in the output of the `playerstats` CCMD is now always calculated correctly.
@@ -2221,11 +2290,11 @@
 * Support has been added for certain hacks to the `NODE` lump of a map. See [here](http://doomwiki.org/wiki/Linguortal) for more information.
 * The chaingunner’s refire frame is now fullbright.
 
----
+![](https://github.com/bradharding/www.doomretro.com/raw/master/wiki/bigdivider.png)
 
 ###### Saturday, August 29, 2015
 
-### DOOM Retro v1.8.4
+#### DOOM Retro v1.8.4
 
 * Entering the `playername` CVAR without a value will now display the value it is currently set to.
 * Gradual lighting is now applied to the sectors under all doors as they open and close, similar to the effect introduced in *BOOM*.
@@ -2244,11 +2313,11 @@
 * The game will no longer crash when trying to bind an action to an invalid control using the `bind` CCMD. And now a warning will be displayed in the console advising that it couldn’t be bound.
 * The `+alwaysrun` action can now be bound to a gamepad button.
 
----
+![](https://github.com/bradharding/www.doomretro.com/raw/master/wiki/bigdivider.png)
 
 ###### Thursday, August 20, 2015
 
-### DOOM Retro v1.8.3
+#### DOOM Retro v1.8.3
 
 * A bug has been fixed whereby some platforms would move silently.
 * The brightmap for walls with the `SW2BRN2` texture has been fixed.
@@ -2261,20 +2330,20 @@
 * A bug has been fixed whereby the game would crash when trying to draw teleport lines in the automap in some instances.
 * The game will no longer crash when trying to use the <kbd>F9</kbd> to quickload a game in some rare instances.
 
----
+![](https://github.com/bradharding/www.doomretro.com/raw/master/wiki/bigdivider.png)
 
 ###### Wednesday, August 12, 2015
 
-### DOOM Retro v1.8.2
+#### DOOM Retro v1.8.2
 
 * Although quite often the same folder, *DOOM Retro* will now put savegames in the same folder as the executable, rather than the current working folder.
 * A bug has been fixed whereby sprites would appear through closed doors in some instances.
 
----
+![](https://github.com/bradharding/www.doomretro.com/raw/master/wiki/bigdivider.png)
 
 ###### Sunday, August 9, 2015
 
-### DOOM Retro v1.8.1
+#### DOOM Retro v1.8.1
 
 * The width of the text is now checked before pasting in the console.
 * *DOOM Retro* will now look in the same folder as the executable, rather than the current working folder, to find `doomretro.wad` and `doomretro.cfg`.
@@ -2292,11 +2361,11 @@
 * Brightmaps will no longer be rendered when the player has an invulnerability power-up, or in areas with a *BOOM* colormap.
 * A crash will no longer occur when a *BOOM* pusher or puller thing is present in a map.
 
----
+![](https://github.com/bradharding/www.doomretro.com/raw/master/wiki/bigdivider.png)
 
 ###### Sunday, August 2, 2015
 
-### DOOM Retro v1.8
+#### DOOM Retro v1.8
 
 * An extensive number of optimizations have been made to improve the overall performance and stability of *DOOM Retro*.
 * *DOOM Retro* is now compiled using [*Microsoft Visual Studio Community 2015*](http://www.visualstudio.com/vs-2015-product-editions). *Visual Studio’s* runtime library is now statically linked to the binary, meaning it doesn’t need to be installed.
@@ -2374,7 +2443,7 @@
 * A small amount of ammo is now given to the player when using the `give backpack` CCMD, to be consistent with what the player is given when picking up a backpack during a game.
 * A bug has been fixed whereby an additional character could be entered into a cheat sequence in some instances.
 * The use of a *TiMidity* configuration file is now displayed in the console at startup.
-* MAP05C and MAP16C in [*Back To Saturn X E2: Tower in the Fountain of Sparks*](https://www.doomworld.com/forum/topic/69960) may now be loaded using the `map` CCMD.
+* MAP05C and MAP16C in [*Back To Saturn X E2: Tower In The Fountain Of Sparks*](https://www.doomworld.com/forum/topic/69960) may now be loaded using the `map` CCMD.
 * Monsters will no longer be alerted when the player makes a noise while “No Target” mode is on using the `notarget` CCMD.
 * The `s_maxslicetime` CVAR has been removed.
 * Since it produces the same result as using `linear`, the `anisotropic` value for the `vid_scalefilter` CVAR has been removed.
@@ -2409,9 +2478,9 @@
 * A bug has been fixed whereby warnings weren’t being displayed in the console.
 * The <kbd>WINDOWS</kbd> key is now only disabled during a game, and not while the game is in a menu, paused, in the console, or on the title screen.
 
----
+![](https://github.com/bradharding/www.doomretro.com/raw/master/wiki/bigdivider.png)
 
-### DOOM Retro v1.7.1
+#### DOOM Retro v1.7.1
 
 ###### Thursday, May 14, 2015
 
@@ -2448,11 +2517,11 @@
 * A bug has been fixed whereby the map name in the automap was displayed incorrectly when using [*ZDL*](http://zdoom.org/wiki/ZDL) to launch the game.
 * The “fuzzy” edges of spectre shadows are now paused while the console is open.
 
----
+![](https://github.com/bradharding/www.doomretro.com/raw/master/wiki/bigdivider.png)
 
 ###### Monday, April 20, 2015
 
-### DOOM Retro v1.7
+#### DOOM Retro v1.7
 
 * *DOOM Retro* now uses [*SDL 2.0.3*](http://www.libsdl.org/) for its graphics and audio. This brings significant performance improvements, as the screen is now scaled using hardware acceleration when possible, as well as the following features:
   * The monitor to display the game on can now be specified.
@@ -2489,16 +2558,16 @@
 * Several improvements have been made to *DOOM Retro’s* support of *DeHackEd* lumps and files.
 * Now `.bex` files as well as `.deh` files, with the same name and in the same folder as the PWAD selected in the WAD launcher, will now be automatically loaded.
 * `.deh` files are no longer automatically loaded if a PWAD is loaded from the command-line. They will need to be explicitly loaded using the `-deh` command-line parameter.
-* A bug has been fixed whereby some teleporters in [*Back To Saturn X E1: Get Out Of My Stations*](https://www.doomworld.com/idgames/levels/doom2/megawads/btsx_e1) and [*Back To Saturn X E2: Tower in the Fountain of Sparks*](https://www.doomworld.com/forum/topic/69960) were animating as if they were liquid.
+* A bug has been fixed whereby some teleporters in [*Back To Saturn X E1: Get Out Of My Stations*](https://www.doomworld.com/idgames/levels/doom2/megawads/btsx_e1) and [*Back To Saturn X E2: Tower In The Fountain Of Sparks*](https://www.doomworld.com/forum/topic/69960) were animating as if they were liquid.
 * The position of the player arrow is now drawn much more accurately when in the automap and rotate mode is on.
 * The automap will no longer disappear, nor the game crash, when zooming out in very large maps.
 * Translucency is now applied to MegaSpheres as originally intended.
 
----
+![](https://github.com/bradharding/www.doomretro.com/raw/master/wiki/bigdivider.png)
 
 ###### Tuesday, February 3, 2015
 
-### DOOM Retro v1.6.7
+#### DOOM Retro v1.6.7
 
 * A bug has been fixed whereby *DOOM Retro* would crash at startup when trying to run in a screen resolution that wasn’t widescreen.
 * *DOOM Retro* will no longer crash after successive presses of <kbd>ALT</kbd> + <kbd>ENTER</kbd> to switch between fullscreen and windowed modes.
@@ -2509,18 +2578,18 @@
 * Weapons spawned at the start of a map are now also mirrored when the `mirrorweapons` setting was `true` in `doomretro.cfg`.
 * *Vanilla DOOM’s* [“long wall error”](http://doomwiki.org/wiki/Long_wall_error) has been fixed.
 * Further optimizations have been made to improve the overall performance and stability of *DOOM Retro*.
-* Teleporters in [*Back To Saturn X E1: Get Out Of My Stations*](https://www.doomworld.com/idgames/levels/doom2/megawads/btsx_e1) and [*Back To Saturn X E2: Tower in the Fountain of Sparks*](https://www.doomworld.com/forum/topic/69960) are now drawn correctly in the automap before they have been triggered.
+* Teleporters in [*Back To Saturn X E1: Get Out Of My Stations*](https://www.doomworld.com/idgames/levels/doom2/megawads/btsx_e1) and [*Back To Saturn X E2: Tower In The Fountain Of Sparks*](https://www.doomworld.com/forum/topic/69960) are now drawn correctly in the automap before they have been triggered.
 * Whether the automap is active or not, and any automap marks, are now saved in savegames. (Note that this change breaks savegame compatibility with previous versions of *DOOM Retro*.)
 * A header comment has been added to the top of `doomretro.cfg`, with a note advising to “go to http://wiki.doomretro.com for information on changing these settings”.
 * The FPS counter displayed when `-devparm` is specified on the command-line now won’t be hidden when taking a screenshot, and will continue to update when in a menu or the game is paused.
 * Diminished lighting from the player has been enhanced.
 * Blood splats are now only spawned at the same height as corpses as they slide.
 
----
+![](https://github.com/bradharding/www.doomretro.com/raw/master/wiki/bigdivider.png)
 
 ###### Sunday, January 25, 2015
 
-### DOOM Retro v1.6.6
+#### DOOM Retro v1.6.6
 
 * The new liquid animation that was introduced in *DOOM Retro v1.6.5* has been improved upon such that the entire textures of the sectors will now also rise and fall, rather than just their edges.
 * Due to this change in animation, the floating objects in liquid sectors now rise and fall in sync with each other and the sector.
@@ -2529,15 +2598,15 @@
 * A bug has been fixed whereby the liquid animation was stopping the player and/or monsters from being able to enter certain areas of some maps.
 * The brightmap for the `COMP2` wall texture has been fixed.
 * A bug has been fixed whereby other monsters could infight with arch-viles.
-* The teleporter texture used in [*Back To Saturn X E1: Get Out Of My Stations*](https://www.doomworld.com/idgames/levels/doom2/megawads/btsx_e1) and [*Back To Saturn X E2: Tower in the Fountain of Sparks*](https://www.doomworld.com/forum/topic/69960) no longer animates like a liquid.
+* The teleporter texture used in [*Back To Saturn X E1: Get Out Of My Stations*](https://www.doomworld.com/idgames/levels/doom2/megawads/btsx_e1) and [*Back To Saturn X E2: Tower In The Fountain Of Sparks*](https://www.doomworld.com/forum/topic/69960) no longer animates like a liquid.
 * Savegames will now be placed in the `savegames\DOOM2.WAD\` folder rather than the `savegames\unknown.wad\` folder when `nerve.wad` is loaded.
 * The player’s weapon is now recentered after teleporting.
 
----
+![](https://github.com/bradharding/www.doomretro.com/raw/master/wiki/bigdivider.png)
 
 ###### Monday, January 19, 2015
 
-### DOOM Retro v1.6.5
+#### DOOM Retro v1.6.5
 
 * Many optimizations have been made to further improve the overall performance and stability of *DOOM Retro*.
 * A bug has been fixed whereby secret sectors that lower and change their texture may not be displayed in the automap correctly.
@@ -2569,11 +2638,11 @@
 * The edges of shadows are now black when the `translucency` setting in `doomretro.cfg` to `false`.
 * The `sfxvolume` and `musicvolume` settings in `doomretro.cfg` will no longer round down to `0%` when set to `6%`.
 
----
+![](https://github.com/bradharding/www.doomretro.com/raw/master/wiki/bigdivider.png)
 
 ###### Wednesday, December 10, 2014
 
-### DOOM Retro v1.6.4
+#### DOOM Retro v1.6.4
 
 * Several optimizations have been made in an attempt to further improve the overall performance of *DOOM Retro*.
 * *DeHackEd* files (`*.deh` and `*.bex`) are now displayed and can be loaded in the WAD launcher. <kbd>CTRL</kbd>-click to select them along with the WAD file(s) you want to load.
@@ -2597,11 +2666,11 @@
 * The player will now bob as intended when `playerbob` is greater than `75%`.
 * Changes have been made to the messages displayed when adding and clearing marks.
 
----
+![](https://github.com/bradharding/www.doomretro.com/raw/master/wiki/bigdivider.png)
 
 ###### Tuesday, November 25, 2014
 
-### DOOM Retro v1.6.3
+#### DOOM Retro v1.6.3
 
 * Several internal optimizations have been made in an attempt to improve the overall performance of *DOOM Retro*.
 * Decorative corpses are now randomly mirrored when a map is loaded.
@@ -2640,11 +2709,11 @@
 * A bug has been fixed present in *Vanilla DOOM* whereby the vertical position of an arch-vile’s fire attack could be set incorrectly in some instances.
 * There is no longer any small upward thrust when the player is receives an arch-vile’s fire attack while “no clipping mode” is on using the `IDCLIP` cheat.
 
----
+![](https://github.com/bradharding/www.doomretro.com/raw/master/wiki/bigdivider.png)
 
 ###### Saturday, November 8, 2014
 
-### DOOM Retro v1.6.2
+#### DOOM Retro v1.6.2
 
 * A bug, inadvertently introduced in v1.6.1, has been fixed whereby the wrong colored keys would appear in the HUD.
 * The default value for the `saturation` setting in `doomretro.cfg` has been changed from `0.75` to `1.00`.
@@ -2659,17 +2728,17 @@
 * The <kbd>,</kbd> and <kbd>.</kbd> keys can now also be used to strafe left and right, as they could in *Vanilla DOOM*. They are changed using the `key_strafeleft2` and `key_straferight2` settings in `doomretro.cfg`.
 * Shifted characters are now allowed when entering savegame descriptions. (In *Vanilla DOOM*, pressing <kbd>SHIFT</kbd> + <kbd>/</kbd>, for example, would still display “/” rather than “?”.)
 
----
+![](https://github.com/bradharding/www.doomretro.com/raw/master/wiki/bigdivider.png)
 
 ###### Tuesday, November 4, 2014
 
-### DOOM Retro v1.6.1
+#### DOOM Retro v1.6.1
 
 * If a *DeHackEd* file (with a `.deh` extension) is present with the same name and in the same folder as the selected PWAD, it will be automatically opened as well.
 * Improvements have been made to when the player slides against walls.
 * A bug has been fixed whereby the screen would not render fully after switching from fullscreen to windowed modes when pressing <kbd>ALT</kbd> + <kbd>ENTER</kbd>.
 * Several compatibility fixes have been made when using *DeHackEd* files and lumps.
-* Savegames for [*Back To Saturn X E1: Get Out Of My Stations*](https://www.doomworld.com/idgames/levels/doom2/megawads/btsx_e1) and [*Back To Saturn X E2: Tower in the Fountain of Sparks*](https://www.doomworld.com/forum/topic/69960) are now separated by episode.
+* Savegames for [*Back To Saturn X E1: Get Out Of My Stations*](https://www.doomworld.com/idgames/levels/doom2/megawads/btsx_e1) and [*Back To Saturn X E2: Tower In The Fountain Of Sparks*](https://www.doomworld.com/forum/topic/69960) are now separated by episode.
 * A bug has been fixed whereby [*HacX: Twitch ’n Kill*](http://www.drnostromo.com/hacx/) wouldn’t load at all. Specific support has now been added for it.
 * Fake contrast is now applied to outdoor areas again.
 * Thing triangles no longer appear for the invisible corpses in *Chex Quest* when using the `IDDT` cheat in the automap.
@@ -2680,11 +2749,11 @@
 * A bug has been fixed whereby switching to and from the chainsaw using the number keys really quickly would cause either a crash, or the player’s weapon to disappear completely.
 * The player’s weapon bob is now consistent with *Vanilla DOOM*.
 
----
+![](https://github.com/bradharding/www.doomretro.com/raw/master/wiki/bigdivider.png)
 
 ###### Saturday, October 25, 2014
 
-### DOOM Retro v1.6
+#### DOOM Retro v1.6
 
 * Further enhancements have been made to *DOOM Retro’s* overall performance and stability.
 * Widescreen mode is no longer stretched horizontally on displays with a greater aspect ratio than 16:10.
@@ -2727,7 +2796,7 @@
   * All blood splats are green.
   * Since corpses are effectively invisible, there are no blood splats or crunch sounds made if an invisible corpse happens to be under a door.
   * The screen will flash green rather than red when the player is injured.
-* Specific support has also been added for [*Back To Saturn X E1: Get Out Of My Stations*](https://www.doomworld.com/idgames/levels/doom2/megawads/btsx_e1) and [*Back To Saturn X E2: Tower in the Fountain of Sparks*](https://www.doomworld.com/forum/topic/69960):
+* Specific support has also been added for [*Back To Saturn X E1: Get Out Of My Stations*](https://www.doomworld.com/idgames/levels/doom2/megawads/btsx_e1) and [*Back To Saturn X E2: Tower In The Fountain Of Sparks*](https://www.doomworld.com/forum/topic/69960):
   * The window caption is displayed as the PWAD’s full title.
   * *DOOM Retro’s* custom sprite offsets, previously only used with the official *DOOM* IWADS, are now used. This fixes a bug that caused some level decorations to “twitch” as they animated.
   * If only `btsx_e2a.wad` is loaded from the WAD launcher, then `btsx_e2b.wad` is automatically loaded as well, and vice-versa.
@@ -2781,11 +2850,11 @@
 * A bug has been fixed whereby you could switch weapons when zooming in the automap if both actions were set to the gamepad’s left and right shoulder buttons.
 * Skies with heights other than 128 pixels are now rendered correctly.
 
----
+![](https://github.com/bradharding/www.doomretro.com/raw/master/wiki/bigdivider.png)
 
 ###### Friday, August 15, 2014
 
-### DOOM Retro v1.5.2
+#### DOOM Retro v1.5.2
 
 * Monster targets are now completely restored upon loading a game, regardless of whether they were targeting the player, or they were infighting.
 * A Boss Brain no longer needs to be in MAP30 for the monsters it spawns to telefrag the player.
@@ -2801,11 +2870,11 @@
 * Minor changes have been made to a few messages.
 * A bug has been fixed whereby *DOOM Retro* would exit with an error if the `IDDQD` cheat was used to resurrect a dead player.
 
----
+![](https://github.com/bradharding/www.doomretro.com/raw/master/wiki/bigdivider.png)
 
 ###### Thursday, August 7, 2014
 
-### DOOM Retro v1.5.1
+#### DOOM Retro v1.5.1
 
 * A splash screen is now displayed briefly when *DOOM Retro* is opened.
 * Several optimizations have been made to improve *DOOM Retro’s* overall performance and reduce the size of its executable.
@@ -2830,11 +2899,11 @@
 * *DOOM Retro* will no longer crash if the player walks over a very deep hole.
 * The intensity of the vibration effect for XInput-compatible controllers when the player fires a weapon or is injured has been increased. Previously, the effect on the *Logitech F710 controller* could barely be felt.
 
----
+![](https://github.com/bradharding/www.doomretro.com/raw/master/wiki/bigdivider.png)
 
 ###### Thursday, July 17, 2014
 
-### DOOM Retro v1.5
+#### DOOM Retro v1.5
 
 * An extensive amount of enhancements have been made to *DOOM Retro’s* overall performance and stability.
 * By default, *DOOM Retro* will now try running at a resolution of 1280×800. If that isn’t available, the desktop resolution will be used.
@@ -2915,11 +2984,11 @@
 * A bug has been fixed whereby pressing <kbd>SPACE</kbd> to advance a finale text screen would carry over to the following map, and cause the player to use a switch if they started directly in front of one (such as is the case for *MAP07: Dead Simple* in *DOOM II: Hell On Earth*).
 * The flashing key in the HUD will now be updated if the player tries opening another locked door that requires a different key to the one currently flashing.
 
----
+![](https://github.com/bradharding/www.doomretro.com/raw/master/wiki/bigdivider.png)
 
 ###### Tuesday, May 13, 2014
 
-### DOOM Retro v1.4.3
+#### DOOM Retro v1.4.3
 
 * The screen size can now be adjusted correctly in the options menu when not in a game.
 * The size of the pixels when the graphic detail is “LOW” can now be changed by editing the `pixelwidth` and `pixelheight` settings in `doomretro.cfg`. Both are set to a default of `2`.
@@ -2939,11 +3008,11 @@
 * A bug has been fixed whereby use of the `-episode`, `-skill` and `-warp` command-line parameters would cause the game to silently crash.
 * Gamepads now work correctly.
 
----
+![](https://github.com/bradharding/www.doomretro.com/raw/master/wiki/bigdivider.png)
 
 ###### Tuesday, May 6, 2014
 
-### DOOM Retro v1.4.2
+#### DOOM Retro v1.4.2
 
 * Several more limits have been removed, allowing larger and more detailed maps to be loaded without crashing.
 * *DOOM Retro* will now try to fix some common map errors before loading a map.
@@ -2964,11 +3033,11 @@
 * A flashing HOM (“Hall of Mirrors”) indicator has been implemented. The screen will flash red in place of missing textures, but not when the player has enabled “no clipping mode” using the `IDCLIP` or `IDSPISPOPD` cheats.
 * When saving a game, the savegame description will only be updated to the current map name if it hasn’t been changed to something other than map name previously.
 
----
+![](https://github.com/bradharding/www.doomretro.com/raw/master/wiki/bigdivider.png)
 
 ###### Tuesday, April 29, 2014
 
-### DOOM Retro v1.4.1
+#### DOOM Retro v1.4.1
 
 * A bug has been fixed whereby the sound would become disabled if adjusting the volume through the menu or pausing and then unpausing the game.
 * The visplane limit has been removed, allowing for more detailed levels to run without crashing.
@@ -2977,11 +3046,11 @@
 * Projectiles will now pass through map decorations like they do in *Vanilla DOOM*. (Please note that this particular change means savegames from previous versions of *DOOM Retro* won’t work with *DOOM Retro v1.4.1*.)
 * If music can’t be loaded for a particular map, that map will still load without music rather than the game exiting with an error.
 
----
+![](https://github.com/bradharding/www.doomretro.com/raw/master/wiki/bigdivider.png)
 
 ###### Friday, April 25, 2014
 
-### DOOM Retro v1.4
+#### DOOM Retro v1.4
 
 * Several optimizations have been made that improve the overall performance of *DOOM Retro*.
 * When *DOOM Retro* is opened for the first time the following message is now displayed:
@@ -3033,11 +3102,11 @@
 * The small ‘3’ and ‘8’ digits used for marks in the automap, and the small ‘3’ digit in the status bar, have been altered slightly.
 * There is now a chance that the super shotgun may gib a monster when fired at point blank range. (This idea has been taken from Fabian Greffrath’s *Crispy DOOM*.)
 
----
+![](https://github.com/bradharding/www.doomretro.com/raw/master/wiki/bigdivider.png)
 
 ###### Tuesday, April 1, 2014
 
-### DOOM Retro v1.3
+#### DOOM Retro v1.3
 
 * An extensive number of optimizations have been made that improve the overall performance of *DOOM Retro*.
 * A heads-up display (HUD) is now shown in widescreen mode.
@@ -3093,11 +3162,11 @@
 * There are no longer any overlapping drop shadows in the menus.
 * Keys are now positioned correctly in the status bar.
 
----
+![](https://github.com/bradharding/www.doomretro.com/raw/master/wiki/bigdivider.png)
 
 ###### Saturday, March 1, 2014
 
-### DOOM Retro v1.2.1
+#### DOOM Retro v1.2.1
 
 * *DOOM Retro* is now compiled using *Microsoft Visual Studio Express 2013 for Windows Desktop*.
 * *DOOM Retro* is now distributed with version 1.2.14 of `SDL.dll` and version 1.2.12 of `SDL_mixer.dll`.
@@ -3145,11 +3214,11 @@
 * The player arrow in the automap will now be translucent while the player has a partial invisibility power-up.
 * In *DOOM II (BFG Edition)*, since `TITLEPIC` isn’t present in the IWAD, the otherwise unused `DMENUPIC` is now used instead of `INTERPIC`.
 
----
+![](https://github.com/bradharding/www.doomretro.com/raw/master/wiki/bigdivider.png)
 
 ###### Friday, January 24, 2014
 
-### DOOM Retro v1.1
+#### DOOM Retro v1.1
 
 * The source code is no longer distributed with *DOOM Retro* itself, and has instead been made separately available in a [*GitHub* repository](http://github.com/bradharding/doomretro). Please visit this site to follow the latest daily developments, and report any [issues](http://github.com/bradharding/doomretro/issues) that you may encounter.
 * The correct and complete version information is now displayed when right-clicking on `doomretro.exe` and selecting “Properties”.
@@ -3184,3 +3253,5 @@
 * A bug has been fixed whereby if a game is saved while a platform is moving, it could potentially cause the game to crash when that savegame is loaded.
 * When using the `IDCLEVxy` cheat, keycards and skull keys are no longer removed from the status bar before the screen is wiped.
 * The correct message is now displayed when entering the `IDKFA` cheat.
+
+![](https://github.com/bradharding/www.doomretro.com/raw/master/wiki/bigdivider.png)

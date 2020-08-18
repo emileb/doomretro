@@ -42,7 +42,9 @@
 #include "doomtype.h"
 #include "r_defs.h"
 
+extern byte *tinttab20;
 extern byte *tinttab25;
+extern byte *tinttab30;
 extern byte *tinttab33;
 extern byte *tinttab40;
 extern byte *tinttab50;
@@ -71,10 +73,15 @@ extern byte nearestblack;
 extern byte nearestred;
 extern byte nearestwhite;
 
+extern byte *black25;
+extern byte *black40;
+extern byte *yellow15;
+extern byte *white50;
+
 void I_InitTintTables(byte *palette);
 int FindNearestColor(byte *palette, int red, int green, int blue);
 void FindNearestColors(byte *palette);
 
-int FindDominantColor(patch_t *patch);
+int FindDominantColor(patch_t *patch, byte *palette);
 
 #endif

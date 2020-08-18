@@ -44,7 +44,6 @@
 #define FINEANGLES          8192
 #define FINEMASK            (FINEANGLES - 1)
 
-// 0x100000000 to 0x2000
 #define ANGLETOFINESHIFT    19
 
 // Effective size is 10240.
@@ -71,7 +70,7 @@ extern fixed_t  finetangent[FINEANGLES / 2];
 typedef unsigned int    angle_t;
 
 // Effective size is 2049;
-// The +1 size is to handle the case when x==y
+// The +1 size is to handle the case when x == y
 //  without additional checking.
 extern angle_t  tantoangle[SLOPERANGE + 1];
 

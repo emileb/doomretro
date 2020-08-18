@@ -229,6 +229,7 @@
       <SuppressStartupBanner>false</SuppressStartupBanner>
       <BrowseInformation>true</BrowseInformation>
       <BufferSecurityCheck>false</BufferSecurityCheck>
+      <EnableFiberSafeOptimizations>true</EnableFiberSafeOptimizations>
     </ClCompile>
     <Link>
       <AdditionalDependencies>SDL2.lib;SDL2_mixer.lib;SDL2_image.lib;SDL2main.lib;rpcrt4.lib;%(AdditionalDependencies)</AdditionalDependencies>
@@ -303,6 +304,7 @@
       <SuppressStartupBanner>false</SuppressStartupBanner>
       <BrowseInformation>true</BrowseInformation>
       <BufferSecurityCheck>false</BufferSecurityCheck>
+      <EnableFiberSafeOptimizations>true</EnableFiberSafeOptimizations>
     </ClCompile>
     <Link>
       <AdditionalDependencies>SDL2.lib;SDL2_mixer.lib;SDL2_image.lib;SDL2main.lib;rpcrt4.lib;%(AdditionalDependencies)</AdditionalDependencies>
@@ -506,6 +508,12 @@
     <ResourceCompile Include="..\src\win32.rc" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="..\.gitattributes" />
+    <None Include="..\.gitignore" />
+    <None Include="..\.travis.yml" />
+    <None Include="..\CODEOWNERS" />
+    <None Include="..\LICENSE" />
+    <None Include="..\README.md" />
     <None Include="..\releasenotes.md" />
     <None Include="..\res\CHEXBEX" />
     <None Include="..\res\DEHACKED" />
@@ -515,6 +523,9 @@
     <None Include="..\src\doomretro.manifest" />
     <None Include="..\src\Makefile" />
     <None Include="..\src\Makefile.osx" />
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="..\CMakeLists.txt" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets" />

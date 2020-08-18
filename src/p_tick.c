@@ -43,8 +43,8 @@
 #include "s_sound.h"
 #include "z_zone.h"
 
-int             leveltime;
-unsigned int    stat_time = 0;
+int         leveltime;
+uint64_t    stat_time = 0;
 
 //
 // THINKERS
@@ -54,7 +54,7 @@ unsigned int    stat_time = 0;
 // but the first element must be thinker_t.
 //
 
-// killough 8/29/98: we maintain several separate threads, each containing
+// killough 08/29/98: we maintain several separate threads, each containing
 // a special class of thinkers, to allow more efficient searches.
 thinker_t       thinkers[th_all + 1];
 
@@ -100,7 +100,7 @@ void P_AddThinker(thinker_t *thinker)
 
     thinker->references = 0;    // killough 11/98: init reference counter to 0
 
-    // killough 8/29/98: set sentinel pointers, and then add to appropriate list
+    // killough 08/29/98: set sentinel pointers, and then add to appropriate list
     thinker->cnext = NULL;
     thinker->cprev = NULL;
     P_UpdateThinker(thinker);
@@ -148,7 +148,7 @@ void P_RemoveThinkerDelayed(thinker_t *thinker)
 // Deallocation is lazy -- it will not actually be freed
 // until its thinking turn comes up.
 //
-// killough 4/25/98:
+// killough 04/25/98:
 //
 // Instead of marking the function with -1 value cast to a function pointer,
 // set the function to P_RemoveThinkerDelayed(), so that later, it will be
@@ -180,40 +180,6 @@ void P_SetTarget(mobj_t **mop, mobj_t *targ)
 }
 
 //
-// P_RunThinkers
-//
-// killough 4/25/98:
-//
-// Fix deallocator to stop using "next" pointer after node has been freed
-// (a DOOM bug).
-//
-// Process each thinker. For thinkers which are marked deleted, we must
-// load the "next" pointer prior to freeing the node. In DOOM, the "next"
-// pointer was loaded AFTER the thinker was freed, which could have caused
-// crashes.
-//
-// But if we are not deleting the thinker, we should reload the "next"
-// pointer after calling the function, in case additional thinkers are
-// added at the end of the list.
-//
-// killough 11/98:
-//
-// Rewritten to delete nodes implicitly, by making currentthinker
-// external and using P_RemoveThinkerDelayed() implicitly.
-//
-static void P_RunThinkers(void)
-{
-    for (currentthinker = thinkers[th_mobj].cnext; currentthinker != &thinkers[th_mobj]; currentthinker = currentthinker->cnext)
-        currentthinker->function((mobj_t *)currentthinker);
-
-    for (currentthinker = thinkers[th_misc].cnext; currentthinker != &thinkers[th_misc]; currentthinker = currentthinker->cnext)
-        if (currentthinker->function)
-            currentthinker->function((mobj_t *)currentthinker);
-
-    T_MAPMusic();
-}
-
-//
 // P_Ticker
 //
 void P_Ticker(void)
@@ -223,23 +189,42 @@ void P_Ticker(void)
 
     P_PlayerThink();
 
-    if (menuactive || consoleactive)
+    if (consoleactive)
         return;
 
-    P_MapEnd();
-
-    if (freeze)
+    if (menuactive && !freeze)
     {
-        P_MobjThinker(viewplayer->mo);
-        return;
+        for (currentthinker = thinkers[th_misc].cnext; currentthinker != &thinkers[th_misc]; currentthinker = currentthinker->cnext)
+            if (currentthinker->function && currentthinker->menu)
+                currentthinker->function((mobj_t *)currentthinker);
+
+        P_UpdateSpecials();
     }
+    else
+    {
+        P_MapEnd();
 
-    P_RunThinkers();
+        if (freeze)
+        {
+            P_MobjThinker(viewplayer->mo);
+            return;
+        }
 
-    P_UpdateSpecials();
-    P_RespawnSpecials();
+        for (currentthinker = thinkers[th_mobj].cnext; currentthinker != &thinkers[th_mobj]; currentthinker = currentthinker->cnext)
+            currentthinker->function((mobj_t *)currentthinker);
 
-    // for par times
-    leveltime++;
-    stat_time = SafeAdd(stat_time, 1);
+        for (currentthinker = thinkers[th_misc].cnext; currentthinker != &thinkers[th_misc]; currentthinker = currentthinker->cnext)
+            if (currentthinker->function)
+                currentthinker->function((mobj_t *)currentthinker);
+
+        P_UpdateSpecials();
+
+        T_MAPMusic();
+
+        P_RespawnSpecials();
+
+        // for par times
+        leveltime++;
+        stat_time = SafeAdd(stat_time, 1);
+    }
 }

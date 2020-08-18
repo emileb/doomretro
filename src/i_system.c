@@ -60,9 +60,9 @@
 #if defined(_WIN32)
 extern char *previouswad;
 
-typedef long (__stdcall *PRTLGETVERSION)(PRTL_OSVERSIONINFOEXW);
-typedef BOOL (WINAPI *PGETPRODUCTINFO)(DWORD, DWORD, DWORD, DWORD, PDWORD);
-typedef BOOL (WINAPI *PISWOW64PROCESS)(HANDLE, PBOOL);
+typedef long    (__stdcall *PRTLGETVERSION)(PRTL_OSVERSIONINFOEXW);
+typedef BOOL    (WINAPI *PGETPRODUCTINFO)(DWORD, DWORD, DWORD, DWORD, PDWORD);
+typedef BOOL    (WINAPI *PISWOW64PROCESS)(HANDLE, PBOOL);
 
 #define PRODUCT_CORE    0x00000065
 
@@ -223,7 +223,7 @@ void I_Quit(dboolean shutdown)
 {
     if (shutdown)
     {
-        D_FadeScreen();
+        D_FadeScreenToBlack();
 
         S_Shutdown();
 

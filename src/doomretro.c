@@ -46,6 +46,7 @@
 #include "d_main.h"
 #include "doomstat.h"
 #include "i_gamepad.h"
+#include "i_video.h"
 #include "m_argv.h"
 #include "m_config.h"
 #include "version.h"
@@ -65,7 +66,7 @@ static void I_SetProcessDPIAware(void)
 
     if (hLibrary)
     {
-        typedef BOOL (*SETPROCESSDPIAWARE)();
+        typedef BOOL    (*SETPROCESSDPIAWARE)();
 
         SETPROCESSDPIAWARE  pSetProcessDPIAware = (SETPROCESSDPIAWARE)GetProcAddress(hLibrary, "SetProcessDPIAware");
 
@@ -78,8 +79,6 @@ static void I_SetProcessDPIAware(void)
 
 static WNDPROC  oldProc;
 static HICON    icon;
-
-dboolean MouseShouldBeGrabbed(void);
 
 LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
@@ -123,8 +122,8 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
     {
         LPMINMAXINFO    minmaxinfo = (LPMINMAXINFO)lParam;
 
-        minmaxinfo->ptMinTrackSize.x = ORIGINALWIDTH + windowborderwidth;
-        minmaxinfo->ptMinTrackSize.y = ORIGINALWIDTH * 3 / 4 + windowborderheight;
+        minmaxinfo->ptMinTrackSize.x = VANILLAWIDTH + windowborderwidth;
+        minmaxinfo->ptMinTrackSize.y = VANILLAWIDTH * 3 / 4 + windowborderheight;
 
         return false;
     }

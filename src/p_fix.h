@@ -50,7 +50,7 @@
 typedef struct
 {
     int     mission;
-    int     epsiode;
+    int     episode;
     int     map;
     int     vertex;
     int     oldx, oldy;
@@ -62,7 +62,7 @@ extern vertexfix_t  vertexfix[];
 typedef struct
 {
     int     mission;
-    int     epsiode;
+    int     episode;
     int     map;
     int     linedef;
     int     side;
@@ -81,7 +81,7 @@ extern linefix_t    linefix[];
 typedef struct
 {
     int     mission;
-    int     epsiode;
+    int     episode;
     int     map;
     int     sector;
     char    *floorpic;
@@ -89,8 +89,7 @@ typedef struct
     int     floorheight;
     int     ceilingheight;
     int     special;
-    int     oldtag;
-    int     newtag;
+    int     tag;
 } sectorfix_t;
 
 extern sectorfix_t  sectorfix[];
@@ -98,7 +97,7 @@ extern sectorfix_t  sectorfix[];
 typedef struct
 {
     int     mission;
-    int     epsiode;
+    int     episode;
     int     map;
     int     thing;
     int     type;

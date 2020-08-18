@@ -102,17 +102,18 @@ typedef enum
 } GameMission_t;
 
 // Screen width and height.
-#define ORIGINALWIDTH       320
-#define ORIGINALHEIGHT      200
+#define VANILLAWIDTH        320
+#define VANILLAHEIGHT       200
 
-#define ORIGINALSBARHEIGHT  32
+#define VANILLASBARHEIGHT   32
 
 #define SCREENSCALE         2
 
-#define SCREENWIDTH         (ORIGINALWIDTH * SCREENSCALE)
-#define SCREENHEIGHT        (ORIGINALHEIGHT * SCREENSCALE)
+#define SCREENWIDTH         (VANILLAWIDTH * SCREENSCALE)
+#define SCREENHEIGHT        (VANILLAHEIGHT * SCREENSCALE)
+#define SCREENAREA          (SCREENWIDTH * SCREENHEIGHT)
 
-#define SBARHEIGHT          (ORIGINALSBARHEIGHT * SCREENSCALE)
+#define SBARHEIGHT          (VANILLASBARHEIGHT * SCREENSCALE)
 
 // State updates, number of tics/second.
 #define TICRATE             35
@@ -238,7 +239,7 @@ enum
 // Index of the special effects (INVUL inverse) map.
 #define INVERSECOLORMAP         32
 
-// phares 3/20/98:
+// phares 03/20/98:
 //
 // Player friction is variable, based on controlling
 // linedefs. More friction can create mud, sludge,

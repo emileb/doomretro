@@ -38,6 +38,7 @@
 
 #include <string.h>
 
+#include "c_cmds.h"
 #include "c_console.h"
 #include "doomstat.h"
 #include "g_game.h"
@@ -72,7 +73,7 @@ void A_Fall(mobj_t *actor, player_t *player, pspdef_t *psp);
 // Recursively traverse adjacent sectors,
 // sound blocking lines cut off traversal.
 //
-// killough 5/5/98: reformatted, cleaned up
+// killough 05/05/98: reformatted, cleaned up
 //
 static void P_RecursiveSound(sector_t *sec, int soundblocks, mobj_t *soundtarget)
 {
@@ -129,7 +130,7 @@ dboolean P_CheckMeleeRange(mobj_t *actor)
     if (!target)
         return false;
 
-    // killough 7/18/98: friendly monsters don't attack other friends
+    // killough 07/18/98: friendly monsters don't attack other friends
     if (actor->flags & target->flags & MF_FRIEND)
         return false;
 
@@ -170,9 +171,8 @@ static dboolean P_HitFriend(mobj_t *actor)
 //
 static dboolean P_CheckMissileRange(mobj_t *actor)
 {
-    fixed_t     dist;
-    mobj_t      *target = actor->target;
-    mobjtype_t  type;
+    fixed_t dist;
+    mobj_t  *target = actor->target;
 
     if (!P_CheckSight(actor, target))
         return false;
@@ -182,7 +182,7 @@ static dboolean P_CheckMissileRange(mobj_t *actor)
         // the target just hit the enemy, so fight back!
         actor->flags &= ~MF_JUSTHIT;
 
-        // killough 7/18/98: no friendly fire at corpses
+        // killough 07/18/98: no friendly fire at corpses
         // killough 11/98: prevent too much infighting among friends
         return (!(actor->flags & MF_FRIEND)
             || (target->health > 0
@@ -190,7 +190,7 @@ static dboolean P_CheckMissileRange(mobj_t *actor)
                     || (target->player ? M_Random() > 128 : !(target->flags & MF_JUSTHIT) && M_Random() > 128))));
     }
 
-    // killough 7/18/98: friendly monsters don't attack other friendly
+    // killough 07/18/98: friendly monsters don't attack other friendly
     // monsters or players (except when attacked, and then only once)
     if (actor->flags & target->flags & MF_FRIEND)
         return false;
@@ -203,32 +203,17 @@ static dboolean P_CheckMissileRange(mobj_t *actor)
     if (!actor->info->meleestate)
         dist -= 128;                    // no melee attack, so fire more
 
-    type = actor->type;
+    if (actor->info->maxattackrange > 0 && dist > actor->info->maxattackrange)
+        return false;                   // too far away
 
-    if (type == MT_VILE)
-    {
-        if (dist > 896)
-            return false;               // too far away
-    }
-    else if (type == MT_UNDEAD)
-    {
-        if (dist < 196)
-            return false;               // close for fist attack
+    if (actor->info->meleestate != S_NULL && dist < actor->info->meleethreshold)
+        return false;                   // close for fist attack
 
-        dist >>= 1;
-    }
-    else if (type == MT_CYBORG)
-    {
+    if (actor->flags3 & MF3_MISSILEMORE)
         dist >>= 1;
 
-        if (dist > 160)
-            dist = 160;
-    }
-    else if (type == MT_SPIDER || type == MT_SKULL)
-        dist >>= 1;
-
-    if (dist > 200)
-        dist = 200;
+    if (dist > actor->info->minmissilechance)
+        dist = actor->info->minmissilechance;
 
     if (M_Random() < dist)
         return false;
@@ -242,7 +227,7 @@ static dboolean P_CheckMissileRange(mobj_t *actor)
 //
 // P_IsUnderDamage
 //
-// killough 9/9/98:
+// killough 09/09/98:
 //
 // Returns nonzero if the object is under damage based on
 // their current position. Returns 1 if the damage is moderate,
@@ -268,14 +253,14 @@ static int P_IsUnderDamage(mobj_t *actor)
 // Move in the current direction,
 // returns false if the move is blocked.
 //
-static const fixed_t    xspeed[8] = { FRACUNIT, 47000, 0, -47000, -FRACUNIT, -47000, 0, 47000 };
-static const fixed_t    yspeed[8] = { 0, 47000, FRACUNIT, 47000, 0, -47000, -FRACUNIT, -47000 };
+static const fixed_t    xspeed[] = { FRACUNIT, 47000, 0, -47000, -FRACUNIT, -47000, 0, 47000 };
+static const fixed_t    yspeed[] = { 0, 47000, FRACUNIT, 47000, 0, -47000, -FRACUNIT, -47000 };
 
-// 1/11/98 killough: Limit removed on special lines crossed
+// killough 01/11/98: Limit removed on special lines crossed
 extern line_t   **spechit;
 extern int      numspechit;
 
-static dboolean P_Move(mobj_t *actor, int dropoff)  // killough 9/12/98
+static dboolean P_Move(mobj_t *actor, int dropoff)  // killough 09/12/98
 {
     fixed_t tryx, tryy;
     fixed_t deltax, deltay;
@@ -318,12 +303,12 @@ static dboolean P_Move(mobj_t *actor, int dropoff)  // killough 9/12/98
 
         // if the special is not a door that can be opened, return false
         //
-        // killough 8/9/98: this is what caused monsters to get stuck in
+        // killough 08/09/98: this is what caused monsters to get stuck in
         // doortracks, because it thought that the monster freed itself
         // by opening a door, even if it was moving towards the doortrack,
         // and not the door itself.
         //
-        // killough 9/9/98: If a line blocking the monster is activated,
+        // killough 09/09/98: If a line blocking the monster is activated,
         // return true 90% of the time. If a line blocking the monster is
         // not activated, but some other line is, return false 90% of the
         // time. A bit of randomness is needed to ensure it's free from
@@ -363,7 +348,7 @@ static dboolean P_Move(mobj_t *actor, int dropoff)  // killough 9/12/98
 //
 // P_SmartMove
 //
-// killough 9/12/98: Same as P_Move, except smarter
+// killough 09/12/98: Same as P_Move(), except smarter
 //
 static dboolean P_SmartMove(mobj_t *actor)
 {
@@ -371,24 +356,24 @@ static dboolean P_SmartMove(mobj_t *actor)
     int         dropoff = 0;
     int         underdamage = P_IsUnderDamage(actor);
 
-    // killough 9/12/98: stay on a lift if target is on one
+    // killough 09/12/98: stay on a lift if target is on one
     dboolean    onlift = (target && target->health > 0
                     && target->subsector->sector->tag == actor->subsector->sector->tag
                     && actor->subsector->sector->islift);
 
     // killough 10/98: allow dogs to drop off of taller ledges sometimes.
-    // dropoff==1 means always allow it, dropoff == 2 means only up to 128 high,
+    // dropoff == 1 means always allow it, dropoff == 2 means only up to 128 high,
     // and only if the target is immediately on the other side of the line.
     if (actor->type == MT_DOGS
         && target && !((target->flags ^ actor->flags) & MF_FRIEND)
-        && (target->player || P_ApproxDistance(actor->x - target->x, actor->y - target->y) < FRACUNIT * 144)
+        && (target->player || P_ApproxDistance(actor->x - target->x, actor->y - target->y) < 144 * FRACUNIT)
         && M_Random() < 235)
         dropoff = (target->player ? 1 : 2);
 
     if (!P_Move(actor, dropoff))
         return false;
 
-    // killough 9/9/98: avoid crushing ceilings or other damaging areas
+    // killough 09/09/98: avoid crushing ceilings or other damaging areas
     if ((onlift && M_Random() < 230          // stay on lift
          && !actor->subsector->sector->islift)
         || (!underdamage                     // get away from damage
@@ -422,7 +407,7 @@ static dboolean P_TryWalk(mobj_t *actor)
 //
 // P_DoNewChaseDir
 //
-// killough 9/8/98:
+// killough 09/08/98:
 //
 // Most of P_NewChaseDir(), except for what
 // determines the new direction to take
@@ -575,9 +560,9 @@ static dboolean PIT_AvoidDropoff(line_t *line)
 
         // The monster must contact one of the two floors,
         // and the other must be a tall dropoff (more than 24).
-        if (back == floorz && front < floorz - FRACUNIT * 24)
+        if (back == floorz && front < floorz - 24 * FRACUNIT)
             angle = R_PointToAngle2(0, 0, line->dx, line->dy) >> ANGLETOFINESHIFT;  // front side dropoff
-        else if (front == floorz && back < floorz - FRACUNIT * 24)
+        else if (front == floorz && back < floorz - 24 * FRACUNIT)
             angle = R_PointToAngle2(line->dx, line->dy, 0, 0) >> ANGLETOFINESHIFT;  // back side dropoff
         else
             return true;
@@ -618,7 +603,7 @@ static fixed_t P_AvoidDropoff(mobj_t *actor)
 //
 // P_NewChaseDir
 //
-// killough 9/8/98: Split into two functions
+// killough 09/08/98: Split into two functions
 //
 static void P_NewChaseDir(mobj_t *actor)
 {
@@ -626,7 +611,7 @@ static void P_NewChaseDir(mobj_t *actor)
     fixed_t deltax = target->x - actor->x;
     fixed_t deltay = target->y - actor->y;
 
-    if (actor->floorz - actor->dropoffz > FRACUNIT * 24 && actor->z <= actor->floorz
+    if (actor->floorz - actor->dropoffz > 24 * FRACUNIT && actor->z <= actor->floorz
         && !(actor->flags & (MF_DROPOFF | MF_FLOAT)) && P_AvoidDropoff(actor))   // Move away from dropoff
     {
         P_DoNewChaseDir(actor, dropoff_deltax, dropoff_deltay);
@@ -709,7 +694,7 @@ static dboolean P_LookForPlayer(mobj_t *actor, dboolean allaround)
     if (viewplayer->cheats & CF_NOTARGET)
         return false;
 
-    // killough 9/9/98: friendly monsters go about players differently
+    // killough 09/09/98: friendly monsters go about players differently
     if (actor->flags & MF_FRIEND)
     {
         // Go back to the player, no matter whether they're visible or not
@@ -733,7 +718,7 @@ static dboolean P_LookForPlayer(mobj_t *actor, dboolean allaround)
 
     if (viewplayer->health <= 0 || !P_CheckSight(actor, mo))
     {
-        // Use last known enemy if no players sighted -- killough 2/15/98
+        // Use last known enemy if no players sighted -- killough 02/15/98
         if (actor->lastenemy && actor->lastenemy->health > 0)
         {
             P_SetTarget(&actor->target, actor->lastenemy);
@@ -752,7 +737,7 @@ static dboolean P_LookForPlayer(mobj_t *actor, dboolean allaround)
             // if real close, react anyway
             if (P_ApproxDistance(mo->x - actor->x, mo->y - actor->y) > MELEERANGE)
             {
-                // Use last known enemy if no players sighted -- killough 2/15/98
+                // Use last known enemy if no players sighted -- killough 02/15/98
                 if (actor->lastenemy && actor->lastenemy->health > 0)
                 {
                     P_SetTarget(&actor->target, actor->lastenemy);
@@ -777,7 +762,7 @@ static dboolean P_LookForPlayer(mobj_t *actor, dboolean allaround)
 
     P_SetTarget(&actor->target, mo);
 
-    // killough 9/9/98: give monsters a threshold towards getting players
+    // killough 09/09/98: give monsters a threshold towards getting players
     // (we don't want it to be too easy for a player with dogs :)
     actor->threshold = 60;
 
@@ -808,7 +793,7 @@ void A_Look(mobj_t *actor, player_t *player, pspdef_t *psp)
 
     actor->threshold = 0;       // any shot will wake up
 
-    // killough 7/18/98:
+    // killough 07/18/98:
     // Friendly monsters go after other monsters first, but
     // also return to player, without attacking them, if they
     // cannot find any targets. A marine's best friend :)
@@ -818,34 +803,30 @@ void A_Look(mobj_t *actor, player_t *player, pspdef_t *psp)
         && P_LookForTargets(actor, false))
         && !(target
             && (target->flags & MF_SHOOTABLE)
-            && (P_SetTarget(&actor->target, target), !(flags & MF_AMBUSH) || P_CheckSight(actor, target)))
+            && (P_SetTarget(&actor->target, target), (!(flags & MF_AMBUSH) || P_CheckSight(actor, target))))
         && (friend || !P_LookForTargets(actor, false)))
         return;
 
     // go into chase state
     if (actor->info->seesound)
     {
-        int sound;
-
         switch (actor->info->seesound)
         {
             case sfx_posit1:
             case sfx_posit2:
             case sfx_posit3:
-                sound = sfx_posit1 + M_Random() % 3;
+                S_StartSound(actor, sfx_posit1 + M_Random() % 3);
                 break;
 
             case sfx_bgsit1:
             case sfx_bgsit2:
-                sound = sfx_bgsit1 + M_Random() % 2;
+                S_StartSound(actor, sfx_bgsit1 + M_Random() % 2);
                 break;
 
             default:
-                sound = actor->info->seesound;
+                S_StartSound(actor, actor->info->seesound);
                 break;
         }
-
-        S_StartSound(actor, sound);
 
         // [crispy] make seesounds uninterruptible
         S_UnlinkSound(actor);
@@ -915,7 +896,7 @@ void A_Chase(mobj_t *actor, player_t *player, pspdef_t *psp)
 
         P_SetMobjState(actor, info->meleestate);
 
-        // killough 8/98: remember an attack
+        // killough 08/98: remember an attack
         if (!info->missilestate)
             actor->flags |= MF_JUSTHIT;
 
@@ -934,7 +915,7 @@ void A_Chase(mobj_t *actor, player_t *player, pspdef_t *psp)
 
     if (!actor->threshold)
     {
-        // killough 7/18/98, 9/9/98: new monster AI
+        // killough 07/18/98, 09/09/98: new monster AI
         // Look for new targets if current one is bad or is out of view
         if (actor->pursuecount)
             actor->pursuecount--;
@@ -1003,7 +984,7 @@ void A_PosAttack(mobj_t *actor, player_t *player, pspdef_t *psp)
     A_FaceTarget(actor, NULL, NULL);
     S_StartSound(actor, sfx_pistol);
     P_LineAttack(actor, actor->angle + (M_SubRandom() << 20), MISSILERANGE,
-        P_AimLineAttack(actor, actor->angle, MISSILERANGE, 0), ((M_Random() % 5) + 1) * 3);
+        P_AimLineAttack(actor, actor->angle, MISSILERANGE, 0), (M_Random() % 5 + 1) * 3);
 }
 
 void A_SPosAttack(mobj_t *actor, player_t *player, pspdef_t *psp)
@@ -1016,7 +997,7 @@ void A_SPosAttack(mobj_t *actor, player_t *player, pspdef_t *psp)
 
     for (int i = 0; i < 3; i++)
         P_LineAttack(actor, actor->angle + (M_SubRandom() << 20), MISSILERANGE,
-            P_AimLineAttack(actor, actor->angle, MISSILERANGE, 0), ((M_Random() % 5) + 1) * 3);
+            P_AimLineAttack(actor, actor->angle, MISSILERANGE, 0), (M_Random() % 5 + 1) * 3);
 }
 
 void A_CPosAttack(mobj_t *actor, player_t *player, pspdef_t *psp)
@@ -1027,7 +1008,7 @@ void A_CPosAttack(mobj_t *actor, player_t *player, pspdef_t *psp)
     A_FaceTarget(actor, NULL, NULL);
     S_StartSound(actor, sfx_shotgn);
     P_LineAttack(actor, actor->angle + (M_SubRandom() << 20), MISSILERANGE,
-        P_AimLineAttack(actor, actor->angle, MISSILERANGE, 0), ((M_Random() % 5) + 1) * 3);
+        P_AimLineAttack(actor, actor->angle, MISSILERANGE, 0), (M_Random() % 5 + 1) * 3);
 }
 
 void A_CPosRefire(mobj_t *actor, player_t *player, pspdef_t *psp)
@@ -1290,7 +1271,7 @@ void A_SkelFist(mobj_t *actor, player_t *player, pspdef_t *psp)
     if (P_CheckMeleeRange(actor))
     {
         S_StartSound(actor, sfx_skepch);
-        P_DamageMobj(target, actor, actor, ((M_Random() % 10) + 1) * 6, true);
+        P_DamageMobj(target, actor, actor, (M_Random() % 10 + 1) * 6, true);
     }
 }
 
@@ -1391,7 +1372,7 @@ void A_VileChase(mobj_t *actor, player_t *player, pspdef_t *psp)
                     corpsehit->height = info->height;
                     corpsehit->radius = info->radius;
 
-                    // killough 7/18/98: friendliness is transferred from AV to raised corpse
+                    // killough 07/18/98: friendliness is transferred from AV to raised corpse
                     corpsehit->flags = ((info->flags & ~MF_FRIEND) | (actor->flags & MF_FRIEND));
 
                     corpsehit->flags2 = info->flags2;
@@ -1399,7 +1380,7 @@ void A_VileChase(mobj_t *actor, player_t *player, pspdef_t *psp)
                     corpsehit->shadowoffset = info->shadowoffset;
                     P_SetTarget(&corpsehit->target, NULL);
 
-                    // killough 9/9/98
+                    // killough 09/09/98
                     P_SetTarget(&corpsehit->lastenemy, NULL);
                     corpsehit->flags &= ~MF_JUSTHIT;
 
@@ -1438,7 +1419,7 @@ void A_VileChase(mobj_t *actor, player_t *player, pspdef_t *psp)
                         free(temp);
                     }
 
-                    // killough 8/29/98: add to appropriate thread
+                    // killough 08/29/98: add to appropriate thread
                     P_UpdateThinker(&corpsehit->thinker);
                     return;
                 }
@@ -1549,12 +1530,11 @@ void A_VileAttack(mobj_t *actor, player_t *player, pspdef_t *psp)
     if (!target->player || !(target->flags & MF_NOCLIP))
         target->momz = 1000 * FRACUNIT / target->info->mass;
 
-    an = actor->angle >> ANGLETOFINESHIFT;
-
     if (!(fire = actor->tracer))
         return;
 
     // move the fire between the vile and the player
+    an = actor->angle >> ANGLETOFINESHIFT;
     fire->x = target->x - FixedMul(24 * FRACUNIT, finecosine[an]);
     fire->y = target->y - FixedMul(24 * FRACUNIT, finesine[an]);
     P_RadiusAttack(fire, actor, 70, true);
@@ -1725,11 +1705,11 @@ static void A_PainShootSkull(mobj_t *actor, angle_t angle)
         return;
     }
 
-    // killough 7/20/98: PEs shoot lost souls with the same friendliness
+    // killough 07/20/98: PEs shoot lost souls with the same friendliness
     newmobj->flags = ((newmobj->flags & ~MF_FRIEND) | (actor->flags & MF_FRIEND));
     newmobj->flags &= ~MF_COUNTKILL;
 
-    // killough 8/29/98: add to appropriate thread
+    // killough 08/29/98: add to appropriate thread
     P_UpdateThinker(&newmobj->thinker);
 
     // [BH] put in attack state
@@ -1766,7 +1746,7 @@ void A_Scream(mobj_t *actor, player_t *player, pspdef_t *psp)
 {
     int sound = actor->info->deathsound;
 
-    if (sound == sfx_None)
+    if (sound == sfx_none)
         return;
     else if (sound >= sfx_podth1 && sound <= sfx_podth3)
         sound = sfx_podth1 + M_Random() % 3;
@@ -1791,7 +1771,7 @@ void A_SkullPop(mobj_t *actor, player_t *player, pspdef_t *psp)
     mo = P_SpawnMobj(actor->x, actor->y, actor->z + 48 * FRACUNIT, MT_GIBDTH);
     mo->momx = M_SubRandom() << 9;
     mo->momy = M_SubRandom() << 9;
-    mo->momz = FRACUNIT * 2 + (M_Random() << 6);
+    mo->momz = 2 * FRACUNIT + (M_Random() << 6);
 
     // Attach player mobj to bloody skull
     player = actor->player;
@@ -1809,8 +1789,10 @@ void A_SkullPop(mobj_t *actor, player_t *player, pspdef_t *psp)
 
 void A_Pain(mobj_t *actor, player_t *player, pspdef_t *psp)
 {
-    if (actor->info->painsound)
-        S_StartSound(actor, actor->info->painsound);
+    int painsound = actor->info->painsound;
+
+    if (painsound && (!actor->player || !(actor->player->cheats & CF_GODMODE)))
+        S_StartSound(actor, painsound);
 }
 
 void A_Fall(mobj_t *actor, player_t *player, pspdef_t *psp)
@@ -1995,7 +1977,6 @@ void A_BabyMetal(mobj_t *actor, player_t *player, pspdef_t *psp)
 
 // [jeff] remove limit on braintargets
 //  and fix <https://doomwiki.org/wiki/Spawn_cubes_miss_east_and_west_targets>
-
 void A_BrainAwake(mobj_t *actor, player_t *player, pspdef_t *psp)
 {
     S_StartSound(NULL, sfx_bossit);
@@ -2009,7 +1990,7 @@ void A_BrainPain(mobj_t *actor, player_t *player, pspdef_t *psp)
 void A_BrainScream(mobj_t *actor, player_t *player, pspdef_t *psp)
 {
     // [BH] Fix <https://doomwiki.org/wiki/Lopsided_final_boss_explosions>
-    for (int x = actor->x - 258 * FRACUNIT; x < actor->x + 258 * FRACUNIT; x += FRACUNIT * 8)
+    for (int x = actor->x - 258 * FRACUNIT; x < actor->x + 258 * FRACUNIT; x += 8 * FRACUNIT)
     {
         int     y = actor->y - 320 * FRACUNIT;
         int     z = 128 + M_Random() * 2 * FRACUNIT;
@@ -2038,7 +2019,8 @@ void A_BrainExplode(mobj_t *actor, player_t *player, pspdef_t *psp)
 
 void A_BrainDie(mobj_t *actor, player_t *player, pspdef_t *psp)
 {
-    G_ExitLevel();
+    if (!(actor->flags2 & MF2_MASSACRE))
+        G_ExitLevel();
 }
 
 static mobj_t *A_NextBrainTarget(void)
@@ -2069,8 +2051,6 @@ static mobj_t *A_NextBrainTarget(void)
     return found;
 }
 
-extern dboolean massacre;
-
 void A_BrainSpit(mobj_t *actor, player_t *player, pspdef_t *psp)
 {
     mobj_t          *target;
@@ -2095,10 +2075,10 @@ void A_BrainSpit(mobj_t *actor, player_t *player, pspdef_t *psp)
         // Use the reactiontime to hold the distance (squared) from the target after the next move.
         newmobj->reactiontime = P_ApproxDistance(target->x - (actor->x + actor->momx), target->y - (actor->y + actor->momy));
 
-        // killough 7/18/98: brain friendliness is transferred
+        // killough 07/18/98: brain friendliness is transferred
         newmobj->flags = ((newmobj->flags & ~MF_FRIEND) | (actor->flags & MF_FRIEND));
 
-        // killough 8/29/98: add to appropriate thread
+        // killough 08/29/98: add to appropriate thread
         P_UpdateThinker(&newmobj->thinker);
 
         S_StartSound(NULL, sfx_bospit);
@@ -2116,7 +2096,7 @@ void A_SpawnFly(mobj_t *actor, player_t *player, pspdef_t *psp)
     // Will the next move put the cube closer to the target point than it is now?
     dist = P_ApproxDistance(target->x - (actor->x + actor->momx), target->y - (actor->y + actor->momy));
 
-    if ((unsigned int)dist < (unsigned int)actor->reactiontime)
+    if (dist < actor->reactiontime)
     {
         actor->reactiontime = dist; // Yes. Still flying
         return;
@@ -2163,11 +2143,11 @@ void A_SpawnFly(mobj_t *actor, player_t *player, pspdef_t *psp)
 
         newmobj = P_SpawnMobj(target->x, target->y, target->z, type);
 
-        // killough 7/18/98: brain friendliness is transferred
+        // killough 07/18/98: brain friendliness is transferred
         newmobj->flags = ((newmobj->flags & ~MF_FRIEND) | (actor->flags & MF_FRIEND));
         newmobj->flags &= ~MF_COUNTKILL;
 
-        // killough 8/29/98: add to appropriate thread
+        // killough 08/29/98: add to appropriate thread
         P_UpdateThinker(&newmobj->thinker);
 
         if (!P_LookForPlayer(newmobj, true) || P_SetMobjState(newmobj, newmobj->info->seestate))
@@ -2230,7 +2210,7 @@ void A_Die(mobj_t *actor, player_t *player, pspdef_t *psp)
 
 //
 // A_Detonate
-// killough 8/9/98: same as A_Explode, except that the damage is variable
+// killough 08/09/98: same as A_Explode, except that the damage is variable
 //
 void A_Detonate(mobj_t *actor, player_t *player, pspdef_t *psp)
 {
@@ -2238,14 +2218,14 @@ void A_Detonate(mobj_t *actor, player_t *player, pspdef_t *psp)
 }
 
 //
-// killough 9/98: a mushroom explosion effect, sorta :)
+// killough 09/98: a mushroom explosion effect, sorta :)
 //
 void A_Mushroom(mobj_t *actor, player_t *player, pspdef_t *psp)
 {
     int     n = actor->info->damage;
 
     // Mushroom parameters are part of code pointer's state
-    fixed_t misc1 = (actor->state->misc1 ? actor->state->misc1 : FRACUNIT * 4);
+    fixed_t misc1 = (actor->state->misc1 ? actor->state->misc1 : 4 * FRACUNIT);
     fixed_t misc2 = (actor->state->misc2 ? actor->state->misc2 : FRACUNIT / 2);
 
     A_Explode(actor, NULL, NULL);                               // First make normal explosion

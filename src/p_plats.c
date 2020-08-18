@@ -43,7 +43,7 @@
 #include "s_sound.h"
 #include "z_zone.h"
 
-platlist_t  *activeplats;   // killough 2/14/98: made global again
+platlist_t  *activeplats;   // killough 02/14/98: made global again
 
 //
 // Move a plat up and down
@@ -57,9 +57,8 @@ void T_PlatRaise(plat_t *plat)
         case up:
             res = T_MovePlane(plat->sector, plat->speed, plat->high, plat->crush, 0, 1, false);
 
-            if (plat->type == raiseAndChange || plat->type == raiseToNearestAndChange)
-                if (!(leveltime & 7) && plat->sector->floorheight != plat->high)
-                    S_StartSectorSound(&plat->sector->soundorg, sfx_stnmov);
+            if ((plat->type == raiseAndChange || plat->type == raiseToNearestAndChange) && !(leveltime & 7))
+                S_StartSectorSound(&plat->sector->soundorg, sfx_stnmov);
 
             if (res == crushed && !plat->crush)
             {

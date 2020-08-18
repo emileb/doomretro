@@ -77,43 +77,43 @@ dboolean        species_infighting = false;
 
 // a weapon is found with two clip loads,
 // a big item has five clip loads
-int             maxammo[NUMAMMO] =  { 200, 50, 300, 50 };
-int             clipammo[NUMAMMO] = {  10,  4,  20,  1 };
+int             maxammo[] =  { 200, 50, 300, 50 };
+int             clipammo[] = {  10,  4,  20,  1 };
 
 dboolean        con_obituaries = con_obituaries_default;
 dboolean        r_mirroredweapons = r_mirroredweapons_default;
 dboolean        tossdrop = tossdrop_default;
 
-unsigned int    stat_barrelsexploded = 0;
-unsigned int    stat_damageinflicted = 0;
-unsigned int    stat_damagereceived = 0;
-unsigned int    stat_deaths = 0;
-unsigned int    stat_itemspickedup = 0;
-unsigned int    stat_itemspickedup_ammo_bullets = 0;
-unsigned int    stat_itemspickedup_ammo_cells = 0;
-unsigned int    stat_itemspickedup_ammo_rockets = 0;
-unsigned int    stat_itemspickedup_ammo_shells = 0;
-unsigned int    stat_itemspickedup_armor = 0;
-unsigned int    stat_itemspickedup_health = 0;
-unsigned int    stat_monsterskilled = 0;
-unsigned int    stat_monsterskilled_arachnotrons = 0;
-unsigned int    stat_monsterskilled_archviles = 0;
-unsigned int    stat_monsterskilled_baronsofhell = 0;
-unsigned int    stat_monsterskilled_cacodemons = 0;
-unsigned int    stat_monsterskilled_cyberdemons = 0;
-unsigned int    stat_monsterskilled_demons = 0;
-unsigned int    stat_monsterskilled_heavyweapondudes = 0;
-unsigned int    stat_monsterskilled_hellknights = 0;
-unsigned int    stat_monsterskilled_imps = 0;
-unsigned int    stat_monsterskilled_lostsouls = 0;
-unsigned int    stat_monsterskilled_mancubi = 0;
-unsigned int    stat_monsterskilled_painelementals = 0;
-unsigned int    stat_monsterskilled_revenants = 0;
-unsigned int    stat_monsterskilled_shotgunguys = 0;
-unsigned int    stat_monsterskilled_spectres = 0;
-unsigned int    stat_monsterskilled_spidermasterminds = 0;
-unsigned int    stat_monsterskilled_zombiemen = 0;
-unsigned int    stat_suicides = 0;
+uint64_t        stat_barrelsexploded = 0;
+uint64_t        stat_damageinflicted = 0;
+uint64_t        stat_damagereceived = 0;
+uint64_t        stat_deaths = 0;
+uint64_t        stat_itemspickedup = 0;
+uint64_t        stat_itemspickedup_ammo_bullets = 0;
+uint64_t        stat_itemspickedup_ammo_cells = 0;
+uint64_t        stat_itemspickedup_ammo_rockets = 0;
+uint64_t        stat_itemspickedup_ammo_shells = 0;
+uint64_t        stat_itemspickedup_armor = 0;
+uint64_t        stat_itemspickedup_health = 0;
+uint64_t        stat_monsterskilled = 0;
+uint64_t        stat_monsterskilled_arachnotrons = 0;
+uint64_t        stat_monsterskilled_archviles = 0;
+uint64_t        stat_monsterskilled_baronsofhell = 0;
+uint64_t        stat_monsterskilled_cacodemons = 0;
+uint64_t        stat_monsterskilled_cyberdemons = 0;
+uint64_t        stat_monsterskilled_demons = 0;
+uint64_t        stat_monsterskilled_heavyweapondudes = 0;
+uint64_t        stat_monsterskilled_hellknights = 0;
+uint64_t        stat_monsterskilled_imps = 0;
+uint64_t        stat_monsterskilled_lostsouls = 0;
+uint64_t        stat_monsterskilled_mancubi = 0;
+uint64_t        stat_monsterskilled_painelementals = 0;
+uint64_t        stat_monsterskilled_revenants = 0;
+uint64_t        stat_monsterskilled_shotgunguys = 0;
+uint64_t        stat_monsterskilled_spectres = 0;
+uint64_t        stat_monsterskilled_spidermasterminds = 0;
+uint64_t        stat_monsterskilled_zombiemen = 0;
+uint64_t        stat_suicides = 0;
 
 extern dboolean healthcvar;
 
@@ -351,9 +351,7 @@ static dboolean P_GiveWeapon(weapontype_t weapon, dboolean dropped, dboolean sta
     {
         gaveweapon = true;
         viewplayer->weaponowned[weapon] = true;
-
-        if (weapon != wp_missile && weapon != wp_bfg)
-            P_EquipWeapon(weapon);
+        P_EquipWeapon(weapon);
     }
 
     return (gaveweapon || gaveammo);
@@ -512,7 +510,7 @@ int cardsfound;
 //
 void P_InitCards(void)
 {
-    int cardsprites[NUMCARDS] = { SPR_BKEY, SPR_YKEY, SPR_RKEY, SPR_BSKU, SPR_YSKU, SPR_RSKU };
+    int cardsprites[] = { SPR_BKEY, SPR_YKEY, SPR_RKEY, SPR_BSKU, SPR_YSKU, SPR_RSKU };
 
     for (int i = 0; i < NUMCARDS; i++)
         viewplayer->cards[i] = CARDNOTINMAP;
@@ -1668,13 +1666,13 @@ static void P_WriteObituary(mobj_t *target, mobj_t *inflicter, mobj_t *source, d
                         C_Obituary("You were %s by %s %s that you exploded.",
                             (gibbed ? "gibbed" : "killed"),
                             (isvowel(inflicter->info->name1[0]) ? "an" : "a"),
-                            inflicter->info->name1);
+                            (*inflicter->info->name1 ? inflicter->info->name1 : "monster"));
                     else
                         C_Obituary("%s was %s by %s %s that they exploded.",
                             playername,
                             (gibbed ? "gibbed" : "killed"),
                             (isvowel(inflicter->info->name1[0]) ? "an" : "a"),
-                            inflicter->info->name1);
+                            (*inflicter->info->name1 ? inflicter->info->name1 : "monster"));
                 }
                 else
                 {
@@ -1682,7 +1680,7 @@ static void P_WriteObituary(mobj_t *target, mobj_t *inflicter, mobj_t *source, d
                         C_Obituary("You were %s by %s %s that %s %s exploded.",
                             (gibbed ? "gibbed" : "killed"),
                             (isvowel(inflicter->info->name1[0]) ? "an" : "a"),
-                            inflicter->info->name1,
+                            (*inflicter->info->name1 ? inflicter->info->name1 : "monster"),
                             (isvowel(mobjinfo[inflicter->inflicter].name1[0]) ? "an" : "a"),
                             mobjinfo[inflicter->inflicter].name1);
                     else
@@ -1690,7 +1688,7 @@ static void P_WriteObituary(mobj_t *target, mobj_t *inflicter, mobj_t *source, d
                             playername,
                             (gibbed ? "gibbed" : "killed"),
                             (isvowel(inflicter->info->name1[0]) ? "an" : "a"),
-                            inflicter->info->name1,
+                            (*inflicter->info->name1 ? inflicter->info->name1 : "monster"),
                             (isvowel(mobjinfo[inflicter->inflicter].name1[0]) ? "an" : "a"),
                             mobjinfo[inflicter->inflicter].name1);
                 }
@@ -1716,14 +1714,14 @@ static void P_WriteObituary(mobj_t *target, mobj_t *inflicter, mobj_t *source, d
                         temp,
                         (gibbed ? "gibbed" : "killed"),
                         (isvowel(inflicter->info->name1[0]) ? "an" : "a"),
-                        inflicter->info->name1,
+                        (*inflicter->info->name1 ? inflicter->info->name1 : "monster"),
                         playername);
                 else
                     C_Obituary("%s was %s by %s %s that %s %s exploded.",
                         temp,
                         (gibbed ? "gibbed" : "killed"),
                         (isvowel(inflicter->info->name1[0]) ? "an" : "a"),
-                        inflicter->info->name1,
+                        (*inflicter->info->name1 ? inflicter->info->name1 : "monster"),
                         (isvowel(mobjinfo[inflicter->inflicter].name1[0]) ? "an" : "a"),
                         mobjinfo[inflicter->inflicter].name1);
 
@@ -1941,7 +1939,7 @@ void P_KillMobj(mobj_t *target, mobj_t *inflicter, mobj_t *source)
     target->flags2 &= ~MF2_PASSMOBJ;
     target->height >>= 2;
 
-    // killough 8/29/98: remove from threaded list
+    // killough 08/29/98: remove from threaded list
     P_UpdateThinker(&target->thinker);
 
     if (type != MT_BARREL)
@@ -2025,7 +2023,7 @@ void P_KillMobj(mobj_t *target, mobj_t *inflicter, mobj_t *source)
 
     // Drop stuff.
     // This determines the kind of object spawned during the death frame of a thing.
-    if (info->droppeditem)
+    if (info->droppeditem != MT_NULL)
     {
         mobj_t  *mo;
 
@@ -2034,7 +2032,7 @@ void P_KillMobj(mobj_t *target, mobj_t *inflicter, mobj_t *source)
             mo = P_SpawnMobj(target->x, target->y, target->floorz + target->height * 3 / 2 - 3 * FRACUNIT, info->droppeditem);
             mo->momx = (target->momx >> 1) + (M_SubRandom() << 8);
             mo->momy = (target->momy >> 1) + (M_SubRandom() << 8);
-            mo->momz = FRACUNIT * 2 + (M_Random() << 9);
+            mo->momz = 2 * FRACUNIT + (M_Random() << 9);
         }
         else
             mo = P_SpawnMobj(target->x, target->y, ONFLOORZ, info->droppeditem);
@@ -2158,10 +2156,6 @@ void P_DamageMobj(mobj_t *target, mobj_t *inflicter, mobj_t *source, int damage,
         if (freeze && (!inflicter || !inflicter->player))
             return;
 
-        // ignore damage if in god mode or player about to warp
-        if ((cheats & CF_GODMODE) || idclevtics)
-            return;
-
         // end of game hell hack
         if (target->subsector->sector->special == DamageNegative10Or20PercentHealthAndEndLevel && damage >= target->health)
             damage = target->health - 1;
@@ -2170,27 +2164,31 @@ void P_DamageMobj(mobj_t *target, mobj_t *inflicter, mobj_t *source, int damage,
         if (tplayer->powers[pw_invulnerability] && damage < 1000)
             return;
 
-        if (adjust && tplayer->armorpoints)
+        // ignore damage if in god mode or player about to warp
+        if (!(cheats & CF_GODMODE) && !idclevtics)
         {
-            int saved = damage / (tplayer->armortype == armortype_green ? 3 : 2);
-
-            if (tplayer->armorpoints <= saved)
+            if (adjust && tplayer->armorpoints)
             {
-                // armor is used up
-                saved = tplayer->armorpoints;
-                tplayer->armortype = armortype_none;
+                int saved = damage / (tplayer->armortype == armortype_green ? 3 : 2);
+
+                if (tplayer->armorpoints <= saved)
+                {
+                    // armor is used up
+                    saved = tplayer->armorpoints;
+                    tplayer->armortype = armortype_none;
+                }
+
+                if (saved)
+                {
+                    tplayer->armorpoints -= saved;
+                    damage -= saved;
+                    armorhighlight = I_GetTimeMS() + HUD_ARMOR_HIGHLIGHT_WAIT;
+                }
             }
 
-            if (saved)
-            {
-                tplayer->armorpoints -= saved;
-                damage -= saved;
-                armorhighlight = I_GetTimeMS() + HUD_ARMOR_HIGHLIGHT_WAIT;
-            }
+            tplayer->health -= damage;
+            target->health -= damage;
         }
-
-        tplayer->health -= damage;
-        target->health -= damage;
 
         if ((cheats & CF_BUDDHA) && tplayer->health <= 0)
         {

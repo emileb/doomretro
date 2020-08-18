@@ -97,7 +97,7 @@ typedef struct
 
 #define MAXANIMS    32
 
-unsigned int        stat_secretsrevealed = 0;
+uint64_t            stat_secretsrevealed = 0;
 
 dboolean            r_liquid_bob = r_liquid_bob_default;
 
@@ -125,10 +125,10 @@ static anim_t       *anims;             // new structure w/o limits -- killough
 terraintype_t       *terraintypes;
 dboolean            *isteleport;
 
-// killough 3/7/98: Initialize generalized scrolling
+// killough 03/07/98: Initialize generalized scrolling
 static void P_SpawnScrollers(void);
-static void P_SpawnFriction(void);      // phares 3/16/98
-static void P_SpawnPushers(void);       // phares 3/20/98
+static void P_SpawnFriction(void);      // phares 03/16/98
+static void P_SpawnPushers(void);       // phares 03/20/98
 
 extern int          numflats;
 
@@ -195,7 +195,7 @@ void P_InitPicAnims(void)
     {
         static size_t   maxanims;
 
-        // 1/11/98 killough -- removed limit by array-doubling
+        // killough 01/11/98 -- removed limit by array-doubling
         if (lastanim >= anims + maxanims)
         {
             size_t  newmax = (maxanims ? maxanims * 2 : MAXANIMS);
@@ -887,7 +887,7 @@ sector_t *P_FindModelCeilingSector(fixed_t ceildestheight, int secnum)
 // Rewritten by Lee Killough to use chained hashing to improve speed
 int P_FindSectorFromLineTag(const line_t *line, int start)
 {
-    start = (start >= 0 ? sectors[start].nexttag : sectors[line->tag % numsectors].firsttag);
+    start = (start >= 0 ? sectors[start].nexttag : sectors[(unsigned int)line->tag % numsectors].firsttag);
 
     while (start >= 0 && sectors[start].tag != line->tag)
         start = sectors[start].nexttag;
@@ -895,10 +895,10 @@ int P_FindSectorFromLineTag(const line_t *line, int start)
     return start;
 }
 
-// killough 4/16/98: Same thing, only for linedefs
+// killough 04/16/98: same thing, only for linedefs
 int P_FindLineFromLineTag(const line_t *line, int start)
 {
-    start = (start >= 0 ? lines[start].nexttag : lines[line->tag % numlines].firsttag);
+    start = (start >= 0 ? lines[start].nexttag : lines[(unsigned int)line->tag % numlines].firsttag);
 
     while (start >= 0 && lines[start].tag != line->tag)
         start = lines[start].nexttag;
@@ -909,26 +909,26 @@ int P_FindLineFromLineTag(const line_t *line, int start)
 // Hash the sector tags across the sectors and linedefs.
 void P_InitTagLists(void)
 {
-    for (int i = numsectors; --i >= 0;)             // Initially make all slots empty.
+    for (int i = numsectors; --i >= 0;)                     // Initially make all slots empty.
         sectors[i].firsttag = -1;
 
-    for (int i = numsectors; --i >= 0;)             // Proceed from last to first sector
-    {                                               // so that lower sectors appear first
-        int j = sectors[i].tag % numsectors;        // Hash func
+    for (int i = numsectors; --i >= 0;)                     // Proceed from last to first sector
+    {                                                       // so that lower sectors appear first
+        int j = (unsigned int)sectors[i].tag % numsectors;  // Hash func
 
-        sectors[i].nexttag = sectors[j].firsttag;   // Prepend sector to chain
+        sectors[i].nexttag = sectors[j].firsttag;           // Prepend sector to chain
         sectors[j].firsttag = i;
     }
 
-    // killough 4/17/98: same thing, only for linedefs
-    for (int i = numlines; --i >= 0;)               // Initially make all slots empty.
+    // killough 04/17/98: same thing, only for linedefs
+    for (int i = numlines; --i >= 0;)                       // Initially make all slots empty.
         lines[i].firsttag = -1;
 
-    for (int i = numlines; --i >= 0;)               // Proceed from last to first linedef
-    {                                               // so that lower linedefs appear first
-        int j = lines[i].tag % numlines;            // Hash func
+    for (int i = numlines; --i >= 0;)                       // Proceed from last to first linedef
+    {                                                       // so that lower linedefs appear first
+        int j = (unsigned int)lines[i].tag % numlines;      // Hash func
 
-        lines[i].nexttag = lines[j].firsttag;       // Prepend linedef to chain
+        lines[i].nexttag = lines[j].firsttag;               // Prepend linedef to chain
         lines[j].firsttag = i;
     }
 }
@@ -1165,8 +1165,7 @@ dboolean P_SectorActive(special_e t, sector_t *sec)
 {
     return (t == floor_special ? !!sec->floordata :     // return whether
         (t == ceiling_special ? !!sec->ceilingdata :    // thinker of same
-        (t == lighting_special ? !!sec->lightingdata :  // type is active
-        true)));                                        // don't know which special, must be active, shouldn't be here
+        true));                                         // don't know which special, must be active, shouldn't be here
 }
 
 //
@@ -2200,20 +2199,20 @@ void P_PlayerInSpecialSector(sector_t *sector)
         switch (sector->special)
         {
             case DamageNegative5Or10PercentHealth:
-                if (!viewplayer->powers[pw_ironfeet] && !(leveltime & 0x1F))
+                if (!(leveltime & 31) && !(viewplayer->cheats & CF_GODMODE) && !viewplayer->powers[pw_ironfeet])
                     P_DamageMobj(viewplayer->mo, NULL, NULL, 10, true);
 
                 break;
 
             case DamageNegative2Or5PercentHealth:
-                if (!viewplayer->powers[pw_ironfeet] && !(leveltime & 0x1F))
+                if (!(leveltime & 31) && !(viewplayer->cheats & CF_GODMODE) && !viewplayer->powers[pw_ironfeet])
                     P_DamageMobj(viewplayer->mo, NULL, NULL, 5, true);
 
                 break;
 
             case DamageNegative10Or20PercentHealth:
             case DamageNegative10Or20PercentHealthAndLightBlinks_2Hz:
-                if ((!viewplayer->powers[pw_ironfeet] || M_Random() < 5) && !(leveltime & 0x1F))
+                if (!(leveltime & 31) && !(viewplayer->cheats & CF_GODMODE) && (!viewplayer->powers[pw_ironfeet] || M_Random() < 5))
                     P_DamageMobj(viewplayer->mo, NULL, NULL, 20, true);
 
                 break;
@@ -2252,21 +2251,21 @@ void P_PlayerInSpecialSector(sector_t *sector)
 
             case 1:
                 // 2/5 damage per 31 tics
-                if (!viewplayer->powers[pw_ironfeet] && !(leveltime & 0x1F))
+                if (!(leveltime & 31) && !(viewplayer->cheats & CF_GODMODE) && !viewplayer->powers[pw_ironfeet])
                     P_DamageMobj(viewplayer->mo, NULL, NULL, 5, true);
 
                 break;
 
             case 2:
                 // 5/10 damage per 31 tics
-                if (!viewplayer->powers[pw_ironfeet] && !(leveltime & 0x1F))
+                if (!(leveltime & 31) && !(viewplayer->cheats & CF_GODMODE) && !viewplayer->powers[pw_ironfeet])
                     P_DamageMobj(viewplayer->mo, NULL, NULL, 10, true);
 
                 break;
 
             case 3:
                 // 10/20 damage per 31 tics
-                if ((!viewplayer->powers[pw_ironfeet] || M_Random() < 5) && !(leveltime & 0x1F))
+                if (!(leveltime & 31) && !(viewplayer->cheats & CF_GODMODE) && (!viewplayer->powers[pw_ironfeet] || M_Random() < 5))
                     P_DamageMobj(viewplayer->mo, NULL, NULL, 20, true);
 
                 break;
@@ -2287,20 +2286,17 @@ void P_PlayerInSpecialSector(sector_t *sector)
 // P_UpdateSpecials
 // Animate planes, scroll walls, etc.
 //
-int timer;
+int timer = 0;
 int countdown;
 
 void P_UpdateSpecials(void)
 {
-    if (timer && !--countdown)
-        G_ExitLevel();
-
     // ANIMATE FLATS AND TEXTURES GLOBALLY
     for (anim_t *anim = anims; anim < lastanim; anim++)
-        if (!(leveltime & (anim->speed - 1)))
+        if (!(gametime & (anim->speed - 1)))
             for (int i = anim->basepic; i < anim->basepic + anim->numpics; i++)
             {
-                int pic = anim->basepic + (leveltime / anim->speed + i) % anim->numpics;
+                int pic = anim->basepic + (gametime / anim->speed + i) % anim->numpics;
 
                 if (anim->istexture)
                     texturetranslation[i] = pic;
@@ -2308,7 +2304,7 @@ void P_UpdateSpecials(void)
                     flattranslation[i] = firstflat + pic;
             }
 
-    animatedliquiddiff += animatedliquiddiffs[leveltime & 63];
+    animatedliquiddiff += animatedliquiddiffs[gametime & 63];
     animatedliquidxoffs += animatedliquidxdir;
 
     if (animatedliquidxoffs > 64 * FRACUNIT)
@@ -2320,6 +2316,12 @@ void P_UpdateSpecials(void)
         animatedliquidyoffs = 0;
 
     skycolumnoffset += skyscrolldelta;
+
+    if (menuactive)
+        return;
+
+    if (timer && !--countdown)
+        G_ExitLevel();
 
     // DO BUTTONS
     for (int i = 0; i < maxbuttons; i++)
@@ -2378,7 +2380,7 @@ void P_UpdateSpecials(void)
 }
 
 //
-// Special Stuff that cannot be categorized
+// Special stuff that cannot be categorized
 //
 dboolean EV_DoDonut(line_t *line)
 {
@@ -2545,7 +2547,7 @@ void P_SpawnSpecials(void)
         }
     }
 
-    P_RemoveAllActiveCeilings();        // jff 2/22/98 use killough's scheme
+    P_RemoveAllActiveCeilings();        // jff 02/22/98 use killough's scheme
     P_RemoveAllActivePlats();           // killough
 
     for (int i = 0; i < maxbuttons; i++)
@@ -2554,14 +2556,14 @@ void P_SpawnSpecials(void)
     // P_InitTagLists() must be called before P_FindSectorFromLineTag()
     // or P_FindLineFromLineTag() can be called.
 
-    P_SpawnScrollers();                 // killough 3/7/98: Add generalized scrollers
-    P_SpawnFriction();                  // phares 3/12/98: New friction model using linedefs
-    P_SpawnPushers();                   // phares 3/20/98: New pusher model using linedefs
+    P_SpawnScrollers();                 // killough 03/07/98: Add generalized scrollers
+    P_SpawnFriction();                  // phares 03/12/98: New friction model using linedefs
+    P_SpawnPushers();                   // phares 03/20/98: New pusher model using linedefs
 
     for (int i = 0; i < numlines; i++, line++)
         switch (line->special)
         {
-            // killough 3/7/98:
+            // killough 03/07/98:
             // support for drawn heights coming from different sector
             case CreateFakeCeilingAndFloor:
             {
@@ -2573,7 +2575,7 @@ void P_SpawnSpecials(void)
                 break;
             }
 
-            // killough 3/16/98: Add support for setting
+            // killough 03/16/98: Add support for setting
             // floor lighting independently (e.g. lava)
             case Floor_ChangeBrightnessToThisBrightness:
             {
@@ -2585,7 +2587,7 @@ void P_SpawnSpecials(void)
                 break;
             }
 
-            // killough 4/11/98: Add support for setting
+            // killough 04/11/98: Add support for setting
             // ceiling lighting independently
             case Ceiling_ChangeBrightnessToThisBrightness:
             {
@@ -2614,7 +2616,7 @@ void P_SpawnSpecials(void)
         }
 }
 
-// killough 2/28/98:
+// killough 02/28/98:
 //
 // This function, with the help of r_plane.c and r_bsp.c, supports generalized
 // scrolling floors and walls, with optional mobj-carrying properties, e.g.
@@ -2631,7 +2633,7 @@ void P_SpawnSpecials(void)
 // Process the active scrollers.
 //
 // This is the main scrolling code
-// killough 3/7/98
+// killough 03/07/98
 void T_Scroll(scroll_t *s)
 {
     fixed_t dx = s->dx;
@@ -2661,7 +2663,7 @@ void T_Scroll(scroll_t *s)
         dy = FixedMul(dy, delta);
     }
 
-    // killough 3/14/98: Add acceleration
+    // killough 03/14/98: Add acceleration
     if (s->accel)
     {
         s->vdx = (dx += s->vdx);
@@ -2673,34 +2675,38 @@ void T_Scroll(scroll_t *s)
 
     switch (s->type)
     {
-        side_t      *side;
         sector_t    *sec;
-        fixed_t     height;
-        fixed_t     waterheight;                // killough 4/4/98: add waterheight
 
-        case sc_side:                           // killough 3/7/98: Scroll wall texture
-            side = sides + s->affectee;
+        case sc_side:                           // killough 03/07/98: Scroll wall texture
+        {
+            side_t  *side = sides + s->affectee;
+
             side->textureoffset += dx;
             side->rowoffset += dy;
             break;
+        }
 
-        case sc_floor:                          // killough 3/7/98: Scroll floor texture
+        case sc_floor:                          // killough 03/07/98: Scroll floor texture
             sec = sectors + s->affectee;
             sec->floor_xoffs += dx;
             sec->floor_yoffs += dy;
             break;
 
-        case sc_ceiling:                        // killough 3/7/98: Scroll ceiling texture
+        case sc_ceiling:                        // killough 03/07/98: Scroll ceiling texture
             sec = sectors + s->affectee;
             sec->ceiling_xoffs += dx;
             sec->ceiling_yoffs += dy;
             break;
 
         case sc_carry:
-            // killough 3/7/98: Carry things on floor
-            // killough 3/20/98: use new sector list which reflects true members
-            // killough 3/27/98: fix carrier bug
-            // killough 4/4/98: Underwater, carry things even w/o gravity
+        {
+            fixed_t height;
+            fixed_t waterheight;                // killough 04/04/98: add waterheight
+
+            // killough 03/07/98: Carry things on floor
+            // killough 03/20/98: use new sector list which reflects true members
+            // killough 03/27/98: fix carrier bug
+            // killough 04/04/98: Underwater, carry things even w/o gravity
             sec = sectors + s->affectee;
             height = sec->floorheight;
             waterheight = (sec->heightsec && sec->heightsec->floorheight > height ? sec->heightsec->floorheight : FIXED_MIN);
@@ -2719,6 +2725,7 @@ void T_Scroll(scroll_t *s)
             }
 
             break;
+        }
     }
 }
 
@@ -2754,6 +2761,7 @@ static void Add_Scroller(int type, fixed_t dx, fixed_t dy, int control, int affe
     s->affectee = affectee;
 
     s->thinker.function = &T_Scroll;
+    s->thinker.menu = true;
     P_AddThinker(&s->thinker);
 }
 
@@ -2762,7 +2770,7 @@ static void Add_Scroller(int type, fixed_t dx, fixed_t dy, int control, int affe
 // direction is translated into vertical motion, while scrolling along
 // the wall in a parallel direction is translated into horizontal motion.
 //
-// killough 5/25/98: cleaned up arithmetic to avoid drift due to roundoff
+// killough 05/25/98: cleaned up arithmetic to avoid drift due to roundoff
 //
 // killough 10/98:
 // fix scrolling aliasing problems, caused by long linedefs causing overflowing
@@ -2802,12 +2810,12 @@ static void P_SpawnScrollers(void)
         dboolean    accel = false;
         int         special = l->special;
 
-        // killough 3/7/98: Types 245-249 are same as 250-254 except that the
+        // killough 03/07/98: Types 245-249 are same as 250-254 except that the
         // first side's sector's heights cause scrolling when they change, and
         // this linedef controls the direction and speed of the scrolling. The
         // most complicated linedef since donuts, but powerful :)
         //
-        // killough 3/15/98: Add acceleration. Types 214-218 are the same but
+        // killough 03/15/98: Add acceleration. Types 214-218 are the same but
         // are accelerative.
         if (special >= Scroll_ScrollCeilingWhenSectorChangesHeight
             && special <= Scroll_ScrollWallWhenSectorChangesHeight)         // displacement scrollers
@@ -2848,7 +2856,7 @@ static void P_SpawnScrollers(void)
 
                 break;
 
-            // killough 3/1/98: scroll wall according to linedef
+            // killough 03/01/98: scroll wall according to linedef
             // (same direction and speed as scrolling floors)
             case Scroll_ScrollWallAccordingToLineVector:
                 if (!l->tag)
@@ -2882,7 +2890,7 @@ static void P_SpawnScrollers(void)
 //
 // FRICTION EFFECTS
 //
-// phares 3/12/98: Start of friction effects
+// phares 03/12/98: Start of friction effects
 //
 // As the player moves, friction is applied by decreasing the x and y
 // momentum values on each tic. By varying the percentage of decrease,
@@ -2906,7 +2914,7 @@ static void P_SpawnScrollers(void)
 // their floors. Players satisfying this condition are given new friction
 // values that are applied by the player movement code later.
 //
-// killough 8/28/98:
+// killough 08/28/98:
 //
 // Completely redid code, which did not need thinkers, and which put a heavy
 // drag on CPU. Friction is now a property of sectors, NOT objects inside
@@ -2930,7 +2938,7 @@ static void P_SpawnFriction(void)
 {
     line_t  *l = lines;
 
-    // killough 8/28/98: initialize all sectors to normal friction first
+    // killough 08/28/98: initialize all sectors to normal friction first
     for (int i = 0; i < numsectors; i++)
     {
         sectors[i].friction = ORIG_FRICTION;
@@ -2954,7 +2962,7 @@ static void P_SpawnFriction(void)
 
             for (int s = -1; (s = P_FindSectorFromLineTag(l, s)) >= 0;)
             {
-                // killough 8/28/98:
+                // killough 08/28/98:
                 //
                 // Instead of spawning thinkers, which are slow and expensive,
                 // modify the sector's own friction values. Friction should be
@@ -2972,7 +2980,7 @@ static void P_SpawnFriction(void)
 //
 // PUSH/PULL EFFECT
 //
-// phares 3/20/98: Start of push/pull effects
+// phares 03/20/98: Start of push/pull effects
 //
 // This is where push/pull effects are applied to objects in the sectors.
 //
@@ -3037,6 +3045,7 @@ static void Add_Pusher(int type, int x_mag, int y_mag, mobj_t *source, int affec
     p->affectee = affectee;
 
     p->thinker.function = &T_Pusher;
+    p->thinker.menu = true;
     P_AddThinker(&p->thinker);
 }
 

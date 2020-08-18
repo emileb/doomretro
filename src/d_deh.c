@@ -533,6 +533,9 @@ char    *s_M_EPISODE2 = "";
 char    *s_M_EPISODE3 = "";
 char    *s_M_EPISODE4 = "";
 char    *s_M_EPISODE5 = "";
+char    *s_M_EPISODE6 = "";
+char    *s_M_EPISODE7 = "";
+char    *s_M_EPISODE8 = "";
 char    *s_M_WHICHEXPANSION = "";
 char    *s_M_EXPANSION1 = "";
 char    *s_M_EXPANSION2 = "";
@@ -1494,10 +1497,10 @@ typedef struct
 } deh_block;
 
 #define DEH_BUFFERMAX   1024    // input buffer area size, hardcoded for now
-// killough 8/9/98: make DEH_BLOCKMAX self-adjusting
+// killough 08/09/98: make DEH_BLOCKMAX self-adjusting
 #define DEH_BLOCKMAX    arrlen(deh_blocks)              // size of array
 #define DEH_MAXKEYLEN   32      // as much of any key as we'll look at
-#define DEH_MOBJINFOMAX 32      // number of ints in the mobjinfo_t structure (!)
+#define DEH_MOBJINFOMAX 35      // number of ints in the mobjinfo_t structure (!)
 
 // Put all the block header values, and the function to be called when that
 // one is encountered, in this array:
@@ -1529,7 +1532,7 @@ static dboolean includenotext;
 // These are for mobjinfo_t types. Each is an integer
 // within the structure, so we can use index of the string in this
 // array to offset by sizeof(int) into the mobjinfo_t array at [nn]
-// * things are base zero but dehacked considers them to start at #1. ***
+// * things are base zero but dehacked considers them to start at #1.
 static const char *deh_mobjinfo[DEH_MOBJINFOMAX] =
 {
     "ID #",                     // .doomednum
@@ -1549,6 +1552,9 @@ static const char *deh_mobjinfo[DEH_MOBJINFOMAX] =
     "Exploding frame",          // .xdeathstate
     "Death sound",              // .deathsound
     "Dropped item",             // .droppeditem
+    "Melee threshold",          // .meleethreshold
+    "Max target range",         // .maxattackrange
+    "Min missile chance",       // .minmissilechance
     "Speed",                    // .speed
     "Width",                    // .radius
     "Pickup width",             // .pickupradius
@@ -1954,7 +1960,7 @@ static const deh_bexptr deh_bexptrs[] =
     { A_SpawnSound,      "A_SpawnSound"      },
     { A_SpawnFly,        "A_SpawnFly"        },
     { A_BrainExplode,    "A_BrainExplode"    },
-    { A_Detonate,        "A_Detonate"        },   // killough 8/9/98
+    { A_Detonate,        "A_Detonate"        },   // killough 08/09/98
     { A_Mushroom,        "A_Mushroom"        },   // killough 10/98
     { A_SkullPop,        "A_SkullPop"        },
     { A_Die,             "A_Die"             },   // killough 11/98
@@ -1966,7 +1972,7 @@ static const deh_bexptr deh_bexptrs[] =
     { A_RandomJump,      "A_RandomJump"      },   // killough 11/98
     { A_LineEffect,      "A_LineEffect"      },   // killough 11/98
 
-    { A_FireOldBFG,      "A_FireOldBFG"      },   // killough 7/19/98: classic BFG firing function
+    { A_FireOldBFG,      "A_FireOldBFG"      },   // killough -7/19/98: classic BFG firing function
     { A_BetaSkullAttack, "A_BetaSkullAttack" },   // killough 10/98: beta lost souls attacked different
     { A_Stop,            "A_Stop"            },
 
@@ -2185,7 +2191,7 @@ static void deh_procBexCodePointers(DEHFILE *fpin, char *line)
         if (!*inbuffer)
             break;      // killough 11/98: really exit on blank line
 
-        // killough 8/98: allow hex numbers in input:
+        // killough 08/98: allow hex numbers in input:
         if ((sscanf(inbuffer, "%31s %10i = %31s", key, &indexnum, mnemonic) != 3)
             || !M_StringCompare(key, "FRAME"))        // NOTE: different format from normal
         {
@@ -2259,7 +2265,7 @@ static void deh_procThing(DEHFILE *fpin, char *line)
     if (devparm)
         C_Output("Thing line: \"%s\"", inbuffer);
 
-    // killough 8/98: allow hex numbers in input:
+    // killough 08/98: allow hex numbers in input:
     ix = sscanf(inbuffer, "%31s %10i", key, &indexnum);
 
     if (devparm)
@@ -2403,6 +2409,8 @@ static void deh_procThing(DEHFILE *fpin, char *line)
                     mobjinfo[indexnum].flags2 = value;
                 }
             }
+            else if (M_StringCompare(key, "Dropped item"))
+                mobjinfo[indexnum].droppeditem = (int)value - 1;
             else
             {
                 pix = (int *)&mobjinfo[indexnum];
@@ -2421,23 +2429,31 @@ static void deh_procThing(DEHFILE *fpin, char *line)
         }
 
         if ((string = M_StringCompare(key, "Name1")))
-            strncpy(mobjinfo[indexnum].name1, lowercase(trimwhitespace(strval)), 100);
+            M_StringCopy(mobjinfo[indexnum].name1, lowercase(trimwhitespace(strval)), sizeof(mobjinfo[indexnum].name1));
         else if ((string = M_StringCompare(key, "Plural1")))
-            strncpy(mobjinfo[indexnum].plural1, lowercase(trimwhitespace(strval)), 100);
+            M_StringCopy(mobjinfo[indexnum].plural1, lowercase(trimwhitespace(strval)), sizeof(mobjinfo[indexnum].plural1));
         else if ((string = M_StringCompare(key, "Name2")))
-            strncpy(mobjinfo[indexnum].name2, lowercase(trimwhitespace(strval)), 100);
+            M_StringCopy(mobjinfo[indexnum].name2, lowercase(trimwhitespace(strval)), sizeof(mobjinfo[indexnum].name2));
         else if ((string = M_StringCompare(key, "Plural2")))
-            strncpy(mobjinfo[indexnum].plural2, lowercase(trimwhitespace(strval)), 100);
+            M_StringCopy(mobjinfo[indexnum].plural2, lowercase(trimwhitespace(strval)), sizeof(mobjinfo[indexnum].plural2));
         else if ((string = M_StringCompare(key, "Name3")))
-            strncpy(mobjinfo[indexnum].name3, lowercase(trimwhitespace(strval)), 100);
+            M_StringCopy(mobjinfo[indexnum].name3, lowercase(trimwhitespace(strval)), sizeof(mobjinfo[indexnum].name3));
         else if ((string = M_StringCompare(key, "Plural3")))
-            strncpy(mobjinfo[indexnum].plural3, lowercase(trimwhitespace(strval)), 100);
+            M_StringCopy(mobjinfo[indexnum].plural3, lowercase(trimwhitespace(strval)), sizeof(mobjinfo[indexnum].plural3));
 
         if (string && devparm)
             C_Output("Assigned %s to %s (%i) at index %i.", lowercase(trimwhitespace(strval)), key, indexnum, ix);
 
         if (!gibhealth && mobjinfo[indexnum].spawnhealth && !mobjinfo[indexnum].gibhealth)
             mobjinfo[indexnum].gibhealth = -mobjinfo[indexnum].spawnhealth;
+    }
+
+    // [BH] Disable bobbing and translucency if thing no longer a pickup
+    if ((mobjinfo[indexnum].flags2 & MF2_FLOATBOB) && !(mobjinfo[indexnum].flags & MF_SPECIAL))
+    {
+        mobjinfo[indexnum].flags2 &= ~MF2_FLOATBOB;
+        mobjinfo[indexnum].flags2 &= ~MF2_TRANSLUCENT_33;
+        mobjinfo[indexnum].flags2 &= ~MF2_TRANSLUCENT_BLUE_25;
     }
 }
 
@@ -2457,7 +2473,7 @@ static void deh_procFrame(DEHFILE *fpin, char *line)
 
     strncpy(inbuffer, line, DEH_BUFFERMAX);
 
-    // killough 8/98: allow hex numbers in input:
+    // killough 08/98: allow hex numbers in input:
     sscanf(inbuffer, "%31s %10i", key, &indexnum);
 
     if (devparm)
@@ -2565,7 +2581,7 @@ static void deh_procPointer(DEHFILE *fpin, char *line)
     strncpy(inbuffer, line, DEH_BUFFERMAX);
     // NOTE: different format from normal
 
-    // killough 8/98: allow hex numbers in input, fix error case:
+    // killough 08/98: allow hex numbers in input, fix error case:
     if (sscanf(inbuffer, "%*s %*i (%31s %10i)", key, &indexnum) != 2)
     {
         C_Warning(1, "Bad data pair in \"%s\".", inbuffer);
@@ -2641,7 +2657,7 @@ static void deh_procSounds(DEHFILE *fpin, char *line)
 
     strncpy(inbuffer, line, DEH_BUFFERMAX);
 
-    // killough 8/98: allow hex numbers in input:
+    // killough 08/98: allow hex numbers in input:
     sscanf(inbuffer, "%31s %10i", key, &indexnum);
 
     if (devparm)
@@ -2677,7 +2693,7 @@ static void deh_procSounds(DEHFILE *fpin, char *line)
         else if (M_StringCompare(key, deh_sfxinfo[4]))      // Zero 2
             /* nop */;
         else if (M_StringCompare(key, deh_sfxinfo[5]))      // Zero 3
-            S_sfx[indexnum].volume = value;
+            /* nop */;
         else if (M_StringCompare(key, deh_sfxinfo[6]))      // Zero 4
             /* nop */;
         else  if (M_StringCompare(key, deh_sfxinfo[7]))     // Neg. One 1
@@ -2705,7 +2721,7 @@ static void deh_procAmmo(DEHFILE *fpin, char *line)
 
     strncpy(inbuffer, line, DEH_BUFFERMAX);
 
-    // killough 8/98: allow hex numbers in input:
+    // killough 08/98: allow hex numbers in input:
     sscanf(inbuffer, "%31s %10i", key, &indexnum);
 
     if (devparm)
@@ -2755,7 +2771,7 @@ static void deh_procWeapon(DEHFILE *fpin, char *line)
 
     strncpy(inbuffer, line, DEH_BUFFERMAX);
 
-    // killough 8/98: allow hex numbers in input:
+    // killough 08/98: allow hex numbers in input:
     sscanf(inbuffer, "%31s %10i", key, &indexnum);
 
     if (devparm)
@@ -2817,7 +2833,7 @@ static void deh_procSprite(DEHFILE *fpin, char *line)   // Not supported
     // there are better ways of handling sprite renaming. Not supported.
     strncpy(inbuffer, line, DEH_BUFFERMAX);
 
-    // killough 8/98: allow hex numbers in input:
+    // killough 08/98: allow hex numbers in input:
     sscanf(inbuffer, "%31s %10i", key, &indexnum);
     C_Warning(1, "Ignoring sprite offset change at index %i: \"%s\".", indexnum, key);
 
@@ -3321,15 +3337,14 @@ static void deh_procMisc(DEHFILE *fpin, char *line)
 static void deh_procText(DEHFILE *fpin, char *line)
 {
     char        key[DEH_MAXKEYLEN];
-    char        inbuffer[DEH_BUFFERMAX * 2];    // can't use line -- double size buffer too.
-    int         i;                              // loop variable
-    int         fromlen, tolen;                 // as specified on the text block line
-    int         usedlen;                        // shorter of fromlen and tolen if not matched
-    dboolean    found = false;                  // to allow early exit once found
-    char        *line2 = NULL;                  // duplicate line for rerouting
+    char        inbuffer[DEH_BUFFERMAX * 2];                // can't use line -- double size buffer too.
+    int         i;                                          // loop variable
+    int         fromlen, tolen;                             // as specified on the text block line
+    dboolean    found = false;                              // to allow early exit once found
+    char        *line2 = NULL;                              // duplicate line for rerouting
 
     // Ty 04/11/98 - Included file may have NOTEXT skip flag set
-    if (includenotext)                      // flag to skip included deh-style text
+    if (includenotext)                                      // flag to skip included deh-style text
     {
         C_Output("Skipped text block because of NOTEXT directive.");
         strcpy(inbuffer, line);
@@ -3341,7 +3356,7 @@ static void deh_procText(DEHFILE *fpin, char *line)
         return;                             // ************** Early return
     }
 
-    // killough 8/98: allow hex numbers in input:
+    // killough 08/98: allow hex numbers in input:
     sscanf(line, "%31s %10i %10i", key, &fromlen, &tolen);
 
     if (devparm)
@@ -3367,9 +3382,9 @@ static void deh_procText(DEHFILE *fpin, char *line)
     {
         i = 0;
 
-        while (sprnames[i])     // null terminated list in info.c       // jff 3/19/98
-        {                                                               // check pointer
-            if (!strncasecmp(sprnames[i], inbuffer, fromlen))           // not first char
+        while (sprnames[i])                                 // null terminated list in info.c   // jff 3/19/98
+        {                                                                                       // check pointer
+            if (!strncasecmp(sprnames[i], inbuffer, fromlen))                                   // not first char
             {
                 if (devparm)
                     C_Output("Changing name of sprite at index %i from %s to %*s", i, sprnames[i], tolen, &inbuffer[fromlen]);
@@ -3382,15 +3397,16 @@ static void deh_procText(DEHFILE *fpin, char *line)
 
                 strncpy(sprnames[i], &inbuffer[fromlen], tolen);
                 found = true;
-                break;          // only one will match--quit early
+                break;                                      // only one matches, quit early
             }
 
-            i++;                // next array element
+            i++;                                            // next array element
         }
     }
-    else if (fromlen < 7 && tolen < 7)   // lengths of music and sfx are 6 or shorter
+
+    if (!found && fromlen < 7 && tolen < 7)                 // lengths of music and sfx are 6 or shorter
     {
-        usedlen = (fromlen < tolen ? fromlen : tolen);
+        int usedlen = (fromlen < tolen ? fromlen : tolen);  // shorter of fromlen and tolen if not matched
 
         if (fromlen != tolen && devparm)
             C_Warning(1, "Mismatched lengths from %i to %i. Using %i.", fromlen, tolen, usedlen);
@@ -3399,43 +3415,43 @@ static void deh_procText(DEHFILE *fpin, char *line)
         for (i = 1; i < NUMSFX; i++)
         {
             // avoid short prefix erroneous match
-            if (strlen(S_sfx[i].name) != fromlen)
+            if (strlen(S_sfx[i].name2) != fromlen)
                 continue;
 
-            if (!strncasecmp(S_sfx[i].name, inbuffer, fromlen))
+            if (!strncasecmp(S_sfx[i].name1, inbuffer, fromlen))
             {
                 if (devparm)
-                    C_Output("Changing name of sfx from %s to %*s", S_sfx[i].name, usedlen, &inbuffer[fromlen]);
+                    C_Output("Changing name of sfx from %s to %*s", S_sfx[i].name1, usedlen, &inbuffer[fromlen]);
 
-                strncpy(S_sfx[i].name, &inbuffer[fromlen], 9);
+                strncpy(S_sfx[i].name1, &inbuffer[fromlen], 9);
                 found = true;
-                break;          // only one matches, quit early
+                break;                                      // only one matches, quit early
             }
         }
 
-        if (!found)             // not yet
+        if (!found)                                         // not yet
         {
             // Try music name entries - see sounds.c
             for (i = 1; i < NUMMUSIC; i++)
             {
                 // avoid short prefix erroneous match
-                if (strlen(S_music[i].name) != fromlen)
+                if (strlen(S_music[i].name1) != fromlen)
                     continue;
 
-                if (!strncasecmp(S_music[i].name, inbuffer, fromlen))
+                if (!strncasecmp(S_music[i].name1, inbuffer, fromlen))
                 {
                     if (devparm)
-                        C_Output("Changing name of music from %s to %*s", S_music[i].name, usedlen, &inbuffer[fromlen]);
+                        C_Output("Changing name of music from %s to %*s", S_music[i].name1, usedlen, &inbuffer[fromlen]);
 
-                    strncpy(S_music[i].name, &inbuffer[fromlen], 9);
+                    strncpy(S_music[i].name1, &inbuffer[fromlen], 9);
                     found = true;
-                    break;      // only one matches, quit early
+                    break;                                  // only one matches, quit early
                 }
             }
-        }                       // end !found test
+        }
     }
 
-    if (!found) // Nothing we want to handle here -- see if strings can deal with it.
+    if (!found)                                             // Nothing we want to handle here -- see if strings can deal with it.
     {
         if (devparm)
             C_Output("Checking text area through strings for \"%.12s%s\" from = %i to = %i",
@@ -3450,7 +3466,7 @@ static void deh_procText(DEHFILE *fpin, char *line)
         deh_procStringSub(NULL, inbuffer, trimwhitespace(line2));
     }
 
-    free(line2);        // may be NULL, ignored by free()
+    free(line2);                                            // may be NULL, ignored by free()
 }
 
 static void deh_procError(DEHFILE *fpin, char *line)
@@ -3688,7 +3704,7 @@ static void lfstrip(char *s)        // strip the \r and/or \n off of a line
 //
 static void rstrip(char *s)         // strip trailing whitespace
 {
-    char    *p = s + strlen(s);     // killough 4/4/98: same here
+    char    *p = s + strlen(s);     // killough 04/04/98: same here
 
     while (p > s && isspace((unsigned char)*--p))  // break on first non-whitespace
         *p = '\0';

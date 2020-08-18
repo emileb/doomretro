@@ -41,7 +41,9 @@
 #include "c_console.h"
 #include "d_deh.h"
 #include "d_englsh.h"
+#include "d_main.h"
 #include "doomstat.h"
+#include "g_game.h"
 #include "hu_stuff.h"
 #include "i_gamepad.h"
 #include "i_swap.h"
@@ -49,6 +51,7 @@
 #include "m_misc.h"
 #include "m_random.h"
 #include "s_sound.h"
+#include "p_setup.h"
 #include "v_data.h"
 #include "v_video.h"
 #include "w_wad.h"
@@ -102,113 +105,158 @@ static void F_ConsoleFinaleText(void)
 //
 // F_StartFinale
 //
+
 void F_StartFinale(void)
 {
+    char    *intertext = P_GetInterText(gamemap);
+    char    *intersecret = P_GetInterSecretText(gamemap);
+
     viewactive = false;
     automapactive = false;
 
-    // killough 3/28/98: clear accelerative text flags
+    // killough 03/28/98: clear accelerative text flags
     acceleratestage = false;
     midstage = false;
 
     C_AddConsoleDivider();
 
-    // Okay - IWAD dependent stuff.
-    // This has been changed severely, and
-    //  some stuff might have changed in the process.
-    switch (gamemode)
+    if (*intertext || (*intersecret && secretexit))
     {
-        // DOOM 1 - E1, E3 or E4, but each nine missions
-        case shareware:
-        case registered:
-        case retail:
-            S_ChangeMusic(mus_victor, true, false, false);
+        char    *interbackdrop = P_GetInterBackrop(gamemap);
+        int     mus = P_GetInterMusic(gamemap);
 
-            switch (gameepisode)
+        if (!secretexit)
+        {
+            if (M_StringCompare(trimwhitespace(intertext), "clear"))
             {
-                case 1:
-                    finaleflat = bgflatE1;
-                    finaletext = s_E1TEXT;
-                    break;
-
-                case 2:
-                    finaleflat = bgflatE2;
-                    finaletext = s_E2TEXT;
-                    break;
-
-                case 3:
-                    finaleflat = bgflatE3;
-                    finaletext = s_E3TEXT;
-                    break;
-
-                case 4:
-                    finaleflat = bgflatE4;
-                    finaletext = s_E4TEXT;
-                    break;
-
-                case 5:
-                    finaleflat = bgflatE5;
-                    finaletext = s_E5TEXT;
-                    break;
+                gameaction = ga_worlddone;
+                return;
             }
 
-            break;
-
-        // DOOM II and missions packs with E1, M34
-        case commercial:
-            S_ChangeMusic(mus_read_m, true, false, false);
-
-            switch (gamemap)      // This is regular DOOM II
+            finaletext = intertext;
+        }
+        else
+        {
+            if (M_StringCompare(trimwhitespace(intersecret), "clear"))
             {
-                case 6:
-                    finaleflat = bgflat06;
-                    finaletext = (gamemission == pack_tnt ? s_T1TEXT : (gamemission == pack_plut ? s_P1TEXT : s_C1TEXT));
-                    break;
-
-                case 8:
-                    if (gamemission == pack_nerve)
-                    {
-                        finaleflat = bgflat06;
-                        finaletext = s_N1TEXT;
-                    }
-
-                    break;
-
-                case 11:
-                    finaleflat = bgflat11;
-                    finaletext = (gamemission == pack_tnt ? s_T2TEXT : (gamemission == pack_plut ? s_P2TEXT : s_C2TEXT));
-                    break;
-
-                case 20:
-                    finaleflat = bgflat20;
-                    finaletext = (gamemission == pack_tnt ? s_T3TEXT : (gamemission == pack_plut ? s_P3TEXT : s_C3TEXT));
-                    break;
-
-                case 30:
-                    finaleflat = bgflat30;
-                    finaletext = (gamemission == pack_tnt ? s_T4TEXT : (gamemission == pack_plut ? s_P4TEXT : s_C4TEXT));
-                    break;
-
-                case 15:
-                    finaleflat = bgflat15;
-                    finaletext = (gamemission == pack_tnt ? s_T5TEXT : (gamemission == pack_plut ? s_P5TEXT : s_C5TEXT));
-                    break;
-
-                case 31:
-                    finaleflat = bgflat31;
-                    finaletext = (gamemission == pack_tnt ? s_T6TEXT : (gamemission == pack_plut ? s_P6TEXT : s_C6TEXT));
-                    break;
+                gameaction = ga_worlddone;
+                return;
             }
 
-            break;
+            finaletext = intersecret;
+        }
 
-        // Indeterminate.
-        default:
-            S_ChangeMusic(mus_read_m, true, false, false);
-            finaleflat = "F_SKY1";
-            finaletext = s_C1TEXT;
-            break;
+        finaleflat = (*interbackdrop ? interbackdrop : "FLOOR4_8");
+
+        if (mus > 0)
+            S_ChangeMusInfoMusic(mus, true);
+        else
+            S_ChangeMusic((gamemode == commercial ? mus_read_m : mus_victor), true, false, false);
     }
+    else if (P_GetMapEndCast(gamemap))
+    {
+        gameaction = ga_nothing;
+        gamestate = GS_FINALE;
+        F_StartCast();
+        return;
+    }
+    else
+        // Okay - IWAD dependent stuff.
+        // This has been changed severely, and
+        //  some stuff might have changed in the process.
+        switch (gamemode)
+        {
+            // DOOM 1 - E1, E3 or E4, but each nine missions
+            case shareware:
+            case registered:
+            case retail:
+                S_ChangeMusic(mus_victor, true, false, false);
+
+                switch (gameepisode)
+                {
+                    case 1:
+                        finaleflat = bgflatE1;
+                        finaletext = s_E1TEXT;
+                        break;
+
+                    case 2:
+                        finaleflat = bgflatE2;
+                        finaletext = s_E2TEXT;
+                        break;
+
+                    case 3:
+                        finaleflat = bgflatE3;
+                        finaletext = s_E3TEXT;
+                        break;
+
+                    case 4:
+                        finaleflat = bgflatE4;
+                        finaletext = s_E4TEXT;
+                        break;
+
+                    case 5:
+                        finaleflat = bgflatE5;
+                        finaletext = s_E5TEXT;
+                        break;
+                }
+
+                break;
+
+            // DOOM II and missions packs with E1, M34
+            case commercial:
+                S_ChangeMusic(mus_read_m, true, false, false);
+
+                switch (gamemap)      // This is regular DOOM II
+                {
+                    case 6:
+                        finaleflat = bgflat06;
+                        finaletext = (gamemission == pack_tnt ? s_T1TEXT : (gamemission == pack_plut ? s_P1TEXT : s_C1TEXT));
+                        break;
+
+                    case 8:
+                        if (gamemission == pack_nerve)
+                        {
+                            finaleflat = bgflat06;
+                            finaletext = s_N1TEXT;
+                        }
+
+                        break;
+
+                    case 11:
+                        finaleflat = bgflat11;
+                        finaletext = (gamemission == pack_tnt ? s_T2TEXT : (gamemission == pack_plut ? s_P2TEXT : s_C2TEXT));
+                        break;
+
+                    case 20:
+                        finaleflat = bgflat20;
+                        finaletext = (gamemission == pack_tnt ? s_T3TEXT : (gamemission == pack_plut ? s_P3TEXT : s_C3TEXT));
+                        break;
+
+                    case 30:
+                        finaleflat = bgflat30;
+                        finaletext = (gamemission == pack_tnt ? s_T4TEXT : (gamemission == pack_plut ? s_P4TEXT : s_C4TEXT));
+                        break;
+
+                    case 15:
+                        finaleflat = bgflat15;
+                        finaletext = (gamemission == pack_tnt ? s_T5TEXT : (gamemission == pack_plut ? s_P5TEXT : s_C5TEXT));
+                        break;
+
+                    case 31:
+                        finaleflat = bgflat31;
+                        finaletext = (gamemission == pack_tnt ? s_T6TEXT : (gamemission == pack_plut ? s_P6TEXT : s_C6TEXT));
+                        break;
+                }
+
+                break;
+
+            // Indeterminate.
+            default:
+                S_ChangeMusic(mus_read_m, true, false, false);
+                finaleflat = "F_SKY1";
+                finaletext = s_C1TEXT;
+                break;
+        }
 
     if (strlen(finaletext) <= 1)
     {
@@ -259,7 +307,22 @@ void F_Ticker(void)
         if (finalecount > FixedMul((fixed_t)strlen(finaletext) * FRACUNIT, TextSpeed()) + (midstage ? NEWTEXTWAIT : TEXTWAIT)
             || (midstage && acceleratestage))
         {
-            if (gamemode != commercial)
+            if (P_GetMapEndCast(gamemap))
+                F_StartCast();
+            else if (P_GetMapEndBunny(gamemap))
+            {
+                finalecount = 0;
+                finalestage = F_STAGE_ARTSCREEN;
+                wipegamestate = GS_NONE;
+                S_StartMusic(mus_bunny);
+            }
+            else if (P_GetMapEndGame(gamemap))
+            {
+                finalecount = 0;
+                finalestage = F_STAGE_ARTSCREEN;
+                wipegamestate = GS_NONE;
+            }
+            else if (gamemode != commercial)
             {
                 finalecount = 0;
                 finalestage = F_STAGE_ARTSCREEN;
@@ -280,7 +343,6 @@ void F_Ticker(void)
 }
 
 //
-//
 // F_TextWrite
 //
 void M_DrawSmallChar(int x, int y, int i, dboolean shadow);
@@ -289,7 +351,6 @@ static void F_TextWrite(void)
 {
     // draw some of the text onto the screen
     byte        *src;
-    byte        *dest;
     int         w;
     int         count = MAX(0, FixedDiv((finalecount - 10) * FRACUNIT, TextSpeed()) >> FRACBITS);
     const char  *ch = finaletext;
@@ -299,55 +360,63 @@ static void F_TextWrite(void)
     char        prev = ' ';
 
     // erase the entire screen to a tiled background
-    src = (byte *)W_CacheLumpName((char *)finaleflat);
-    dest = screens[0];
+    int         lumpnum = W_GetNumForName(finaleflat);
+
+    if (W_LumpLength(lumpnum) == 4096)  // 64x64 flat
+    {
+        byte    *dest = screens[0];
+
+        src = (byte *)W_CacheLumpNum(lumpnum);
 
 #if SCREENSCALE == 1
-    for (int y = 0; y < SCREENHEIGHT; y++)
-    {
-        for (int x = 0; x < SCREENWIDTH / 64; x++)
+        for (int y = 0; y < SCREENHEIGHT; y++)
         {
-            memcpy(dest, src + ((y & 63) << 6), 64);
-            dest += 64;
-        }
-
-        if (SCREENWIDTH & 63)
-        {
-            memcpy(dest, src + ((y & 63) << 6), SCREENWIDTH & 63);
-            dest += (SCREENWIDTH & 63);
-        }
-    }
-#else
-    for (int y = 0; y < SCREENHEIGHT; y += 2)
-        for (int x = 0; x < SCREENWIDTH / 32; x += 2)
-        {
-            for (int i = 0; i < 64; i++)
+            for (int x = 0; x < SCREENWIDTH / 64; x++)
             {
-                int     j = i * 2;
-                byte    dot = src[(((y / 2) & 63) << 6) + i];
-
-                if (y * SCREENWIDTH + x + j < SCREENWIDTH * (SCREENHEIGHT - 1))
-                    *(dest + j) = dot;
-
-                j++;
-
-                if (y * SCREENWIDTH + x + j < SCREENWIDTH * (SCREENHEIGHT - 1))
-                    *(dest + j) = dot;
-
-                j += SCREENWIDTH;
-
-                if (y * SCREENWIDTH + x + j < SCREENWIDTH * (SCREENHEIGHT - 1))
-                    *(dest + j) = dot;
-
-                j--;
-
-                if (y * SCREENWIDTH + x + j < SCREENWIDTH * (SCREENHEIGHT - 1))
-                    *(dest + j) = dot;
+                memcpy(dest, src + ((y & 63) << 6), 64);
+                dest += 64;
             }
 
-            dest += 128;
+            if (SCREENWIDTH & 63)
+            {
+                memcpy(dest, src + ((y & 63) << 6), SCREENWIDTH & 63);
+                dest += (SCREENWIDTH & 63);
+            }
         }
+#else
+        for (int y = 0; y < SCREENHEIGHT; y += 2)
+            for (int x = 0; x < SCREENWIDTH / 32; x += 2)
+            {
+                for (int i = 0; i < 64; i++)
+                {
+                    int     j = i * 2;
+                    byte    dot = src[(((y / 2) & 63) << 6) + i];
+
+                    if (y * SCREENWIDTH + x + j < SCREENWIDTH * (SCREENHEIGHT - 1))
+                        *(dest + j) = dot;
+
+                    j++;
+
+                    if (y * SCREENWIDTH + x + j < SCREENWIDTH * (SCREENHEIGHT - 1))
+                        *(dest + j) = dot;
+
+                    j += SCREENWIDTH;
+
+                    if (y * SCREENWIDTH + x + j < SCREENWIDTH * (SCREENHEIGHT - 1))
+                        *(dest + j) = dot;
+
+                    j--;
+
+                    if (y * SCREENWIDTH + x + j < SCREENWIDTH * (SCREENHEIGHT - 1))
+                        *(dest + j) = dot;
+                }
+
+                dest += 128;
+            }
 #endif
+    }
+    else
+        V_DrawPatch(0, 0, 0, W_CacheLumpNum(lumpnum));
 
     for (; count; count--)
     {
@@ -374,7 +443,7 @@ static void F_TextWrite(void)
             continue;
         }
 
-        if (cx > ORIGINALWIDTH - 12)
+        if (cx > VANILLAWIDTH - 12)
             continue;
 
         if (STCFN034)
@@ -522,11 +591,12 @@ static void F_CastTicker(void)
 
         caststate = &states[mobjinfo[castorder[castnum].type].seestate];
         castframes = 0;
+
+        D_FadeScreen();
     }
     else
     {
         int st;
-        int sfx = 0;
 
         // just advance to next state in animation
         if (!castdeath && caststate == &states[S_PLAY_ATK1])
@@ -540,11 +610,11 @@ static void F_CastTicker(void)
         switch (st)
         {
             case S_PLAY_ATK1:
-                sfx = sfx_dshtgn;
+                S_StartSound(NULL, sfx_dshtgn);
                 break;
 
             case S_POSS_ATK2:
-                sfx = sfx_pistol;
+                S_StartSound(NULL, sfx_pistol);
                 break;
 
             case S_SPOS_ATK2:
@@ -553,23 +623,23 @@ static void F_CastTicker(void)
             case S_CPOS_ATK4:
             case S_SPID_ATK2:
             case S_SPID_ATK3:
-                sfx = sfx_shotgn;
+                S_StartSound(NULL, sfx_shotgn);
                 break;
 
             case S_VILE_ATK2:
-                sfx = sfx_vilatk;
+                S_StartSound(NULL, sfx_vilatk);
                 break;
 
             case S_SKEL_FIST2:
-                sfx = sfx_skeswg;
+                S_StartSound(NULL, sfx_skeswg);
                 break;
 
             case S_SKEL_FIST4:
-                sfx = sfx_skepch;
+                S_StartSound(NULL, sfx_skepch);
                 break;
 
             case S_SKEL_MISS2:
-                sfx = sfx_skeatk;
+                S_StartSound(NULL, sfx_skeatk);
                 break;
 
             case S_FATT_ATK8:
@@ -578,35 +648,32 @@ static void F_CastTicker(void)
             case S_BOSS_ATK2:
             case S_BOS2_ATK2:
             case S_HEAD_ATK2:
-                sfx = sfx_firsht;
+                S_StartSound(NULL, sfx_firsht);
                 break;
 
             case S_TROO_ATK3:
-                sfx = sfx_claw;
+                S_StartSound(NULL, sfx_claw);
                 break;
 
             case S_SARG_ATK2:
-                sfx = sfx_sgtatk;
+                S_StartSound(NULL, sfx_sgtatk);
                 break;
 
             case S_SKULL_ATK2:
             case S_PAIN_ATK3:
-                sfx = sfx_sklatk;
+                S_StartSound(NULL, sfx_sklatk);
                 break;
 
             case S_BSPI_ATK2:
-                sfx = sfx_plasma;
+                S_StartSound(NULL, sfx_plasma);
                 break;
 
             case S_CYBER_ATK2:
             case S_CYBER_ATK4:
             case S_CYBER_ATK6:
-                sfx = sfx_rlaunc;
+                S_StartSound(NULL, sfx_rlaunc);
                 break;
         }
-
-        if (sfx)
-            S_StartSound(NULL, sfx);
     }
 
     if (!castdeath && castframes == 12)
@@ -762,7 +829,7 @@ static void F_CastPrint(const char *text)
     }
 
     // draw it
-    cx = (ORIGINALWIDTH - width) / 2;
+    cx = (VANILLAWIDTH - width) / 2;
     ch = text;
 
     while (ch)
@@ -793,7 +860,7 @@ static void F_CastDrawer(void)
     int             lump;
     int             rot = 0;
     patch_t         *patch;
-    int             y = ORIGINALHEIGHT - 30;
+    int             y = VANILLAHEIGHT - 30;
     mobjtype_t      type = castorder[castnum].type;
 
     // erase the entire screen to a background
@@ -829,25 +896,25 @@ static void F_CastDrawer(void)
             if (r_shadows_translucency)
             {
                 if (type == MT_SHADOWS)
-                    V_DrawFlippedSpectreShadowPatch(ORIGINALWIDTH / 2, ORIGINALHEIGHT - 28, patch);
+                    V_DrawFlippedSpectreShadowPatch(VANILLAWIDTH / 2, VANILLAHEIGHT - 28, patch);
                 else
-                    V_DrawFlippedShadowPatch(ORIGINALWIDTH / 2, ORIGINALHEIGHT - 28, patch);
+                    V_DrawFlippedShadowPatch(VANILLAWIDTH / 2, VANILLAHEIGHT - 28, patch);
             }
             else
             {
                 if (type == MT_SHADOWS)
-                    V_DrawFlippedSolidSpectreShadowPatch(ORIGINALWIDTH / 2, ORIGINALHEIGHT - 28, patch);
+                    V_DrawFlippedSolidSpectreShadowPatch(VANILLAWIDTH / 2, VANILLAHEIGHT - 28, patch);
                 else
-                    V_DrawFlippedSolidShadowPatch(ORIGINALWIDTH / 2, ORIGINALHEIGHT - 28, patch);
+                    V_DrawFlippedSolidShadowPatch(VANILLAWIDTH / 2, VANILLAHEIGHT - 28, patch);
             }
         }
 
         if (r_translucency && (type == MT_SKULL || (type == MT_PAIN && castdeath)))
-            V_DrawFlippedTranslucentRedPatch(ORIGINALWIDTH / 2, y, patch);
+            V_DrawFlippedTranslucentRedPatch(VANILLAWIDTH / 2, y, patch);
         else if (type == MT_SHADOWS)
-            V_DrawFlippedFuzzPatch(ORIGINALWIDTH / 2, y, patch);
+            V_DrawFlippedFuzzPatch(VANILLAWIDTH / 2, y, patch);
         else
-            V_DrawFlippedPatch(ORIGINALWIDTH / 2, y, patch);
+            V_DrawFlippedPatch(VANILLAWIDTH / 2, y, patch);
     }
     else
     {
@@ -858,25 +925,25 @@ static void F_CastDrawer(void)
             if (r_shadows_translucency)
             {
                 if (type == MT_SHADOWS)
-                    V_DrawSpectreShadowPatch(ORIGINALWIDTH / 2, ORIGINALHEIGHT - 28, patch);
+                    V_DrawSpectreShadowPatch(VANILLAWIDTH / 2, VANILLAHEIGHT - 28, patch);
                 else
-                    V_DrawShadowPatch(ORIGINALWIDTH / 2, ORIGINALHEIGHT - 28, patch);
+                    V_DrawShadowPatch(VANILLAWIDTH / 2, VANILLAHEIGHT - 28, patch);
             }
             else
             {
                 if (type == MT_SHADOWS)
-                    V_DrawSolidSpectreShadowPatch(ORIGINALWIDTH / 2, ORIGINALHEIGHT - 28, patch);
+                    V_DrawSolidSpectreShadowPatch(VANILLAWIDTH / 2, VANILLAHEIGHT - 28, patch);
                 else
-                    V_DrawSolidShadowPatch(ORIGINALWIDTH / 2, ORIGINALHEIGHT - 28, patch);
+                    V_DrawSolidShadowPatch(VANILLAWIDTH / 2, VANILLAHEIGHT - 28, patch);
             }
         }
 
         if (r_translucency && (type == MT_SKULL || (type == MT_PAIN && castdeath)))
-            V_DrawTranslucentRedPatch(ORIGINALWIDTH / 2, y, patch);
+            V_DrawTranslucentRedPatch(VANILLAWIDTH / 2, y, patch);
         else if (type == MT_SHADOWS)
-            V_DrawFuzzPatch(ORIGINALWIDTH / 2, y, patch);
+            V_DrawFuzzPatch(VANILLAWIDTH / 2, y, patch);
         else
-            V_DrawPatch(ORIGINALWIDTH / 2, y, 0, patch);
+            V_DrawPatch(VANILLAWIDTH / 2, y, 0, patch);
     }
 }
 
@@ -912,24 +979,24 @@ static void F_DrawPatchCol(int x, patch_t *patch, int col, fixed_t fracstep)
 //
 static void F_BunnyScroll(void)
 {
-    int             scrolled = BETWEEN(0, ORIGINALWIDTH - (finalecount - 230) / 2, ORIGINALWIDTH);
+    int             scrolled = BETWEEN(0, VANILLAWIDTH - (finalecount - 230) / 2, VANILLAWIDTH);
     patch_t         *p1 = W_CacheLumpName("PFUB2");
     patch_t         *p2 = W_CacheLumpName("PFUB1");
     char            name[10];
     int             stage;
     static int      laststage;
-    const fixed_t   yscale = (ORIGINALHEIGHT << FRACBITS) / SCREENHEIGHT;
-    const fixed_t   xscale = (ORIGINALWIDTH << FRACBITS) / SCREENWIDTH;
+    const fixed_t   yscale = (VANILLAHEIGHT << FRACBITS) / SCREENHEIGHT;
+    const fixed_t   xscale = (VANILLAWIDTH << FRACBITS) / SCREENWIDTH;
     fixed_t         frac = 0;
 
-    for (int x = 0; x < ORIGINALWIDTH; x++)
+    for (int x = 0; x < VANILLAWIDTH; x++)
     {
         do
         {
-            if (x + scrolled < ORIGINALWIDTH)
+            if (x + scrolled < VANILLAWIDTH)
                 F_DrawPatchCol(frac / xscale, p1, x + scrolled, yscale);
             else
-                F_DrawPatchCol(frac / xscale, p2, x + scrolled - ORIGINALWIDTH, yscale);
+                F_DrawPatchCol(frac / xscale, p2, x + scrolled - VANILLAWIDTH, yscale);
 
             frac += xscale;
         } while ((frac >> FRACBITS) <= x);
@@ -939,7 +1006,7 @@ static void F_BunnyScroll(void)
         return;
     else if (finalecount < 1180)
     {
-        V_DrawPatchWithShadow((ORIGINALWIDTH - 13 * 8) / 2 + 1, (ORIGINALHEIGHT - 8 * 8) / 2 + 1, W_CacheLumpName("END0"), false);
+        V_DrawPatchWithShadow((VANILLAWIDTH - 13 * 8) / 2 + 1, (VANILLAHEIGHT - 8 * 8) / 2 + 1, W_CacheLumpName("END0"), false);
         laststage = 0;
         return;
     }
@@ -951,12 +1018,24 @@ static void F_BunnyScroll(void)
     }
 
     M_snprintf(name, sizeof(name), "END%i", stage);
-    V_DrawPatchWithShadow((ORIGINALWIDTH - 13 * 8) / 2 + 1, (ORIGINALHEIGHT - 8 * 8) / 2 + 1, W_CacheLumpName(name), false);
+    V_DrawPatchWithShadow((VANILLAWIDTH - 13 * 8) / 2 + 1, (VANILLAHEIGHT - 8 * 8) / 2 + 1, W_CacheLumpName(name), false);
 }
 
 static void F_ArtScreenDrawer(void)
 {
-    if (gameepisode == 3)
+    int lumpnum = P_GetMapEndPic(gamemap);
+
+    if (lumpnum > 0)
+    {
+        if (!finalestage)
+            F_TextWrite();
+        else
+        {
+            V_DrawPatch(0, 0, 0, W_CacheLumpNum(lumpnum));
+            return;
+        }
+    }
+    else if (P_GetMapEndBunny(gamemap) || gameepisode == 3)
         F_BunnyScroll();
     else
     {

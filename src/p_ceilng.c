@@ -44,7 +44,7 @@
 #include "s_sound.h"
 #include "z_zone.h"
 
-// the list of ceilings moving currently, including crushers
+// the list of ceilings currently moving, including crushers
 ceilinglist_t   *activeceilings;
 
 static void P_GradualLightingToCeiling(ceiling_t *ceiling)
@@ -73,9 +73,7 @@ void T_MoveCeiling(ceiling_t *ceiling)
             // UP
             res = T_MovePlane(ceiling->sector, ceiling->speed, ceiling->topheight, false, 1, ceiling->direction, false);
 
-            if (!(leveltime & 7)
-                // [BH] don't make sound once ceiling is at its destination height
-                && ceiling->sector->ceilingheight != ceiling->topheight)
+            if (!(leveltime & 7))
                 switch (ceiling->type)
                 {
                     case silentCrushAndRaise:
@@ -130,9 +128,7 @@ void T_MoveCeiling(ceiling_t *ceiling)
             // DOWN
             res = T_MovePlane(ceiling->sector, ceiling->speed, ceiling->bottomheight, ceiling->crush, 1, ceiling->direction, false);
 
-            if (!(leveltime & 7)
-                // [BH] don't make sound once ceiling is at its destination height
-                && ceiling->sector->ceilingheight != ceiling->bottomheight)
+            if (!(leveltime & 7))
                 switch (ceiling->type)
                 {
                     case silentCrushAndRaise:
@@ -157,7 +153,7 @@ void T_MoveCeiling(ceiling_t *ceiling)
                         if (ceiling->oldspeed < CEILSPEED * 3)
                             ceiling->speed = ceiling->oldspeed;
 
-                        ceiling->direction = 1; // jff 2/22/98 make it go back up!
+                        ceiling->direction = 1; // jff 02/22/98 make it go back up!
                         break;
 
                     case silentCrushAndRaise:

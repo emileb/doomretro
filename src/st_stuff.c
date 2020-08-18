@@ -249,12 +249,10 @@ int                         idclevtics;
 
 dboolean                    idmus;
 
-static dboolean             samelevel;
-
 int                         facebackcolor = facebackcolor_default;
 int                         r_berserkintensity = r_berserkintensity_default;
 
-unsigned int                stat_cheated = 0;
+uint64_t                    stat_cheated = 0;
 
 cheatseq_t cheat_mus = CHEAT("idmus", 0);
 cheatseq_t cheat_mus_xy = CHEAT("idmus", 2);
@@ -390,19 +388,19 @@ static void ST_RefreshBackground(void)
 #if SCREENSCALE == 1
         if (STBAR >= 3)
         {
-            V_DrawSTBARPatch(ST_X, ORIGINALHEIGHT - ORIGINALSBARHEIGHT, sbar);
-            V_DrawPatch(ST_ARMSBGX + hacx * 4, ORIGINALHEIGHT - ORIGINALSBARHEIGHT, 0, armsbg);
+            V_DrawSTBARPatch(ST_X, VANILLAHEIGHT - VANILLASBARHEIGHT, sbar);
+            V_DrawPatch(ST_ARMSBGX + hacx * 4, VANILLAHEIGHT - VANILLASBARHEIGHT, 0, armsbg);
         }
         else
-            V_DrawSTBARPatch(ST_X, ORIGINALHEIGHT - ORIGINALSBARHEIGHT, sbar);
+            V_DrawSTBARPatch(ST_X, VANILLAHEIGHT - VANILLASBARHEIGHT, sbar);
 #else
         if (STBAR >= 3)
         {
-            V_DrawSTBARPatch(ST_X, ORIGINALHEIGHT - ORIGINALSBARHEIGHT, sbar);
-            V_DrawPatch(ST_ARMSBGX + hacx * 4, ORIGINALHEIGHT - ORIGINALSBARHEIGHT, 0, armsbg);
+            V_DrawSTBARPatch(ST_X, VANILLAHEIGHT - VANILLASBARHEIGHT, sbar);
+            V_DrawPatch(ST_ARMSBGX + hacx * 4, VANILLAHEIGHT - VANILLASBARHEIGHT, 0, armsbg);
         }
         else if (r_detail == r_detail_low)
-            V_DrawSTBARPatch(ST_X, ORIGINALHEIGHT - ORIGINALSBARHEIGHT, sbar);
+            V_DrawSTBARPatch(ST_X, VANILLAHEIGHT - VANILLASBARHEIGHT, sbar);
         else
             V_DrawBigPatch(ST_X, ST_Y, sbar2);
 #endif
@@ -613,7 +611,7 @@ dboolean ST_Responder(event_t *ev)
                         if (musnum != NONE)
                         {
                             static char msg[80];
-                            char        *temp = uppercase(S_music[musnum].name);
+                            char        *temp = uppercase(S_music[musnum].name1);
 
                             S_ChangeMusic(musnum, 1, true, false);
 
@@ -972,8 +970,7 @@ dboolean ST_Responder(event_t *ev)
                 // Catch invalid maps.
                 // [BH] simplified by checking if lump for map exists in WAD
                 // [BH] only allow MAP01 to MAP09 when NERVE.WAD loaded
-                if (W_CheckNumForName(lump) < 0 || (gamemission == pack_nerve && map > 9)
-                    || (BTSX && W_CheckMultipleLumps(lump) == 1))
+                if (W_CheckNumForName(lump) < 0 || (gamemission == pack_nerve && map > 9) || (BTSX && W_CheckMultipleLumps(lump) == 1))
                     idclev = false;
                 else
                 {
@@ -983,7 +980,7 @@ dboolean ST_Responder(event_t *ev)
                     C_Input("%s%c%c", cheat_clev_xy.sequence, buffer[0], buffer[1]);
 
                     if (BTSX)
-                        M_snprintf(lump, sizeof(lump), "E%iM%c%c", (BTSXE1 ? 1 : 2), buffer[0], buffer[1]);
+                        M_snprintf(lump, sizeof(lump), "E%iM%c%c", (BTSXE1 ? 1 : (BTSXE2 ? 2 : 3)), buffer[0], buffer[1]);
                     else if (FREEDOOM && gamemode != commercial)
                         M_snprintf(lump, sizeof(lump), "C%cM%c", buffer[0], buffer[1]);
 
@@ -1052,12 +1049,19 @@ static int ST_CalcPainOffset(void)
 static void ST_UpdateFaceWidget(void)
 {
     static int  priority;
-
-    // [crispy] fix status bar face hysteresis
-    int         painoffset = ST_CalcPainOffset();
+    int         painoffset;
     static int  faceindex;
 
-    dboolean    invulnerable = ((viewplayer->cheats & CF_GODMODE) || viewplayer->powers[pw_invulnerability]);
+    // invulnerability
+    if (((viewplayer->cheats & CF_GODMODE) || viewplayer->powers[pw_invulnerability]))
+    {
+        priority = 5;
+        st_faceindex = ST_GODFACE;
+        st_facecount = 0;
+        return;
+    }
+
+    painoffset = ST_CalcPainOffset();
 
     if (priority < 10)
     {
@@ -1079,8 +1083,7 @@ static void ST_UpdateFaceWidget(void)
             dboolean    doevilgrin = false;
 
             for (int i = 0; i < NUMWEAPONS; i++)
-                // [BH] no evil grin when invulnerable
-                if (oldweaponsowned[i] != viewplayer->weaponowned[i] && !invulnerable)
+                if (oldweaponsowned[i] != viewplayer->weaponowned[i])
                 {
                     doevilgrin = true;
                     oldweaponsowned[i] = viewplayer->weaponowned[i];
@@ -1156,8 +1159,7 @@ static void ST_UpdateFaceWidget(void)
     {
         static int  lastattackdown = -1;
 
-        // [BH] no rampage face when invulnerable
-        if (viewplayer->attackdown && !invulnerable)
+        if (viewplayer->attackdown)
         {
             if (lastattackdown == -1)
                 lastattackdown = ST_RAMPAGEDELAY;
@@ -1171,18 +1173,6 @@ static void ST_UpdateFaceWidget(void)
         }
         else
             lastattackdown = -1;
-    }
-
-    if (priority < 5)
-    {
-        // invulnerability
-        if (invulnerable)
-        {
-            priority = 4;
-            painoffset = 0;
-            faceindex = ST_GODFACE;
-            st_facecount = 1;
-        }
     }
 
     // look left or look right if the facecount has timed out
@@ -1209,30 +1199,27 @@ static void ST_UpdateWidgets(void)
     w_ready.data = readyweapon;
 
     // update keycard multiple widgets
-    for (int i = 0; i < 3; i++)
-    {
-        keyboxes[i] = (viewplayer->cards[i] > 0 ? i : -1);
-
-        if (viewplayer->cards[i + 3] > 0 && viewplayer->cards[i + 3] > viewplayer->cards[i])
-            keyboxes[i] = i + 3;
-    }
+    keyboxes[0] = (viewplayer->cards[it_blueskull] > 0 ? it_blueskull : (viewplayer->cards[it_bluecard] > 0 ? it_bluecard : -1));
+    keyboxes[1] = (viewplayer->cards[it_yellowskull] > 0 ? it_yellowskull : (viewplayer->cards[it_yellowcard] > 0 ? it_yellowcard : -1));
+    keyboxes[2] = (viewplayer->cards[it_redskull] > 0 ? it_redskull : (viewplayer->cards[it_redcard] > 0 ? it_redcard : -1));
 
     // refresh everything if this is him coming back to life
-    // [BH] but only if not paused and no menu
-    if (!freeze && !paused && !menuactive && !consoleactive)
-        ST_UpdateFaceWidget();
+    ST_UpdateFaceWidget();
 }
 
 void ST_Ticker(void)
 {
-    if (!freeze && !paused && !menuactive && !consoleactive)
+    if (!vid_widescreen)
     {
-        if (!vid_widescreen)
+        if (!freeze && !paused && !menuactive && !consoleactive)
         {
             ST_UpdateWidgets();
             st_oldhealth = viewplayer->health;
         }
-        else if (r_hud && !r_althud)
+    }
+    else if (r_hud && !r_althud)
+    {
+        if (!freeze && !paused && !menuactive && !consoleactive)
         {
             ST_UpdateFaceWidget();
             st_oldhealth = viewplayer->health;
@@ -1254,8 +1241,7 @@ static void ST_DoPaletteStuff(void)
     int palette = 0;
 
     if (viewplayer->powers[pw_strength]
-        && (viewplayer->pendingweapon == wp_fist
-            || (viewplayer->readyweapon == wp_fist && viewplayer->pendingweapon == wp_nochange))
+        && (viewplayer->pendingweapon == wp_fist || (viewplayer->readyweapon == wp_fist && viewplayer->pendingweapon == wp_nochange))
         && viewplayer->health > 0 && r_berserkintensity)
     {
         int bonuscount = viewplayer->bonuscount;
@@ -1269,7 +1255,7 @@ static void ST_DoPaletteStuff(void)
     {
         int damagecount = viewplayer->damagecount;
 
-        if (damagecount)
+        if (damagecount && !(viewplayer->cheats & CF_GODMODE))
             palette = (chex ? RADIATIONPAL : STARTREDPALS + MIN((damagecount + 7) >> 3, NUMREDPALS - 1));
         else if (viewplayer->health > 0)
         {
@@ -1293,16 +1279,20 @@ static void ST_DrawWidgets(dboolean refresh)
 {
     STlib_UpdateBigNum(&w_ready);
 
-    for (int i = 0; i < 4; i++)
-    {
-        STlib_UpdateSmallNum(&w_ammo[i]);
-        STlib_UpdateSmallNum(&w_maxammo[i]);
-    }
+    STlib_UpdateSmallNum(&w_ammo[0]);
+    STlib_UpdateSmallNum(&w_ammo[1]);
+    STlib_UpdateSmallNum(&w_ammo[2]);
+    STlib_UpdateSmallNum(&w_ammo[3]);
+
+    STlib_UpdateSmallNum(&w_maxammo[0]);
+    STlib_UpdateSmallNum(&w_maxammo[1]);
+    STlib_UpdateSmallNum(&w_maxammo[2]);
+    STlib_UpdateSmallNum(&w_maxammo[3]);
 
     STlib_UpdatePercent(&w_health, refresh);
     STlib_UpdatePercent(&w_armor, refresh);
 
-    st_shotguns = (viewplayer->weaponowned[wp_shotgun] | viewplayer->weaponowned[wp_supershotgun]);
+    st_shotguns = (viewplayer->weaponowned[wp_shotgun] || viewplayer->weaponowned[wp_supershotgun]);
 
     STlib_UpdateArmsIcon(&w_arms[0], refresh, 0);
     STlib_UpdateArmsIcon(&w_arms[1], refresh, 1);
@@ -1320,8 +1310,9 @@ static void ST_DrawWidgets(dboolean refresh)
 
     STlib_UpdateMultIcon(&w_faces, refresh);
 
-    for (int i = 0; i < 3; i++)
-        STlib_UpdateMultIcon(&w_keyboxes[i], refresh);
+    STlib_UpdateMultIcon(&w_keyboxes[0], refresh);
+    STlib_UpdateMultIcon(&w_keyboxes[1], refresh);
+    STlib_UpdateMultIcon(&w_keyboxes[2], refresh);
 }
 
 void ST_DoRefresh(void)
@@ -1477,16 +1468,6 @@ static void ST_LoadCallback(char *lumpname, patch_t **variable)
         *variable = W_CacheLumpName(lumpname);
 }
 
-static void ST_LoadGraphics(void)
-{
-    ST_LoadUnloadGraphics(&ST_LoadCallback);
-}
-
-static void ST_LoadData(void)
-{
-    ST_LoadGraphics();
-}
-
 static void ST_InitData(void)
 {
     st_firsttime = true;
@@ -1550,30 +1531,16 @@ static void ST_CreateWidgets(void)
     STlib_InitNum(&w_maxammo[am_misl], ST_MAXAMMO3X, ST_MAXAMMO3Y, shortnum, &viewplayer->maxammo[am_misl], ST_MAXAMMO3WIDTH);
 }
 
-static dboolean st_stopped = true;
-
-static void ST_Stop(void)
-{
-    if (st_stopped)
-        return;
-
-    I_SetPalette(PLAYPAL);
-    st_stopped = true;
-}
-
 void ST_Start(void)
 {
-    if (!st_stopped)
-        ST_Stop();
-
     ST_InitData();
     ST_CreateWidgets();
-    st_stopped = false;
 }
 
 void ST_Init(void)
 {
-    ST_LoadData();
+    ST_LoadUnloadGraphics(&ST_LoadCallback);
+
     screens[4] = malloc(ST_WIDTH * SBARHEIGHT);
 
     // [BH] fix evil grin being displayed when picking up first item after

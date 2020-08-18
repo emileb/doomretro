@@ -44,7 +44,7 @@
 
 typedef enum
 {
-    NOTYPE = -1,
+    MT_NULL = -1,
     MT_PLAYER,
     MT_POSSESSED,
     MT_SHOTGUY,
@@ -184,14 +184,14 @@ typedef enum
     MT_MISC86,
 
     MT_PUSH,    // controls push source                     // phares
-    MT_PULL,    // controls pull source                     // phares 3/20/98
+    MT_PULL,    // controls pull source                     // phares 03/20/98
 
-    MT_DOGS,    // killough 7/19/98: Marine's best friend
+    MT_DOGS,    // killough 07/19/98: Marine's best friend
 
-    MT_PLASMA1, // killough 7/11/98: first of alternating beta plasma fireballs
-    MT_PLASMA2, // killough 7/11/98: second of alternating beta plasma fireballs
-    MT_SCEPTRE, // killough 7/11/98: evil sceptre in beta version
-    MT_BIBLE,   // killough 7/11/98: unholy bible in beta version
+    MT_PLASMA1, // killough 07/11/98: first of alternating beta plasma fireballs
+    MT_PLASMA2, // killough 07/11/98: second of alternating beta plasma fireballs
+    MT_SCEPTRE, // killough 07/11/98: evil sceptre in beta version
+    MT_BIBLE,   // killough 07/11/98: unholy bible in beta version
 
     MT_MUSICSOURCE,
     MT_GIBDTH,
@@ -246,6 +246,9 @@ typedef struct
     int         xdeathstate;
     int         deathsound;
     mobjtype_t  droppeditem;
+    int         meleethreshold;
+    int         maxattackrange;
+    int         minmissilechance;
     int         speed;
     int         radius;
     int         pickupradius;
@@ -261,12 +264,12 @@ typedef struct
     dboolean    fullbright;
     int         blood;
     int         shadowoffset;
-    char        name1[100];
-    char        plural1[100];
-    char        name2[100];
-    char        plural2[100];
-    char        name3[100];
-    char        plural3[100];
+    char        name1[64];
+    char        plural1[64];
+    char        name2[64];
+    char        plural2[64];
+    char        name3[64];
+    char        plural3[64];
     void        (*colfunc)(void);
     void        (*altcolfunc)(void);
 } mobjinfo_t;

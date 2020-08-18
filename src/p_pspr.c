@@ -58,8 +58,20 @@ int             weaponbob = weaponbob_default;
 dboolean        weaponbounce = weaponbounce_default;
 dboolean        weaponrecoil = weaponrecoil_default;
 
-unsigned int    stat_shotsfired = 0;
-unsigned int    stat_shotshit = 0;
+uint64_t        stat_shotsfired_pistol = 0;
+uint64_t        stat_shotsfired_shotgun = 0;
+uint64_t        stat_shotsfired_supershotgun = 0;
+uint64_t        stat_shotsfired_chaingun = 0;
+uint64_t        stat_shotsfired_rocketlauncher = 0;
+uint64_t        stat_shotsfired_plasmarifle = 0;
+uint64_t        stat_shotsfired_bfg9000 = 0;
+uint64_t        stat_shotssuccessful_pistol = 0;
+uint64_t        stat_shotssuccessful_shotgun = 0;
+uint64_t        stat_shotssuccessful_supershotgun = 0;
+uint64_t        stat_shotssuccessful_chaingun = 0;
+uint64_t        stat_shotssuccessful_rocketlauncher = 0;
+uint64_t        stat_shotssuccessful_plasmarifle = 0;
+uint64_t        stat_shotssuccessful_bfg9000 = 0;
 
 dboolean        successfulshot;
 dboolean        skippsprinterp;
@@ -301,7 +313,6 @@ void A_WeaponReady(mobj_t *actor, player_t *player, pspdef_t *psp)
         {
             player->attackdown = true;
             P_FireWeapon();
-            return;
         }
     }
     else
@@ -381,7 +392,6 @@ void A_Raise(mobj_t *actor, player_t *player, pspdef_t *psp)
         return;
 
     psp->sy = WEAPONTOP;
-    startingnewgame = false;
     P_SetPsprite(ps_weapon, weaponinfo[player->readyweapon].readystate);
 }
 
@@ -403,14 +413,13 @@ void A_GunFlash(mobj_t *actor, player_t *player, pspdef_t *psp)
 void A_Punch(mobj_t *actor, player_t *player, pspdef_t *psp)
 {
     angle_t angle = actor->angle + (M_SubRandom() << 18);
-    int     slope;
+    int     slope = P_AimLineAttack(actor, angle, MELEERANGE, MF_FRIEND);
     int     damage = (M_Random() % 10 + 1) << 1;
 
     if (player->powers[pw_strength])
         damage *= 10;
 
-    // killough 8/2/98: make autoaiming prefer enemies
-    if ((slope = P_AimLineAttack(actor, angle, MELEERANGE, MF_FRIEND), !linetarget))
+    if (!linetarget)
         slope = P_AimLineAttack(actor, angle, MELEERANGE, 0);
 
     hitwall = false;
@@ -433,11 +442,9 @@ void A_Punch(mobj_t *actor, player_t *player, pspdef_t *psp)
 void A_Saw(mobj_t *actor, player_t *player, pspdef_t *psp)
 {
     angle_t angle = actor->angle + (M_SubRandom() << 18);
-    int     slope;
+    int     slope = P_AimLineAttack(actor, angle, MELEERANGE + 1, MF_FRIEND);
 
-    // use MELEERANGE + 1 so the puff doesn't skip the flash
-    // killough 8/2/98: make autoaiming prefer enemies
-    if ((slope = P_AimLineAttack(actor, angle, MELEERANGE + 1, MF_FRIEND), !linetarget))
+    if (!linetarget)
         slope = P_AimLineAttack(actor, angle, MELEERANGE + 1, 0);
 
     P_LineAttack(actor, angle, MELEERANGE + 1, slope, 2 * (M_Random() % 10 + 1));
@@ -478,8 +485,8 @@ void A_FireMissile(mobj_t *actor, player_t *player, pspdef_t *psp)
     P_SubtractAmmo(1);
     P_SpawnPlayerMissile(actor, MT_ROCKET);
 
-    player->shotsfired++;
-    stat_shotsfired = SafeAdd(stat_shotsfired, 1);
+    player->shotsfired[wp_missile]++;
+    stat_shotsfired_rocketlauncher = SafeAdd(stat_shotsfired_rocketlauncher, 1);
 }
 
 //
@@ -495,7 +502,7 @@ void A_FireBFG(mobj_t *actor, player_t *player, pspdef_t *psp)
 // A_FireOldBFG
 //
 // This function emulates DOOM's Pre-Beta BFG
-// By Lee Killough 6/6/98, 7/11/98, 7/19/98, 8/20/98
+// By Lee Killough 06/06/98, 07/11/98, 07/19/98, 08/20/98
 //
 // This code may not be used in other mods without appropriate credit given.
 // Code leeches will be telefragged.
@@ -518,7 +525,7 @@ void A_FireOldBFG(mobj_t *actor, player_t *player, pspdef_t *psp)
             slope = PLAYERSLOPE(player);
         else
         {
-            // killough 8/2/98: make autoaiming prefer enemies
+            // killough 08/02/98: make autoaiming prefer enemies
             int mask = MF_FRIEND;
 
             do
@@ -540,7 +547,7 @@ void A_FireOldBFG(mobj_t *actor, player_t *player, pspdef_t *psp)
                         }
                     }
                 }
-            } while (mask && (mask = 0, !linetarget));  // killough 8/2/98
+            } while (mask && (mask = 0, !linetarget));  // killough 08/02/98
         }
 
         an1 += an - actor->angle;
@@ -576,8 +583,8 @@ void A_FirePlasma(mobj_t *actor, player_t *player, pspdef_t *psp)
     P_SetPsprite(ps_flash, weaponinfo[player->readyweapon].flashstate + (M_Random() & 1));
     P_SpawnPlayerMissile(actor, MT_PLASMA);
 
-    player->shotsfired++;
-    stat_shotsfired = SafeAdd(stat_shotsfired, 1);
+    player->shotsfired[wp_plasma]++;
+    stat_shotsfired_plasmarifle = SafeAdd(stat_shotsfired_plasmarifle, 1);
 }
 
 //
@@ -593,7 +600,7 @@ static void P_BulletSlope(mobj_t *actor)
         bulletslope = PLAYERSLOPE(viewplayer);
     else
     {
-        // killough 8/2/98: make autoaiming prefer enemies
+        // killough 08/02/98: make autoaiming prefer enemies
         int mask = MF_FRIEND;
 
         do
@@ -615,7 +622,7 @@ static void P_BulletSlope(mobj_t *actor)
                         bulletslope = PLAYERSLOPE(viewplayer);
                 }
             }
-        } while (mask && (mask = 0, !linetarget));  // killough 8/2/98
+        } while (mask && (mask = 0, !linetarget));  // killough 08/02/98
     }
 }
 
@@ -648,13 +655,13 @@ void A_FirePistol(mobj_t *actor, player_t *player, pspdef_t *psp)
     P_GunShot(actor, !player->refire);
     A_Recoil(wp_pistol);
 
-    player->shotsfired++;
-    stat_shotsfired = SafeAdd(stat_shotsfired, 1);
+    player->shotsfired[wp_pistol]++;
+    stat_shotsfired_pistol = SafeAdd(stat_shotsfired_pistol, 1);
 
     if (successfulshot)
     {
-        player->shotshit++;
-        stat_shotshit = SafeAdd(stat_shotshit, 1);
+        player->shotssuccessful[wp_pistol]++;
+        stat_shotssuccessful_pistol = SafeAdd(stat_shotssuccessful_pistol, 1);
     }
 }
 
@@ -676,13 +683,13 @@ void A_FireShotgun(mobj_t *actor, player_t *player, pspdef_t *psp)
 
     A_Recoil(wp_shotgun);
 
-    player->shotsfired++;
-    stat_shotsfired = SafeAdd(stat_shotsfired, 1);
+    player->shotsfired[wp_shotgun]++;
+    stat_shotsfired_shotgun = SafeAdd(stat_shotsfired_shotgun, 1);
 
     if (successfulshot)
     {
-        player->shotshit++;
-        stat_shotshit = SafeAdd(stat_shotshit, 1);
+        player->shotssuccessful[wp_shotgun]++;
+        stat_shotssuccessful_shotgun = SafeAdd(stat_shotssuccessful_shotgun, 1);
     }
 
     player->preferredshotgun = wp_shotgun;
@@ -707,13 +714,13 @@ void A_FireShotgun2(mobj_t *actor, player_t *player, pspdef_t *psp)
 
     A_Recoil(wp_supershotgun);
 
-    player->shotsfired++;
-    stat_shotsfired = SafeAdd(stat_shotsfired, 1);
+    player->shotsfired[wp_supershotgun]++;
+    stat_shotsfired_supershotgun = SafeAdd(stat_shotsfired_supershotgun, 1);
 
     if (successfulshot)
     {
-        player->shotshit++;
-        stat_shotshit = SafeAdd(stat_shotshit, 1);
+        player->shotssuccessful[wp_supershotgun]++;
+        stat_shotssuccessful_supershotgun = SafeAdd(stat_shotssuccessful_supershotgun, 1);
     }
 
     player->preferredshotgun = wp_supershotgun;
@@ -755,13 +762,13 @@ void A_FireCGun(mobj_t *actor, player_t *player, pspdef_t *psp)
     P_GunShot(actor, !player->refire);
     A_Recoil(wp_chaingun);
 
-    player->shotsfired++;
-    stat_shotsfired = SafeAdd(stat_shotsfired, 1);
+    player->shotsfired[wp_chaingun]++;
+    stat_shotsfired_chaingun = SafeAdd(stat_shotsfired_chaingun, 1);
 
     if (successfulshot)
     {
-        player->shotshit++;
-        stat_shotshit = SafeAdd(stat_shotshit, 1);
+        player->shotssuccessful[wp_chaingun]++;
+        stat_shotssuccessful_chaingun = SafeAdd(stat_shotssuccessful_chaingun, 1);
     }
 }
 
@@ -799,7 +806,7 @@ void A_BFGSpray(mobj_t *actor, player_t *player, pspdef_t *psp)
         int     damage = 0;
         angle_t an = mo->angle - ANG90 / 2 + ANG90 / 40 * i;
 
-        // killough 8/2/98: make autoaiming prefer enemies
+        // killough 08/02/98: make autoaiming prefer enemies
         if (P_AimLineAttack(mo, an, 16 * 64 * FRACUNIT, MF_FRIEND), !linetarget)
             P_AimLineAttack(mo, an, 16 * 64 * FRACUNIT, 0);
 
@@ -818,13 +825,13 @@ void A_BFGSpray(mobj_t *actor, player_t *player, pspdef_t *psp)
 
     if (mo->player)
     {
-        mo->player->shotsfired++;
-        stat_shotsfired = SafeAdd(stat_shotsfired, 1);
+        mo->player->shotsfired[wp_bfg]++;
+        stat_shotsfired_bfg9000 = SafeAdd(stat_shotsfired_bfg9000, 1);
 
         if (successfulshot)
         {
-            mo->player->shotshit++;
-            stat_shotshit = SafeAdd(stat_shotshit, 1);
+            mo->player->shotssuccessful[wp_bfg]++;
+            stat_shotssuccessful_bfg9000 = SafeAdd(stat_shotssuccessful_bfg9000, 1);
         }
     }
 
@@ -854,7 +861,9 @@ void P_SetupPsprites(void)
     // spawn the gun
     viewplayer->pendingweapon = viewplayer->readyweapon;
     P_BringUpWeapon();
-    skippsprinterp = true;
+
+    if (r_playersprites)
+        skippsprinterp = true;
 }
 
 //

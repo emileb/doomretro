@@ -39,7 +39,7 @@
 #if !defined(__R_DRAW_H__)
 #define __R_DRAW_H__
 
-#define FUZZ(a, b)      fuzzrange[M_RandomInt(a, b) + 1]
+#define FUZZ(a, b)      fuzzrange[M_BigRandomInt(a, b) + 1]
 
 // [BH] Compensate for rounding errors in DOOM's renderer by stretching wall
 //  columns by 1px. This eliminates the randomly-colored pixels ("sparkles")
@@ -69,15 +69,16 @@ extern byte             *dc_black40;
 // first pixel in a column
 extern byte             *dc_source;
 
+extern int              fuzzpos;
 extern const int        fuzzrange[3];
-extern int              fuzztable[SCREENWIDTH * SCREENHEIGHT];
+extern int              fuzztable[SCREENAREA];
 
 // The span blitting interface.
 // Hook in assembler or system specific BLT here.
 void R_DrawColumn(void);
 void R_DrawColorColumn(void);
 void R_DrawWallColumn(void);
-void R_DrawBrightMapWallColumn(void);
+void R_DrawBrightmapWallColumn(void);
 void R_DrawSkyColumn(void);
 void R_DrawFlippedSkyColumn(void);
 void R_DrawSkyColorColumn(void);

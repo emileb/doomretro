@@ -76,19 +76,21 @@
 #include <libgen.h>
 #include <mach-o/dyld.h>
 #include <errno.h>
-#endif
-
-#if defined(__OpenBSD__) || defined(__FreeBSD__)
+#elif defined(__OpenBSD__) || defined(__FreeBSD__)
 #include <sys/sysctl.h>
 #include <dirent.h>
 #include <errno.h>
 #include <libgen.h>
 #include <unistd.h>
-#elif defined(__linux__)
+#elif defined(__linux__) || defined(__HAIKU__)
 #include <dirent.h>
 #include <errno.h>
 #include <libgen.h>
 #include <unistd.h>
+
+#if defined(__HAIKU__)
+#include <kernel/image.h>
+#endif
 #endif
 
 //
@@ -116,6 +118,60 @@ dboolean M_FileExists(const char *filename)
 
     return false;
 }
+
+#if !defined(_WIN32) && !defined(__APPLE__)
+// Check if a file exists by probing for common case variation of its filename.
+// Returns a newly allocated string that the caller is responsible for freeing.
+char *M_FileCaseExists(const char *path)
+{
+    char    *path_dup = M_StringDuplicate(path);
+    char    *filename;
+    char    *ext;
+
+    // actual path
+    if (M_FileExists(path_dup))
+        return path_dup;
+
+    if ((filename = strrchr(path_dup, DIR_SEPARATOR)))
+        filename++;
+    else
+        filename = path_dup;
+
+    // lowercase filename, e.g. doom2.wad
+    lowercase(filename);
+
+    if (M_FileExists(path_dup))
+        return path_dup;
+
+    // uppercase filename, e.g. DOOM2.WAD
+    uppercase(filename);
+
+    if (M_FileExists(path_dup))
+        return path_dup;
+
+    // uppercase basename with lowercase extension, e.g. DOOM2.wad
+    if ((ext = strrchr(path_dup, '.')) && ext > filename)
+    {
+        lowercase(ext + 1);
+
+        if (M_FileExists(path_dup))
+            return path_dup;
+    }
+
+    // lowercase filename with uppercase first letter, e.g. Doom2.wad
+    if (strlen(filename) > 1)
+    {
+        lowercase(filename + 1);
+
+        if (M_FileExists(path_dup))
+            return path_dup;
+    }
+
+    // no luck
+    free(path_dup);
+    return NULL;
+}
+#endif
 
 // Check if a folder exists
 dboolean M_FolderExists(const char *folder)
@@ -303,6 +359,22 @@ char *M_GetExecutableFolder(void)
     }
 
     return dirname(exe);
+#elif defined(__HAIKU__)
+    char        *exe = malloc(MAX_PATH);
+    image_info  ii;
+    int32_t     ck = 0;
+
+    exe[0] = '\0';
+
+    while (get_next_image_info(0, &ck, &ii) == B_OK)
+        if (ii.type == B_APP_IMAGE)
+        {
+            strcpy(exe, ii.name);
+            return dirname(exe);
+        }
+
+    strcpy(exe, ".");
+    return exe;
 #else
     char    *folder = malloc(2);
 
@@ -338,7 +410,7 @@ char *M_StringJoin(char *s, ...)
 
     va_start(args, s);
 
-    for (;;)
+    while (true)
     {
         v = va_arg(args, char *);
 
@@ -357,7 +429,7 @@ char *M_StringJoin(char *s, ...)
 
     va_start(args, s);
 
-    for (;;)
+    while (true)
     {
         if (!(v = va_arg(args, char *)))
             break;

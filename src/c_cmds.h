@@ -61,18 +61,19 @@ typedef struct
 
 typedef struct
 {
-    char    *action;
-    void    (*func)(void);
-    void    *keyboard1;
-    void    *keyboard2;
-    void    *mouse1;
-    void    *gamepad1;
-    void    *gamepad2;
+    char        *action;
+    dboolean    hideconsole;
+    void        (*func)(void);
+    void        *keyboard1;
+    void        *keyboard2;
+    void        *mouse1;
+    void        *gamepad1;
+    void        *gamepad2;
 } action_t;
 
 typedef enum
 {
-    CT_CMD   = 1,
+    CT_CCMD  = 1,
     CT_CVAR  = 2,
     CT_CHEAT = 3
 } cmdtype_t;

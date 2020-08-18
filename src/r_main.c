@@ -99,8 +99,8 @@ fixed_t             *finecosine = &finesine[FINEANGLES / 4];
 fixed_t             finetangent[FINEANGLES / 2];
 angle_t             tantoangle[SLOPERANGE + 1];
 
-// killough 3/20/98: Support dynamic colormaps, e.g. deep water
-// killough 4/4/98: support dynamic number of them as well
+// killough 03/20/98: Support dynamic colormaps, e.g. deep water
+// killough 04/04/98: support dynamic number of them as well
 int                 numcolormaps = 1;
 static lighttable_t *(*c_scalelight)[LIGHTLEVELS][MAXLIGHTSCALE];
 static lighttable_t *(*c_zlight)[LIGHTLEVELS][MAXLIGHTZ];
@@ -137,10 +137,10 @@ extern lighttable_t **walllights;
 //
 int R_PointOnSide(fixed_t x, fixed_t y, const node_t *node)
 {
-    fixed_t nx = node->x;
-    fixed_t ny = node->y;
-    fixed_t ndx = node->dx;
-    fixed_t ndy = node->dy;
+    const fixed_t   nx = node->x;
+    const fixed_t   ny = node->y;
+    const int64_t   ndx = node->dx;
+    const int64_t   ndy = node->dy;
 
     if (!ndx)
         return (x <= nx ? (ndy > 0) : (ndy < 0));
@@ -155,15 +155,15 @@ int R_PointOnSide(fixed_t x, fixed_t y, const node_t *node)
     if ((ndy ^ ndx ^ x ^ y) < 0)
         return ((ndy ^ x) < 0); // (left is negative)
 
-    return ((int64_t)y * ndx >= (int64_t)ndy * x);
+    return (y * ndx >= ndy * x);
 }
 
 int R_PointOnSegSide(fixed_t x, fixed_t y, seg_t *line)
 {
-    fixed_t lx = line->v1->x;
-    fixed_t ly = line->v1->y;
-    int64_t ldx = line->dx;
-    int64_t ldy = line->dy;
+    const fixed_t   lx = line->v1->x;
+    const fixed_t   ly = line->v1->y;
+    const int64_t   ldx = line->dx;
+    const int64_t   ldy = line->dy;
 
     if (!ldx)
         return (x <= lx ? (ldy > 0) : (ldy < 0));
@@ -189,7 +189,7 @@ static int SlopeDiv(unsigned int num, unsigned int den)
         return (ANG45 - 1);
 
     ans = ((uint64_t)num << 3) / (den >> 8);
-    return (int)(ans <= SLOPERANGE ? tantoangle[ans] : (ANG45 - 1));
+    return (int)(ans <= SLOPERANGE ? tantoangle[ans] : ANG45 - 1);
 }
 
 //
@@ -289,11 +289,11 @@ static void R_InitTables(void)
 {
     // viewangle tangent table
     for (int i = 0; i < FINEANGLES / 2; i++)
-        finetangent[i] = (fixed_t)(FRACUNIT * tan(((double)i - FINEANGLES / 4 + 0.5) * M_PI * 2 / FINEANGLES));
+        finetangent[i] = (fixed_t)(tan(((double)i - FINEANGLES / 4 + 0.5) * M_PI * 2 / FINEANGLES) * FRACUNIT);
 
     // finesine table
     for (int i = 0; i < 5 * FINEANGLES / 4; i++)
-        finesine[i] = (fixed_t)(FRACUNIT * sin((i + 0.5) * M_PI * 2 / FINEANGLES));
+        finesine[i] = (fixed_t)(sin((i + 0.5) * M_PI * 2 / FINEANGLES) * FRACUNIT);
 }
 
 static void R_InitPointToAngle(void)
@@ -309,12 +309,10 @@ static void R_InitPointToAngle(void)
 static void R_InitTextureMapping(void)
 {
     // Use tangent table to generate viewangletox:
-    //  viewangletox will give the next greatest x
-    //  after the view angle.
+    //  viewangletox will give the next greatest x after the view angle.
     const fixed_t   limit = finetangent[FINEANGLES / 4 + (r_fov * FINEANGLES / 360) / 2];
 
-    // Calc focallength
-    //  so field of view angles covers SCREENWIDTH.
+    // Calc focallength so field of view angles covers SCREENWIDTH.
     const fixed_t   focallength = FixedDiv(centerxfrac, limit);
 
     for (int i = 0; i < FINEANGLES / 2; i++)
@@ -330,8 +328,7 @@ static void R_InitTextureMapping(void)
     }
 
     // Scan viewangletox[] to generate xtoviewangle[]:
-    //  xtoviewangle will give the smallest view angle
-    //  that maps to x.
+    //  xtoviewangle will give the smallest view angle that maps to x.
     for (int i, x = 0; x <= viewwidth; x++)
     {
         for (i = 0; viewangletox[i] > x; i++);
@@ -351,11 +348,8 @@ static void R_InitTextureMapping(void)
 
 //
 // R_InitLightTables
-// Only inits the zlight table,
-//  because the scalelight table changes with view size.
+// Only inits the zlight table, because the scalelight table changes with view size.
 //
-#define DISTMAP 2
-
 void R_InitLightTables(void)
 {
     int width = FixedMul(SCREENWIDTH, FixedDiv(FRACUNIT, finetangent[FINEANGLES / 4 + (r_fov * FINEANGLES / 360) / 2])) + 1;
@@ -373,9 +367,9 @@ void R_InitLightTables(void)
         for (int j = 0; j < MAXLIGHTZ; j++)
         {
             const int   scale = FixedDiv(width / 2 * FRACUNIT, (j + 1) << LIGHTZSHIFT) >> LIGHTSCALESHIFT;
-            const int   level = BETWEEN(0, start - scale / DISTMAP, NUMCOLORMAPS - 1) * 256;
+            const int   level = BETWEEN(0, start - scale / 2, NUMCOLORMAPS - 1) * 256;
 
-            // killough 3/20/98: Initialize multiple colormaps
+            // killough 03/20/98: Initialize multiple colormaps
             for (int t = 0; t < numcolormaps; t++)
                 c_zlight[t][i][j] = &colormaps[t][level];
         }
@@ -384,8 +378,7 @@ void R_InitLightTables(void)
 
 //
 // R_SetViewSize
-// Do not really change anything here,
-//  because it might be in the middle of a refresh.
+// Do not really change anything here, because it might be in the middle of a refresh.
 // The change will take effect next refresh.
 //
 dboolean    setsizeneeded;
@@ -432,7 +425,7 @@ void R_ExecuteSetViewSize(void)
     R_InitTextureMapping();
 
     // psprite scales
-    pspritescale = FixedDiv(viewwidth, ORIGINALWIDTH);
+    pspritescale = FixedDiv(viewwidth, VANILLAWIDTH);
     pspriteiscale = FixedDiv(FRACUNIT, pspritescale);
 
     if (gamestate == GS_LEVEL)
@@ -452,31 +445,29 @@ void R_ExecuteSetViewSize(void)
 
     yslope = yslopes[LOOKDIRMAX];
 
-    // Calculate the light levels to use
-    //  for each level/scale combination.
+    // Calculate the light levels to use for each level/scale combination.
     for (int i = 0; i < LIGHTLEVELS; i++)
     {
         const int   start = ((LIGHTLEVELS - LIGHTBRIGHT - i) * 2) * NUMCOLORMAPS / LIGHTLEVELS;
 
         for (int j = 0; j < MAXLIGHTSCALE; j++)
         {
-            const int   level = BETWEEN(0, start - j * SCREENWIDTH / (viewwidth * DISTMAP), NUMCOLORMAPS - 1) * 256;
+            const int   level = BETWEEN(0, start - j * SCREENWIDTH / (viewwidth * 2), NUMCOLORMAPS - 1) * 256;
 
-            // killough 3/20/98: initialize multiple colormaps
+            // killough 03/20/98: initialize multiple colormaps
             for (int t = 0; t < numcolormaps; t++)
                 c_scalelight[t][i][j] = &colormaps[t][level];
         }
     }
 
-    // [BH] calculate separate light levels to use when drawing
-    //  player's weapon, so it stays consistent regardless of view size
+    // [BH] calculate separate light levels to use when drawing player's weapon, so it stays consistent regardless of view size.
     for (int i = 0; i < OLDLIGHTLEVELS; i++)
     {
         const int   start = ((OLDLIGHTLEVELS - LIGHTBRIGHT - i) * 2) * NUMCOLORMAPS / OLDLIGHTLEVELS;
 
         for (int j = 0; j < OLDMAXLIGHTSCALE; j++)
         {
-            const int   level = BETWEEN(0, start - j / DISTMAP, NUMCOLORMAPS - 1) * 256;
+            const int   level = BETWEEN(0, start - j / 2, NUMCOLORMAPS - 1) * 256;
 
             for (int t = 0; t < numcolormaps; t++)
                 c_psprscalelight[t][i][j] = &colormaps[t][level];
@@ -523,7 +514,7 @@ void R_InitColumnFunctions(void)
         fuzzcolfunc = &R_DrawFuzzColumn;
         transcolfunc = &R_DrawTranslatedColumn;
         wallcolfunc = &R_DrawWallColumn;
-        bmapwallcolfunc = &R_DrawBrightMapWallColumn;
+        bmapwallcolfunc = &R_DrawBrightmapWallColumn;
         segcolfunc = &R_DrawColumn;
 
         if (r_skycolor != r_skycolor_default)
@@ -627,7 +618,7 @@ void R_InitColumnFunctions(void)
         else if (info->doomednum == MegaSphere && !doom4vanilla && !hacx)
         {
             info->colfunc = megaspherecolfunc;
-            info->altcolfunc = basecolfunc;
+            info->altcolfunc = megaspherecolfunc;
         }
         else if (info->flags & MF_FUZZ)
         {
@@ -652,12 +643,12 @@ void R_InitColumnFunctions(void)
         else if (flags2 & MF2_TRANSLUCENT_33)
         {
             info->colfunc = tl33colfunc;
-            info->altcolfunc = basecolfunc;
+            info->altcolfunc = tl33colfunc;
         }
         else if ((info->flags & MF_TRANSLUCENT) || (flags2 & MF2_TRANSLUCENT_50))
         {
             info->colfunc = tl50colfunc;
-            info->altcolfunc = basecolfunc;
+            info->altcolfunc = tl50colfunc;
         }
         else if (flags2 & MF2_TRANSLUCENT_REDWHITEONLY)
         {
@@ -667,27 +658,27 @@ void R_InitColumnFunctions(void)
         else if (flags2 & MF2_TRANSLUCENT_REDTOGREEN_33)
         {
             info->colfunc = tlredtogreen33colfunc;
-            info->altcolfunc = basecolfunc;
+            info->altcolfunc = tlredtogreen33colfunc;
         }
         else if (flags2 & MF2_TRANSLUCENT_REDTOBLUE_33)
         {
             info->colfunc = tlredtoblue33colfunc;
-            info->altcolfunc = basecolfunc;
+            info->altcolfunc = tlredtoblue33colfunc;
         }
         else if (flags2 & MF2_TRANSLUCENT_BLUE_25)
         {
             info->colfunc = tlblue25colfunc;
-            info->altcolfunc = basecolfunc;
+            info->altcolfunc = tlblue25colfunc;
         }
         else if (flags2 & MF2_REDTOGREEN)
         {
             info->colfunc = redtogreencolfunc;
-            info->altcolfunc = basecolfunc;
+            info->altcolfunc = redtogreencolfunc;
         }
         else if (flags2 & MF2_REDTOBLUE)
         {
             info->colfunc = redtobluecolfunc;
-            info->altcolfunc = basecolfunc;
+            info->altcolfunc = redtobluecolfunc;
         }
         else
         {
@@ -821,7 +812,7 @@ static void R_SetupFrame(void)
     viewsin = finesine[viewangle >> ANGLETOFINESHIFT];
     viewcos = finecosine[viewangle >> ANGLETOFINESHIFT];
 
-    // killough 3/20/98, 4/4/98: select colormap based on player status
+    // killough 03/20/98, 4/4/98: select colormap based on player status
     if (mo->subsector->sector->heightsec)
     {
         const sector_t  *s = mo->subsector->sector->heightsec;
@@ -840,10 +831,10 @@ static void R_SetupFrame(void)
 
     if (viewplayer->fixedcolormap && r_textures)
     {
-        // killough 3/20/98: localize scalelightfixed (readability/optimization)
+        // killough 03/20/98: localize scalelightfixed (readability/optimization)
         static lighttable_t *scalelightfixed[MAXLIGHTSCALE];
 
-        // killough 3/20/98: use fullcolormap
+        // killough 03/20/98: use fullcolormap
         fixedcolormap = fullcolormap;
 
         if (viewplayer->fixedcolormap == INVERSECOLORMAP)
@@ -884,11 +875,11 @@ void R_RenderPlayerView(void)
     }
 
     if (r_homindicator)
-        V_FillRect(0, viewwindowx, viewwindowy, viewwidth, viewheight,
-            ((leveltime % 20) < 9 ? nearestred : (viewplayer->fixedcolormap == INVERSECOLORMAP ? nearestwhite : nearestblack)), false);
+        V_FillRect(0, viewwindowx, viewwindowy, viewwidth, viewheight, ((leveltime % 20) < 9 ? nearestred :
+            (viewplayer->fixedcolormap == INVERSECOLORMAP ? colormaps[0][32 * 256 + 4] : nearestblack)), false);
     else if ((viewplayer->cheats & CF_NOCLIP) || freeze)
         V_FillRect(0, viewwindowx, viewwindowy, viewwidth, viewheight,
-            (viewplayer->fixedcolormap == INVERSECOLORMAP ? nearestwhite : nearestblack), false);
+            (viewplayer->fixedcolormap == INVERSECOLORMAP ? colormaps[0][32 * 256 + 4] : nearestblack), false);
 
     R_RenderBSPNode(numnodes - 1);  // head node is the last node output
     R_DrawPlanes();

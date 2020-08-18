@@ -202,10 +202,7 @@ void S_Init(void)
             sfxinfo_t   *sfx = &S_sfx[i];
             char        namebuf[9];
 
-            if (sfx->link)
-                sfx = sfx->link;
-
-            M_snprintf(namebuf, sizeof(namebuf), "ds%s", sfx->name);
+            M_snprintf(namebuf, sizeof(namebuf), "ds%s", sfx->name1);
 
             if ((sfx->lumpnum = W_CheckNumForName(namebuf)) >= 0)
             {
@@ -477,18 +474,6 @@ static void S_StartSoundAtVolume(mobj_t *origin, int sfx_id, int pitch)
     if (nosfx || sfx->lumpnum == -1)
         return;
 
-    // Initialize sound parameters
-    if (sfx->link)
-    {
-        volume += sfx->volume;
-
-        if (volume < 1)
-            return;
-
-        if (volume > snd_SfxVolume)
-            volume = snd_SfxVolume;
-    }
-
     // Check to see if it is audible, and if not, modify the parms
     if (origin && origin != viewplayer->mo && !S_AdjustSoundParms(origin, &volume, &sep))
         return;
@@ -578,10 +563,6 @@ void S_UpdateSounds(void)
     for (int cnum = 0; cnum < s_channels; cnum++)
     {
         channel_t   *c = &channels[cnum];
-        sfxinfo_t   *sfx = c->sfxinfo;
-
-        if (!sfx)
-            continue;
 
         if (I_SoundIsPlaying(c->handle))
         {
@@ -591,19 +572,12 @@ void S_UpdateSounds(void)
             // check non-local sounds for distance clipping or modify their parms
             if (origin && origin != viewplayer->mo)
             {
-                int sep = NORM_SEP;
-                int volume = snd_SfxVolume;
+                int         sep = NORM_SEP;
+                int         volume = snd_SfxVolume;
+                sfxinfo_t   *sfx = c->sfxinfo;
 
-                if (sfx->link)
-                {
-                    if ((volume += sfx->volume) < 1)
-                    {
-                        S_StopChannel(cnum);
-                        continue;
-                    }
-                    else if (volume > snd_SfxVolume)
-                        volume = snd_SfxVolume;
-                }
+                if (!sfx)
+                    continue;
 
                 if (!S_AdjustSoundParms(origin, &volume, &sep))
                     S_StopChannel(cnum);
@@ -658,7 +632,7 @@ void S_ChangeMusic(int music_id, dboolean looping, dboolean allowrestart, dboole
     // shutdown old music
     S_StopMusic();
 
-    M_snprintf(namebuf, sizeof(namebuf), "d_%s", music->name);
+    M_snprintf(namebuf, sizeof(namebuf), "d_%s", music->name1);
 
     // get lumpnum if necessary
     if (autosigil)
