@@ -1851,7 +1851,7 @@ static void SetVideoMode(dboolean output)
     if (nearestlinear && !(SDL_SetHintWithPriority(SDL_HINT_RENDER_SCALE_QUALITY, vid_scalefilter_nearest, SDL_HINT_OVERRIDE)))
         I_SDLError(SDL_SetHintWithPriority);
 #ifdef __ANDROID__
-	pixelformat = SDL_PIXELFORMAT_RGBA8888;
+	//pixelformat = SDL_PIXELFORMAT_RGBA8888; // Not needed fot SDL2.0.12
 #endif
 
     if (!(texture = SDL_CreateTexture(renderer, pixelformat, SDL_TEXTUREACCESS_STREAMING, SCREENWIDTH, SCREENHEIGHT)))
