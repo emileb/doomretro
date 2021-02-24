@@ -7,7 +7,7 @@
 ========================================================================
 
   Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2020 by Brad Harding.
+  Copyright © 2013-2021 by Brad Harding.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
@@ -43,6 +43,7 @@
 #include "g_game.h"
 #include "i_system.h"
 #include "i_swap.h"
+#include "p_fix.h"
 #include "p_local.h"
 #include "p_setup.h"
 #include "s_sound.h"
@@ -637,7 +638,7 @@ dboolean P_UseSpecialLine(mobj_t *thing, line_t *line, int side)
             break;
 
         case S1_Light_ChangeTo35:
-            EV_LightTurnOn(line, 35);
+            EV_LightTurnOn(line, TICRATE);
             P_ChangeSwitchTexture(line, false);
             break;
 
@@ -1035,7 +1036,7 @@ dboolean P_UseSpecialLine(mobj_t *thing, line_t *line, int side)
             break;
 
         case SR_Light_ChangeTo35:
-            EV_LightTurnOn(line, (canmodify && gamemission == doom2 && gamemap == 4 ? 0 : 35));
+            EV_LightTurnOn(line, (MAP04 ? 0 : TICRATE));
             P_ChangeSwitchTexture(line, true);
             break;
 

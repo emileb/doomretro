@@ -7,7 +7,7 @@
 ========================================================================
 
   Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2020 by Brad Harding.
+  Copyright © 2013-2021 by Brad Harding.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
@@ -128,7 +128,7 @@ void T_VerticalDoor(vldoor_t *door)
 
         case -1:
             // DOWN
-            res = T_MovePlane(door->sector, door->speed, door->sector->floorheight, false, 1, door->direction, false);
+            res = T_MovePlane(door->sector, door->speed, door->sector->floorheight, false, 1, door->direction);
 
             // killough 10/98: implement gradual lighting effects
             // [BH] enhanced to apply effects to all doors
@@ -194,7 +194,7 @@ void T_VerticalDoor(vldoor_t *door)
 
         case 1:
             // UP
-            res = T_MovePlane(door->sector, door->speed, door->topheight, false, 1, door->direction, false);
+            res = T_MovePlane(door->sector, door->speed, door->topheight, false, 1, door->direction);
 
             // killough 10/98: implement gradual lighting effects
             // [BH] enhanced to apply effects to all doors

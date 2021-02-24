@@ -7,7 +7,7 @@
 ========================================================================
 
   Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2020 by Brad Harding.
+  Copyright © 2013-2021 by Brad Harding.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
@@ -44,10 +44,10 @@
 //
 // Globally visible constants.
 //
-#define HU_FONTSTART                '!'     // the first font characters
-#define HU_FONTEND                  '_'     // the last font characters
+#define HU_FONTSTART                '!'     // the first font character
+#define HU_FONTEND                  '_'     // the last font character
 
-// Calculate # of glyphs in font.
+// Calculate # of characters in font.
 #define HU_FONTSIZE                 (HU_FONTEND - HU_FONTSTART + 1)
 
 #define HU_MSGX                     3
@@ -56,22 +56,22 @@
 
 #define HU_MSGTIMEOUT               (4 * TICRATE)
 
-#define HUD_HEALTH_X                45
-#define HUD_HEALTH_Y                (SCREENHEIGHT - SBARHEIGHT - 28)
-#define HUD_HEALTH_MIN              20
+#define HUD_HEALTH_X                55
+#define HUD_HEALTH_Y                (SCREENHEIGHT - 28)
+#define HUD_HEALTH_MIN              10
 #define HUD_HEALTH_WAIT             250
 #define HUD_HEALTH_HIGHLIGHT_WAIT   250
 
-#define HUD_ARMOR_X                 114
+#define HUD_ARMOR_X                 124
 #define HUD_ARMOR_Y                 HUD_HEALTH_Y
 #define HUD_ARMOR_HIGHLIGHT_WAIT    250
 
-#define HUD_KEYS_X                  (SCREENWIDTH - 78)
+#define HUD_KEYS_X                  (SCREENWIDTH - 88)
 #define HUD_KEYS_Y                  (HUD_HEALTH_Y - 1)
 
-#define HUD_AMMO_X                  (SCREENWIDTH - 41)
+#define HUD_AMMO_X                  (SCREENWIDTH - 51)
 #define HUD_AMMO_Y                  HUD_HEALTH_Y
-#define HUD_AMMO_MIN                20
+#define HUD_AMMO_MIN                10
 #define HUD_AMMO_WAIT               250
 #define HUD_AMMO_HIGHLIGHT_WAIT     250
 
@@ -79,7 +79,7 @@
 
 #define ALTHUD_LEFT_X               56
 #define ALTHUD_RIGHT_X              (SCREENWIDTH - 179)
-#define ALTHUD_Y                    (SCREENHEIGHT - SBARHEIGHT - 37)
+#define ALTHUD_Y                    (SCREENHEIGHT - 37)
 
 //
 // HEADS UP TEXT

@@ -7,7 +7,7 @@
 ========================================================================
 
   Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2020 by Brad Harding.
+  Copyright © 2013-2021 by Brad Harding.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
@@ -39,13 +39,13 @@
 #if !defined(__V_DATA_H__)
 #define __V_DATA_H__
 
-extern const char *wilv[];
-extern const char *redcharset[];
-extern const char *smallcharset[];
-extern const int  lsleft[];
-extern const int  lscntr[];
-extern const int  lsrght[];
-extern const char *nmare;
-extern const char *underscores;
+extern const char   *wilv[];
+extern const char   *redcharset[];
+extern const char   *smallcharset[];
+extern const int    lsleft[];
+extern const int    lscntr[];
+extern const int    lsrght[];
+extern const char   *nmare;
+extern const char   *underscores;
 
 #endif

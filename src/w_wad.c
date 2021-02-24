@@ -7,7 +7,7 @@
 ========================================================================
 
   Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2020 by Brad Harding.
+  Copyright © 2013-2021 by Brad Harding.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
@@ -85,7 +85,7 @@ static dboolean IsFreedoom(const char *iwadname)
     int         result = false;
 
     if (!fp)
-        I_Error("Can't open IWAD: %s\n", iwadname);
+        return false;
 
     // read IWAD header
     if (fread(&header, 1, sizeof(header), fp) == sizeof(header))
@@ -342,7 +342,7 @@ dboolean W_AddFile(char *filename, dboolean automatic)
     free(fileinfo);
 
     temp = commify((int64_t)numlumps - startlump);
-    C_Output("%s %s lump%s from %s <b>%s</b>.", (automatic ? "Automatically added" : "Added"), temp,
+    C_Output("%s %s lump%s from the %s <b>%s</b>.", (automatic ? "Automatically added" : "Added"), temp,
         (numlumps - startlump == 1 ? "" : "s"), (wadfile->type == IWAD ? "IWAD" : "PWAD"), wadfile->path);
     free(temp);
 
@@ -352,18 +352,18 @@ dboolean W_AddFile(char *filename, dboolean automatic)
         || M_StringEndsWith(filename, "SIGIL.wad"))
     {
         autosigil = automatic;
-        C_Output("<i><b>SIGIL</b></i> is now available to play from the episode menu.");
+        C_Output("<i>SIGIL</i> is now available to play from the episode menu.");
     }
     else if (M_StringEndsWith(filename, "SIGIL_SHREDS.WAD") || M_StringEndsWith(filename, "SIGIL_SHREDS_COMPAT.wad"))
     {
         buckethead = true;
-        C_Output("Buckethead's soundtrack will now be used when playing <i><b>SIGIL.</b></i>");
+        C_Output("Buckethead's soundtrack will now be used when playing <i>SIGIL.</i>");
     }
     else if (M_StringEndsWith(filename, "DOOM.WAD"))
-        C_Output("<i><b>E1M4B: Phobos Mission Control</b></i> and <i><b>E1M8B: Tech Gone Bad</b></i> "
+        C_Output("<i>E1M4B: Phobos Mission Control</i> and <i>E1M8B: Tech Gone Bad</i> "
             "are now available to play using the <b>map</b> CCMD.");
     else if (M_StringEndsWith(filename, "NERVE.WAD"))
-        C_Output("<i><b>No Rest For The Living</b></i> is now available to play from the expansion menu.");
+        C_Output("<i>No Rest For The Living</i> is now available to play from the expansion menu.");
 
     if (!packagewadadded)
     {
@@ -426,36 +426,47 @@ dboolean HasDehackedLump(const char *pwadname)
 
 GameMission_t IWADRequiredByPWAD(char *pwadname)
 {
-    char            *leaf = leafname(pwadname);
     FILE            *fp = fopen(pwadname, "rb");
-    filelump_t      lump;
-    wadinfo_t       header;
-    const char      *n = lump.name;
     GameMission_t   result = none;
 
     if (!fp)
         I_Error("Can't open PWAD: %s\n", pwadname);
-
-    if (fread(&header, 1, sizeof(header), fp) != sizeof(header)
-        || (header.id[0] != 'I' && header.id[0] != 'P') || header.id[1] != 'W' || header.id[2] != 'A' || header.id[3] != 'D')
-        I_Error("%s doesn't have an IWAD or PWAD id.", pwadname);
-
-    fseek(fp, LONG(header.infotableofs), SEEK_SET);
-
-    for (header.numlumps = LONG(header.numlumps); header.numlumps && fread(&lump, sizeof(lump), 1, fp); header.numlumps--)
-        if (n[0] == 'E' && isdigit((int)n[1]) && n[2] == 'M' && isdigit((int)n[3]) && n[4] == '\0')
-            result = doom;
-        else if (n[0] == 'M' && n[1] == 'A' && n[2] == 'P' && isdigit((int)n[3]) && isdigit((int)n[4]) && n[5] == '\0')
-            result = doom2;
-
-    fclose(fp);
-
-    if (result == doom2)
+    else
     {
-        if (M_StringCompare(leaf, "pl2.wad") || M_StringCompare(leaf, "plut3.wad"))
-            result = pack_plut;
-        else if (M_StringCompare(leaf, "tntr.wad") || M_StringCompare(leaf, "tnt-ren.wad") || M_StringCompare(leaf, "resist.wad"))
-            result = pack_tnt;
+        wadinfo_t   header;
+
+        if (fread(&header, 1, sizeof(header), fp) != sizeof(header)
+            || (header.id[0] != 'I' && header.id[0] != 'P') || header.id[1] != 'W' || header.id[2] != 'A' || header.id[3] != 'D')
+        {
+            fclose(fp);
+            I_Error("%s doesn't have an IWAD or PWAD id.", pwadname);
+        }
+        else
+        {
+            filelump_t  lump;
+            const char  *n = lump.name;
+
+            fseek(fp, LONG(header.infotableofs), SEEK_SET);
+
+            for (header.numlumps = LONG(header.numlumps); header.numlumps && fread(&lump, sizeof(lump), 1, fp); header.numlumps--)
+                if (n[0] == 'E' && isdigit((int)n[1]) && n[2] == 'M' && isdigit((int)n[3]) && n[4] == '\0')
+                    result = doom;
+                else if (n[0] == 'M' && n[1] == 'A' && n[2] == 'P' && isdigit((int)n[3]) && isdigit((int)n[4]) && n[5] == '\0')
+                    result = doom2;
+
+            fclose(fp);
+
+            if (result == doom2)
+            {
+                char    *leaf = leafname(pwadname);
+
+                if (M_StringCompare(leaf, "pl2.wad") || M_StringCompare(leaf, "plut3.wad"))
+                    result = pack_plut;
+                else if (M_StringCompare(leaf, "tntr.wad") || M_StringCompare(leaf, "tnt-ren.wad")
+                    || M_StringCompare(leaf, "resist.wad"))
+                    result = pack_tnt;
+            }
+        }
     }
 
     return result;

@@ -7,7 +7,7 @@
 ========================================================================
 
   Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2020 by Brad Harding.
+  Copyright © 2013-2021 by Brad Harding.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
@@ -299,7 +299,6 @@ static void R_InitTextures(void)
             numpnameslumps++;
         }
 
-    name[8] = '\0';
     patchlookup = malloc(nummappatches * sizeof(*patchlookup)); // killough
 
     for (int i = 0, patch = 0; i < numpnameslumps; i++)
@@ -567,7 +566,8 @@ static void R_InitSpriteLumps(void)
         M_StringCopy(weaponinfo[wp_plasma].description, "polaric energy cannon", sizeof(weaponinfo[wp_plasma].description));
         M_StringCopy(weaponinfo[wp_bfg].description, "SKAG 1337", sizeof(weaponinfo[wp_bfg].description));
         M_StringCopy(weaponinfo[wp_chainsaw].description, "angle grinder", sizeof(weaponinfo[wp_chainsaw].description));
-        M_StringCopy(weaponinfo[wp_supershotgun].description, "double-barreled shotgun", sizeof(weaponinfo[wp_supershotgun].description));
+        M_StringCopy(weaponinfo[wp_supershotgun].description, "double-barreled shotgun",
+            sizeof(weaponinfo[wp_supershotgun].description));
 
         M_StringCopy(mobjinfo[MT_POSSESSED].name1, "zombie", sizeof(mobjinfo[MT_POSSESSED].name1));
         M_StringCopy(mobjinfo[MT_POSSESSED].plural1, "zombies", sizeof(mobjinfo[MT_POSSESSED].plural1));
@@ -694,20 +694,20 @@ static void R_InitColormaps(void)
     colormapwad = lumpinfo[W_CheckNumForName("COLORMAP")]->wadfile;
 
     if (numcolormaps == 1)
-        C_Output("Using the <b>COLORMAP</b> lump in %s <b>%s</b>.",
+        C_Output("Using the <b>COLORMAP</b> lump in the %s <b>%s</b>.",
             (colormapwad->type == IWAD ? "IWAD" : "PWAD"), colormapwad->path);
     else
-        C_Output("Using %i colormaps from the <b>COLORMAP</b> lump in %s <b>%s</b>.",
+        C_Output("Using %i colormaps from the <b>COLORMAP</b> lump in the %s <b>%s</b>.",
             numcolormaps, (colormapwad->type == IWAD ? "IWAD" : "PWAD"), colormapwad->path);
 
     palsrc = palette = PLAYPAL;
 
     for (int i = 0; i < 255; i++)
     {
-        double  red = *palsrc++ / 256.0;
-        double  green = *palsrc++ / 256.0;
-        double  blue = *palsrc++ / 256.0;
-        int     gray = (int)((red * 0.2126 + green * 0.7152 + blue * 0.0722) * 255.0);
+        double  red = *palsrc++;
+        double  green = *palsrc++;
+        double  blue = *palsrc++;
+        int     gray = (int)(red * 0.2126 + green * 0.7152 + blue * 0.0722);
 
         grays[i] = FindNearestColor(palette, gray, gray, gray);
 
@@ -840,7 +840,7 @@ int R_TextureNumForName(char *name)
 // to avoid using alloca(), and to improve performance.
 void R_PrecacheLevel(void)
 {
-    dboolean    *hitlist = calloc(1, sizeof(dboolean) * MAX(numtextures, numflats));
+    dboolean    *hitlist = calloc(MAX(numtextures, numflats), sizeof(dboolean));
 
     // Precache flats.
     for (int i = 0; i < numsectors; i++)

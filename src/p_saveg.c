@@ -7,7 +7,7 @@
 ========================================================================
 
   Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2020 by Brad Harding.
+  Copyright © 2013-2021 by Brad Harding.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
@@ -101,7 +101,8 @@ static byte saveg_read8(void)
 {
     byte    result = -1;
 
-    fread(&result, 1, 1, save_stream);
+    if (fread(&result, 1, 1, save_stream) < 1)
+        return 0;
 
     return result;
 }
@@ -542,8 +543,10 @@ static void saveg_read_player_t(void)
     viewplayer->bounce = saveg_read32();
     viewplayer->bouncemax = saveg_read32();
 
+    if (!(musinfo.current_item = saveg_read32()))
+        musinfo.current_item = -1;
+
     // [BH] For future features without breaking savegame compatibility
-    saveg_read32();
     saveg_read32();
     saveg_read32();
     saveg_read32();
@@ -650,8 +653,9 @@ static void saveg_write_player_t(void)
     saveg_write32(viewplayer->bounce);
     saveg_write32(viewplayer->bouncemax);
 
+    saveg_write32(musinfo.current_item);
+
     // [BH] For future features without breaking savegame compatibility
-    saveg_write32(0);
     saveg_write32(0);
     saveg_write32(0);
     saveg_write32(0);
@@ -769,7 +773,7 @@ static void saveg_write_floormove_t(floormove_t *str)
 //
 static void saveg_read_plat_t(plat_t *str)
 {
-    str->thinker.function = (saveg_read_bool() ? &T_PlatRaise : NULL);
+    str->thinker.function = (saveg_read_bool() ? &T_PlatRaise : &T_PlatStay);
     str->sector = sectors + saveg_read32();
     str->speed = saveg_read32();
     str->low = saveg_read32();
@@ -1029,11 +1033,9 @@ dboolean P_ReadSaveGameHeader(char *description)
         menuactive = false;
         quickSaveSlot = -1;
         C_ShowConsole();
-        C_Warning(1, "This savegame is incompatible with <i>" PACKAGE_NAMEANDVERSIONSTRING "</i>.");
+        C_Warning(1, "This savegame is incompatible with <i>" PACKAGE_NAMEANDVERSIONSTRING ".</i>");
         return false;   // bad version
     }
-
-    S_StopMusic();
 
     gameskill = (skill_t)saveg_read8();
     gameepisode = saveg_read8();
@@ -1271,22 +1273,22 @@ static void P_SetNewTarget(mobj_t **mop, mobj_t *targ)
 //
 void P_UnArchiveThinkers(void)
 {
-    thinker_t   *currentthinker = thinkers[th_all].next;
+    thinker_t   *th = thinkers[th_all].next;
 
     // remove all the current thinkers
-    while (currentthinker != &thinkers[th_all])
+    while (th != &thinkers[th_all])
     {
-        thinker_t   *next = currentthinker->next;
+        thinker_t   *next = th->next;
 
-        if (currentthinker->function == &P_MobjThinker || currentthinker->function == &MusInfoThinker)
+        if (th->function == &P_MobjThinker || th->function == &MusInfoThinker)
         {
-            P_RemoveMobj((mobj_t *)currentthinker);
-            P_RemoveThinkerDelayed(currentthinker);
+            P_RemoveMobj((mobj_t *)th);
+            P_RemoveThinkerDelayed(th);
         }
         else
-            Z_Free(currentthinker);
+            Z_Free(th);
 
-        currentthinker = next;
+        th = next;
     }
 
     P_InitThinkers();
@@ -1338,7 +1340,7 @@ void P_UnArchiveThinkers(void)
 
             case tc_bloodsplat:
             {
-                bloodsplat_t    *splat = calloc(1, sizeof(*splat));
+                bloodsplat_t    *splat = Z_Malloc(sizeof(*splat), PU_LEVEL, NULL);
 
                 saveg_read_bloodsplat_t(splat);
 
@@ -1384,20 +1386,6 @@ void P_RestoreTargets(void)
 }
 
 //
-// P_RemoveCorruptMobjs
-//
-void P_RemoveCorruptMobjs(void)
-{
-    for (thinker_t *th = thinkers[th_mobj].cnext; th != &thinkers[th_mobj]; th = th->cnext)
-    {
-        mobj_t *mo = (mobj_t *)th;
-
-        if (!mo->state && mo->info->spawnstate != S_NULL)
-            P_RemoveMobj(mo);
-    }
-}
-
-//
 // P_ArchiveSpecials
 //
 void P_ArchiveSpecials(void)
@@ -1408,34 +1396,17 @@ void P_ArchiveSpecials(void)
     // save off the current thinkers
     for (thinker_t *th = thinkers[th_misc].cnext; th != &thinkers[th_misc]; th = th->cnext)
     {
-        if (!th->function)
+        if (th->function == &T_CeilingStay)
         {
-            dboolean    done_one = false;
-
             for (ceilinglist_t *ceilinglist = activeceilings; ceilinglist; ceilinglist = ceilinglist->next)
                 if (ceilinglist->ceiling == (ceiling_t *)th)
                 {
                     saveg_write8(tc_ceiling);
                     saveg_write_ceiling_t((ceiling_t *)th);
-                    done_one = true;
                     break;
                 }
-
-            // [jeff-d] save height of moving platforms
-            for (platlist_t *platlist = activeplats; platlist; platlist = platlist->next)
-                if (platlist->plat == (plat_t *)th)
-                {
-                    saveg_write8(tc_plat);
-                    saveg_write_plat_t((plat_t *)th);
-                    done_one = true;
-                    break;
-                }
-
-            if (done_one)
-                continue;
         }
-
-        if (th->function == &T_MoveCeiling)
+        else if (th->function == &T_MoveCeiling)
         {
             saveg_write8(tc_ceiling);
             saveg_write_ceiling_t((ceiling_t *)th);
@@ -1449,6 +1420,17 @@ void P_ArchiveSpecials(void)
         {
             saveg_write8(tc_floor);
             saveg_write_floormove_t((floormove_t *)th);
+        }
+        else if (th->function == &T_PlatStay)
+        {
+            // [jeff-d] save height of moving platforms
+            for (platlist_t *platlist = activeplats; platlist; platlist = platlist->next)
+                if (platlist->plat == (plat_t *)th)
+                {
+                    saveg_write8(tc_plat);
+                    saveg_write_plat_t((plat_t *)th);
+                    break;
+                }
         }
         else if (th->function == &T_PlatRaise)
         {
@@ -1563,7 +1545,6 @@ void P_UnArchiveSpecials(void)
 
                 saveg_read_plat_t(plat);
                 plat->sector->floordata = plat;
-                plat->thinker.function = &T_PlatRaise;
                 P_AddThinker(&plat->thinker);
                 P_AddActivePlat(plat);
                 break;

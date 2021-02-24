@@ -7,7 +7,7 @@
 ========================================================================
 
   Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2020 by Brad Harding.
+  Copyright © 2013-2021 by Brad Harding.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
@@ -45,6 +45,7 @@
 
 #include "c_cmds.h"
 #include "c_console.h"
+#include "d_deh.h"
 #include "d_main.h"
 #include "doomstat.h"
 #include "g_game.h"
@@ -77,30 +78,29 @@ patch_t                 *consolefont[CONSOLEFONTSIZE];
 patch_t                 *degree;
 patch_t                 *unknownchar;
 patch_t                 *altunderscores;
-patch_t                 *brand;
 patch_t                 *lsquote;
 patch_t                 *ldquote;
 
-static patch_t          *dot;
+static patch_t          *brand;
 static patch_t          *trademark;
 static patch_t          *copyright;
 static patch_t          *regomark;
 static patch_t          *multiply;
 static patch_t          *warning;
-static patch_t          *bindlist;
-static patch_t          *cmdlist;
-static patch_t          *cvarlist;
-static patch_t          *maplist;
-static patch_t          *mapstats;
-static patch_t          *playerstats;
-static patch_t          *thinglist;
+
+patch_t                 *bindlist;
+patch_t                 *cmdlist;
+patch_t                 *cvarlist;
+patch_t                 *maplist;
+patch_t                 *mapstats;
+patch_t                 *playerstats;
+patch_t                 *thinglist;
 
 static short            brandwidth;
 static short            brandheight;
 static short            spacewidth;
 
 static char             consoleinput[255];
-static int              numautocomplete;
 int                     consolestrings = 0;
 size_t                  consolestringsmax = 0;
 
@@ -113,9 +113,13 @@ static int              caretwait;
 static int              selectstart;
 static int              selectend;
 
+static dboolean         wrapbold;
+static dboolean         wrapitalics;
+
 char                    consolecheat[255];
 char                    consolecheatparm[3];
 
+static int              inputhistory = -1;
 static int              outputhistory = -1;
 
 int                     con_backcolor = con_backcolor_default;
@@ -124,12 +128,10 @@ int                     warninglevel = warninglevel_default;
 
 static int              timerx;
 static int              zerowidth;
-static int              warningwidth;
-static int              dotwidth;
 
 static int              consolecaretcolor = 4;
 static int              consolelowfpscolor = 180;
-static int              consolehighfpscolor = 116;
+static int              consolehighfpscolor = 4;
 static int              consoletimercolor = 4;
 static int              consoleinputcolor = 4;
 static int              consoleselectedinputcolor = 4;
@@ -139,22 +141,24 @@ static int              consoleplayermessagecolor = 161;
 static int              consoletimestampcolor = 161;
 static int              consoleoutputcolor = 88;
 static int              consoleboldcolor = 4;
-static int              consoleitalicscolor = 98;
+static int              consolebolditalicscolor = 96;
 static int              consolewarningcolor = 180;
 static int              consolewarningboldcolor = 176;
 static int              consoledividercolor = 100;
 static int              consolescrollbartrackcolor = 100;
-static int              consolescrollbarfacecolor = 94;
-static int              consolescrollbargripcolor = 104;
+static int              consolescrollbarfacecolor = 96;
+static int              consoleedgecolor;
+
+static int              consolecolors[STRINGTYPES];
+static int              consoleboldcolors[STRINGTYPES];
 
 static byte             *consolebevel;
 static byte             *consoleautomapbevel;
 
-static int              consolecolors[STRINGTYPES];
+static dboolean         scrollbardrawn;
 
-dboolean                scrollbardrawn;
-
-static void (*consoletextfunc)(int, int, patch_t *, int, int, int, dboolean, byte *);
+static void (*consoletextfunc)(int x, int y, patch_t *patch, int width, int color,
+    int backgroundcolor, dboolean italics, byte *translucency);
 
 extern int              framespersecond;
 extern int              refreshrate;
@@ -177,7 +181,10 @@ void C_Input(const char *string, ...)
 
     M_StringCopy(console[consolestrings].string, buffer, sizeof(console[consolestrings].string));
     C_DumpConsoleStringToFile(consolestrings);
+    console[consolestrings].indent = 0;
+    console[consolestrings].wrap = 0;
     console[consolestrings++].stringtype = inputstring;
+    inputhistory = -1;
     outputhistory = -1;
     consoleinput[0] = '\0';
     caretpos = 0;
@@ -204,7 +211,10 @@ void C_InputNoRepeat(const char *string, ...)
 
         M_StringCopy(console[consolestrings].string, buffer, sizeof(console[consolestrings].string));
         C_DumpConsoleStringToFile(consolestrings);
+        console[consolestrings].indent = 0;
+        console[consolestrings].wrap = 0;
         console[consolestrings++].stringtype = inputstring;
+        inputhistory = -1;
         outputhistory = -1;
         consoleinput[0] = '\0';
         caretpos = 0;
@@ -267,77 +277,10 @@ void C_Output(const char *string, ...)
     M_StringCopy(console[consolestrings].string, buffer, sizeof(console[consolestrings].string));
 
     C_DumpConsoleStringToFile(consolestrings);
+    console[consolestrings].indent = 0;
+    console[consolestrings].wrap = 0;
     console[consolestrings++].stringtype = outputstring;
     outputhistory = -1;
-}
-
-void C_OutputWrap(const char *string, ...)
-{
-    va_list argptr;
-    char    buffer[CONSOLETEXTMAXLENGTH];
-
-    va_start(argptr, string);
-    M_vsnprintf(buffer, CONSOLETEXTMAXLENGTH - 1, string, argptr);
-    va_end(argptr);
-
-    if (!consolestrings || !M_StringCompare(console[consolestrings - 1].string, buffer))
-    {
-        int len = (int)strlen(buffer);
-
-        if (consolestrings >= (int)consolestringsmax)
-            console = I_Realloc(console, (consolestringsmax += CONSOLESTRINGSMAX) * sizeof(*console));
-
-        if (len <= 100)
-        {
-            M_StringCopy(console[consolestrings].string, buffer, sizeof(console[consolestrings].string));
-            console[consolestrings].line = 1;
-            C_DumpConsoleStringToFile(consolestrings);
-            console[consolestrings++].stringtype = outputstring;
-        }
-        else
-        {
-            int     truncate = len;
-            char    *temp;
-
-            do
-            {
-                int width;
-
-                temp = M_SubString(buffer, 0, truncate);
-                width = C_TextWidth(temp, true, true);
-                free(temp);
-
-                if (width <= CONSOLETEXTPIXELWIDTH)
-                    break;
-            } while (truncate-- > 0);
-
-            while (truncate > 0 && !isbreak(buffer[truncate]))
-                truncate--;
-
-            temp = M_SubString(buffer, 0, truncate);
-            M_StringCopy(console[consolestrings].string, temp, sizeof(console[consolestrings].string));
-            free(temp);
-            console[consolestrings].line = 1;
-            C_DumpConsoleStringToFile(consolestrings);
-            console[consolestrings++].stringtype = outputstring;
-
-            if (consolestrings >= (int)consolestringsmax)
-                console = I_Realloc(console, (consolestringsmax += CONSOLESTRINGSMAX) * sizeof(*console));
-
-            temp = M_SubString(buffer, truncate, (size_t)len - truncate);
-
-            if (*temp)
-            {
-                M_StringCopy(console[consolestrings].string, trimwhitespace(temp), sizeof(console[consolestrings].string));
-                free(temp);
-                console[consolestrings].line = 2;
-                C_DumpConsoleStringToFile(consolestrings);
-                console[consolestrings++].stringtype = outputstring;
-            }
-        }
-
-        outputhistory = -1;
-    }
 }
 
 void C_OutputNoRepeat(const char *string, ...)
@@ -356,12 +299,14 @@ void C_OutputNoRepeat(const char *string, ...)
 
         M_StringCopy(console[consolestrings].string, buffer, sizeof(console[consolestrings].string));
         C_DumpConsoleStringToFile(consolestrings);
+        console[consolestrings].indent = 0;
+        console[consolestrings].wrap = 0;
         console[consolestrings++].stringtype = outputstring;
         outputhistory = -1;
     }
 }
 
-void C_TabbedOutput(const int tabs[4], const char *string, ...)
+void C_TabbedOutput(const int tabs[3], const char *string, ...)
 {
     va_list argptr;
     char    buffer[CONSOLETEXTMAXLENGTH];
@@ -376,20 +321,24 @@ void C_TabbedOutput(const int tabs[4], const char *string, ...)
     M_StringCopy(console[consolestrings].string, buffer, sizeof(console[consolestrings].string));
     console[consolestrings].stringtype = outputstring;
     memcpy(console[consolestrings].tabs, tabs, sizeof(console[consolestrings].tabs));
+    console[consolestrings].indent = (tabs[2] ? tabs[2] : (tabs[1] ? tabs[1] : tabs[0])) - CONSOLETEXTX;
+    console[consolestrings].wrap = 0;
     C_DumpConsoleStringToFile(consolestrings);
     consolestrings++;
     outputhistory = -1;
 }
 
-void C_Header(const int tabs[4], const headertype_t headertype, const char *string)
+void C_Header(const int tabs[3], patch_t *header, const char *string)
 {
     if (consolestrings >= (int)consolestringsmax)
         console = I_Realloc(console, (consolestringsmax += CONSOLESTRINGSMAX) * sizeof(*console));
 
     console[consolestrings].stringtype = headerstring;
     memcpy(console[consolestrings].tabs, tabs, sizeof(console[consolestrings].tabs));
-    console[consolestrings].headertype = headertype;
+    console[consolestrings].header = header;
     M_StringCopy(console[consolestrings].string, string, sizeof(console[consolestrings].string));
+    console[consolestrings].indent = 0;
+    console[consolestrings].wrap = (int)strlen(string);
     C_DumpConsoleStringToFile(consolestrings);
     consolestrings++;
     outputhistory = -1;
@@ -409,60 +358,15 @@ void C_Warning(const int minwarninglevel, const char *string, ...)
 
     if (!consolestrings || !M_StringCompare(console[consolestrings - 1].string, buffer))
     {
-        int len = (int)strlen(buffer);
-
         if (consolestrings >= (int)consolestringsmax)
             console = I_Realloc(console, (consolestringsmax += CONSOLESTRINGSMAX) * sizeof(*console));
 
-        if (len <= 100 || !warningwidth)
-        {
-            M_StringCopy(console[consolestrings].string, buffer, sizeof(console[consolestrings].string));
-            console[consolestrings].line = 1;
-            C_DumpConsoleStringToFile(consolestrings);
-            console[consolestrings++].stringtype = warningstring;
-        }
-        else
-        {
-            int     truncate = len;
-            char    *temp;
-
-            do
-            {
-                int width;
-
-                temp = M_SubString(buffer, 0, truncate);
-                width = C_TextWidth(temp, true, true) + warningwidth + 12;
-                free(temp);
-
-                if (width <= CONSOLETEXTPIXELWIDTH - 8)
-                    break;
-            } while (truncate-- > 0);
-
-            while (truncate > 0 && !isbreak(buffer[truncate]))
-                truncate--;
-
-            temp = M_SubString(buffer, 0, truncate);
-            M_StringCopy(console[consolestrings].string, temp, sizeof(console[consolestrings].string));
-            free(temp);
-            console[consolestrings].line = 1;
-            C_DumpConsoleStringToFile(consolestrings);
-            console[consolestrings++].stringtype = warningstring;
-
-            if (consolestrings >= (int)consolestringsmax)
-                console = I_Realloc(console, (consolestringsmax += CONSOLESTRINGSMAX) * sizeof(*console));
-
-            temp = M_SubString(buffer, truncate, (size_t)len - truncate);
-
-            if (*temp)
-            {
-                M_StringCopy(console[consolestrings].string, trimwhitespace(temp), sizeof(console[consolestrings].string));
-                free(temp);
-                console[consolestrings].line = 2;
-                C_DumpConsoleStringToFile(consolestrings);
-                console[consolestrings++].stringtype = warningstring;
-            }
-        }
-
+        M_StringCopy(console[consolestrings].string, buffer, sizeof(console[consolestrings].string));
+        console[consolestrings].line = 1;
+        C_DumpConsoleStringToFile(consolestrings);
+        console[consolestrings].indent = WARNINGWIDTH + 2;
+        console[consolestrings].wrap = 0;
+        console[consolestrings++].stringtype = warningstring;
         outputhistory = -1;
     }
 }
@@ -493,42 +397,19 @@ void C_PlayerMessage(const char *string, ...)
         console[consolestrings].tics = gametime;
         console[consolestrings].timestamp[0] = '\0';
         C_DumpConsoleStringToFile(consolestrings);
+        console[consolestrings].indent = 0;
+        console[consolestrings].wrap = 0;
         console[consolestrings++].count = 1;
+        viewplayer->prevmessage[0] = '\0';
     }
 
     outputhistory = -1;
 }
 
-void C_Obituary(const char *string, ...)
+void C_ResetWrappedLines(void)
 {
-    va_list     argptr;
-    char        buffer[CONSOLETEXTMAXLENGTH];
-    const int   i = consolestrings - 1;
-
-    va_start(argptr, string);
-    M_vsnprintf(buffer, CONSOLETEXTMAXLENGTH - 1, string, argptr);
-    va_end(argptr);
-
-    if (i >= 0 && console[i].stringtype == obituarystring && M_StringCompare(console[i].string, buffer))
-    {
-        console[i].tics = gametime;
-        console[i].timestamp[0] = '\0';
-        console[i].count++;
-    }
-    else
-    {
-        if (consolestrings >= (int)consolestringsmax)
-            console = I_Realloc(console, (consolestringsmax += CONSOLESTRINGSMAX) * sizeof(*console));
-
-        M_StringCopy(console[consolestrings].string, buffer, sizeof(console[consolestrings].string));
-        console[consolestrings].stringtype = obituarystring;
-        console[consolestrings].tics = gametime;
-        console[consolestrings].timestamp[0] = '\0';
-        C_DumpConsoleStringToFile(consolestrings);
-        console[consolestrings++].count = 1;
-    }
-
-    outputhistory = -1;
+    for (int i = 0; i < consolestrings; i++)
+        console[i].wrap = 0;
 }
 
 static void C_AddToUndoHistory(void)
@@ -543,7 +424,7 @@ static void C_AddToUndoHistory(void)
 
 void C_AddConsoleDivider(void)
 {
-    if (!consolestrings || console[consolestrings - 1].stringtype != dividerstring)
+    if (console[consolestrings - 1].stringtype != dividerstring || !consolestrings)
     {
         if (consolestrings >= (int)consolestringsmax)
             console = I_Realloc(console, (consolestringsmax += CONSOLESTRINGSMAX) * sizeof(*console));
@@ -555,6 +436,7 @@ void C_AddConsoleDivider(void)
 
 const kern_t altkern[] =
 {
+    { '\t', '"',  -2 }, { '\t', '\'', -2 }, { '\t', '(',  -2 }, { '\t', '4',  -1 }, { ' ',  ' ',  -1 }, { ' ',  '(',  -1 },
     { ' ',  'J',  -1 }, { ' ',  'T',  -1 }, { '!',  ' ',   2 }, { '"',  '+',  -1 }, { '"',  ',',  -2 }, { '"',  '.',  -2 },
     { '"',  '4',  -1 }, { '"',  'J',  -2 }, { '"',  'a',  -1 }, { '"',  'c',  -1 }, { '"',  'd',  -1 }, { '"',  'e',  -1 },
     { '"',  'g',  -1 }, { '"',  'j',  -2 }, { '"',  'o',  -1 }, { '"',  'q',  -1 }, { '"',  's',  -1 }, { '\'',  '4', -1 },
@@ -563,38 +445,39 @@ const kern_t altkern[] =
     { '.',  '7',  -1 }, { '.',  '\\', -1 }, { '/',  '/',  -2 }, { '/',  'a',  -2 }, { '/',  'd',  -1 }, { '/',  'o',  -1 },
     { '0',  ',',  -1 }, { '0',  ';',  -1 }, { '0',  'j',  -2 }, { '1',  ',',  -1 }, { '1',  '"',  -1 }, { '1',  '\'', -1 },
     { '1',  '\\', -1 }, { '1',  'j',  -2 }, { '2',  ',',  -1 }, { '2',  'j',  -2 }, { '3',  ',',  -1 }, { '3',  ';',  -1 },
-    { '3',  'j',  -2 }, { '4',  '.',  -1 }, { '4',  ',',  -1 }, { '4',  '"',  -1 }, { '4',  '\'', -1 }, { '4',  '\\', -2 },
-    { '4',  ')',  -1 }, { '4',  '7',  -1 }, { '4',  'j',  -2 }, { '5',  ',',  -1 }, { '5',  ';',  -1 }, { '5',  'j',  -2 },
-    { '6',  ',',  -1 }, { '6',  'j',  -2 }, { '7',  ',',  -3 }, { '7',  '.',  -2 }, { '7',  ';',  -1 }, { '7',  '4',  -1 },
-    { '7',  'j',  -2 }, { '8',  ',',  -1 }, { '8',  ';',  -1 }, { '8',  'j',  -2 }, { '9',  ',',  -1 }, { '9',  ';',  -1 },
-    { '9',  'j',  -2 }, { '?',  ' ',   2 }, { 'F',  ' ',  -1 }, { 'F',  ',',  -1 }, { 'F',  '.',  -1 }, { 'F',  ';',  -1 },
-    { 'F',  'J',  -1 }, { 'F',  'a',  -1 }, { 'F',  'e',  -1 }, { 'F',  'o',  -1 }, { 'L',  ' ',  -1 }, { 'L',  '"',  -1 },
-    { 'L',  'Y',  -1 }, { 'L',  '\'', -1 }, { 'L',  '\\', -1 }, { 'P',  ',',  -1 }, { 'P',  '.',  -1 }, { 'P',  ';',  -1 },
-    { 'P',  '_',  -1 }, { 'P',  'J',  -1 }, { 'T',  ' ',  -1 }, { 'T',  ',',  -1 }, { 'T',  '.',  -1 }, { 'T',  ';',  -1 },
-    { 'T',  'a',  -1 }, { 'T',  'e',  -1 }, { 'T',  'o',  -1 }, { 'V',  ',',  -1 }, { 'V',  '.',  -1 }, { 'V',  ';',  -1 },
-    { 'V',  'a',  -1 }, { 'Y',  ',',  -1 }, { 'Y',  '.',  -1 }, { 'Y',  ';',  -1 }, { '\'', 'J',  -2 }, { '\'', 'a',  -1 },
-    { '\'', 'c',  -1 }, { '\'', 'd',  -1 }, { '\'', 'e',  -1 }, { '\'', 'g',  -1 }, { '\'', 'j',  -2 }, { '\'', 'o',  -1 },
-    { '\'', 't',  -1 }, { '\\', 'T',  -1 }, { '\\', 'V',  -2 }, { '\\', '\\', -2 }, { '\\', 't',  -1 }, { '\\', 'v',  -1 },
-    { '_',  'f',  -1 }, { '_',  't',  -1 }, { '_',  'v',  -2 }, { 'a',  '"',  -1 }, { 'a',  '\'', -1 }, { 'a',  '\\', -1 },
-    { 'a',  'j',  -2 }, { 'b',  '"',  -1 }, { 'b',  ',',  -1 }, { 'b',  ';',  -1 }, { 'b',  '\'', -1 }, { 'b',  '\\', -1 },
-    { 'b',  'j',  -2 }, { 'c',  '"',  -1 }, { 'c',  ',',  -1 }, { 'c',  ';',  -1 }, { 'c',  '\'', -1 }, { 'c',  '\\', -1 },
-    { 'c',  'j',  -2 }, { 'd',  'j',  -2 }, { 'e',  '"',  -1 }, { 'e',  '.',  -1 }, { 'e',  ',',  -1 }, { 'e',  '/',  -1 },
-    { 'e',  ';',  -1 }, { 'e',  '\'', -1 }, { 'e',  '\\', -1 }, { 'e',  '_',  -1 }, { 'e',  ')',  -1 }, { 'e',  'j',  -2 },
-    { 'f',  ' ',  -1 }, { 'f',  ',',  -2 }, { 'f',  ';',  -1 }, { 'f',  '_',  -1 }, { 'f',  'a',  -1 }, { 'f',  'f',  -1 },
-    { 'f',  'j',  -2 }, { 'f',  't',  -1 }, { 'h',  '\\', -1 }, { 'h',  'j',  -2 }, { 'i',  'j',  -2 }, { 'k',  'j',  -2 },
-    { 'l',  'j',  -2 }, { 'm',  '"',  -1 }, { 'm',  '\'', -1 }, { 'm',  '\\', -1 }, { 'm',  'j',  -2 }, { 'n',  '"',  -1 },
-    { 'n',  '\'', -1 }, { 'n',  '\\', -1 }, { 'n',  'j',  -2 }, { 'o',  '"',  -1 }, { 'o',  ',',  -1 }, { 'o',  ';',  -1 },
-    { 'o',  '\'', -1 }, { 'o',  '\\', -1 }, { 'o',  'j',  -2 }, { 'p',  '"',  -1 }, { 'p',  ',',  -1 }, { 'p',  ';',  -1 },
-    { 'p',  '\'', -1 }, { 'p',  '\\', -1 }, { 'p',  'j',  -2 }, { 'r',  ' ',  -1 }, { 'r',  '"',  -1 }, { 'r',  ')',  -1 },
-    { 'r',  ',',  -2 }, { 'r',  '.',  -1 }, { 'r',  '/',  -1 }, { 'r',  ';',  -1 }, { 'r',  '\'', -1 }, { 'r',  '\\', -1 },
-    { 'r',  '_',  -2 }, { 'r',  'a',  -1 }, { 'r',  'j',  -2 }, { 's',  ',',  -1 }, { 's',  ';',  -1 }, { 's',  'j',  -2 },
-    { 't',  'j',  -2 }, { 't',  't',  -1 }, { 'u',  'j',  -2 }, { 'v',  ',',  -1 }, { 'v',  ';',  -1 }, { 'v',  'a',  -1 },
-    { 'v',  'j',  -2 }, { 'w',  'j',  -2 }, { 'x',  'j',  -2 }, { 'z',  'j',  -2 }, { '\0', '\0',  0 }
+    { '3',  'j',  -2 }, { '4',  '.',  -1 }, { '4',  ',',  -1 }, { '4',  '"',  -1 }, { '4',  '\'', -1 }, { '4',  '\\', -1 },
+    { '4',  ')',  -1 }, { '4',  '4',  -1 }, { '4',  '7',  -1 }, { '4',  'j',  -2 }, { '5',  ',',  -1 }, { '5',  ';',  -1 },
+    { '5',  'j',  -2 }, { '6',  ',',  -1 }, { '6',  'j',  -2 }, { '7',  ',',  -3 }, { '7',  '.',  -2 }, { '7',  ';',  -1 },
+    { '7',  '4',  -1 }, { '7',  'j',  -2 }, { '8',  ',',  -1 }, { '8',  ';',  -1 }, { '8',  'j',  -2 }, { '9',  ',',  -1 },
+    { '9',  ';',  -1 }, { '9',  'j',  -2 }, { '?',  ' ',   2 }, { 'F',  ' ',  -1 }, { 'F',  ',',  -1 }, { 'F',  '.',  -1 },
+    { 'F',  ';',  -1 }, { 'F',  'J',  -1 }, { 'F',  'a',  -1 }, { 'F',  'e',  -1 }, { 'F',  'o',  -1 }, { 'L',  ' ',  -1 },
+    { 'L',  '"',  -1 }, { 'L',  'Y',  -1 }, { 'L',  '\'', -1 }, { 'L',  '\\', -1 }, { 'P',  ',',  -1 }, { 'P',  '.',  -1 },
+    { 'P',  ';',  -1 }, { 'P',  '_',  -1 }, { 'P',  'J',  -1 }, { 'T',  ' ',  -1 }, { 'T',  ',',  -1 }, { 'T',  '.',  -1 },
+    { 'T',  ';',  -1 }, { 'T',  'a',  -1 }, { 'T',  'e',  -1 }, { 'T',  'o',  -1 }, { 'V',  ',',  -1 }, { 'V',  '.',  -1 },
+    { 'V',  ';',  -1 }, { 'V',  'a',  -1 }, { 'Y',  ',',  -1 }, { 'Y',  '.',  -1 }, { 'Y',  ';',  -1 }, { '\'', 'J',  -2 },
+    { '\'', 'a',  -1 }, { '\'', 'c',  -1 }, { '\'', 'd',  -1 }, { '\'', 'e',  -1 }, { '\'', 'g',  -1 }, { '\'', 'j',  -2 },
+    { '\'', 'o',  -1 }, { '\'', 't',  -1 }, { '\\', 'T',  -1 }, { '\\', 'V',  -2 }, { '\\', '\\', -2 }, { '\\', 't',  -1 },
+    { '\\', 'v',  -1 }, { '_',  'f',  -1 }, { '_',  't',  -1 }, { '_',  'v',  -2 }, { 'a',  '"',  -1 }, { 'a',  '\'', -1 },
+    { 'a',  '\\', -1 }, { 'a',  'j',  -2 }, { 'b',  '"',  -1 }, { 'b',  ',',  -1 }, { 'b',  ';',  -1 }, { 'b',  '\'', -1 },
+    { 'b',  '\\', -1 }, { 'b',  'j',  -2 }, { 'c',  '"',  -1 }, { 'c',  ',',  -1 }, { 'c',  ';',  -1 }, { 'c',  '\'', -1 },
+    { 'c',  '\\', -1 }, { 'c',  'j',  -2 }, { 'd',  'j',  -2 }, { 'e',  '"',  -1 }, { 'e',  '.',  -1 }, { 'e',  ',',  -1 },
+    { 'e',  '/',  -1 }, { 'e',  ';',  -1 }, { 'e',  '\'', -1 }, { 'e',  '\\', -1 }, { 'e',  '_',  -1 }, { 'e',  ')',  -1 },
+    { 'e',  'j',  -2 }, { 'f',  ' ',  -1 }, { 'f',  '.',  -1 }, { 'f',  ',',  -1 }, { 'f',  ';',  -1 }, { 'f',  '_',  -1 },
+    { 'f',  'a',  -1 }, { 'f',  'f',  -1 }, { 'f',  'j',  -2 }, { 'f',  't',  -1 }, { 'h',  '\\', -1 }, { 'h',  'j',  -2 },
+    { 'i',  'j',  -2 }, { 'k',  'j',  -2 }, { 'l',  'j',  -2 }, { 'm',  '"',  -1 }, { 'm',  '\'', -1 }, { 'm',  '\\', -1 },
+    { 'm',  'j',  -2 }, { 'n',  '"',  -1 }, { 'n',  '\'', -1 }, { 'n',  '\\', -1 }, { 'n',  'j',  -2 }, { 'o',  '"',  -1 },
+    { 'o',  ',',  -1 }, { 'o',  ';',  -1 }, { 'o',  '\'', -1 }, { 'o',  '\\', -1 }, { 'o',  'j',  -2 }, { 'p',  '"',  -1 },
+    { 'p',  ',',  -1 }, { 'p',  ';',  -1 }, { 'p',  '\'', -1 }, { 'p',  '\\', -1 }, { 'p',  'j',  -2 }, { 'r',  ' ',  -1 },
+    { 'r',  '"',  -1 }, { 'r',  ')',  -1 }, { 'r',  ',',  -2 }, { 'r',  '.',  -1 }, { 'r',  '/',  -1 }, { 'r',  ';',  -1 },
+    { 'r',  '\'', -1 }, { 'r',  '\\', -1 }, { 'r',  '_',  -2 }, { 'r',  'a',  -1 }, { 'r',  'j',  -2 }, { 's',  ',',  -1 },
+    { 's',  ';',  -1 }, { 's',  'j',  -2 }, { 't',  'j',  -2 }, { 't',  't',  -1 }, { 'u',  'j',  -2 }, { 'v',  ',',  -1 },
+    { 'v',  ';',  -1 }, { 'v',  'a',  -1 }, { 'v',  'j',  -2 }, { 'w',  'j',  -2 }, { 'x',  'j',  -2 }, { 'z',  'j',  -2 },
+    { '\0', '\0',  0 }
 };
 
-int C_TextWidth(const char *text, const dboolean formatting, const dboolean kerning)
+static int C_TextWidth(const char *text, const dboolean formatting, const dboolean kerning)
 {
-    int             bold = 0;
+    dboolean        bold = false;
     dboolean        italics = false;
     const int       len = (int)strlen(text);
     unsigned char   prevletter = '\0';
@@ -609,32 +492,36 @@ int C_TextWidth(const char *text, const dboolean formatting, const dboolean kern
             w += spacewidth;
         else if (letter == '<' && i < len - 2 && tolower(text[i + 1]) == 'b' && text[i + 2] == '>' && formatting)
         {
-            bold = (italics ? 2 : 1);
+            bold = true;
             i += 2;
+            continue;
         }
         else if (letter == '<' && i < len - 3 && text[i + 1] == '/' && tolower(text[i + 2]) == 'b' && text[i + 3] == '>' && formatting)
         {
-            bold = 0;
+            bold = false;
             i += 3;
+            continue;
         }
         else if (letter == '<' && i < len - 2 && tolower(text[i + 1]) == 'i' && text[i + 2] == '>' && formatting)
         {
             italics = true;
             i += 2;
+            continue;
         }
         else if (letter == '<' && i < len - 3 && text[i + 1] == '/' && tolower(text[i + 2]) == 'i' && text[i + 3] == '>' && formatting)
         {
             italics = false;
             i += 3;
             w++;
+            continue;
         }
         else if (letter == 153)
         {
             w += SHORT(trademark->width);
             i++;
         }
-        else if (letter == '(' && i < len - 3 && tolower(text[i + 1]) == 't' && tolower(text[i + 2]) == 'm' && text[i + 3] == ')'
-            && formatting)
+        else if (letter == '(' && i < len - 3 && tolower(text[i + 1]) == 't'
+            && tolower(text[i + 2]) == 'm' && text[i + 3] == ')' && formatting)
         {
             w += SHORT(trademark->width);
             i += 3;
@@ -671,7 +558,7 @@ int C_TextWidth(const char *text, const dboolean formatting, const dboolean kern
         {
             if (letter == '\'')
                 w += SHORT(lsquote->width);
-            else if (letter == '\"')
+            else if (letter == '"')
                 w += SHORT(ldquote->width);
             else
             {
@@ -701,8 +588,6 @@ int C_TextWidth(const char *text, const dboolean formatting, const dboolean kern
 
             if (prevletter == '/' && italics)
                 w -= 2;
-            else if (prevletter == '.' && letter == ' ' && !bold && !italics)
-                w++;
         }
 
         prevletter = letter;
@@ -713,43 +598,49 @@ int C_TextWidth(const char *text, const dboolean formatting, const dboolean kern
 
 static void C_DrawScrollbar(void)
 {
-    const int   trackstart = CONSOLESCROLLBARY * CONSOLEWIDTH;
-    const int   trackend = trackstart + CONSOLESCROLLBARHEIGHT * CONSOLEWIDTH;
-    const int   facestart = CONSOLESCROLLBARY + CONSOLESCROLLBARHEIGHT * (outputhistory == -1 ?
+    const int   trackend = CONSOLESCROLLBARHEIGHT * SCREENWIDTH;
+    const int   facestart = CONSOLESCROLLBARHEIGHT * (outputhistory == -1 ?
                     MAX(0, consolestrings - CONSOLELINES) : outputhistory) / consolestrings;
     const int   faceend = facestart + CONSOLESCROLLBARHEIGHT - CONSOLESCROLLBARHEIGHT
                     * MAX(0, consolestrings - CONSOLELINES) / consolestrings;
 
-    if (trackstart == facestart * CONSOLEWIDTH && trackend == faceend * CONSOLEWIDTH)
+    if (!facestart && trackend == faceend * SCREENWIDTH)
         scrollbardrawn = false;
     else
     {
-        const int   offset = (CONSOLEHEIGHT - consoleheight) * CONSOLEWIDTH;
-        const int   gripstart = (facestart + (faceend - facestart) / 2 - 2) * CONSOLEWIDTH;
+        const int   offset = (CONSOLEHEIGHT - consoleheight) * SCREENWIDTH;
+        const int   gripstart = (facestart + (faceend - facestart) / 2 - 2) * SCREENWIDTH;
 
         // draw scrollbar track
-        for (int y = trackstart; y < trackend; y += CONSOLEWIDTH)
+        for (int y = 0; y < trackend; y += SCREENWIDTH)
             if (y - offset >= CONSOLETOP)
                 for (int x = CONSOLESCROLLBARX; x < CONSOLESCROLLBARX + CONSOLESCROLLBARWIDTH; x++)
                     screens[0][y - offset + x] = tinttab50[screens[0][y - offset + x] + consolescrollbartrackcolor];
 
+        // init scrollbar grip
+        if (faceend - facestart > 8)
+            for (int y = gripstart; y < gripstart + SCREENWIDTH * 6; y += SCREENWIDTH * 2)
+                if (y - offset >= CONSOLETOP)
+                    for (int x = CONSOLESCROLLBARX + 1; x < CONSOLESCROLLBARX + CONSOLESCROLLBARWIDTH - 1; x++)
+                        screens[1][y - offset + x] = screens[0][y - offset + x];
+
         // draw scrollbar face
-        for (int y = facestart * CONSOLEWIDTH; y < faceend * CONSOLEWIDTH; y += CONSOLEWIDTH)
+        for (int y = facestart * SCREENWIDTH; y < faceend * SCREENWIDTH; y += SCREENWIDTH)
             if (y - offset >= CONSOLETOP)
                 for (int x = CONSOLESCROLLBARX; x < CONSOLESCROLLBARX + CONSOLESCROLLBARWIDTH; x++)
                     screens[0][y - offset + x] = consolescrollbarfacecolor;
 
         // draw scrollbar grip
         if (faceend - facestart > 8)
-            for (int y = gripstart; y < gripstart + CONSOLEWIDTH * 6; y += CONSOLEWIDTH * 2)
+            for (int y = gripstart; y < gripstart + SCREENWIDTH * 6; y += SCREENWIDTH * 2)
                 if (y - offset >= CONSOLETOP)
                     for (int x = CONSOLESCROLLBARX + 1; x < CONSOLESCROLLBARX + CONSOLESCROLLBARWIDTH - 1; x++)
-                        screens[0][y - offset + x] = consolescrollbargripcolor;
+                        screens[0][y - offset + x] = screens[1][y - offset + x];
 
         // draw scrollbar face shadow
-        if (faceend * CONSOLEWIDTH - offset >= CONSOLETOP)
+        if (faceend * SCREENWIDTH - offset >= CONSOLETOP)
             for (int x = CONSOLESCROLLBARX; x < CONSOLESCROLLBARX + CONSOLESCROLLBARWIDTH; x++)
-                screens[0][faceend * CONSOLEWIDTH - offset + x] = tinttab20[screens[0][faceend * CONSOLEWIDTH - offset + x]];
+                screens[0][faceend * SCREENWIDTH - offset + x] = tinttab20[screens[0][faceend * SCREENWIDTH - offset + x]];
 
         scrollbardrawn = true;
     }
@@ -777,26 +668,28 @@ void C_Init(void)
     consoletimestampcolor = nearestcolors[consoletimestampcolor];
     consoleoutputcolor = nearestcolors[consoleoutputcolor];
     consoleboldcolor = nearestcolors[consoleboldcolor];
-    consoleitalicscolor = nearestcolors[consoleitalicscolor];
+    consolebolditalicscolor = nearestcolors[consolebolditalicscolor];
     consolewarningcolor = nearestcolors[consolewarningcolor];
     consolewarningboldcolor = nearestcolors[consolewarningboldcolor];
     consoledividercolor = nearestcolors[consoledividercolor] << 8;
     consolescrollbartrackcolor = nearestcolors[consolescrollbartrackcolor] << 8;
     consolescrollbarfacecolor = nearestcolors[consolescrollbarfacecolor];
-    consolescrollbargripcolor = nearestcolors[consolescrollbargripcolor];
+    consoleedgecolor = nearestcolors[con_edgecolor] << 8;
 
     consolecolors[inputstring] = consoleinputtooutputcolor;
     consolecolors[outputstring] = consoleoutputcolor;
-    consolecolors[dividerstring] = consoledividercolor;
     consolecolors[warningstring] = consolewarningcolor;
     consolecolors[playermessagestring] = consoleplayermessagecolor;
-    consolecolors[obituarystring] = consoleplayermessagecolor;
+
+    consoleboldcolors[inputstring] = consoleboldcolor;
+    consoleboldcolors[outputstring] = consoleboldcolor;
+    consoleboldcolors[warningstring] = consolewarningboldcolor;
+    consoleboldcolors[playermessagestring] = consoleplayermessagecolor;
 
     consolebevel = &tinttab50[nearestblack << 8];
     consoleautomapbevel = &tinttab50[nearestcolors[5] << 8];
 
     brand = W_CacheLumpName("DRBRAND");
-    dot = W_CacheLumpName("DRFON046");
     lsquote = W_CacheLumpName("DRFON145");
     ldquote = W_CacheLumpName("DRFON147");
     trademark = W_CacheLumpName("DRFON153");
@@ -820,12 +713,8 @@ void C_Init(void)
     brandwidth = SHORT(brand->width);
     brandheight = SHORT(brand->height);
     spacewidth = SHORT(consolefont[' ' - CONSOLEFONTSTART]->width);
-    timerx = CONSOLEWIDTH - C_TextWidth("00:00:00", false, false) - CONSOLETEXTX + 1;
+    timerx = SCREENWIDTH - C_TextWidth("00:00:00", false, false) - CONSOLETEXTX + 1;
     zerowidth = SHORT(consolefont['0' - CONSOLEFONTSTART]->width);
-    warningwidth = SHORT(warning->width);
-    dotwidth = SHORT(dot->width);
-
-    while (*autocompletelist[++numautocomplete].text);
 }
 
 void C_ShowConsole(void)
@@ -843,7 +732,7 @@ void C_ShowConsole(void)
     for (int i = 0; i < MAX_MOUSE_BUTTONS; i++)
         mousebuttons[i] = false;
 
-    if (gamestate == GS_TITLESCREEN && !devparm)
+    if (gamestate == GS_TITLESCREEN)
     {
         S_StartSound(NULL, sfx_swtchn);
         D_FadeScreen();
@@ -871,7 +760,7 @@ void C_HideConsole(void)
         D_FadeScreen();
     }
 
-    S_SetMusicVolume(musicVolume * MAX_MUSIC_VOLUME / 31);
+    S_SetMusicVolume(musicVolume * MIX_MAX_VOLUME / 31);
 }
 
 void C_HideConsoleFast(void)
@@ -886,122 +775,123 @@ void C_HideConsoleFast(void)
     consoleheight = 0;
     consoleactive = false;
 
-    S_SetMusicVolume(musicVolume * MAX_MUSIC_VOLUME / 31);
+    S_SetMusicVolume(musicVolume * MIX_MAX_VOLUME / 31);
 }
 
 static void C_DrawBackground(void)
 {
     static dboolean blurred;
-    static byte     blurscreen[SCREENAREA];
+    static byte     blurscreen[MAXSCREENAREA];
     int             consolebackcolor = nearestcolors[con_backcolor] << 8;
-    int             consoleedgecolor = nearestcolors[con_edgecolor] << 8;
-    int             height = (consoleheight + 5) * CONSOLEWIDTH;
+    int             height = (consoleheight + 5) * SCREENWIDTH;
 
-    if (!blurred)
+    if (!blurred || !forceconsoleblurredraw)
     {
         // blur background
         memcpy(blurscreen, screens[0], height);
 
-        for (int y = 0; y <= height - CONSOLEWIDTH; y += CONSOLEWIDTH)
-            for (int x = y; x <= y + CONSOLEWIDTH - 2; x++)
+        for (int y = 0; y <= height - SCREENWIDTH; y += SCREENWIDTH)
+            for (int x = y; x <= y + SCREENWIDTH - 2; x++)
                 blurscreen[x] = tinttab50[(blurscreen[x + 1] << 8) + blurscreen[x]];
 
-        for (int y = 0; y <= height - CONSOLEWIDTH; y += CONSOLEWIDTH)
-            for (int x = y + CONSOLEWIDTH - 2; x >= y; x--)
+        for (int y = 0; y <= height - SCREENWIDTH; y += SCREENWIDTH)
+            for (int x = y + SCREENWIDTH - 2; x > y; x--)
                 blurscreen[x] = tinttab50[(blurscreen[x - 1] << 8) + blurscreen[x]];
 
-        for (int y = CONSOLEWIDTH; y <= height - CONSOLEWIDTH * 2; y += CONSOLEWIDTH)
-            for (int x = y; x <= y + CONSOLEWIDTH - 2; x++)
-                blurscreen[x] = tinttab50[(blurscreen[x] << 8) + blurscreen[x]];
+        for (int y = height - SCREENWIDTH; y >= SCREENWIDTH; y -= SCREENWIDTH)
+            for (int x = y + SCREENWIDTH - 1; x >= y + 1; x--)
+                blurscreen[x] = tinttab50[(blurscreen[x - SCREENWIDTH - 1] << 8) + blurscreen[x]];
 
-        for (int y = height - CONSOLEWIDTH; y >= CONSOLEWIDTH; y -= CONSOLEWIDTH)
-            for (int x = y + CONSOLEWIDTH - 1; x >= y + 1; x--)
-                blurscreen[x] = tinttab50[(blurscreen[x - CONSOLEWIDTH - 1] << 8) + blurscreen[x]];
+        for (int y = 0; y <= height - SCREENWIDTH * 2; y += SCREENWIDTH)
+            for (int x = y; x <= y + SCREENWIDTH - 1; x++)
+                blurscreen[x] = tinttab50[(blurscreen[x + SCREENWIDTH] << 8) + blurscreen[x]];
 
-        for (int y = 0; y <= height - CONSOLEWIDTH * 2; y += CONSOLEWIDTH)
-            for (int x = y; x <= y + CONSOLEWIDTH - 1; x++)
-                blurscreen[x] = tinttab50[(blurscreen[x + CONSOLEWIDTH] << 8) + blurscreen[x]];
+        for (int y = height - SCREENWIDTH; y >= SCREENWIDTH; y -= SCREENWIDTH)
+            for (int x = y; x <= y + SCREENWIDTH - 1; x++)
+                blurscreen[x] = tinttab50[(blurscreen[x - SCREENWIDTH] << 8) + blurscreen[x]];
 
-        for (int y = height - CONSOLEWIDTH; y >= CONSOLEWIDTH; y -= CONSOLEWIDTH)
-            for (int x = y; x <= y + CONSOLEWIDTH - 1; x++)
-                blurscreen[x] = tinttab50[(blurscreen[x - CONSOLEWIDTH] << 8) + blurscreen[x]];
+        for (int y = 0; y <= height - SCREENWIDTH * 2; y += SCREENWIDTH)
+            for (int x = y + SCREENWIDTH - 1; x >= y + 1; x--)
+                blurscreen[x] = tinttab50[(blurscreen[x + SCREENWIDTH - 1] << 8) + blurscreen[x]];
 
-        for (int y = 0; y <= height - CONSOLEWIDTH * 2; y += CONSOLEWIDTH)
-            for (int x = y + CONSOLEWIDTH - 1; x >= y + 1; x--)
-                blurscreen[x] = tinttab50[(blurscreen[x + CONSOLEWIDTH - 1] << 8) + blurscreen[x]];
-
-        for (int y = height - CONSOLEWIDTH; y >= CONSOLEWIDTH; y -= CONSOLEWIDTH)
-            for (int x = y; x <= y + CONSOLEWIDTH - 2; x++)
-                blurscreen[x] = tinttab50[(blurscreen[x - CONSOLEWIDTH + 1] << 8) + blurscreen[x]];
+        for (int y = height - SCREENWIDTH; y >= SCREENWIDTH; y -= SCREENWIDTH)
+            for (int x = y; x <= y + SCREENWIDTH - 2; x++)
+                blurscreen[x] = tinttab50[(blurscreen[x - SCREENWIDTH + 1] << 8) + blurscreen[x]];
     }
 
-    if (forceconsoleblurredraw)
-    {
-        forceconsoleblurredraw = false;
-        blurred = false;
-    }
-    else
-        blurred = (consoleheight == CONSOLEHEIGHT && !dowipe);
+    forceconsoleblurredraw = false;
+    blurred = (consoleheight == CONSOLEHEIGHT && !dowipe);
 
     // tint background using con_backcolor CVAR
     for (int i = 0; i < height; i++)
         screens[0][i] = tinttab50[consolebackcolor + blurscreen[i]];
 
     // apply corrugated glass effect to background
-    for (int i = height - 2; i > 1; i -= 3)
-        screens[0][i + 1] = colormaps[0][6 * 256 + screens[0][i + ((i % CONSOLEWIDTH) && (i + 1) % CONSOLEWIDTH ? -1 : 1)]];
+    for (int y = 1; y <= height - SCREENWIDTH * 3; y += SCREENWIDTH)
+    {
+        for (int x = 2; x < SCREENWIDTH - 1; x += 3)
+            screens[0][y + x] = colormaps[0][6 * 256 + screens[0][y + x + ((((y + x) % SCREENWIDTH) % SCREENWIDTH) ? -1 : 1)]];
+
+        y += SCREENWIDTH;
+
+        for (int x = 1; x < SCREENWIDTH - 1; x += 3)
+            screens[0][y + x] = colormaps[0][6 * 256 + screens[0][y + x + ((((y + x) % SCREENWIDTH) % SCREENWIDTH) ? -1 : 1)]];
+
+        y += SCREENWIDTH;
+
+        for (int x = 0; x < SCREENWIDTH - 1; x += 3)
+            screens[0][y + x] = colormaps[0][6 * 256 + screens[0][y + x + ((((y + x) % SCREENWIDTH) % SCREENWIDTH) ? -1 : 1)]];
+    }
 
     // draw branding
-    V_DrawConsoleBrandingPatch(CONSOLEWIDTH - brandwidth, consoleheight - brandheight + 2, brand, consoleedgecolor);
+    V_DrawConsoleBrandingPatch(SCREENWIDTH - brandwidth, consoleheight - brandheight + 2, brand, consoleedgecolor);
 
     // draw bottom edge
-    for (int i = height - CONSOLEWIDTH * 3; i < height; i++)
+    for (int i = height - SCREENWIDTH * 3; i < height; i++)
         screens[0][i] = tinttab50[consoleedgecolor + screens[0][i]];
 
     // bevel left and right edges
     if (automapactive && am_backcolor == am_backcolor_default)
     {
-        for (int i = 0; i < height - 3 * CONSOLEWIDTH; i += CONSOLEWIDTH)
+        for (int i = 0; i < height - 3 * SCREENWIDTH; i += SCREENWIDTH)
             screens[0][i] = consoleautomapbevel[screens[0][i + 1]];
 
-        for (int i = MAX(0, height - 3 * CONSOLEWIDTH); i < height; i += CONSOLEWIDTH)
+        for (int i = MAX(0, height - 3 * SCREENWIDTH); i < height; i += SCREENWIDTH)
             screens[0][i] = consolebevel[screens[0][i + 1]];
 
-        for (int i = 0; i < height - (brandheight + 3) * CONSOLEWIDTH; i += CONSOLEWIDTH)
-            screens[0][i + CONSOLEWIDTH - 1] = consoleautomapbevel[screens[0][i + CONSOLEWIDTH - 2]];
+        for (int i = 0; i < height - (brandheight + 3) * SCREENWIDTH; i += SCREENWIDTH)
+            screens[0][i + SCREENWIDTH - 1] = consoleautomapbevel[screens[0][i + SCREENWIDTH - 2]];
 
-        for (int i = MAX(0, height - (brandheight + 3) * CONSOLEWIDTH); i < height; i += CONSOLEWIDTH)
-            screens[0][i + CONSOLEWIDTH - 1] = consolebevel[screens[0][i + CONSOLEWIDTH - 2]];
+        for (int i = MAX(0, height - (brandheight + 3) * SCREENWIDTH); i < height; i += SCREENWIDTH)
+            screens[0][i + SCREENWIDTH - 1] = consolebevel[screens[0][i + SCREENWIDTH - 2]];
     }
     else
-        for (int i = 0; i < height; i += CONSOLEWIDTH)
+        for (int i = 0; i < height; i += SCREENWIDTH)
         {
             screens[0][i] = consolebevel[screens[0][i + 1]];
-            screens[0][i + CONSOLEWIDTH - 1] = consolebevel[screens[0][i + CONSOLEWIDTH - 2]];
+            screens[0][i + SCREENWIDTH - 1] = consolebevel[screens[0][i + SCREENWIDTH - 2]];
         }
 
     // bevel bottom edge
-    for (int i = height - CONSOLEWIDTH + 1; i < height - 1; i++)
+    for (int i = height - SCREENWIDTH + 1; i < height - 1; i++)
         screens[0][i] = consolebevel[screens[0][i]];
 
     // draw shadow
     if (gamestate != GS_TITLESCREEN)
-        for (int i = CONSOLEWIDTH; i <= 4 * CONSOLEWIDTH; i += CONSOLEWIDTH)
+        for (int i = SCREENWIDTH; i <= 4 * SCREENWIDTH; i += SCREENWIDTH)
             for (int j = height; j < height + i; j++)
                 screens[0][j] = colormaps[0][4 * 256 + screens[0][j]];
 }
 
 static int C_DrawConsoleText(int x, int y, char *text, const int color1, const int color2, const int boldcolor,
-    byte *translucency, const int tabs[4], const dboolean formatting, const dboolean kerning, const int index)
+    byte *translucency, const int tabs[3], const dboolean formatting, const dboolean kerning, const int index)
 {
-    int             bold = 0;
-    dboolean        italics = false;
+    dboolean        bold = wrapbold;
+    dboolean        italics = wrapitalics;
     int             tab = -1;
     int             len = (int)strlen(text);
-    int             truncate = len;
     unsigned char   prevletter = '\0';
-    int             width = 0;
-    int             lastcolor1 = color1;
+    unsigned char   prevletter2 = '\0';
     int             startx = x;
 
     y -= CONSOLEHEIGHT - consoleheight;
@@ -1011,47 +901,26 @@ static int C_DrawConsoleText(int x, int y, char *text, const int color1, const i
         if (console[index].line == 2)
         {
             if (text[0] == ' ')
-                width -= spacewidth;
+                x -= spacewidth;
         }
         else
-            V_DrawConsoleOutputTextPatch(x, y, warning, warningwidth, color1, color2, false, translucency);
+            V_DrawConsoleOutputTextPatch(x, y, warning, WARNINGWIDTH, color1, color2, false, translucency);
 
-        width += warningwidth + 1;
-        x += width;
+        x += WARNINGWIDTH + 1;
     }
 
-    if (len > 100)
-    {
-        do
-        {
-            char    *temp = M_SubString(text, 0, truncate);
-            int     width2 = C_TextWidth(temp, formatting, kerning) + width + 6;
-
-            free(temp);
-
-            if (width2 <= CONSOLETEXTPIXELWIDTH)
-                break;
-        } while (truncate-- > 0);
-
-        if (truncate == len - 1 && text[truncate] == '.')
-            truncate++;
-
-        if (text[truncate - 1] == ' ')
-            truncate--;
-    }
-
-    for (int i = 0; i < truncate; i++)
+    for (int i = 0; i < len; i++)
     {
         const unsigned char letter = text[i];
 
         if (letter == '<' && i < len - 2 && tolower(text[i + 1]) == 'b' && text[i + 2] == '>' && formatting)
         {
-            bold = (italics ? 2 : 1);
+            bold = true;
             i += 2;
         }
         else if (letter == '<' && i < len - 3 && text[i + 1] == '/' && tolower(text[i + 2]) == 'b' && text[i + 3] == '>' && formatting)
         {
-            bold = 0;
+            bold = false;
             i += 3;
         }
         else if (letter == '<' && i < len - 2 && tolower(text[i + 1]) == 'i' && text[i + 2] == '>' && formatting)
@@ -1107,12 +976,23 @@ static int C_DrawConsoleText(int x, int y, char *text, const int color1, const i
 
                 patch = (c >= 0 && c < CONSOLEFONTSIZE ? consolefont[c] : unknownchar);
 
-                if (!i || prevletter == ' ' || prevletter == '(' || prevletter == '[' || prevletter == '\t')
+                if (!i || (i == 3 && (bold || italics)) || prevletter == ' ' || prevletter == '(' || prevletter == '['
+                    || prevletter == '\t')
                 {
                     if (letter == '\'')
+                    {
                         patch = lsquote;
-                    else if (letter == '\"')
+
+                        if (!i)
+                            x--;
+                    }
+                    else if (letter == '"')
+                    {
                         patch = ldquote;
+
+                        if (!i)
+                            x--;
+                    }
                 }
             }
 
@@ -1137,51 +1017,54 @@ static int C_DrawConsoleText(int x, int y, char *text, const int color1, const i
                     else if (prevletter == '\'')
                         x++;
                 }
-                else if (prevletter == '.' && letter == ' ' && !bold)
-                    x++;
+                else if (letter == '(' && prevletter == ' ' && prevletter2 == '.')
+                    x--;
             }
 
             if (patch)
             {
                 int patchwidth = SHORT(patch->width);
 
-                consoletextfunc(x, y, patch, patchwidth, (lastcolor1 = (bold == 1 ? boldcolor : (bold == 2 ? color1 : (italics ?
-                    (color1 == consolewarningcolor ? color1 : consoleitalicscolor) : color1)))), color2,
-                    (italics && letter != '_' && letter != '-' && letter != '+' && letter != ',' && letter != '/'), translucency);
+                consoletextfunc(x, y, patch, patchwidth, (bold && italics ? (color1 == consolewarningcolor ? color1 :
+                    consolebolditalicscolor) : (bold ? boldcolor : color1)), color2, (italics && letter != '_' && letter != '-'
+                    && letter != '+' && letter != ',' && letter != '/'), translucency);
                 x += patchwidth;
             }
 
+            prevletter2 = prevletter;
             prevletter = letter;
         }
     }
 
-    if (truncate < len)
-    {
-        if (kerning)
-            for (int j = 0; altkern[j].char1; j++)
-                if (prevletter == altkern[j].char1 && altkern[j].char2 == '.')
-                {
-                    x += altkern[j].adjust;
-                    break;
-                }
-
-        consoletextfunc(x, y, dot, dotwidth, lastcolor1, color2, false, translucency);
-        x += dotwidth;
-        consoletextfunc(x, y, dot, dotwidth, lastcolor1, color2, false, translucency);
-
-        if (text[truncate - 1] != '.')
-        {
-            x += dotwidth;
-            consoletextfunc(x, y, dot, dotwidth, lastcolor1, color2, false, translucency);
-        }
-    }
-
+    console[index].bold = bold;
+    console[index].italics = italics;
     return (x - startx);
 }
 
-static void C_DrawOverlayText(int x, int y, const char *text, const int color, dboolean monospaced)
+static int C_OverlayWidth(const char *text)
 {
     const int   len = (int)strlen(text);
+    int         w = 0;
+
+    for (int i = 0; i < len; i++)
+    {
+        const unsigned char letter = text[i];
+
+        if (letter == ' ')
+            w += spacewidth;
+        else if (isdigit(letter))
+            w += zerowidth;
+        else if (letter >= CONSOLEFONTSTART)
+            w += SHORT(consolefont[letter - CONSOLEFONTSTART]->width);
+    }
+
+    return w;
+}
+
+static void C_DrawOverlayText(int x, int y, const char *text, const int color)
+{
+    const int   len = (int)strlen(text);
+    byte        *tinttab = (r_hud_translucency ? (consoleactive ? tinttab75 : tinttab50) : NULL);
 
     for (int i = 0; i < len; i++)
     {
@@ -1194,16 +1077,15 @@ static void C_DrawOverlayText(int x, int y, const char *text, const int color, d
             patch_t *patch = consolefont[letter - CONSOLEFONTSTART];
             int     width = SHORT(patch->width);
 
-            if (monospaced && letter == '1')
+            if (isdigit(letter))
             {
-                V_DrawConsoleOutputTextPatch(x + 1, y, patch, width, color, NOBACKGROUNDCOLOR, false,
-                    (r_hud_translucency ? tinttab75 : NULL));
-                x += width + 2;
+                V_DrawConsoleOutputTextPatch(x + (letter == '1') - (letter == '4'),
+                    y, patch, width, color, NOBACKGROUNDCOLOR, false, tinttab);
+                x += zerowidth;
             }
             else
             {
-                V_DrawConsoleOutputTextPatch(x, y, patch, width, color, NOBACKGROUNDCOLOR, false,
-                    (r_hud_translucency ? tinttab75 : NULL));
+                V_DrawConsoleOutputTextPatch(x, y, patch, width, color, NOBACKGROUNDCOLOR, false, tinttab);
                 x += width;
             }
         }
@@ -1232,7 +1114,7 @@ char *C_CreateTimeStamp(int index)
     if ((hours += tics / 3600) > 12)
         hours %= 12;
 
-    M_snprintf(console[index].timestamp, 9, "%i:%02i:%02i", hours, minutes, seconds);
+    M_snprintf(console[index].timestamp, 9, "%i:%02i:%02i", (!hours ? 12 : hours), minutes, seconds);
     return console[index].timestamp;
 }
 
@@ -1249,22 +1131,24 @@ static void C_DrawTimeStamp(int x, int y, int index)
         patch_t *patch = consolefont[ch - CONSOLEFONTSTART];
         int     width = SHORT(patch->width);
 
-        x -= (i && ch != ':' ? zerowidth : width);
+        x -= (ch != ':' ? zerowidth : width);
         V_DrawConsoleOutputTextPatch(x + (i && ch == '1'), y, patch, width, consoletimestampcolor, NOBACKGROUNDCOLOR, false, tinttab33);
     }
 }
 
 void C_UpdateFPS(void)
 {
-    if (!dowipe && !splashscreen)
+    if (!dowipe)
     {
         char    buffer[32];
+        char    *temp = commify(framespersecond);
 
-        M_snprintf(buffer, sizeof(buffer), "%i FPS (%.1fms)", framespersecond, 1000.0f / framespersecond);
+        M_snprintf(buffer, sizeof(buffer), s_STSTR_FPS, temp, 1000.0f / framespersecond);
 
-        C_DrawOverlayText(CONSOLEWIDTH - C_TextWidth(buffer, false, false) - CONSOLETEXTX + 1, CONSOLETEXTY, buffer,
+        C_DrawOverlayText(SCREENWIDTH - C_OverlayWidth(buffer) - CONSOLETEXTX + 1, CONSOLETEXTY, buffer,
             (framespersecond < (refreshrate && vid_capfps != TICRATE ? refreshrate : TICRATE) ? consolelowfpscolor :
-            consolehighfpscolor), false);
+            (((viewplayer->fixedcolormap == INVERSECOLORMAP) ^ (!r_textures)) ? nearestblack : consolehighfpscolor)));
+        free(temp);
     }
 }
 
@@ -1285,7 +1169,8 @@ void C_UpdateTimer(void)
             M_snprintf(buffer, 9, "%02i:%02i:%02i", hours, minutes, seconds);
         }
 
-        C_DrawOverlayText(timerx, (vid_showfps ? CONSOLETEXTY + CONSOLELINEHEIGHT : CONSOLETEXTY), buffer, consoletimercolor, true);
+        C_DrawOverlayText(timerx, (vid_showfps ? CONSOLETEXTY + CONSOLELINEHEIGHT : CONSOLETEXTY), buffer,
+            (((viewplayer->fixedcolormap == INVERSECOLORMAP) ^ (!r_textures)) ? nearestblack : consoletimercolor));
     }
 }
 
@@ -1295,26 +1180,14 @@ void C_Drawer(void)
     {
         int             i;
         int             x = CONSOLETEXTX;
-        int             start;
-        int             end;
+        int             y = CONSOLELINEHEIGHT * (CONSOLELINES - 1) - CONSOLELINEHEIGHT / 2 + 1;
+        int             bottomline = (outputhistory == -1 ? consolestrings : outputhistory + CONSOLELINES) - 1;
         int             len;
         char            partialinput[255];
         const dboolean  prevconsoleactive = consoleactive;
         static int      consolewait;
         int             tics = I_GetTimeMS();
-
-        const int consoledown[] =
-        {
-             14,  28,  42,  56,  70,  84,  98, 112, 126, 140, 150, 152,
-            154, 156, 158, 160, 161, 162, 163, 164, 165, 166, 167, 168
-        };
-
-        const int consoleup[] =
-        {
-            154, 140, 126, 112,  98,  84,  70,  56,  42,  28,  14,   0
-        };
-
-        const int notabs[4] = { 0 };
+        const int       notabs[3] = { 0 };
 
         // adjust console height
         if (gamestate == GS_TITLESCREEN)
@@ -1327,6 +1200,12 @@ void C_Drawer(void)
             {
                 if (consoleheight < CONSOLEHEIGHT)
                 {
+                    const int consoledown[] =
+                    {
+                         14,  28,  42,  56,  70,  84,  98, 112, 126, 140, 150, 152,
+                        154, 156, 158, 160, 161, 162, 163, 164, 165, 166, 167, 168
+                    };
+
                     if (consoleheight > consoledown[consoleanim])
                         consolewait = 0;
                     else
@@ -1339,6 +1218,11 @@ void C_Drawer(void)
             {
                 if (consoleheight)
                 {
+                    const int consoleup[] =
+                    {
+                        154, 140, 126, 112,  98,  84,  70,  56,  42,  28,  14,   0
+                    };
+
                     if (consoleheight < consoleup[consoleanim])
                         consolewait = 0;
                     else
@@ -1377,84 +1261,124 @@ void C_Drawer(void)
         // draw the scrollbar
         C_DrawScrollbar();
 
-        // draw console text
         consoletextfunc = &V_DrawConsoleOutputTextPatch;
 
-        if (outputhistory == -1)
+        // draw console text
+        for (i = bottomline; i >= 0; i--)
         {
-            start = MAX(0, consolestrings - CONSOLELINES);
-            end = consolestrings;
-        }
-        else
-        {
-            start = outputhistory;
-            end = outputhistory + CONSOLELINES;
-        }
-
-        for (i = start; i < end; i++)
-        {
-            int                 y = CONSOLELINEHEIGHT * (i - start + MAX(0, CONSOLELINES - consolestrings)) - CONSOLELINEHEIGHT / 2 + 1;
             const stringtype_t  stringtype = console[i].stringtype;
 
-            if (stringtype == playermessagestring || stringtype == obituarystring)
+            if (stringtype == dividerstring)
             {
-                int width = C_DrawConsoleText(CONSOLETEXTX, y, console[i].string, consoleplayermessagecolor,
-                                NOBACKGROUNDCOLOR, consoleplayermessagecolor, tinttab66, notabs, true, true, i);
+                int yy = (y + 5 - (CONSOLEHEIGHT - consoleheight)) * SCREENWIDTH;
 
-                if (console[i].count > 1)
+                if (yy >= CONSOLETOP)
+                    for (int xx = yy + CONSOLETEXTX; xx < yy + CONSOLETEXTPIXELWIDTH + CONSOLETEXTX; xx++)
+                    {
+                        byte    *dest = &screens[0][xx];
+
+                        *dest = tinttab50[consoledividercolor + *dest];
+                    }
+
+                if ((yy += SCREENWIDTH) >= CONSOLETOP)
+                    for (int xx = yy + CONSOLETEXTX; xx < yy + CONSOLETEXTPIXELWIDTH + CONSOLETEXTX; xx++)
+                    {
+                        byte    *dest = &screens[0][xx];
+
+                        *dest = tinttab50[consoledividercolor + *dest];
+                    }
+            }
+            else if ((len = (int)strlen(console[i].string)))
+            {
+                int     wrap;
+                char    *text;
+
+                if (console[i].wrap)
+                    wrap = console[i].wrap;
+                else
                 {
-                    char    buffer[CONSOLETEXTMAXLENGTH];
-                    char    *temp = commify(console[i].count);
+                    int indent = console[i].indent;
 
-                    M_snprintf(buffer, sizeof(buffer), "(%s)", temp);
-                    C_DrawConsoleText(CONSOLETEXTX + width + 2, y, buffer, consoleplayermessagecolor,
-                        NOBACKGROUNDCOLOR, consoleplayermessagecolor, tinttab66, notabs, false, false, i);
+                    wrap = len;
+
+                    do
+                    {
+                        char    *temp = M_SubString(console[i].string, 0, wrap);
+                        int     width;
+
+                        if (stringtype == warningstring)
+                            width = indent + C_TextWidth(temp, true, true);
+                        else
+                            width = (indent ? indent + C_TextWidth(strrchr(temp, '\t') + 1, true, true) : C_TextWidth(temp, true, true));
+
+                        free(temp);
+
+                        if (width <= CONSOLETEXTPIXELWIDTH && isbreak(console[i].string[wrap]))
+                            break;
+                    } while (wrap-- > 0);
+
+                    console[i].wrap = wrap;
+                }
+
+                if (wrap < len)
+                {
+                    text = M_SubString(console[i].string, 0, wrap);
+
+                    if (i < bottomline)
+                        y -= CONSOLELINEHEIGHT;
+                }
+                else
+                    text = M_StringDuplicate(console[i].string);
+
+                if (stringtype == playermessagestring)
+                {
+                    if (console[i].count > 1)
+                    {
+                        char    buffer[CONSOLETEXTMAXLENGTH];
+                        char    *temp = commify(console[i].count);
+
+                        M_snprintf(buffer, sizeof(buffer), "%s (%s)", text, temp);
+                        C_DrawConsoleText(CONSOLETEXTX, y, buffer, consoleplayermessagecolor,
+                            NOBACKGROUNDCOLOR, consoleplayermessagecolor, tinttab66, notabs, true, true, i);
+                        free(temp);
+                    }
+                    else
+                        C_DrawConsoleText(CONSOLETEXTX, y, text, consoleplayermessagecolor,
+                            NOBACKGROUNDCOLOR, consoleplayermessagecolor, tinttab66, notabs, true, true, i);
+
+                    C_DrawTimeStamp(SCREENWIDTH - CONSOLETEXTX * 2 - CONSOLESCROLLBARWIDTH + 1, y, i);
+                }
+                else if (stringtype == outputstring)
+                    C_DrawConsoleText(CONSOLETEXTX, y, text, consoleoutputcolor,
+                        NOBACKGROUNDCOLOR, consoleboldcolor, tinttab66, console[i].tabs, true, true, i);
+                else if (stringtype == inputstring)
+                    C_DrawConsoleText(CONSOLETEXTX, y, text, consoleinputcolor,
+                        NOBACKGROUNDCOLOR, consoleboldcolor, tinttab66, notabs, true, true, i);
+                else if (stringtype == warningstring)
+                    C_DrawConsoleText(CONSOLETEXTX, y, text, consolewarningcolor,
+                        NOBACKGROUNDCOLOR, consolewarningboldcolor, tinttab66, notabs, true, true, i);
+                else
+                    V_DrawConsolePatch(CONSOLETEXTX, y + 4 - (CONSOLEHEIGHT - consoleheight),
+                        console[i].header, consoleedgecolor, CONSOLETEXTPIXELWIDTH + 2);
+
+                if (wrap < len && i < bottomline)
+                {
+                    char    *temp = M_SubString(console[i].string, wrap, (size_t)len - wrap);
+
+                    wrapbold = console[i].bold;
+                    wrapitalics = console[i].italics;
+                    C_DrawConsoleText(CONSOLETEXTX + console[i].indent, y + CONSOLELINEHEIGHT, trimwhitespace(temp),
+                        consolecolors[stringtype], NOBACKGROUNDCOLOR, consoleboldcolors[stringtype], tinttab66, notabs, true, true, 0);
+                    wrapbold = false;
+                    wrapitalics = false;
                     free(temp);
                 }
 
-                C_DrawTimeStamp(CONSOLEWIDTH - CONSOLETEXTX * 2 - CONSOLESCROLLBARWIDTH + 3, y, i);
+                free(text);
             }
-            else if (stringtype == outputstring)
-                C_DrawConsoleText(CONSOLETEXTX, y, console[i].string, consolecolors[stringtype],
-                    NOBACKGROUNDCOLOR, consoleboldcolor, tinttab66, console[i].tabs, true, true, i);
-            else if (stringtype == dividerstring)
-            {
-                if ((y += 5 - (CONSOLEHEIGHT - consoleheight)) >= CONSOLETOP)
-                    for (int xx = CONSOLETEXTX; xx < CONSOLETEXTX + CONSOLETEXTPIXELWIDTH + 2; xx++)
-                        screens[0][y * CONSOLEWIDTH + xx] = tinttab50[consoledividercolor + screens[0][y * CONSOLEWIDTH + xx]];
 
-                if (++y >= CONSOLETOP)
-                    for (int xx = CONSOLETEXTX; xx < CONSOLETEXTX + CONSOLETEXTPIXELWIDTH + 2; xx++)
-                        screens[0][y * CONSOLEWIDTH + xx] = tinttab50[consoledividercolor + screens[0][y * CONSOLEWIDTH + xx]];
-            }
-            else if (stringtype == headerstring)
-            {
-                const headertype_t  headertype = console[i].headertype;
-                const int           consoleedgecolor = nearestcolors[con_edgecolor] << 8;
-
-                y += 4 - (CONSOLEHEIGHT - consoleheight);
-
-                if (headertype == bindlistheader)
-                    V_DrawConsolePatch(CONSOLETEXTX, y, bindlist, consoleedgecolor);
-                else if (headertype == cmdlistheader)
-                    V_DrawConsolePatch(CONSOLETEXTX, y, cmdlist, consoleedgecolor);
-                else if (headertype == cvarlistheader)
-                    V_DrawConsolePatch(CONSOLETEXTX, y, cvarlist, consoleedgecolor);
-                else if (headertype == maplistheader)
-                    V_DrawConsolePatch(CONSOLETEXTX, y, maplist, consoleedgecolor);
-                else if (headertype == mapstatsheader)
-                    V_DrawConsolePatch(CONSOLETEXTX, y, mapstats, consoleedgecolor);
-                else if (headertype == playerstatsheader)
-                    V_DrawConsolePatch(CONSOLETEXTX, y, playerstats, consoleedgecolor);
-                else if (headertype == thinglistheader)
-                    V_DrawConsolePatch(CONSOLETEXTX, y, thinglist, consoleedgecolor);
-            }
-            else if (stringtype == warningstring)
-                C_DrawConsoleText(CONSOLETEXTX, y, console[i].string, consolecolors[stringtype], NOBACKGROUNDCOLOR,
-                    consolewarningboldcolor, tinttab66, notabs, true, true, i);
-            else
-                C_DrawConsoleText(CONSOLETEXTX, y, console[i].string, consolecolors[stringtype], NOBACKGROUNDCOLOR,
-                    consoleboldcolor, tinttab66, notabs, true, true, i);
+            if ((y -= CONSOLELINEHEIGHT) < -CONSOLELINEHEIGHT)
+                break;
         }
 
         if (quitcmd)
@@ -1487,10 +1411,10 @@ void C_Drawer(void)
                 {
                     for (i = 1; i < CONSOLELINEHEIGHT - 1; i++)
                     {
-                        int y = CONSOLEHEIGHT - 17 + i - (CONSOLEHEIGHT - consoleheight);
+                        int yy = CONSOLEHEIGHT - 17 + i - (CONSOLEHEIGHT - consoleheight);
 
-                        if (y >= CONSOLETOP)
-                            screens[0][y * CONSOLEWIDTH + x - 1] = consoleselectedinputbackgroundcolor;
+                        if (yy >= CONSOLETOP)
+                            screens[0][yy * SCREENWIDTH + x - 1] = consoleselectedinputbackgroundcolor;
                     }
 
                     consoletextfunc = &V_DrawConsoleInputTextPatch;
@@ -1499,10 +1423,10 @@ void C_Drawer(void)
 
                     for (i = 1; i < CONSOLELINEHEIGHT - 1; i++)
                     {
-                        int y = CONSOLEHEIGHT - 17 + i - (CONSOLEHEIGHT - consoleheight);
+                        int yy = CONSOLEHEIGHT - 17 + i - (CONSOLEHEIGHT - consoleheight);
 
-                        if (y >= CONSOLETOP)
-                            screens[0][y * CONSOLEWIDTH + x] = consoleselectedinputbackgroundcolor;
+                        if (yy >= CONSOLETOP)
+                            screens[0][yy * SCREENWIDTH + x] = consoleselectedinputbackgroundcolor;
                     }
                 }
             }
@@ -1519,12 +1443,12 @@ void C_Drawer(void)
 
             if (showcaret)
             {
-                byte    *dest = &screens[0][(consoleheight - 17) * CONSOLEWIDTH + x];
+                byte    *dest = &screens[0][(consoleheight - 17) * SCREENWIDTH + x];
 
-                for (int y = 0; y < 14 * CONSOLEWIDTH; y += CONSOLEWIDTH)
+                for (int yy = 0; yy < 14 * SCREENWIDTH; yy += SCREENWIDTH)
                 {
-                    *(dest + y) = consolecaretcolor;
-                    *(dest + y + 1) = consolecaretcolor;
+                    *(dest + yy) = consolecaretcolor;
+                    *(dest + yy + 1) = consolecaretcolor;
                 }
             }
         }
@@ -1548,22 +1472,22 @@ void C_Drawer(void)
             {
                 for (i = 1; i < CONSOLELINEHEIGHT - 1; i++)
                 {
-                    int y = CONSOLEHEIGHT - 17 + i - (CONSOLEHEIGHT - consoleheight);
+                    int yy = CONSOLEHEIGHT - 17 + i - (CONSOLEHEIGHT - consoleheight);
 
-                    if (y >= CONSOLETOP)
-                        screens[0][y * CONSOLEWIDTH + x - 1] = consoleselectedinputbackgroundcolor;
+                    if (yy >= CONSOLETOP)
+                        screens[0][yy * SCREENWIDTH + x - 1] = consoleselectedinputbackgroundcolor;
                 }
 
                 consoletextfunc = &V_DrawConsoleInputTextPatch;
                 x += C_DrawConsoleText(x, CONSOLEHEIGHT - 17, partialinput, consoleselectedinputcolor,
-                    consoleselectedinputbackgroundcolor, NOBOLDCOLOR, NULL, notabs, false, true, i);
+                    consoleselectedinputbackgroundcolor, NOBOLDCOLOR, NULL, notabs, false, true, 0);
 
                 for (i = 1; i < CONSOLELINEHEIGHT - 1; i++)
                 {
-                    int y = CONSOLEHEIGHT - 17 + i - (CONSOLEHEIGHT - consoleheight);
+                    int yy = CONSOLEHEIGHT - 17 + i - (CONSOLEHEIGHT - consoleheight);
 
-                    if (y >= CONSOLETOP)
-                        screens[0][y * CONSOLEWIDTH + x] = consoleselectedinputbackgroundcolor;
+                    if (yy >= CONSOLETOP)
+                        screens[0][yy * SCREENWIDTH + x] = consoleselectedinputbackgroundcolor;
                 }
             }
         }
@@ -1582,7 +1506,7 @@ void C_Drawer(void)
             {
                 consoletextfunc = &V_DrawConsoleOutputTextPatch;
                 C_DrawConsoleText(x, CONSOLEHEIGHT - 17, partialinput, consoleinputcolor,
-                    NOBACKGROUNDCOLOR, NOBOLDCOLOR, NULL, notabs, false, true, i);
+                    NOBACKGROUNDCOLOR, NOBOLDCOLOR, NULL, notabs, false, true, 0);
             }
         }
 
@@ -1612,7 +1536,7 @@ dboolean C_ExecuteInputString(const char *input)
     return true;
 }
 
-dboolean C_ValidateInput(const char *input)
+dboolean C_ValidateInput(char *input)
 {
     const int   length = (int)strlen(input);
 
@@ -1685,7 +1609,7 @@ dboolean C_ValidateInput(const char *input)
         for (int i = 0; *actions[i].action; i++)
             if (M_StringCompare(input, actions[i].action))
             {
-                C_Input(input);
+                C_Input("%s", input);
 
                 if (actions[i].func)
                 {
@@ -1704,7 +1628,6 @@ dboolean C_ValidateInput(const char *input)
 dboolean C_Responder(event_t *ev)
 {
     static int  autocomplete = -1;
-    static int  inputhistory = -1;
     static int  scrollspeed = TICRATE;
     int         i;
     int         len;
@@ -1975,7 +1898,8 @@ dboolean C_Responder(event_t *ev)
                     spaces1 = numspaces(input);
                     endspace1 = (input[strlen(input) - 1] == ' ');
 
-                    while ((direction == -1 && autocomplete > 0) || (direction == 1 && autocomplete <= numautocomplete))
+                    while ((direction == -1 && autocomplete > 0)
+                        || (direction == 1 && (autocomplete == -1 || autocompletelist[autocomplete].game)))
                     {
                         static char output[255];
                         int         spaces2;
@@ -2296,25 +2220,30 @@ dboolean C_Responder(event_t *ev)
                 outputhistory = -1;
         }
     }
+    else if (ev->type == ev_gamepad && (gamepadbuttons && gamepadconsole) && gamepadwait < I_GetTime())
+    {
+        gamepadwait = I_GetTime() + 8;
+        C_HideConsole();
+    }
 
     return true;
 }
 
-static const char *dayofweek(int d, int m, int y)
+static const char *dayofweek(int day, int month, int year)
 {
-    const int   adjustment = (14 - m) / 12;
+    const int   adjustment = (14 - month) / 12;
     const char  *days[] = { "Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday" };
 
-    m += 12 * adjustment - 2;
-    y -= adjustment;
+    month += 12 * adjustment - 2;
+    year -= adjustment;
 
-    return days[(d + (13 * m - 1) / 5 + y + y / 4 - y / 100 + y / 400) % 7];
+    return days[(day + (13 * month - 1) / 5 + year + year / 4 - year / 100 + year / 400) % 7];
 }
 
 void C_PrintCompileDate(void)
 {
     char    mth[4] = "";
-    int     day, year, hour, minute;
+    int     minute, hour, day, year;
 
     if (sscanf(__DATE__, "%3s %2d %4d", mth, &day, &year) == 3 && sscanf(__TIME__, "%2d:%2d:%*d", &hour, &minute) == 2)
     {
@@ -2327,17 +2256,18 @@ void C_PrintCompileDate(void)
             "July", "August", "September", "October", "November", "December"
         };
 
-        C_Output("This %i-bit <i><b>%s</b></i> %s of <i><b>%s</b></i> was built at %i:%02i%s on %s, %s %i, %i.",
-            (int)sizeof(intptr_t) * 8, WINDOWS, EXECUTABLE, PACKAGE_NAMEANDVERSIONSTRING, hour - 12 * (hour > 12), minute,
-            (hour < 12 ? "am" : "pm"), dayofweek(day, month + 1, year), months[month], day, year);
+        C_Output("Your %i-bit <i>%s</i> app of <i>%s</i> was built with love by %s at %i:%02i%s on %s, %s %i, %i.",
+            (int)sizeof(intptr_t) * 8, OPERATINGSYSTEM, PACKAGE_NAMEANDVERSIONSTRING, PACKAGE_AUTHOR,
+            (hour ? hour - 12 * (hour > 12) : 12), minute, (hour < 12 ? "am" : "pm"),
+            dayofweek(day, month + 1, year), months[month], day, year);
     }
 
 #if defined(_MSC_FULL_VER)
     if (_MSC_BUILD)
-        C_Output("It was compiled using v%i.%02i.%i.%i of the <i><b>Microsoft C/C++ Optimizing Compiler.</b></i>",
+        C_Output("It was compiled using v%i.%02i.%i.%i of the <i>Microsoft C/C++ Optimizing Compiler.</i>",
             _MSC_FULL_VER / 10000000, (_MSC_FULL_VER % 10000000) / 100000, _MSC_FULL_VER % 100000, _MSC_BUILD);
     else
-        C_Output("It was compiled using v%i.%02i.%i of the <i><b>Microsoft C/C++ Optimizing Compiler.</b></i>",
+        C_Output("It was compiled using v%i.%02i.%i of the <i>Microsoft C/C++ Optimizing Compiler.</i>",
             _MSC_FULL_VER / 10000000, (_MSC_FULL_VER % 10000000) / 100000, _MSC_FULL_VER % 100000);
 #endif
 }
@@ -2350,15 +2280,15 @@ void C_PrintSDLVersions(void)
     {
         char    *temp = commify(revision);
 
-        C_Output("Using v%i.%i.%i (revision %s) of the <i><b>SDL (Simple DirectMedia Layer)</b></i> library.",
+        C_Output("Using v%i.%i.%i (revision %s) of the <i>SDL (Simple DirectMedia Layer)</i> library.",
             SDL_MAJOR_VERSION, SDL_MINOR_VERSION, SDL_PATCHLEVEL, temp);
         free(temp);
     }
     else
-        C_Output("Using v%i.%i.%i of the <i><b>SDL (Simple DirectMedia Layer)</b></i> library.",
+        C_Output("Using v%i.%i.%i of the <i>SDL (Simple DirectMedia Layer)</i> library.",
             SDL_MAJOR_VERSION, SDL_MINOR_VERSION, SDL_PATCHLEVEL);
 
-    C_Output("Using v%i.%i.%i of the <i><b>SDL_mixer</b></i> library and v%i.%i.%i of the <i><b>SDL_image</b></i> library.",
+    C_Output("Using v%i.%i.%i of the <i>SDL_mixer</i> library and v%i.%i.%i of the <i>SDL_image</i> library.",
         SDL_MIXER_MAJOR_VERSION, SDL_MIXER_MINOR_VERSION, SDL_MIXER_PATCHLEVEL,
         SDL_IMAGE_MAJOR_VERSION, SDL_IMAGE_MINOR_VERSION, SDL_IMAGE_PATCHLEVEL);
 }

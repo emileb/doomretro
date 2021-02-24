@@ -7,7 +7,7 @@
 ========================================================================
 
   Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2020 by Brad Harding.
+  Copyright © 2013-2021 by Brad Harding.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
@@ -38,17 +38,141 @@
 
 #include <stdlib.h>
 #include <windows.h>
+#include <Psapi.h>
+
+#include <atomic>
+#include <thread>
+#include <vector>
 
 #include "SDL.h"
 #include "SDL_mixer.h"
 
 #include "midiproc.h"
+#include "..\src\version.h"
+
+#pragma comment(lib, "psapi.lib")
 
 // Currently playing music track
-static Mix_Music    *music;
-static SDL_RWops    *rw;
+static Mix_Music        *music;
+static SDL_RWops        *rw;
+
+static std::atomic_bool quitting = false;
+static std::atomic_bool sentinel_running = false;
 
 static void UnregisterSong(void);
+
+//
+// Sentinel that checks doomretro.exe is actually running
+//
+class AutoHandle
+{
+public:
+    HANDLE  handle;
+
+    AutoHandle(HANDLE h) : handle(h) {}
+
+    ~AutoHandle()
+    {
+        if (handle != nullptr)
+            CloseHandle(handle);
+    }
+};
+
+static boolean Sentinel_EnumerateProcesses(std::vector<DWORD> &ndwPIDs, size_t &numValidPIDs)
+{
+    while (1)
+    {
+        DWORD   cb = static_cast<DWORD>(ndwPIDs.size() * sizeof(DWORD));
+        DWORD   cbNeeded = 0;
+
+        if (!EnumProcesses(&ndwPIDs[0], cb, &cbNeeded))
+            return false;
+        if (cb == cbNeeded)
+            // try again with a larger array
+            ndwPIDs.resize(ndwPIDs.size() * 2);
+        else
+        {
+            // successful
+            numValidPIDs = cbNeeded / sizeof(DWORD);
+            return true;
+        }
+    }
+}
+
+static boolean Sentinel_FindPID(const std::vector<DWORD> &ndwPIDs, HANDLE &pHandle, size_t numValidPIDs)
+{
+    for (size_t i = 0; i < numValidPIDs; i++)
+    {
+        AutoHandle  chProcess(OpenProcess((PROCESS_QUERY_INFORMATION | PROCESS_VM_READ), FALSE, ndwPIDs[i]));
+
+        if (chProcess.handle != nullptr)
+        {
+            char    szProcessImage[MAX_PATH];
+
+            ZeroMemory(szProcessImage, sizeof(szProcessImage));
+
+            if (GetProcessImageFileNameA(chProcess.handle, szProcessImage, sizeof(szProcessImage)))
+            {
+                const size_t    imageLength = strlen(szProcessImage);
+                const size_t    filenameLength = strlen(PACKAGE_FILENAME);
+
+                if (imageLength < filenameLength)
+                    continue;
+
+                // Lop off the start of szProcessImage
+                if (!_strnicmp(szProcessImage + imageLength - filenameLength, PACKAGE_FILENAME, filenameLength))
+                {
+                    pHandle = chProcess.handle;
+                    chProcess.handle = nullptr;     // Abuse AutoHandle's destructor behavior
+                    return true;
+                }
+            }
+        }
+    }
+
+    return false;
+}
+
+void Sentinel_Main()
+{
+    std::vector<DWORD>  ndwPIDs(1024, 0);
+    HANDLE              pHandle;
+    size_t              numValidPIDs;
+    DWORD               dwExitCode;
+
+    sentinel_running = true;
+
+    if (!Sentinel_EnumerateProcesses(ndwPIDs, numValidPIDs))
+    {
+        sentinel_running = false;
+        exit(-1);
+    }
+
+    if (!Sentinel_FindPID(ndwPIDs, pHandle, numValidPIDs))
+    {
+        MessageBox(NULL, TEXT(PACKAGE_FILENAME " is not running."), TEXT("midiproc.exe"), MB_ICONERROR);
+        sentinel_running = false;
+        exit(-1);
+    }
+
+    do
+    {
+        if (quitting)
+        {
+            sentinel_running = false;
+            return;
+        }
+        else if (GetExitCodeProcess(pHandle, &dwExitCode) == 0)
+        {
+            sentinel_running = false;
+            exit(-1);
+        }
+
+        Sleep(100);
+    } while (dwExitCode == STILL_ACTIVE);
+
+    exit(-1);
+}
 
 //
 // RPC Memory Management
@@ -69,7 +193,6 @@ void __RPC_USER midl_user_free(void __RPC_FAR *p)
 
 //
 // InitSDL
-//
 // Start up SDL and SDL_mixer.
 //
 static boolean InitSDL(void)
@@ -77,7 +200,7 @@ static boolean InitSDL(void)
     if (SDL_Init(SDL_INIT_AUDIO) == -1)
         return false;
 
-    if (Mix_OpenAudio(44100, MIX_DEFAULT_FORMAT, 2, 1024) < 0)
+    if (Mix_OpenAudioDevice(44100, MIX_DEFAULT_FORMAT, 2, 1024, NULL, SDL_AUDIO_ALLOW_FREQUENCY_CHANGE) < 0)
         return false;
 
     return true;
@@ -184,11 +307,11 @@ typedef unsigned char   midibyte;
 class SongBuffer
 {
 protected:
-    midibyte            *buffer;                        // accumulated input
-    size_t              size;                           // size of input
-    size_t              allocated;                      // amount of memory allocated (>= size)
+    midibyte            *buffer;                    // accumulated input
+    size_t              size;                       // size of input
+    size_t              allocated;                  // amount of memory allocated (>= size)
 
-    static const int    defaultSize = 128 * 1024;       // 128 KB
+    static const int    defaultSize = 128 * 1024;   // 128 KB
 
 public:
     // Constructor
@@ -232,7 +355,7 @@ public:
 
     // Accessors
     midibyte *getBuffer() const { return buffer; }
-    size_t    getSize()   const { return size; }
+    size_t    getSize()   const { return size;   }
 };
 
 static SongBuffer   *song;
@@ -376,9 +499,14 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
     if (!InitSDL())
         return -1;
 
+    std::thread watcher(Sentinel_Main);
+
     // Initialize RPC Server
     if (!MidiRPC_InitServer())
         return -1;
+
+    while (sentinel_running)
+        Sleep(1);
 
     return 0;
 }

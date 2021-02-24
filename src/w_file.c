@@ -7,7 +7,7 @@
 ========================================================================
 
   Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2020 by Brad Harding.
+  Copyright © 2013-2021 by Brad Harding.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
@@ -48,7 +48,7 @@ wadfile_t *W_OpenFile(char *path)
     if (!fstream)
         return NULL;
 
-    // Create a new wad_file_t to hold the file handle.
+    // Create a new wadfile_t to hold the file handle.
     result = Z_Malloc(sizeof(wadfile_t), PU_STATIC, NULL);
     result->fstream = fstream;
 

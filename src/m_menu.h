@@ -7,7 +7,7 @@
 ========================================================================
 
   Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2020 by Brad Harding.
+  Copyright © 2013-2021 by Brad Harding.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
@@ -88,7 +88,6 @@ void M_Init(void);
 void M_StartControlPanel(void);
 void M_ClearMenus(void);
 void M_EndingGame(void);
-void M_ChangeGamma(dboolean shift);
 
 void M_DarkBackground(void);
 void M_DrawCenteredString(int y, char *string);
@@ -101,7 +100,6 @@ int M_CountSaveGames(void);
 
 void M_StartMessage(char *string, void *routine, dboolean input);
 
-void M_ShowHelp(int choice);
 void M_QuitDOOM(int choice);
 
 void M_AddEpisode(int map, int ep, const char *lumpname, const char *string);
@@ -115,6 +113,7 @@ extern dboolean firstevent;
 extern dboolean savegames;
 extern dboolean inhelpscreens;
 extern int      spindirection;
+extern int      spinspeed;
 extern char     savegamestrings[6][SAVESTRINGSIZE];
 extern menu_t   EpiDef;
 extern menu_t   ExpDef;
@@ -122,5 +121,7 @@ extern menu_t   LoadDef;
 extern menu_t   MainDef;
 extern menu_t   NewDef;
 extern menu_t   SaveDef;
+extern dboolean EpiCustom;
+extern int      gamepadwait;
 
 #endif

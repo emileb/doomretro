@@ -7,7 +7,7 @@
 ========================================================================
 
   Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2020 by Brad Harding.
+  Copyright © 2013-2021 by Brad Harding.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
@@ -59,7 +59,7 @@ dboolean        felldown;
 
 fixed_t         tmbbox[4];
 fixed_t         tmfloorz;
-fixed_t         tmceilingz;
+static fixed_t  tmceilingz;
 static fixed_t  tmdropoffz;
 
 // keep track of the line that lowers the ceiling,
@@ -122,7 +122,7 @@ static dboolean PIT_StompThing(mobj_t *thing)
     if (!telefrag)          // killough 08/09/98: make consistent across all levels
         return false;
 
-    if ((thing->flags2 & MF2_PASSMOBJ) && !infiniteheight)
+    if (((tmthing->flags2 & MF2_PASSMOBJ) || (thing->flags2 & MF2_PASSMOBJ)) && !infiniteheight)
     {
         if (tmz > thing->z + thing->height)
             return true;    // overhead
@@ -502,7 +502,7 @@ static dboolean PIT_CheckThing(mobj_t *thing)
     }
 
     // check if a mobj passed over/under another object
-    if ((tmthing->flags2 & MF2_PASSMOBJ) && !infiniteheight && !(flags & MF_SPECIAL))
+    if (((tmthing->flags2 & MF2_PASSMOBJ) || (thing->flags2 & MF2_PASSMOBJ)) && !infiniteheight && !(flags & MF_SPECIAL))
     {
         if (tmthing->z >= thing->z + thing->height)
             return true;                // over thing
@@ -941,12 +941,20 @@ mobj_t *P_CheckOnMobj(mobj_t *thing)
 
 dboolean P_IsInLiquid(mobj_t *thing)
 {
+    fixed_t floorz;
+
     if (thing->flags & MF_NOGRAVITY)
         return false;
 
+    floorz = thing->floorz;
+
     for (const struct msecnode_s *seclist = thing->touching_sectorlist; seclist; seclist = seclist->m_tnext)
-        if (seclist->m_sector->terraintype == SOLID)
+    {
+        sector_t    *sector = seclist->m_sector;
+
+        if (sector->terraintype == SOLID && sector->floorheight >= floorz)
             return false;
+    }
 
     return true;
 }
@@ -986,7 +994,7 @@ dboolean P_TryMove(mobj_t *thing, fixed_t x, fixed_t y, int dropoff)
                 // large jump down (e.g. dogs)
                 || (dropoff == 2 && (tmfloorz - tmdropoffz > 128 * FRACUNIT || !thing->target || thing->target->z > tmdropoffz)))
             {
-                if (thing->floorz - tmfloorz > 24 * FRACUNIT || thing->dropoffz - tmdropoffz > 24 * FRACUNIT)
+                if (tmfloorz - tmdropoffz > 24 * FRACUNIT)
                     return false;
             }
             else
@@ -1232,8 +1240,7 @@ static fixed_t  tmymove;
 
 //
 // P_HitSlideLine
-// Adjusts the xmove/ymove
-// so that the next move will slide along the wall.
+// Adjusts the xmove/ymove so that the next move will slide along the wall.
 //
 static void P_HitSlideLine(line_t *ld)
 {
@@ -1248,7 +1255,7 @@ static void P_HitSlideLine(line_t *ld)
     // your momentum. If less than 45 degrees, you'll slide along
     // the wall. 45 is arbitrary and is believable.
     //
-    // Check for the special cases of horz or vert walls.
+    // Check for the special cases of horizontal or vertical walls.
 
     // killough 10/98: only bounce if hit hard (prevents wobbling)
     dboolean    icyfloor = (P_ApproxDistance(tmxmove, tmymove) > 4 * FRACUNIT
@@ -1351,8 +1358,7 @@ static dboolean PTR_SlideTraverse(intercept_t *in)
     // this line doesn't block movement
     return true;
 
-    // the line does block movement,
-    // see if it is closer than best so far
+    // the line does block movement, see if it is closer than best so far
 isblocking:
     if (in->frac < bestslidefrac)
     {
@@ -1365,12 +1371,8 @@ isblocking:
 
 //
 // P_SlideMove
-// The momx/momy move is bad, so try to slide
-// along a wall.
-// Find the first line hit, move flush to it,
-// and slide along it
-//
-// This is a kludgey mess.
+// The momx/momy move is bad, so try to slide along a wall.
+// Find the first line hit, move flush to it, and slide along it.
 //
 // killough 11/98: reformatted
 void P_SlideMove(mobj_t *mo)
@@ -1512,8 +1514,7 @@ static dboolean PTR_AimTraverse(intercept_t *in)
             return false;               // stop
 
         // Crosses a two sided line.
-        // A two sided line will restrict
-        // the possible target ranges.
+        // A two sided line will restrict the possible target ranges.
         P_LineOpening(li);
 
         if (openbottom >= opentop)
@@ -1626,7 +1627,7 @@ static dboolean PTR_ShootTraverse(intercept_t *in)
         }
 
         // position a bit closer
-        frac = in->frac - 128/*FixedDiv(4 * FRACUNIT, attackrange)*/;
+        frac = in->frac - 128;
         distz = FixedMul(aimslope, FixedMul(attackrange, frac));
         z = shootz + distz;
 
@@ -1699,7 +1700,7 @@ static dboolean PTR_ShootTraverse(intercept_t *in)
 
     // hit thing
     // position a bit closer
-    frac = in->frac - (attackrange == MISSILERANGE ? 320 : 10240)/*FixedDiv(10 * FRACUNIT, attackrange)*/;
+    frac = in->frac - (attackrange == MISSILERANGE ? 320 : 10240);
 
     x = dltrace.x + FixedMul(dltrace.dx, frac);
     y = dltrace.y + FixedMul(dltrace.dy, frac);
@@ -1722,7 +1723,7 @@ static dboolean PTR_ShootTraverse(intercept_t *in)
             if (type != MT_PLAYER)
                 P_SpawnBlood(x, y, z, shootangle, la_damage, th);
             else if (!viewplayer->powers[pw_invulnerability] && !(viewplayer->cheats & CF_GODMODE))
-                P_SpawnBlood(x, y, z + M_RandomInt(4, 16) * FRACUNIT, shootangle, la_damage, th);
+                P_SpawnBlood(x, y, z + M_RandomInt(4, 16) * FRACUNIT, shootangle, la_damage * 2, th);
         }
     }
 

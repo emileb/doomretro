@@ -7,7 +7,7 @@
 ========================================================================
 
   Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2020 by Brad Harding.
+  Copyright © 2013-2021 by Brad Harding.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
@@ -51,6 +51,8 @@
 #define AUTOTILTMAX     300
 #define MINSTEPSIZE     (8 * FRACUNIT)
 #define MAXSTEPSIZE     (24 * FRACUNIT)
+#define STEP1DISTANCE   24
+#define STEP2DISTANCE   32
 
 dboolean        autotilt = autotilt_default;
 dboolean        autouse = autouse_default;
@@ -61,7 +63,7 @@ int             r_shake_damage = r_shake_damage_default;
 int             stillbob = stillbob_default;
 
 dboolean        autousing = false;
-int             deathcount = 0;
+static int      deathcount = 0;
 int             deadlookdir = -1;
 
 //
@@ -184,19 +186,17 @@ static dboolean P_CheckForSteps(fixed_t width)
 
     if (sector1->terraintype == sector2->terraintype)
     {
-        fixed_t step1 = sector1->floorheight;
-        fixed_t step2 = sector2->floorheight;
-        int     delta1 = step1 - viewplayer->mo->subsector->sector->floorheight;
-        int     delta2 = step2 - step1;
+        fixed_t step = sector1->floorheight;
+        int     delta = step - viewplayer->mo->floorz;
 
-        if (delta1 == delta2)
+        if (delta == sector2->floorheight - step)
         {
-            if (delta1 >= MINSTEPSIZE && delta1 <= MAXSTEPSIZE)
+            if (delta >= MINSTEPSIZE && delta <= MAXSTEPSIZE)
             {
                 viewplayer->lookdir = MIN(viewplayer->lookdir + AUTOTILTUNIT, AUTOTILTMAX);
                 return true;
             }
-            else if (delta1 >= -MAXSTEPSIZE && delta1 <= -MINSTEPSIZE)
+            else if (delta >= -MAXSTEPSIZE && delta <= -MINSTEPSIZE)
             {
                 viewplayer->lookdir = MAX(-AUTOTILTMAX, viewplayer->lookdir - AUTOTILTUNIT);
                 return true;
@@ -251,7 +251,7 @@ void P_MovePlayer(void)
 
     if (autotilt && !(mouselook || freeze || (viewplayer->cheats & MF_NOCLIP)))
     {
-        if (!P_CheckForSteps(32) && !P_CheckForSteps(24))
+        if (!P_CheckForSteps(STEP1DISTANCE) && !P_CheckForSteps(STEP2DISTANCE))
         {
             if (viewplayer->lookdir > 0)
             {
@@ -319,7 +319,7 @@ static void P_DeathThink(void)
 
             if (deadlookdir == -1)
             {
-                float   viewheightrange = (float)(viewplayer->viewheight - DEADVIEWHEIGHT) / FRACUNIT;
+                double  viewheightrange = (double)(viewplayer->viewheight - DEADVIEWHEIGHT) / FRACUNIT;
 
                 inc = MAX(1, ABS(DEADLOOKDIR - viewplayer->lookdir));
 
@@ -436,11 +436,11 @@ void P_ResurrectPlayer(int health)
 
 void P_ChangeWeapon(weapontype_t newweapon)
 {
-    ammotype_t  ammotype = weaponinfo[newweapon].ammotype;
+    weapontype_t    readyweapon = viewplayer->readyweapon;
 
     if (newweapon == wp_fist)
     {
-        if (viewplayer->readyweapon == wp_fist)
+        if (readyweapon == wp_fist)
         {
             if (viewplayer->weaponowned[wp_chainsaw])
             {
@@ -450,7 +450,7 @@ void P_ChangeWeapon(weapontype_t newweapon)
             else
                 newweapon = wp_nochange;
         }
-        else if (viewplayer->readyweapon == wp_chainsaw)
+        else if (readyweapon == wp_chainsaw)
         {
             if (viewplayer->powers[pw_strength])
                 viewplayer->fistorchainsaw = wp_fist;
@@ -460,25 +460,29 @@ void P_ChangeWeapon(weapontype_t newweapon)
         else
             newweapon = viewplayer->fistorchainsaw;
     }
-
-    // Don't switch to a weapon without any or enough ammo.
-    else if (ammotype != am_noammo && viewplayer->ammo[ammotype] < weaponinfo[newweapon].minammo)
-        newweapon = wp_nochange;
-
-    // Select the preferred shotgun.
-    else if (newweapon == wp_shotgun)
+    else
     {
-        if ((!viewplayer->weaponowned[wp_shotgun]
-            || viewplayer->readyweapon == wp_shotgun
-            || (viewplayer->preferredshotgun == wp_supershotgun && viewplayer->readyweapon != wp_supershotgun))
-            && viewplayer->weaponowned[wp_supershotgun] && viewplayer->ammo[am_shell] >= 2)
-            newweapon = viewplayer->preferredshotgun = wp_supershotgun;
-        else if (viewplayer->readyweapon == wp_supershotgun
-            || (viewplayer->preferredshotgun == wp_supershotgun && viewplayer->ammo[am_shell] == 1))
-            viewplayer->preferredshotgun = wp_shotgun;
+        // Don't switch to a weapon without any or enough ammo.
+        ammotype_t  ammotype = weaponinfo[newweapon].ammotype;
+
+        if (ammotype != am_noammo && viewplayer->ammo[ammotype] < weaponinfo[newweapon].minammo)
+            newweapon = wp_nochange;
+
+        // Select the preferred shotgun.
+        else if (newweapon == wp_shotgun)
+        {
+            if ((!viewplayer->weaponowned[wp_shotgun]
+                || readyweapon == wp_shotgun
+                || (viewplayer->preferredshotgun == wp_supershotgun && readyweapon != wp_supershotgun))
+                && viewplayer->weaponowned[wp_supershotgun] && viewplayer->ammo[am_shell] >= 2)
+                newweapon = viewplayer->preferredshotgun = wp_supershotgun;
+            else if (readyweapon == wp_supershotgun
+                || (viewplayer->preferredshotgun == wp_supershotgun && viewplayer->ammo[am_shell] == 1))
+                viewplayer->preferredshotgun = wp_shotgun;
+        }
     }
 
-    if (newweapon != wp_nochange && newweapon != viewplayer->readyweapon && viewplayer->weaponowned[newweapon])
+    if (newweapon != wp_nochange && newweapon != readyweapon && viewplayer->weaponowned[newweapon])
     {
         P_EquipWeapon(newweapon);
 
@@ -502,7 +506,7 @@ void P_PlayerThink(void)
     if (menuactive)
     {
         if (!inhelpscreens && ((messagetoprint && !consoleactive) || !messagetoprint))
-            mo->angle += ANG1 / 32 * spindirection;
+            mo->angle += ANG1 / (spinspeed = MIN(spinspeed + 1, 512)) * 8 * spindirection;
 
         return;
     }
@@ -551,14 +555,8 @@ void P_PlayerThink(void)
         {
             if (viewplayer->damagecount)
                 motionblur = MAX(motionblur, 100);
-            else
-            {
-                if (cmd->angleturn)
-                    motionblur = MIN(ABS(cmd->angleturn) * 100 / 960, 150);
-
-                if (cmd->lookdir)
-                    motionblur = MAX(motionblur, 100);
-            }
+            else if (cmd->angleturn)
+                motionblur = MIN(ABS(cmd->angleturn) * 100 / 960, 150);
         }
 
         I_SetMotionBlur(motionblur * vid_motionblur / 100);

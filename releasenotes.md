@@ -1,10 +1,141 @@
 ![](https://github.com/bradharding/www.doomretro.com/raw/master/releasenotes.png)
 
+#### DOOM Retro v4.0.3
+
+* Optimizations have been made to further improve the overall performance and stability of *DOOM Retro*.
+* *DOOM Retro* will no longer crash on older, non-widescreen displays.
+* A fade transition will now be applied when using the `am_path` CVAR in the console to toggle the player’s path in the automap and the `fade` CVAR is `on`.
+* Gamepads will now briefly vibrate during startup to indicate they are connected and support vibration, if any of the `gp_vibrate_barrels`, `gp_vibrate_damage` or `gp_vibrate_weapons` CVARs are greater than `0`.
+* Player messages and the widescreen HUD are now slightly less translucent when the `r_hud_translucency` CVAR is `on`.
+* Minor changes have been made to some player messages.
+* The following changes have been made to *DOOM II’s* cast sequence:
+  * The player now appears again.
+  * The spectre will now always be positioned correctly while dying.
+  * The double shotgun sound can now be heard again.
+
+![](https://github.com/bradharding/www.doomretro.com/raw/master/wiki/bigdivider.png)
+
+###### Friday, February 12, 2021
+
+#### DOOM Retro v4.0.2
+
+* Optimizations have been made to further improve the overall performance and stability of *DOOM Retro*.
+* The following changes have been made to the external automap:
+  * A bug has been fixed whereby the automap wouldn’t be drawn correctly after changing the `am_external` CVAR in the console.
+  * Map titles are now displayed again in the external automap.
+  * The external automap now displays correctly when the menu is open.
+  * The zoom level is now reset when the external automap is opened.
+  * The <kbd>0</kbd> key can no longer be pressed to toggle maximum zoom if the external automap is open.
+* The automap title and all player messages are now full scale when the `r_screensize` CVAR is `8` and the `r_althud` CVAR is `off`.
+* The automap will now be displayed correctly if it is open while adjusting the screen size in the options menu.
+* Player messages are now slightly more translucent when the `r_hud_translucency` CVAR is `on`.
+* Fade transitions will now be applied in the following instances when the `fade` CVAR is `on`:
+  * When pressing the <kbd>0</kbd> key in the automap to toggle maximum zoom.
+  * When using the `r_textures` CVAR in the console to toggle textures.
+  * When the player picks up an invulnerability power-up.
+  * When the player picks up a computer area map power-up and the automap is open.
+* The `IDDT` cheat can no longer be entered when playing using the *Nightmare!* skill level.
+
+![](https://github.com/bradharding/www.doomretro.com/raw/master/wiki/bigdivider.png)
+
+###### Friday, February 5, 2021
+
+#### DOOM Retro v4.0.1
+
+* A bug has been fixed whereby sprites would be incorrectly drawn in front of masked midtextures in some instances.
+* The external automap now displays correctly when the `am_external` CVAR is `on`.
+* Minor changes have been made to text that is output to the console.
+* Music will now play again when loading a savegame created using *DOOM Retro v3.6* or *v3.6.1*.
+* If the player starts a new game from the menu while playing *E1M4B: Phobos Mission Control* or *E1M8B: Tech Gone Bad*, the correct map will now be loaded.
+
+![](https://github.com/bradharding/www.doomretro.com/raw/master/wiki/bigdivider.png)
+
+###### Sunday, January 31, 2021
+
+#### DOOM Retro v4.0
+
+* *DOOM Retro* now uses [*SDL v2.0.14*](https://www.libsdl.org).
+* *DOOM Retro* now uses the [*Windows Audio Session API (WASAPI)*](https://docs.microsoft.com/en-us/windows/win32/coreaudio/wasapi) rather than the deprecated [*DirectSound* API](https://en.wikipedia.org/wiki/DirectSound). Sound effects are now louder and clearer than before.
+* Minor improvements have been made to *DOOM Retro’s* splash screen.
+* Optimizations have been made to further improve the overall performance and stability of *DOOM Retro*.
+* Non-QWERTY keyboards are now properly supported.
+* *DOOM Retro* now has improved support for wide and ultra-wide displays:
+  * When the `r_screensize` CVAR is `7` and the `vid_widescreen` CVAR is `on`, a new widescreen mode complete with status bar will be displayed that horizontally fills displays of any aspect ratio.
+  * When the `r_screensize` CVAR is changed to it’s new maximum value of `8`, a widescreen mode with an optional HUD instead of a status bar, and a greater vertical field of view, will now be displayed.
+  * You may still press the <kbd>+</kbd> and <kbd>&ndash;</kbd> keys during a game to toggle these new widescreen modes.
+  * The <kbd>+</kbd> and <kbd>&ndash;</kbd> keys may now also be pressed on the title screen to toggle widescreen mode.
+  * Certain [official widescreen assets](https://bethesda.net/en/game/doom-widescreen-mods), such as those for the title screen and status bar, will now be displayed if the `vid_widescreen` CVAR is `on`.
+  * The default of the `vid_windowsize` CVAR has been changed from `768×480` to `854×480`.
+* The following changes have been made to support the IWADs from the latest rereleases of [*The Ultimate DOOM*](https://store.steampowered.com/app/2280/Ultimate_Doom/) and [*DOOM II: Hell On Earth*](https://store.steampowered.com/app/2300/DOOM_II/) on *Steam*:
+  * The WAD launcher will now look for these new IWADs when *DOOM Retro* is run for the first time.
+  * The par times for E1M8, E2M8 and E3M8 have changed.
+* A crash will no longer occur when trying to display a patch with a height greater than 200 pixels. These patches will now be cropped instead.
+* Centered messages are now better centered vertically.
+* The player’s gender identity can now be specified using the new `playergender` CVAR. It can be `male`, `female` or `other`, and is `male` by default. If the `playername` CVAR is changed from its default of `“you”` as well, the pronouns used in several player messages and obituaries will be affected.
+* The following changes have been made to the menu:
+  * A subtle scanline effect is now applied to the menu’s background.
+  * When opening the menu during a game, a brief deceleration effect is now applied to the player’s rotating view in the menu’s background.
+  * A bug has been fixed whereby the sky in the menu’s background wouldn’t be stretched correctly in some instances when the `mouselook` CVAR was `on`.
+  * Navigation of the main menu will now behave correctly when there are no savegames for the currently loaded IWAD or PWAD.
+  * A bug has been fixed whereby using the left mouse button to navigate the menu could cause the player to continuously fire when starting a new game.
+  * The <kbd>F5</kbd> key may now be pressed to toggle the graphic detail while the menu is open.
+  * Screenshots may now be taken while entering a savegame description in the save game menu.
+* If the player has their fists equipped, a berserk power-up, and god mode is enabled, the screen will no longer flash red when they are attacked.
+* Monsters may now walk under other flying monsters when the `infiniteheight` CVAR is `off`.
+* The following changes have been made to the console:
+  * The scrollbar now extends to the top of the screen.
+  * The scrollbar’s grip is now translucent.
+  * A slight shadow is applied to the text along the top of the console.
+  * Minor changes have been made to text that is output to the console.
+  * Long lines of text will now always wrap to the next line rather than be truncated.
+  * Timestamps during the hour after midnight will now be displayed correctly.
+* The following changes have been made to the automap:
+  * A bug has been fixed whereby marks in the automap would reappear in wrong positions when panning far enough to the left or right.
+  * Panning in the automap is now restricted to the dimensions of the current map when the `am_rotate` CVAR is `on`.
+  * The player arrow is now slightly more translucent when the player has a partial invisibility power-up.
+  * Thing triangles will no longer be affected by frame interpolation when the `IDDT` cheat has been entered, the console is open, and the `vid_capfps` CVAR is not `35`.
+  * Fade transitions will now be applied when performing various actions in the automap when the `fade` CVAR is `on`.
+  * A smaller crosshair is now displayed when the `am_followmode` CVAR is `off`.
+  * The player’s path is now thinner when the `am_path` CVAR is `on`.
+* The correct `CREDIT` lump is now displayed when finishing any of the first four episodes of *The Ultimate DOOM*, and *SIGIL* has been automatically loaded.
+* The intermission screens displayed once the player has finished a map will now always transition correctly when the `fade` CVAR is `on`.
+* The `wipe` CVAR has been renamed to `melt`.
+* Fade transitions will now be applied when a melt transition normally would, but the `melt` CVAR is `off` and the `fade` CVAR is `on`.
+* The default of the `s_musicvolume` CVAR has been increased from `67%` to `100%`.
+* Further improvements have been made to the support of both `DEHACKED` and `UMAPINFO` lumps.
+* *DeHackEd* support has been extended further to allow for an additional 200 sound effects (numbered 500 to 699, and named `DSFRE000` to `DSFRE199`).
+* Music that has been changed because of a [`MUSINFO`](https://doomwiki.org/wiki/MUSINFO) lump is now remembered in savegames.
+* The player’s health and ammo will now only flash in the widescreen HUD (or change color in the alternate widescreen HUD) when less than 10.
+* More blood is spawned when the player is injured.
+* Minor improvements have been made to the rendering of blood splats in some instances.
+* The movement of lifts is now smoother in some instances.
+* Improvements have been made in determining if the player or a monster is standing in liquid or not.
+* Monsters will no longer unnecessarily drop from high ledges.
+* The current map’s music will no longer restart when loading a savegame for the same map.
+* Music will no longer continue to play if *DOOM Retro* crashes.
+* Player messages are now slightly translucent again when the `r_hud_translucency` CVAR is `on` and the `vid_widescreen` CVAR is `off`, but not while vanilla mode is enabled.
+* SSAA (supersampling anti-aliasing) is now applied to the help screen’s background when the <kbd>F1</kbd> key is pressed.
+* Minor improvements have been made to the status bar when the `r_detail` CVAR is `high`.
+* The bezel around the player’s view when the `r_screensize` CVAR is less than `7` is now only displayed if either all or none of the relevant graphics have been replaced in a PWAD.
+* The number of times the player uses their fists and chainsaw are now displayed by the `playerstats` CCMD. The player’s fists and chainsaw may now also then be displayed as their `Favorite weapon`.
+* More fixes have been applied to certain maps when the `r_fixmaperrors` CVAR is `on`.
+* The crosshair will now be larger when the `crosshair` CVAR is `cross` or `dot`, and the `r_detail` CVAR is `low`.
+* Improvements have been made to the fuzz effect of the player’s weapon when they have a partial invisibility power-up.
+* A spectre now appears again in *DOOM II’s* cast sequence.
+* A bug has been fixed whereby the player would move slightly slower when using a gamepad rather than the keyboard.
+* The `+console` action may now be bound to a control on a gamepad.
+* Improvements have been made when the player uses the `kill` CCMD to commit suicide.
+* The blood of barons of hell and hellknights is slightly lighter.
+
+![](https://github.com/bradharding/www.doomretro.com/raw/master/wiki/bigdivider.png)
+
+###### Sunday, August 16, 2020
+
 #### DOOM Retro v3.6.1
 
 * Optimizations have been made to further improve the overall performance and stability of *DOOM Retro*.
 * The following changes have been made to the automap:
-  * A bug has been fixed whereby the <kbd>+</kbd> and <kbd>&ndash;</kbd> keys wouldn’t zoom in and out.
+  * A bug has been fixed whereby the <kbd>+</kbd> and <kbd>&ndash;</kbd> keys wouldn’t zoom the automap in and out.
   * The background menu effect will no longer be applied to the external automap when not in a game.
 * Minor changes have been made to text that is output to the console.
 * Navigating the options menu has now been fixed.
@@ -56,7 +187,7 @@
   * There is a new `Favorite weapon` stat.
 * The precision of the angle the player is facing when using the `IDMYPOS` cheat has been improved.
 * Certain cheats are now still active when the player respawns after death.
-* The effect applied when the player is attacked and the `r_shake_damage` CVAR is `on` is now still applied when god mode is enabled.
+* The effect applied when the player is attacked and the `r_shake_damage` CVAR is greater than `0%` is now still applied when god mode is enabled.
 * Fixes to maps that involve changing a sector’s tag will now work as intended when the `r_fixmaperrors` CVAR is `on`.
 * A bug has been fixed whereby certain translucent things wouldn’t be translucent while the player had an invulnerability power-up.
 * The music will no longer be reset when using the `map` CCMD to restart the current map.
@@ -75,7 +206,7 @@
 * The colors of blood splats now vary slightly.
 * More blood splats are now spawned under corpses.
 * To avoid accidentally firing them, the player will no longer automatically switch to the rocket launcher or BFG-9000 if they run out of all other ammo.
-* The player’s face will now appear correctly in both the status bar and widescreen HUD when god mode is enabled and the `STFGOD0` lump has been replaced by a PWAD.
+* The player’s face will now appear correctly in both the status bar and widescreen HUD when god mode is enabled and the `STFGOD0` lump has been replaced in a PWAD.
 * If any weapon pickup sprites have been changed in a PWAD, their silhouettes will no longer appear in the alternate widescreen HUD.
 * The minimum value of the `vid_capfps` CVAR has been changed from `1` to `10`.
 * A bug has been fixed whereby the music volume wouldn’t be restored when closing the console in some instances.

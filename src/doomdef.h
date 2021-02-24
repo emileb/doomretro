@@ -7,7 +7,7 @@
 ========================================================================
 
   Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2020 by Brad Harding.
+  Copyright © 2013-2021 by Brad Harding.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
@@ -41,6 +41,7 @@
 
 #include <stdio.h>
 
+#include "doomtype.h"
 #include "m_controls.h"
 
 #if defined(_WIN32)
@@ -74,9 +75,12 @@
 // Global parameters/defines.
 //
 
-#define DOOM1AND2   0
-#define DOOM1ONLY   1
-#define DOOM2ONLY   2
+enum
+{
+    DOOM1AND2 = 1,
+    DOOM1ONLY = 2,
+    DOOM2ONLY = 3
+};
 
 // Game mode handling - identify IWAD version
 //  to handle IWAD dependent animations etc.
@@ -105,13 +109,34 @@ typedef enum
 #define VANILLAWIDTH        320
 #define VANILLAHEIGHT       200
 
+#define ACTUALHEIGHT        (6 * SCREENHEIGHT / 5)
+
+#define UNITYWIDTH          426
+
 #define VANILLASBARHEIGHT   32
 
 #define SCREENSCALE         2
 
-#define SCREENWIDTH         (VANILLAWIDTH * SCREENSCALE)
-#define SCREENHEIGHT        (VANILLAHEIGHT * SCREENSCALE)
-#define SCREENAREA          (SCREENWIDTH * SCREENHEIGHT)
+#define MAXWIDTH            (VANILLAWIDTH * 4)  // [crispy]
+#define MAXHEIGHT           (VANILLAHEIGHT * 2) // [crispy]
+
+#define NONWIDEWIDTH        (VANILLAWIDTH * SCREENSCALE)
+#define NONWIDEASPECTRATIO  (4.0f / 3.0f)
+
+extern int          SCREENWIDTH;
+extern int          SCREENHEIGHT;
+extern int          SCREENAREA;
+extern int          WIDESCREENDELTA;            // [crispy] horizontal widescreen offset
+extern int          WIDEFOVDELTA;
+
+extern dboolean     nowidescreen;
+
+extern int          MAPWIDTH;
+extern unsigned int MAPHEIGHT;
+extern unsigned int MAPAREA;
+extern unsigned int MAPBOTTOM;
+
+#define MAXSCREENAREA       (MAXWIDTH * MAXHEIGHT)
 
 #define SBARHEIGHT          (VANILLASBARHEIGHT * SCREENSCALE)
 
@@ -126,10 +151,10 @@ typedef enum
 typedef enum
 {
     GS_NONE = -1,
+    GS_TITLESCREEN,
     GS_LEVEL,
     GS_INTERMISSION,
-    GS_FINALE,
-    GS_TITLESCREEN
+    GS_FINALE
 } gamestate_t;
 
 //
@@ -137,19 +162,20 @@ typedef enum
 //
 
 // Skill flags.
-#define MTF_EASY        1
-#define MTF_NORMAL      2
-#define MTF_HARD        4
+enum
+{
+    MTF_EASY =       1,
+    MTF_NORMAL =     2,
+    MTF_HARD =       4,
+    MTF_AMBUSH =     8,
 
-// Deaf monsters/do not react to sound.
-#define MTF_AMBUSH      8
-
-// killough 11/98
-#define MTF_NOTSINGLE   16
-#define MTF_NOTDM       32
-#define MTF_NOTCOOP     64
-#define MTF_FRIEND      128
-#define MTF_RESERVED    256
+    // killough 11/98
+    MTF_NOTSINGLE = 16,
+    MTF_NOTDM =     32,
+    MTF_NOTCOOP =   64,
+    MTF_FRIEND =   128,
+    MTF_RESERVED = 256
+};
 
 typedef enum
 {
@@ -228,10 +254,10 @@ enum
 //
 enum
 {
-    INVULNTICS  =  30 * TICRATE,
-    INVISTICS   =  60 * TICRATE,
-    INFRATICS   = 120 * TICRATE,
-    IRONTICS    =  60 * TICRATE
+    INVULNTICS =  30 * TICRATE,
+    INVISTICS  =  60 * TICRATE,
+    INFRATICS  = 120 * TICRATE,
+    IRONTICS   =  60 * TICRATE
 };
 
 #define STARTFLASHING           127

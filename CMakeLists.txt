@@ -7,7 +7,7 @@
 #========================================================================
 #
 #  Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
-#  Copyright © 2013-2020 by Brad Harding.
+#  Copyright © 2013-2021 by Brad Harding.
 #
 #  DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
 #  <https://github.com/bradharding/doomretro/wiki/CREDITS>.
@@ -45,6 +45,10 @@ PROJECT(doomretro C)
 INCLUDE(GNUInstallDirs)
 
 FILE(GLOB_RECURSE SOURCES ${CMAKE_SOURCE_DIR}/src/*.c)
+
+IF (NOT CMAKE_BUILD_TYPE)
+    SET(CMAKE_BUILD_TYPE "Release" CACHE STRING "Build type" FORCE)
+ENDIF (NOT CMAKE_BUILD_TYPE)
 
 IF (APPLE)
 	ADD_DEFINITIONS(-D__APPLE__=1)

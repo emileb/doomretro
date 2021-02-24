@@ -7,7 +7,7 @@
 ========================================================================
 
   Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2020 by Brad Harding.
+  Copyright © 2013-2021 by Brad Harding.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
@@ -45,6 +45,8 @@
 
 platlist_t  *activeplats;   // killough 02/14/98: made global again
 
+void T_PlatStay(plat_t *plat) {}
+
 //
 // Move a plat up and down
 //
@@ -55,7 +57,7 @@ void T_PlatRaise(plat_t *plat)
     switch (plat->status)
     {
         case up:
-            res = T_MovePlane(plat->sector, plat->speed, plat->high, plat->crush, 0, 1, false);
+            res = T_MovePlane(plat->sector, plat->speed, plat->high, plat->crush, 0, 1);
 
             if ((plat->type == raiseAndChange || plat->type == raiseToNearestAndChange) && !(leveltime & 7))
                 S_StartSectorSound(&plat->sector->soundorg, sfx_stnmov);
@@ -102,7 +104,7 @@ void T_PlatRaise(plat_t *plat)
             break;
 
         case down:
-            res = T_MovePlane(plat->sector, plat->speed, plat->low, false, 0, -1, false);
+            res = T_MovePlane(plat->sector, plat->speed, plat->low, false, 0, -1);
 
             if (res == pastdest)
             {
@@ -326,7 +328,7 @@ dboolean EV_StopPlat(line_t *line)
         {
             plat->oldstatus = plat->status;             // put it in stasis
             plat->status = in_stasis;
-            plat->thinker.function = NULL;
+            plat->thinker.function = &T_PlatStay;
         }
     }
 

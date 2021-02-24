@@ -7,7 +7,7 @@
 ========================================================================
 
   Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2020 by Brad Harding.
+  Copyright © 2013-2021 by Brad Harding.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
@@ -59,12 +59,8 @@
 #include <stdarg.h>
 #include <string.h>
 
-#include "SDL.h"
-
 #include "c_console.h"
-#include "doomdef.h"
 #include "i_system.h"
-#include "m_fixed.h"
 #include "m_misc.h"
 #include "version.h"
 #include "w_file.h"
@@ -76,7 +72,7 @@
 #include <libgen.h>
 #include <mach-o/dyld.h>
 #include <errno.h>
-#elif defined(__OpenBSD__) || defined(__FreeBSD__)
+#elif defined(__OpenBSD__) || defined(__FreeBSD__) || defined(__NetBSD__) || defined(__DragonFly__)
 #include <sys/sysctl.h>
 #include <dirent.h>
 #include <errno.h>
@@ -89,7 +85,7 @@
 #include <unistd.h>
 
 #if defined(__HAIKU__)
-#include <kernel/image.h>
+#include <FindDirectory.h>
 #endif
 #endif
 
@@ -319,21 +315,26 @@ char *M_GetExecutableFolder(void)
     char    *exe = malloc(MAX_PATH);
     strcpy(exe,"."); // CWD
     return exe;
-#elif defined(__linux__)
-    char    *exe = malloc(MAX_PATH);
+#elif defined(__linux__) || defined(__NetBSD__)
+    char    exe[MAX_PATH];
+#if defined(__linux__)
     ssize_t len = readlink("/proc/self/exe", exe, MAX_PATH - 1);
+#else
+    ssize_t len = readlink("/proc/curproc/exe", exe, MAX_PATH - 1);
+#endif
 
     if (len == -1)
     {
         strcpy(exe, ".");
-        return exe;
+        return M_StringDuplicate(exe);
     }
     else
     {
         exe[len] = '\0';
-        return dirname(exe);
+        return M_StringDuplicate(dirname(exe));
     }
-#elif defined(__FreeBSD__)
+
+#elif defined(__FreeBSD__) || defined(__DragonFly__)
     char    *exe = malloc(MAX_PATH);
     size_t  len = MAX_PATH;
     int     mib[] = { CTL_KERN, KERN_PROC, KERN_PROC_PATHNAME, -1 };
@@ -348,6 +349,7 @@ char *M_GetExecutableFolder(void)
         strcpy(exe, ".");
         return exe;
     }
+
 #elif defined(__APPLE__)
     char        *exe = malloc(MAX_PATH);
     uint32_t    len = MAX_PATH;
@@ -359,22 +361,18 @@ char *M_GetExecutableFolder(void)
     }
 
     return dirname(exe);
+
 #elif defined(__HAIKU__)
-    char        *exe = malloc(MAX_PATH);
-    image_info  ii;
-    int32_t     ck = 0;
+    char    *exe = malloc(MAX_PATH);
 
     exe[0] = '\0';
 
-    while (get_next_image_info(0, &ck, &ii) == B_OK)
-        if (ii.type == B_APP_IMAGE)
-        {
-            strcpy(exe, ii.name);
-            return dirname(exe);
-        }
+    if (find_path(B_APP_IMAGE_SYMBOL, B_FIND_PATH_IMAGE_PATH, NULL, exe, MAX_PATH) == B_OK)
+        return dirname(exe);
 
     strcpy(exe, ".");
     return exe;
+
 #else
     char    *folder = malloc(2);
 
@@ -403,18 +401,16 @@ char *M_TempFile(char *s)
 // concatenated together.
 char *M_StringJoin(char *s, ...)
 {
-    char    *result;
-    char    *v;
-    va_list args;
-    size_t  result_len = strlen(s) + 1;
+    char        *result;
+    const char  *v;
+    va_list     args;
+    size_t      result_len = strlen(s) + 1;
 
     va_start(args, s);
 
     while (true)
     {
-        v = va_arg(args, char *);
-
-        if (!v)
+        if (!(v = va_arg(args, const char *)))
             break;
 
         result_len += strlen(v);
@@ -431,7 +427,7 @@ char *M_StringJoin(char *s, ...)
 
     while (true)
     {
-        if (!(v = va_arg(args, char *)))
+        if (!(v = va_arg(args, const char *)))
             break;
 
         strncat(result, v, result_len);

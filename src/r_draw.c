@@ -7,7 +7,7 @@
 ========================================================================
 
   Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2020 by Brad Harding.
+  Copyright © 2013-2021 by Brad Harding.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
@@ -36,6 +36,8 @@
 ========================================================================
 */
 
+#include <string.h>
+
 #include "c_console.h"
 #include "doomstat.h"
 #include "i_colors.h"
@@ -44,7 +46,6 @@
 #include "r_local.h"
 #include "st_stuff.h"
 #include "v_video.h"
-#include "z_zone.h"
 
 //
 // All drawing to the view buffer is accomplished in this file.
@@ -56,16 +57,15 @@
 //
 
 int         viewwidth;
-int         scaledviewwidth;
 int         viewheight;
 int         viewwindowx;
 int         viewwindowy;
 
 int         fuzzpos;
-int         fuzztable[SCREENAREA];
+int         fuzztable[MAXSCREENAREA];
 
-static byte *ylookup0[SCREENHEIGHT];
-static byte *ylookup1[SCREENHEIGHT];
+static byte *ylookup0[MAXHEIGHT];
+static byte *ylookup1[MAXHEIGHT];
 
 static const byte redtoblue[] =
 {
@@ -226,7 +226,7 @@ void R_DrawFuzzyShadowColumn(void)
     byte    *dest = ylookup0[dc_yl] + dc_x;
 
     if (((consoleactive || freeze) && !fuzztable[fuzzpos++])
-        || (!consoleactive && !freeze && !(M_Random() & 3)))
+        || (!consoleactive && !freeze && !(M_BigRandom() & 3)))
         *dest = *(*dest + dc_black25);
 
     dest += SCREENWIDTH;
@@ -239,7 +239,7 @@ void R_DrawFuzzyShadowColumn(void)
 
     if (dc_yh < dc_floorclip
         && (((consoleactive || freeze) && !fuzztable[fuzzpos++])
-            || (!consoleactive && !freeze && !(M_Random() & 3))))
+            || (!consoleactive && !freeze && !(M_BigRandom() & 3))))
         *dest = *(*dest + dc_black25);
 }
 
@@ -263,7 +263,7 @@ void R_DrawSolidFuzzyShadowColumn(void)
     byte    *dest = ylookup0[dc_yl] + dc_x;
 
     if (((consoleactive || freeze) && !fuzztable[fuzzpos++])
-        || (!consoleactive && !freeze && !(M_Random() & 3)))
+        || (!consoleactive && !freeze && !(M_BigRandom() & 3)))
         *dest = dc_black;
 
     dest += SCREENWIDTH;
@@ -276,7 +276,7 @@ void R_DrawSolidFuzzyShadowColumn(void)
 
     if (dc_yh < dc_floorclip
         && (((consoleactive || freeze) && !fuzztable[fuzzpos++])
-            || (!consoleactive && !freeze && !(M_Random() & 3))))
+            || (!consoleactive && !freeze && !(M_BigRandom() & 3))))
         *dest = dc_black;
 }
 
@@ -688,7 +688,7 @@ void R_DrawDitheredColumn(void)
     do
     {
         *dest = colormap[dc_source[frac >> FRACBITS]];
-        dest += SCREENWIDTH << 1;
+        dest += (size_t)SCREENWIDTH << 1;
         frac += fracstep;
     } while ((y -= 2) > 0);
 }
@@ -710,7 +710,7 @@ void R_DrawDitheredColorColumn(void)
     do
     {
         *dest = color;
-        dest += SCREENWIDTH << 1;
+        dest += (size_t)SCREENWIDTH << 1;
     } while ((y -= 2) > 0);
 }
 
@@ -923,7 +923,7 @@ void R_DrawTranslucentBlue25Column(void)
 //
 #define NOFUZZ  251
 
-const int       fuzzrange[] = { -SCREENWIDTH, 0, SCREENWIDTH };
+int fuzzrange[3];
 
 void R_DrawFuzzColumn(void)
 {
@@ -933,12 +933,12 @@ void R_DrawFuzzColumn(void)
     if (!y)
         return;
 
-    dest = ylookup0[dc_yl] + dc_x;;
+    dest = ylookup0[dc_yl] + dc_x;
 
     // top
     if (!dc_yl)
         *dest = fullcolormap[6 * 256 + dest[(fuzztable[fuzzpos++] = FUZZ(0, 1))]];
-    else if (!(M_Random() & 3))
+    else if (!(M_BigRandom() & 3))
         *dest = fullcolormap[12 * 256 + dest[(fuzztable[fuzzpos++] = FUZZ(-1, 1))]];
 
     dest += SCREENWIDTH;
@@ -953,7 +953,7 @@ void R_DrawFuzzColumn(void)
     // bottom
     *dest = fullcolormap[5 * 256 + dest[(fuzztable[fuzzpos++] = FUZZ(-1, 0))]];
 
-    if (dc_yh < dc_floorclip && !(M_Random() & 3))
+    if (dc_yh < dc_floorclip && !(M_BigRandom() & 3))
     {
         dest += SCREENWIDTH;
         *dest = fullcolormap[14 * 256 + dest[(fuzztable[fuzzpos] = FUZZ(-1, 0))]];
@@ -968,7 +968,7 @@ void R_DrawPausedFuzzColumn(void)
     if (!y)
         return;
 
-    dest = ylookup0[dc_yl] + dc_x;;
+    dest = ylookup0[dc_yl] + dc_x;
 
     // top
     if (!dc_yl)
@@ -1021,7 +1021,7 @@ void R_DrawFuzzColumns(void)
                 if (!y || *(src - SCREENWIDTH) == NOFUZZ)
                 {
                     // top
-                    if (!(M_Random() & 3))
+                    if (!(M_BigRandom() & 3))
                         *dest = fullcolormap[12 * 256 + dest[(fuzztable[i] = FUZZ(-1, 1))]];
                 }
                 else if (y == h - SCREENWIDTH)
@@ -1032,7 +1032,7 @@ void R_DrawFuzzColumns(void)
                 else if (*(src + SCREENWIDTH) == NOFUZZ)
                 {
                     // bottom of post
-                    if (!(M_Random() & 3))
+                    if (!(M_BigRandom() & 3))
                         *dest = fullcolormap[12 * 256 + dest[(fuzztable[i] = FUZZ(-1, 1))]];
                 }
                 else
@@ -1040,7 +1040,7 @@ void R_DrawFuzzColumns(void)
                     // middle
                     if (*(src - 1) == NOFUZZ || *(src + 1) == NOFUZZ)
                     {
-                        if (!(M_Random() & 3))
+                        if (!(M_BigRandom() & 3))
                             *dest = fullcolormap[12 * 256 + dest[(fuzztable[i] = FUZZ(-1, 1))]];
                     }
                     else
@@ -1237,6 +1237,40 @@ void R_InitBuffer(int width, int height)
 
         fuzztable[SCREENHEIGHT - 1 + x] = FUZZ(-1, 0);
     }
+
+    fuzzrange[0] = -SCREENWIDTH;
+    fuzzrange[1] = 0;
+    fuzzrange[2] = SCREENWIDTH;
+}
+
+void R_FillBezel(void)
+{
+    // [crispy] this is our own local copy of R_FillBackScreen() to
+    // fill the entire background of st_backing_screen with the bezel pattern,
+    // so it appears to the left and right of the status bar in widescreen mode
+    if (SCREENWIDTH != VANILLAWIDTH * SCREENSCALE)
+    {
+        byte    *src = (byte *)grnrock;
+        byte    *dest = &screens[0][(SCREENHEIGHT - SBARHEIGHT) * SCREENWIDTH];
+
+        for (int y = SCREENHEIGHT - SBARHEIGHT; y < SCREENHEIGHT; y++)
+            for (int x = 0; x < SCREENWIDTH; x += 2)
+            {
+                byte    dot = src[(((y >> 1) & 63) << 6) + ((x >> 1) & 63)];
+
+                *dest++ = dot;
+                *dest++ = dot;
+            }
+
+        if (st_drawbrdr)
+        {
+            for (int x = 0; x < (SCREENWIDTH - NONWIDEWIDTH) / 2 / SCREENSCALE; x += 8)
+                V_DrawPatch(x - WIDESCREENDELTA, VANILLAHEIGHT - VANILLASBARHEIGHT, 0, brdr_b);
+
+            for (int x = SCREENWIDTH / SCREENSCALE - 8; x >= ((SCREENWIDTH - NONWIDEWIDTH) / 2 + NONWIDEWIDTH) / SCREENSCALE - 8; x -= 8)
+                V_DrawPatch(x - WIDESCREENDELTA, VANILLAHEIGHT - VANILLASBARHEIGHT, 0, brdr_b);
+        }
+    }
 }
 
 //
@@ -1249,47 +1283,52 @@ void R_FillBackScreen(void)
 {
     byte    *src;
     byte    *dest;
-    int     x1, y1;
-    int     x2, y2;
 
-    if (scaledviewwidth == SCREENWIDTH)
+    if (viewwidth == SCREENWIDTH)
         return;
 
     src = (byte *)grnrock;
     dest = screens[1];
 
-    for (int y = 0; y < SCREENHEIGHT - SBARHEIGHT; y += 2)
-        for (int x = 0; x < SCREENWIDTH / 32; x += 2, dest += 128)
-            for (int i = 0; i < 128; i += 2)
-                dest[i] = dest[i + 1] = src[(((y / 2) & 63) << 6) + i / 2];
+    for (int y = 0; y < SCREENHEIGHT - SBARHEIGHT; y++)
+        for (int x = 0; x < SCREENWIDTH; x += 2)
+        {
+            byte    dot = src[(((y >> 1) & 63) << 6) + ((x >> 1) & 63)];
 
-    x1 = viewwindowx / 2;
-    y1 = viewwindowy / 2;
-    x2 = scaledviewwidth / 2 + x1;
-    y2 = viewheight / 2 + y1;
+            *dest++ = dot;
+            *dest++ = dot;
+        }
 
-    for (int x = x1; x < x2 - 8; x += 8)
+    if (st_drawbrdr)
     {
-        V_DrawPatch(x, y1 - 8, 1, brdr_t);
-        V_DrawPatch(x, y2, 1, brdr_b);
+        int x1 = viewwindowx / 2 - WIDESCREENDELTA;
+        int y1 = viewwindowy / 2;
+        int x2 = viewwidth / 2 + x1;
+        int y2 = viewheight / 2 + y1;
+
+        for (int x = x1; x < x2 - 8; x += 8)
+        {
+            V_DrawPatch(x, y1 - 8, 1, brdr_t);
+            V_DrawPatch(x, y2, 1, brdr_b);
+        }
+
+        V_DrawPatch(x2 - 8, y1 - 8, 1, brdr_t);
+        V_DrawPatch(x2 - 8, y2, 1, brdr_b);
+
+        for (int y = y1; y < y2 - 8; y += 8)
+        {
+            V_DrawPatch(x1 - 8, y, 1, brdr_l);
+            V_DrawPatch(x2, y, 1, brdr_r);
+        }
+
+        V_DrawPatch(x1 - 8, y2 - 8, 1, brdr_l);
+        V_DrawPatch(x2, y2 - 8, 1, brdr_r);
+
+        V_DrawPatch(x1 - 8, y1 - 8, 1, brdr_tl);
+        V_DrawPatch(x2, y1 - 8, 1, brdr_tr);
+        V_DrawPatch(x1 - 8, y2, 1, brdr_bl);
+        V_DrawPatch(x2, y2, 1, brdr_br);
     }
-
-    V_DrawPatch(x2 - 8, y1 - 8, 1, brdr_t);
-    V_DrawPatch(x2 - 8, y2, 1, brdr_b);
-
-    for (int y = y1; y < y2 - 8; y += 8)
-    {
-        V_DrawPatch(x1 - 8, y, 1, brdr_l);
-        V_DrawPatch(x2, y, 1, brdr_r);
-    }
-
-    V_DrawPatch(x1 - 8, y2 - 8, 1, brdr_l);
-    V_DrawPatch(x2, y2 - 8, 1, brdr_r);
-
-    V_DrawPatch(x1 - 8, y1 - 8, 1, brdr_tl);
-    V_DrawPatch(x2, y1 - 8, 1, brdr_tr);
-    V_DrawPatch(x1 - 8, y2, 1, brdr_bl);
-    V_DrawPatch(x2, y2, 1, brdr_br);
 }
 
 //
@@ -1311,11 +1350,11 @@ void R_DrawViewBorder(void)
     int side;
     int ofs;
 
-    if (scaledviewwidth == SCREENWIDTH)
+    if (viewwidth == SCREENWIDTH)
         return;
 
     top = (SCREENHEIGHT - SBARHEIGHT - viewheight) / 2;
-    side = (SCREENWIDTH - scaledviewwidth) / 2;
+    side = (SCREENWIDTH - viewwidth) / 2;
 
     // copy top and one line of left side
     R_VideoErase(0, top * SCREENWIDTH + side);

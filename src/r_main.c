@@ -7,7 +7,7 @@
 ========================================================================
 
   Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2020 by Brad Harding.
+  Copyright © 2013-2021 by Brad Harding.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
@@ -92,7 +92,7 @@ int                 viewangletox[FINEANGLES / 2];
 // The xtoviewangleangle[] table maps a screen pixel
 // to the lowest viewangle that maps back to x ranges
 // from clipangle to -clipangle.
-angle_t             xtoviewangle[SCREENWIDTH + 1];
+angle_t             xtoviewangle[MAXWIDTH + 1];
 
 fixed_t             finesine[5 * FINEANGLES / 4];
 fixed_t             *finecosine = &finesine[FINEANGLES / 4];
@@ -100,7 +100,7 @@ fixed_t             finetangent[FINEANGLES / 2];
 angle_t             tantoangle[SLOPERANGE + 1];
 
 // killough 03/20/98: Support dynamic colormaps, e.g. deep water
-// killough 04/04/98: support dynamic number of them as well
+// killough 04/04/98: Support dynamic number of them as well
 int                 numcolormaps = 1;
 static lighttable_t *(*c_scalelight)[LIGHTLEVELS][MAXLIGHTSCALE];
 static lighttable_t *(*c_zlight)[LIGHTLEVELS][MAXLIGHTZ];
@@ -310,7 +310,7 @@ static void R_InitTextureMapping(void)
 {
     // Use tangent table to generate viewangletox:
     //  viewangletox will give the next greatest x after the view angle.
-    const fixed_t   limit = finetangent[FINEANGLES / 4 + (r_fov * FINEANGLES / 360) / 2];
+    const fixed_t   limit = finetangent[FINEANGLES / 4 + ((r_fov + WIDEFOVDELTA) * FINEANGLES / 360) / 2];
 
     // Calc focallength so field of view angles covers SCREENWIDTH.
     const fixed_t   focallength = FixedDiv(centerxfrac, limit);
@@ -352,7 +352,8 @@ static void R_InitTextureMapping(void)
 //
 void R_InitLightTables(void)
 {
-    int width = FixedMul(SCREENWIDTH, FixedDiv(FRACUNIT, finetangent[FINEANGLES / 4 + (r_fov * FINEANGLES / 360) / 2])) + 1;
+    int width = FixedMul(SCREENWIDTH,
+                    FixedDiv(FRACUNIT, finetangent[FINEANGLES / 4 + ((r_fov + WIDEFOVDELTA) * FINEANGLES / 360) / 2])) + 1;
 
     c_zlight = malloc(sizeof(*c_zlight) * numcolormaps);
     c_scalelight = malloc(sizeof(*c_scalelight) * numcolormaps);
@@ -402,30 +403,25 @@ void R_ExecuteSetViewSize(void)
 
     if (setblocks == 11)
     {
-        scaledviewwidth = SCREENWIDTH;
+        viewwidth = SCREENWIDTH;
         viewheight = SCREENHEIGHT;
-
-        if (!menuactive)
-            viewheight -= SBARHEIGHT;
+        pspritescale = FixedDiv(NONWIDEWIDTH, VANILLAWIDTH);
     }
     else
     {
-        scaledviewwidth = setblocks * SCREENWIDTH / 10;
+        viewwidth = setblocks * SCREENWIDTH / 10;
         viewheight = (setblocks * (SCREENHEIGHT - SBARHEIGHT) / 10) & ~7;
+        pspritescale = FixedDiv(setblocks * NONWIDEWIDTH / 10, VANILLAWIDTH);
     }
-
-    viewwidth = scaledviewwidth;
 
     centerx = viewwidth / 2;
     centerxfrac = centerx << FRACBITS;
-    fovscale = finetangent[FINEANGLES / 4 + r_fov * FINEANGLES / 360 / 2];
+    fovscale = finetangent[FINEANGLES / 4 + (r_fov + WIDEFOVDELTA) * FINEANGLES / 360 / 2];
     projection = FixedDiv(centerxfrac, fovscale);
 
-    R_InitBuffer(scaledviewwidth, viewheight);
+    R_InitBuffer(viewwidth, viewheight);
     R_InitTextureMapping();
 
-    // psprite scales
-    pspritescale = FixedDiv(viewwidth, VANILLAWIDTH);
     pspriteiscale = FixedDiv(FRACUNIT, pspritescale);
 
     if (gamestate == GS_LEVEL)
@@ -479,7 +475,7 @@ void (*colfunc)(void);
 void (*wallcolfunc)(void);
 void (*bmapwallcolfunc)(void);
 void (*segcolfunc)(void);
-void (*transcolfunc)(void);
+void (*translatedcolfunc)(void);
 void (*basecolfunc)(void);
 void (*fuzzcolfunc)(void);
 void (*tlcolfunc)(void);
@@ -512,7 +508,7 @@ void R_InitColumnFunctions(void)
     {
         basecolfunc = &R_DrawColumn;
         fuzzcolfunc = &R_DrawFuzzColumn;
-        transcolfunc = &R_DrawTranslatedColumn;
+        translatedcolfunc = &R_DrawTranslatedColumn;
         wallcolfunc = &R_DrawWallColumn;
         bmapwallcolfunc = &R_DrawBrightmapWallColumn;
         segcolfunc = &R_DrawColumn;
@@ -575,7 +571,7 @@ void R_InitColumnFunctions(void)
     {
         basecolfunc = &R_DrawColorColumn;
         fuzzcolfunc = &R_DrawTranslucentColor50Column;
-        transcolfunc = &R_DrawColorColumn;
+        translatedcolfunc = &R_DrawColorColumn;
         wallcolfunc = &R_DrawColorColumn;
         bmapwallcolfunc = &R_DrawColorColumn;
         segcolfunc = &R_DrawColorColumn;
@@ -584,7 +580,7 @@ void R_InitColumnFunctions(void)
         tlcolfunc = &R_DrawColorColumn;
         tl50colfunc = &R_DrawColorColumn;
         tl50segcolfunc = (r_translucency ? (r_dither ? &R_DrawDitheredColorColumn : &R_DrawTranslucentColor50Column) :
-            R_DrawColorColumn);
+            &R_DrawColorColumn);
         tl33colfunc = &R_DrawColorColumn;
         tlgreencolfunc = &R_DrawColorColumn;
         tlredcolfunc = &R_DrawColorColumn;
@@ -812,7 +808,7 @@ static void R_SetupFrame(void)
     viewsin = finesine[viewangle >> ANGLETOFINESHIFT];
     viewcos = finecosine[viewangle >> ANGLETOFINESHIFT];
 
-    // killough 03/20/98, 4/4/98: select colormap based on player status
+    // killough 03/20/98, 04/04/98: select colormap based on player status
     if (mo->subsector->sector->heightsec)
     {
         const sector_t  *s = mo->subsector->sector->heightsec;

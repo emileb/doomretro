@@ -7,7 +7,7 @@
 ========================================================================
 
   Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2020 by Brad Harding.
+  Copyright © 2013-2021 by Brad Harding.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
@@ -87,7 +87,6 @@ static byte *tinttab15;
 
 byte        *tinttab20;
 byte        *tinttab25;
-byte        *tinttab30;
 byte        *tinttab33;
 byte        *tinttab40;
 byte        *tinttab50;
@@ -121,9 +120,9 @@ byte        nearestwhite;
 byte        *black25;
 byte        *black40;
 byte        *yellow15;
-byte        *white50;
+byte        *white25;
 
-int FindNearestColor(byte *palette, int red, int green, int blue)
+int FindNearestColor(byte *palette, const int red, const int green, const int blue)
 {
     int bestdiff = INT_MAX;
     int bestcolor = 0;
@@ -131,11 +130,11 @@ int FindNearestColor(byte *palette, int red, int green, int blue)
     for (int i = 0; i < 256; i++)
     {
         // From <https://www.compuphase.com/cmetric.htm>
-        int rmean = (red + *palette) / 2;
-        int r = red - *palette++;
-        int g = green - *palette++;
-        int b = blue - *palette++;
-        int diff = (((512 + rmean) * r * r) >> 8) + 4 * g * g + (((767 - rmean) * b * b) >> 8);
+        const int   rmean = (red + *palette) / 2;
+        const int   r = red - *palette++;
+        const int   g = green - *palette++;
+        const int   b = blue - *palette++;
+        const int   diff = (((512 + rmean) * r * r) >> 8) + 4 * g * g + (((767 - rmean) * b * b) >> 8);
 
         if (!diff)
             return i;
@@ -175,15 +174,15 @@ void FindNearestColors(byte *palette)
     black25 = &tinttab25[nearestblack << 8];
     black40 = &tinttab40[nearestblack << 8];
     yellow15 = &tinttab15[nearestcolors[YELLOW] << 8];
-    white50 = &tinttab50[nearestwhite << 8];
+    white25 = &tinttab25[nearestwhite << 8];
 }
 
 int FindDominantColor(patch_t *patch, byte *palette)
 {
-    int     w = SHORT(patch->width);
-    int     dominantcolor = 0;
-    int     dominantcolorcount = 0;
-    byte    colorcount[256] = { 0 };
+    const int   w = SHORT(patch->width);
+    int         dominantcolor = 0;
+    int         dominantcolorcount = 0;
+    byte        colorcount[256] = { 0 };
 
     for (int col = 0; col < w; col++)
     {
@@ -204,11 +203,11 @@ int FindDominantColor(patch_t *patch, byte *palette)
 
     for (int i = 0; i < 256; i++)
     {
-        byte    red = *palette++;
-        byte    green = *palette++;
-        byte    blue = *palette++;
+        const byte  red = *palette++;
+        const byte  green = *palette++;
+        const byte  blue = *palette++;
 
-        if ((red >= 128 || green >= 128 || blue >= 128) && colorcount[i] > dominantcolorcount)
+        if (colorcount[i] > dominantcolorcount && (red >= 128 || green >= 128 || blue >= 128))
         {
             dominantcolor = i;
             dominantcolorcount = colorcount[i];
@@ -233,11 +232,10 @@ static byte *GenerateTintTable(byte *palette, int percent, int colors)
                 // Color matching in RGB space doesn't work very well with the blues
                 // in DOOM's palette. Rather than do any color conversions, just
                 // emphasize the blues when building the translucency table.
-                int     btmp = (colors == ALTHUD && color1[2] * 1.666 >= (double)color1[0] + color1[1] ? 150 : 100);
-
-                int     r = ((int)color1[0] * percent + (int)color2[0] * (100 - percent)) / btmp;
-                int     g = ((int)color1[1] * percent + (int)color2[1] * (100 - percent)) / btmp;
-                int     b = ((int)color1[2] * percent + (int)color2[2] * (100 - percent)) / 100;
+                const int   btmp = (colors == ALTHUD && color1[2] * 1.666 >= (double)color1[0] + color1[1] ? 150 : 100);
+                const int   r = ((int)color1[0] * percent + (int)color2[0] * (100 - percent)) / btmp;
+                const int   g = ((int)color1[1] * percent + (int)color2[1] * (100 - percent)) / btmp;
+                const int   b = ((int)color1[2] * percent + (int)color2[2] * (100 - percent)) / 100;
 
                 result[(background << 8) + foreground] = FindNearestColor(palette, r, g, b);
             }
@@ -278,7 +276,6 @@ void I_InitTintTables(byte *palette)
     tinttab15 = GenerateTintTable(palette, 15, ALL);
     tinttab20 = GenerateTintTable(palette, 20, ALL);
     tinttab25 = GenerateTintTable(palette, 25, ALL);
-    tinttab30 = GenerateTintTable(palette, 30, ALL);
     tinttab33 = GenerateTintTable(palette, 33, ALL);
     tinttab40 = GenerateTintTable(palette, 40, ALL);
     tinttab50 = GenerateTintTable(palette, 50, ALL);

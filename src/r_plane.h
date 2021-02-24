@@ -7,7 +7,7 @@
 ========================================================================
 
   Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2020 by Brad Harding.
+  Copyright © 2013-2021 by Brad Harding.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
@@ -44,10 +44,10 @@
 
 // Visplane related.
 extern int      *lastopening;
-extern int      floorclip[SCREENWIDTH];
-extern int      ceilingclip[SCREENWIDTH];
+extern int      floorclip[MAXWIDTH];
+extern int      ceilingclip[MAXWIDTH];
 extern fixed_t  *yslope;
-extern fixed_t  yslopes[LOOKDIRS][SCREENHEIGHT];
+extern fixed_t  yslopes[LOOKDIRS][MAXHEIGHT];
 extern int      *openings;  // dropoff overflow
 
 void R_ClearPlanes(void);

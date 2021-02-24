@@ -7,7 +7,7 @@
 ========================================================================
 
   Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2020 by Brad Harding.
+  Copyright © 2013-2021 by Brad Harding.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
@@ -43,12 +43,11 @@
 
 enum
 {
-    p_QUITMSG = 5, p_GOTARMOR = 33, p_GOTMEGA, p_GOTHTHBONUS, p_GOTARMBONUS, p_GOTSTIM, p_GOTMEDINEED,
-    p_GOTMEDIKIT, p_GOTSUPER, p_GOTBLUECARD, p_GOTYELWCARD, p_GOTREDCARD, p_GOTBLUESKUL, p_GOTYELWSKUL,
-    p_GOTREDSKUL, p_GOTREDSKULL, p_GOTINVUL, p_GOTBERSERK, p_GOTINVIS, p_GOTSUIT, p_GOTMAP, p_GOTVISOR,
-    p_GOTCLIP, p_GOTCLIPBOX, p_GOTROCKET, p_GOTROCKETX2, p_GOTROCKBOX, p_GOTCELL, p_GOTCELLX2, p_GOTCELLBOX,
-    p_GOTSHELLS, p_GOTSHELLSX2, p_GOTSHELLBOX, p_GOTBACKPACK, p_GOTBFG9000, p_GOTCHAINGUN, p_GOTCHAINSAW,
-    p_GOTLAUNCHER, p_GOTMSPHERE, p_GOTPLASMA, p_GOTSHOTGUN, p_GOTSHOTGUN2, p_PD_BLUEO, p_PD_REDO, p_PD_YELLOWO,
+    p_QUITMSG = 5, p_GOTARMOR = 33, p_GOTMEGA, p_GOTHTHBONUS, p_GOTARMBONUS, p_GOTSTIM, p_GOTMEDINEED, p_GOTMEDINEED2, p_GOTMEDIKIT,
+    p_GOTSUPER, p_GOTBLUECARD, p_GOTYELWCARD, p_GOTREDCARD, p_GOTBLUESKUL, p_GOTYELWSKUL, p_GOTREDSKUL, p_GOTREDSKULL, p_GOTINVUL,
+    p_GOTBERSERK, p_GOTINVIS, p_GOTSUIT, p_GOTMAP, p_GOTVISOR, p_GOTCLIP, p_GOTCLIPBOX, p_GOTROCKET, p_GOTROCKETX2, p_GOTROCKBOX,
+    p_GOTCELL, p_GOTCELLX2, p_GOTCELLBOX, p_GOTSHELLS, p_GOTSHELLSX2, p_GOTSHELLBOX, p_GOTBACKPACK, p_GOTBFG9000, p_GOTCHAINGUN,
+    p_GOTCHAINSAW, p_GOTLAUNCHER, p_GOTMSPHERE, p_GOTPLASMA, p_GOTSHOTGUN, p_GOTSHOTGUN2, p_PD_BLUEO, p_PD_REDO, p_PD_YELLOWO,
     p_PD_BLUEK, p_PD_REDK, p_PD_YELLOWK
 };
 
@@ -91,6 +90,7 @@ extern char     *s_GOTHTHBONUS;
 extern char     *s_GOTARMBONUS;
 extern char     *s_GOTSTIM;
 extern char     *s_GOTMEDINEED;
+extern char     *s_GOTMEDINEED2;
 extern char     *s_GOTMEDIKIT;
 extern char     *s_GOTSUPER;
 
@@ -355,6 +355,7 @@ extern char     *s_STSTR_RHON;
 extern char     *s_STSTR_RHOFF;
 extern char     *s_STSTR_VON;
 extern char     *s_STSTR_VOFF;
+extern char     *s_STSTR_FPS;
 
 extern char     *s_E1TEXT;
 extern char     *s_E2TEXT;
@@ -506,5 +507,6 @@ extern char     **mapnamesn[];
 extern int      dehcount;
 
 void ProcessDehFile(char *filename, int lumpnum, dboolean automatic);
+void D_BuildBEXTables(void);
 
 #endif

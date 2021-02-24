@@ -7,7 +7,7 @@
 ========================================================================
 
   Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2020 by Brad Harding.
+  Copyright © 2013-2021 by Brad Harding.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
@@ -42,7 +42,6 @@
 
 #include "c_console.h"
 #include "i_midirpc.h"
-#include "m_config.h"
 #include "mmus2mid.h"
 #include "s_sound.h"
 
@@ -83,7 +82,7 @@ void I_ShutdownMusic(void)
 // Initialize music subsystem
 dboolean I_InitMusic(void)
 {
-    int         freq;
+    int         freq = MIX_DEFAULT_FREQUENCY;
     int         channels;
     uint16_t    format;
 
@@ -94,7 +93,8 @@ dboolean I_InitMusic(void)
         if (SDL_InitSubSystem(SDL_INIT_AUDIO) < 0)
             return false;
 
-        if (Mix_OpenAudio(SAMPLERATE, MIX_DEFAULT_FORMAT, CHANNELS, CHUNKSIZE) < 0)
+        if (Mix_OpenAudioDevice(SAMPLERATE, MIX_DEFAULT_FORMAT, MIX_DEFAULT_CHANNELS, CHUNKSIZE, DEFAULT_DEVICE,
+            SDL_AUDIO_ALLOW_FREQUENCY_CHANGE) < 0)
         {
             SDL_QuitSubSystem(SDL_INIT_AUDIO);
             return false;
@@ -114,7 +114,7 @@ dboolean I_InitMusic(void)
     return music_initialized;
 }
 
-// Set music volume (0 - MAX_MUSIC_VOLUME)
+// Set music volume (0 - MIX_MAX_VOLUME)
 void I_SetMusicVolume(int volume)
 {
     // Internal state variable.

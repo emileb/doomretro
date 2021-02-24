@@ -7,7 +7,7 @@
 ========================================================================
 
   Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2020 by Brad Harding.
+  Copyright © 2013-2021 by Brad Harding.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
@@ -36,6 +36,8 @@
 ========================================================================
 */
 
+#include <ctype.h>
+
 #include "am_map.h"
 #include "c_cmds.h"
 #include "c_console.h"
@@ -47,7 +49,6 @@
 #include "m_config.h"
 #include "m_misc.h"
 #include "m_random.h"
-#include "p_inter.h"
 #include "p_local.h"
 #include "p_setup.h"
 #include "p_tick.h"
@@ -725,6 +726,7 @@ dboolean P_GivePower(int power)
     {
         case pw_invulnerability:
             viewplayer->fixedcolormap = INVERSECOLORMAP;
+            D_FadeScreen();
             break;
 
         case pw_strength:
@@ -733,6 +735,12 @@ dboolean P_GivePower(int power)
 
         case pw_invisibility:
             viewplayer->mo->flags |= MF_FUZZ;
+            break;
+
+        case pw_allmap:
+            if (automapactive)
+                D_FadeScreen();
+
             break;
 
         case pw_infrared:
@@ -759,13 +767,13 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, dboolean message, dbo
     if (freeze)
         return;
 
-    if ((delta = special->z - toucher->z) > toucher->height || delta < -8 * FRACUNIT)
-        return;         // out of reach
-
     // Dead thing touching.
     // Can happen with a sliding player corpse.
     if (toucher->health <= 0)
         return;
+
+    if ((delta = special->z - toucher->z) > toucher->height || delta < -8 * FRACUNIT)
+        return;         // out of reach
 
     // Identify by sprite.
     switch (special->sprite)
@@ -954,9 +962,24 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, dboolean message, dbo
                 {
                     static char buffer[1024];
 
-                    M_snprintf(buffer, sizeof(buffer), s_GOTMEDINEED, playername,
-                        (M_StringCompare(playername, playername_default) ? "you" : "they"));
-                    HU_PlayerMessage(buffer, true, false);
+                    M_snprintf(buffer, sizeof(buffer),
+                        s_GOTMEDINEED,
+                        playername,
+                        (M_StringCompare(playername, playername_default) ? playername_default :
+                            (playergender == playergender_male ? "he" : (playergender == playergender_female ? "she" : "they"))));
+
+                    if (buffer[0])
+                        buffer[0] = toupper(buffer[0]);
+
+                    C_PlayerMessage(buffer);
+
+                    if (gamestate == GS_LEVEL && !consoleactive && !message_dontfuckwithme)
+                    {
+                        if (r_screensize < r_screensize_max || !r_althud)
+                            M_StringCopy(buffer, M_StringReplace(buffer, "<i>really</i>", "really"), sizeof(buffer));
+
+                        HU_SetPlayerMessage(buffer, true, false);
+                    }
                 }
                 else
                     HU_PlayerMessage(s_GOTMEDIKIT, true, false);
@@ -1663,28 +1686,29 @@ static void P_WriteObituary(mobj_t *target, mobj_t *inflicter, mobj_t *source, d
                 if (inflicter->inflicter == MT_PLAYER)
                 {
                     if (M_StringCompare(playername, playername_default))
-                        C_Obituary("You were %s by %s %s that you exploded.",
+                        C_PlayerMessage("You were %s by %s %s that you exploded.",
                             (gibbed ? "gibbed" : "killed"),
                             (isvowel(inflicter->info->name1[0]) ? "an" : "a"),
                             (*inflicter->info->name1 ? inflicter->info->name1 : "monster"));
                     else
-                        C_Obituary("%s was %s by %s %s that they exploded.",
+                        C_PlayerMessage("%s was %s by %s %s that %s exploded.",
                             playername,
                             (gibbed ? "gibbed" : "killed"),
                             (isvowel(inflicter->info->name1[0]) ? "an" : "a"),
-                            (*inflicter->info->name1 ? inflicter->info->name1 : "monster"));
+                            (*inflicter->info->name1 ? inflicter->info->name1 : "monster"),
+                            (playergender == playergender_male ? "he" : (playergender == playergender_female ? "she" : "they")));
                 }
                 else
                 {
                     if (M_StringCompare(playername, playername_default))
-                        C_Obituary("You were %s by %s %s that %s %s exploded.",
+                        C_PlayerMessage("You were %s by %s %s that %s %s exploded.",
                             (gibbed ? "gibbed" : "killed"),
                             (isvowel(inflicter->info->name1[0]) ? "an" : "a"),
                             (*inflicter->info->name1 ? inflicter->info->name1 : "monster"),
                             (isvowel(mobjinfo[inflicter->inflicter].name1[0]) ? "an" : "a"),
                             mobjinfo[inflicter->inflicter].name1);
                     else
-                        C_Obituary("%s was %s by %s %s that %s %s exploded.",
+                        C_PlayerMessage("%s was %s by %s %s that %s %s exploded.",
                             playername,
                             (gibbed ? "gibbed" : "killed"),
                             (isvowel(inflicter->info->name1[0]) ? "an" : "a"),
@@ -1710,14 +1734,14 @@ static void P_WriteObituary(mobj_t *target, mobj_t *inflicter, mobj_t *source, d
                 temp = sentencecase(targetname);
 
                 if (inflicter->inflicter == MT_PLAYER)
-                    C_Obituary("%s was %s by %s %s that %s exploded.",
+                    C_PlayerMessage("%s was %s by %s %s that %s exploded.",
                         temp,
                         (gibbed ? "gibbed" : "killed"),
                         (isvowel(inflicter->info->name1[0]) ? "an" : "a"),
                         (*inflicter->info->name1 ? inflicter->info->name1 : "monster"),
                         playername);
                 else
-                    C_Obituary("%s was %s by %s %s that %s %s exploded.",
+                    C_PlayerMessage("%s was %s by %s %s that %s %s exploded.",
                         temp,
                         (gibbed ? "gibbed" : "killed"),
                         (isvowel(inflicter->info->name1[0]) ? "an" : "a"),
@@ -1737,7 +1761,7 @@ static void P_WriteObituary(mobj_t *target, mobj_t *inflicter, mobj_t *source, d
                 if (M_StringCompare(playername, playername_default))
                 {
                     if (target->player)
-                        C_Obituary("You %s yourself using your own %s.",
+                        C_PlayerMessage("You %s yourself with your own %s.",
                             (gibbed ? "gibbed" : "killed"),
                             weaponinfo[readyweapon].description);
                     else
@@ -1753,7 +1777,7 @@ static void P_WriteObituary(mobj_t *target, mobj_t *inflicter, mobj_t *source, d
                                 ((target->flags & MF_FRIEND) ? "friendly " : ""),
                                 (*target->info->name1 ? target->info->name1 : "monster"));
 
-                        C_Obituary("You %s %s using your %s%s.",
+                        C_PlayerMessage("You %s %s with your %s%s.",
                             (target->type == MT_BARREL ? "exploded" : (gibbed ? "gibbed" : "killed")),
                             targetname,
                             weaponinfo[readyweapon].description,
@@ -1763,10 +1787,22 @@ static void P_WriteObituary(mobj_t *target, mobj_t *inflicter, mobj_t *source, d
                 else
                 {
                     if (target->player)
-                        C_Obituary("%s %s themselves using their own %s.",
-                            (M_StringCompare(playername, playername_default) ? "You" : playername),
-                            (gibbed ? "gibbed" : "killed"),
-                            weaponinfo[readyweapon].description);
+                    {
+                        if (M_StringCompare(playername, playername_default))
+                            C_PlayerMessage("You %s yourself with your own %s.",
+                                (gibbed ? "gibbed" : "killed"),
+                                weaponinfo[readyweapon].description);
+                        else
+                            C_PlayerMessage("%s %s %s with %s own %s.",
+                                playername,
+                                (gibbed ? "gibbed" : "killed"),
+                                (playergender == playergender_male ? "himself" :
+                                    (playergender == playergender_female ? "herself" : "themselves")),
+                                (playergender == playergender_male ? "his" :
+                                    (playergender == playergender_female ? "her" : "their")),
+                                weaponinfo[readyweapon].description);
+
+                    }
                     else
                     {
                         char    targetname[100];
@@ -1780,12 +1816,21 @@ static void P_WriteObituary(mobj_t *target, mobj_t *inflicter, mobj_t *source, d
                                 ((target->flags & MF_FRIEND) ? "friendly " : ""),
                                 (*target->info->name1 ? target->info->name1 : "monster"));
 
-                        C_Obituary("%s %s %s using their %s%s.",
-                            (M_StringCompare(playername, playername_default) ? "You" : playername),
-                            (target->type == MT_BARREL ? "exploded" : (gibbed ? "gibbed" : "killed")),
-                            targetname,
-                            weaponinfo[readyweapon].description,
-                            (readyweapon == wp_fist && viewplayer->powers[pw_strength] ? " while berserk" : ""));
+                        if (M_StringCompare(playername, playername_default))
+                            C_PlayerMessage("You %s %s with your %s%s.",
+                                (target->type == MT_BARREL ? "exploded" : (gibbed ? "gibbed" : "killed")),
+                                targetname,
+                                weaponinfo[readyweapon].description,
+                                (readyweapon == wp_fist && viewplayer->powers[pw_strength] ? " while berserk" : ""));
+                        else
+                            C_PlayerMessage("%s %s %s with %s %s%s.",
+                                playername,
+                                (target->type == MT_BARREL ? "exploded" : (gibbed ? "gibbed" : "killed")),
+                                targetname,
+                                (playergender == playergender_male ? "his" :
+                                    (playergender == playergender_female ? "her" : "their")),
+                                weaponinfo[readyweapon].description,
+                                (readyweapon == wp_fist && viewplayer->powers[pw_strength] ? " while berserk" : ""));
                     }
                 }
             }
@@ -1797,9 +1842,9 @@ static void P_WriteObituary(mobj_t *target, mobj_t *inflicter, mobj_t *source, d
                 if (target->player)
                 {
                     if (M_StringCompare(playername, playername_default))
-                        C_Obituary("You were telefragged.");
+                        C_PlayerMessage("You were telefragged.");
                     else
-                        C_Obituary("%s was telefragged.", playername);
+                        C_PlayerMessage("%s was telefragged.", playername);
                 }
                 else
                 {
@@ -1814,7 +1859,7 @@ static void P_WriteObituary(mobj_t *target, mobj_t *inflicter, mobj_t *source, d
                             ((target->flags & MF_FRIEND) ? "friendly " : ""),
                             (*target->info->name1 ? target->info->name1 : "monster"));
 
-                    C_Obituary("%s was telefragged.", targetname);
+                    C_PlayerMessage("%s was telefragged.", targetname);
                 }
             }
             else
@@ -1834,7 +1879,7 @@ static void P_WriteObituary(mobj_t *target, mobj_t *inflicter, mobj_t *source, d
                 temp = sentencecase(sourcename);
 
                 if (target->player)
-                    C_Obituary("%s %s %s.",
+                    C_PlayerMessage("%s %s %s.",
                         temp,
                         (gibbed ? "gibbed" : "killed"),
                         playername);
@@ -1852,7 +1897,7 @@ static void P_WriteObituary(mobj_t *target, mobj_t *inflicter, mobj_t *source, d
                             ((target->flags & MF_FRIEND) ? "friendly " : ""),
                             (*target->info->name1 ? target->info->name1 : "monster"));
 
-                    C_Obituary("%s %s %s.",
+                    C_PlayerMessage("%s %s %s.",
                         temp,
                         (target->type == MT_BARREL ? "exploded" : (gibbed ? "gibbed" : "killed")),
                         targetname);
@@ -1869,9 +1914,9 @@ static void P_WriteObituary(mobj_t *target, mobj_t *inflicter, mobj_t *source, d
         if (sector->ceilingdata && sector->ceilingheight - sector->floorheight < VIEWHEIGHT)
         {
             if (M_StringCompare(playername, playername_default))
-                C_Obituary("You were crushed to death.");
+                C_PlayerMessage("You were crushed to death.");
             else
-                C_Obituary("%s was crushed to death.", playername);
+                C_PlayerMessage("%s was crushed to death.", playername);
 
         }
         else
@@ -1884,7 +1929,7 @@ static void P_WriteObituary(mobj_t *target, mobj_t *inflicter, mobj_t *source, d
                     "slime", "gray slime", "goop",   "icy water", "tar",  "sludge"
                 };
 
-                C_Obituary("%s died in %s.",
+                C_PlayerMessage("%s died in %s.",
                     (M_StringCompare(playername, playername_default) ? "You" : playername),
                     liquids[sector->terraintype]);
             }
@@ -1893,21 +1938,27 @@ static void P_WriteObituary(mobj_t *target, mobj_t *inflicter, mobj_t *source, d
                 short   floorpic = sector->floorpic;
 
                 if ((floorpic >= RROCK05 && floorpic <= RROCK08) || (floorpic >= SLIME09 && floorpic <= SLIME12))
-                    C_Obituary("%s died on molten rock.",
+                    C_PlayerMessage("%s died on molten rock.",
                         (M_StringCompare(playername, playername_default) ? "You" : playername));
                 else if (healthcvar)
                 {
                     if (M_StringCompare(playername, playername_default))
-                        C_Obituary("You killed yourself.");
+                        C_PlayerMessage("You killed yourself.");
                     else
-                        C_Obituary("%s killed themselves.", playername);
+                        C_PlayerMessage("%s killed %s.",
+                            playername,
+                            (playergender == playergender_male ? "himself" :
+                                (playergender == playergender_female ? "herself" : "themselves")));
                 }
                 else
                 {
                     if (M_StringCompare(playername, playername_default))
-                        C_Obituary("You blew yourself up.");
+                        C_PlayerMessage("You blew yourself up.");
                     else
-                        C_Obituary("%s blew themselves up.", playername);
+                        C_PlayerMessage("%s blew %s up.",
+                            playername,
+                            (playergender == playergender_male ? "himself" :
+                                (playergender == playergender_female ? "herself" : "themselves")));
                 }
             }
         }
@@ -2018,7 +2069,7 @@ void P_KillMobj(mobj_t *target, mobj_t *inflicter, mobj_t *source)
     if (chex)
         return;
 
-    if (con_obituaries && !hacx && !massacre)
+    if (con_obituaries && !hacx && (!massacre || type == MT_BARREL))
         P_WriteObituary(target, inflicter, source, gibbed);
 
     // Drop stuff.
@@ -2093,14 +2144,10 @@ void P_DamageMobj(mobj_t *target, mobj_t *inflicter, mobj_t *source, int damage,
     // Some close combat weapons should not
     // inflict thrust and push the victim out of reach,
     // thus kick away unless using the chainsaw.
-    if (inflicter
-        && (!tplayer || !inflicter->player)
-        && !(flags & MF_NOCLIP)
-        && (!source || !splayer || splayer->readyweapon != wp_chainsaw))
+    if (inflicter && !healthcvar && !(flags & MF_NOCLIP) && (!source || !splayer || splayer->readyweapon != wp_chainsaw))
     {
         unsigned int    ang = R_PointToAngle2(inflicter->x, inflicter->y, target->x, target->y);
-        int             mass = (corpse ? MAX(200, info->mass) : info->mass);
-        fixed_t         thrust = damage * (FRACUNIT >> 3) * 100 / mass;
+        fixed_t         thrust = damage * (FRACUNIT >> 3) * 100 / (corpse ? MAX(200, info->mass) : info->mass);
 
         // make fall forwards sometimes
         if (damage < 40 && damage > target->health && target->z - inflicter->z > 64 * FRACUNIT && (M_Random() & 1))
@@ -2109,8 +2156,7 @@ void P_DamageMobj(mobj_t *target, mobj_t *inflicter, mobj_t *source, int damage,
             thrust *= 4;
         }
 
-        ang >>= ANGLETOFINESHIFT;
-        target->momx += FixedMul(thrust, finecosine[ang]);
+        target->momx += FixedMul(thrust, finecosine[(ang >>= ANGLETOFINESHIFT)]);
         target->momy += FixedMul(thrust, finesine[ang]);
 
         // killough 11/98: thrust objects hanging off ledges
@@ -2254,7 +2300,7 @@ void P_DamageMobj(mobj_t *target, mobj_t *inflicter, mobj_t *source, int damage,
         }
     }
 
-    if (M_Random() < info->painchance && !(target->flags & MF_SKULLFLY))
+    if (M_Random() < info->painchance && !(target->flags & MF_SKULLFLY) && (!tplayer || !(viewplayer->cheats & CF_GODMODE)))
     {
         justhit = true;
         P_SetMobjState(target, info->painstate);

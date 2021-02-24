@@ -7,7 +7,7 @@
 ========================================================================
 
   Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2020 by Brad Harding.
+  Copyright © 2013-2021 by Brad Harding.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
@@ -42,7 +42,7 @@
 weaponinfo_t weaponinfo[NUMWEAPONS] =
 {
     {
-        /* description */ "fist",
+        /* description */ "fists",
         /* ammotype */    am_noammo,
         /* minammo */     0,
         /* upstate */     S_PUNCHUP,
@@ -193,4 +193,15 @@ weaponinfo_t weaponinfo[NUMWEAPONS] =
         /* next */        wp_chaingun,
         /* spritename */  "SGN2A0"
     }
+};
+
+char *powerupnames[NUMPOWERS] =
+{
+    "",
+    "Invulnerability",
+    "Berserk",
+    "Partial invisibility",
+    "Radiation shielding suit",
+    "Computer area map",
+    "Light amplification visor"
 };

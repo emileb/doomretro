@@ -7,7 +7,7 @@
 ========================================================================
 
   Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2020 by Brad Harding.
+  Copyright © 2013-2021 by Brad Harding.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
@@ -63,24 +63,19 @@
 #include "i_swap.h"
 #include "i_system.h"
 #include "i_timer.h"
-#include "info.h"
 #include "m_argv.h"
 #include "m_config.h"
 #include "m_menu.h"
 #include "m_misc.h"
-#include "m_random.h"
 #include "p_local.h"
-#include "p_saveg.h"
 #include "p_setup.h"
 #include "s_sound.h"
 #include "st_stuff.h"
 #include "v_video.h"
 #include "version.h"
-#include "w_file.h"
 #include "w_merge.h"
 #include "w_wad.h"
 #include "wi_stuff.h"
-#include "z_zone.h"
 
 #if !defined(_WIN32)
 #include <dirent.h>
@@ -140,14 +135,13 @@ char                *pwadfile = "";
 
 dboolean            fade = fade_default;
 char                *iwadfolder = iwadfolder_default;
+dboolean            melt = melt_default;
 int                 turbo = turbo_default;
 int                 units = units_default;
 
 #if defined(_WIN32)
 char                *wad = wad_default;
 #endif
-
-dboolean            wipe = wipe_default;
 
 char                *packageconfig;
 char                *packagewad;
@@ -178,8 +172,7 @@ dboolean            advancetitle;
 dboolean            dowipe;
 static dboolean     forcewipe;
 
-static byte         fadescreen[SCREENWIDTH * SCREENHEIGHT];
-static int          fadeheight;
+static byte         fadescreen[MAXSCREENAREA];
 int                 fadecount = 0;
 
 dboolean            splashscreen = true;
@@ -223,8 +216,7 @@ void D_FadeScreen(void)
     if (!fade)
         return;
 
-    fadeheight = (SCREENHEIGHT - (vid_widescreen && gamestate == GS_LEVEL) * SBARHEIGHT) * SCREENWIDTH;
-    memcpy(fadescreen, screens[0], fadeheight);
+    memcpy(fadescreen, screens[0], SCREENAREA);
     fadecount = 3;
 }
 
@@ -246,7 +238,7 @@ static void D_UpdateFade(void)
     }
 
     if (tinttab)
-        for (int i = 0; i < fadeheight; i++)
+        for (int i = 0; i < SCREENAREA; i++)
         {
             byte    *dot = *screens + i;
 
@@ -309,8 +301,10 @@ void D_Display(void)
     {
         drawdisk = false;
 
-        if (wipe)
+        if (melt)
             wipe_StartScreen();
+        else
+            D_FadeScreen();
 
         if (forcewipe)
             forcewipe = false;
@@ -366,11 +360,11 @@ void D_Display(void)
         // see if the border needs to be updated to the screen
         if (!automapactive)
         {
-            if (scaledviewwidth != SCREENWIDTH)
+            if (viewwidth != SCREENWIDTH)
                 R_DrawViewBorder();
 
             if (r_detail == r_detail_low)
-                V_LowGraphicDetail(viewwindowx, viewwindowy * SCREENWIDTH, viewwindowx + viewwidth,
+                postprocessfunc(viewwindowx, viewwindowy * SCREENWIDTH, viewwindowx + viewwidth,
                     (viewwindowy + viewheight) * SCREENWIDTH, lowpixelwidth, lowpixelheight);
         }
 
@@ -390,26 +384,17 @@ void D_Display(void)
         {
             patch_t *patch = W_CacheLumpName("M_PAUSE");
 
-            if (vid_widescreen)
-                V_DrawPatchWithShadow((VANILLAWIDTH - SHORT(patch->width)) / 2,
-                    viewwindowy / 2 + (viewheight / 2 - SHORT(patch->height)) / 2, patch, false);
-            else
-                V_DrawPatchWithShadow((VANILLAWIDTH - SHORT(patch->width)) / 2,
-                    (VANILLAHEIGHT - SHORT(patch->height)) / 2, patch, false);
+            V_DrawPatchWithShadow((VANILLAWIDTH - SHORT(patch->width)) / 2,
+                (VANILLAHEIGHT - SHORT(patch->height)) / 2, patch, false);
         }
         else
-        {
-            if (vid_widescreen)
-                M_DrawCenteredString(viewwindowy / 2 + (viewheight / 2 - 16) / 2, s_M_PAUSED);
-            else
-                M_DrawCenteredString((VANILLAHEIGHT - 16) / 2, s_M_PAUSED);
-        }
+            M_DrawCenteredString((VANILLAHEIGHT - 16) / 2, s_M_PAUSED);
     }
 
     if (loadaction != ga_nothing)
         G_LoadedGameMessage();
 
-    if (!dowipe || !wipe)
+    if (!dowipe || !melt)
     {
         C_Drawer();
 
@@ -462,11 +447,10 @@ void D_Display(void)
         wipestart = nowtime;
         done = wipe_ScreenWipe();
 
-        M_Drawer();
-
 #ifdef __ANDROID__ // The touch controls change the viewport, call this to fix. This function does not exist in SDL2
         SDL_ForceupdateViewport(renderer);
 #endif
+
         blitfunc();
         mapblitfunc();
 
@@ -502,8 +486,7 @@ static void D_DoomLoop(void)
 
         S_UpdateSounds();   // move positional sounds
 
-        // Update display, next frame, with current state.
-        D_Display();
+        D_Display();        // update display, next frame, with current state
     }
 }
 
@@ -514,11 +497,12 @@ int             titlesequence = 0;
 int             pagetic = 3 * TICRATE;
 int             logotic = 3 * TICRATE;
 
-static patch_t  *pagelump;
+patch_t         *pagelump;
+patch_t         *creditlump;
+
 static patch_t  *fineprintlump;
 static patch_t  *logolump[18];
 static patch_t  *titlelump;
-static patch_t  *creditlump;
 static byte     *splashpal;
 
 //
@@ -565,14 +549,20 @@ void D_PageDrawer(void)
         if (prevtic != pagetic)
         {
             if (logotic >= 77 && logotic < 94)
-                V_DrawBigPatch(143, 167, logolump[94 - logotic]);
+                V_DrawBigPatch((SCREENWIDTH - VANILLAWIDTH * SCREENSCALE) / 2 + 143, 167, logolump[94 - logotic]);
 
             I_SetSimplePalette(&splashpal[(pagetic < 9 ? 9 - pagetic : (pagetic > 94 ? pagetic - 94 : 0)) * 768]);
             prevtic = pagetic;
         }
     }
     else
-        V_DrawPagePatch(pagelump);
+    {
+        // [crispy] fill pillarboxes in widescreen mode
+        if (SCREENWIDTH != VANILLAWIDTH * SCREENSCALE)
+            memset(screens[0], nearestblack, SCREENAREA);
+
+        V_DrawWidePatch((SCREENWIDTH / SCREENSCALE - SHORT(pagelump->width)) / 2, 0, 0, pagelump);
+    }
 }
 
 //
@@ -599,8 +589,8 @@ void D_DoAdvanceTitle(void)
     if (!titlesequence)
     {
         titlesequence = 1;
-        V_DrawBigPatch(12, 366, fineprintlump);
-        V_DrawBigPatch(143, 167, logolump[0]);
+        V_DrawBigPatch((SCREENWIDTH - VANILLAWIDTH * SCREENSCALE) / 2 + 12, 366, fineprintlump);
+        V_DrawBigPatch((SCREENWIDTH - VANILLAWIDTH * SCREENSCALE) / 2 + 143, 167, logolump[0]);
         return;
     }
     else if (titlesequence == 1)
@@ -1869,6 +1859,8 @@ static void D_DoomMainSetup(void)
     // Load configuration files before initializing other subsystems.
     M_LoadCVARs(packageconfig);
 
+    D_BuildBEXTables();
+
     if ((respawnmonsters = M_CheckParm("-respawn")))
         C_Output("A <b>-respawn</b> parameter was found on the command-line. Monsters will respawn.");
     else if ((respawnmonsters = M_CheckParm("-respawnmonsters")))
@@ -1882,7 +1874,8 @@ static void D_DoomMainSetup(void)
     }
 
     if ((pistolstart = M_CheckParm("-pistolstart")))
-        C_Output("A <b>-pistolstart</b> parameter was found on the command-line. The player will start each map with only a pistol.");
+        C_Output("A <b>-pistolstart</b> parameter was found on the command-line. The player will start each map with 100%% health,"
+            " no armor, and only a pistol and 50 bullets.");
 
     if ((fastparm = M_CheckParm("-fast")))
         C_Output("A <b>-fast</b> parameter was found on the command-line. Monsters will be faster.");
@@ -1926,15 +1919,14 @@ static void D_DoomMainSetup(void)
     I_InitTimer();
 
     if (!stat_runs)
-        C_Output("This is the first time <i><b>" PACKAGE_NAME "</b></i> has been run.");
+        C_Output("This is the first time <i>" PACKAGE_NAME "</i> has been run.");
     else if (stat_runs == 1)
-        C_Output("<i><b>" PACKAGE_NAME "</b></i> has now been run twice.");
+        C_Output("<i>" PACKAGE_NAME "</i> has now been run twice.");
     else
     {
         char    *temp = commify(SafeAdd(stat_runs, 1));
 
-        C_Output("<i><b>" PACKAGE_NAME "</b></i> has now been run %s times.", temp);
-
+        C_Output("<i>" PACKAGE_NAME "</i> has now been run %s times.", temp);
         free(temp);
     }
 
@@ -2086,7 +2078,6 @@ static void D_DoomMainSetup(void)
 
                     free(folder);
                 }
-
             }
         } while ((p = M_CheckParmsWithArgs("-file", "-pwad", "-merge", 1, p)));
 
@@ -2193,7 +2184,7 @@ static void D_DoomMainSetup(void)
             strreplace(string, ".", "");
             strreplace(string, "!", "");
 
-            C_Output("A <b>-%s</b> parameter was found on the command-line. The skill level is now <i><b>%s.</b></i>",
+            C_Output("A <b>-%s</b> parameter was found on the command-line. The skill level is now <i>%s.</i>",
                 myargv[p], string);
             free(string);
         }
@@ -2216,7 +2207,7 @@ static void D_DoomMainSetup(void)
                 M_snprintf(lumpname, sizeof(lumpname), "E%iM%i", startepisode, startmap);
 
             autostart = true;
-            C_Output("An <b>-episode</b> parameter was found on the command-line. The episode is now <i><b>%s.</b></i>",
+            C_Output("An <b>-episode</b> parameter was found on the command-line. The episode is now <i>%s.</i>",
                 *episodes[episode - 1]);
         }
     }
@@ -2232,7 +2223,7 @@ static void D_DoomMainSetup(void)
             M_SaveCVARs();
             M_snprintf(lumpname, sizeof(lumpname), "MAP%02i", startmap);
             autostart = true;
-            C_Output("An <b>-expansion</b> parameter was found on the command-line. The expansion is now <i><b>%s.</b></i>",
+            C_Output("An <b>-expansion</b> parameter was found on the command-line. The expansion is now <i>%s.</i>",
                 *expansions[expansion - 1]);
         }
     }
@@ -2323,14 +2314,41 @@ static void D_DoomMainSetup(void)
 
     if (autosigil)
     {
-        titlelump = W_CacheLastLumpName((TITLEPIC ? "TITLEPIC" : (DMENUPIC ? "DMENUPIC" : "INTERPIC")));
+        titlelump = W_CacheLastLumpName((TITLEPIC ? "TITLEPI2" : (DMENUPIC ? "DMENUPIC" : "INTERPIC")));
+        creditlump = W_CacheLastLumpName("CREDIT1");
+    }
+    else if (W_CheckMultipleLumps("TITLEPIC") > 1)
+    {
+        titlelump = W_CacheLumpName("TITLEPIC");
         creditlump = W_CacheLastLumpName("CREDIT");
     }
     else
-    {
-        titlelump = W_CacheLumpName((TITLEPIC ? "TITLEPIC" : (DMENUPIC ? "DMENUPIC" : "INTERPIC")));
-        creditlump = W_CacheLumpName("CREDIT");
-    }
+        switch (gamemission)
+        {
+            case doom:
+                titlelump = W_CacheLumpName(gamemode == retail ? "TITLEPI2" : "TITLEPI1");
+                creditlump = W_CacheLumpName("CREDIT1");
+                break;
+
+            case doom2:
+            case pack_nerve:
+                titlelump = W_CacheLumpName("TITLEPI3");
+                creditlump = W_CacheLumpName("CREDIT2");
+                break;
+
+            case pack_plut:
+                titlelump = W_CacheLumpName("TITLEPI4");
+                creditlump = W_CacheLumpName("CREDIT2");
+                break;
+
+            case pack_tnt:
+                titlelump = W_CacheLumpName("TITLEPI5");
+                creditlump = W_CacheLumpName("CREDIT2");
+                break;
+
+            case none:
+                break;
+        }
 
     if (gameaction != ga_loadgame)
     {
@@ -2346,14 +2364,6 @@ static void D_DoomMainSetup(void)
             C_Output("Warping to %s...", lumpname);
             G_DeferredInitNew(startskill, startepisode, startmap);
         }
-#if SCREENSCALE == 1
-        else
-        {
-            menuactive = false;
-            splashscreen = false;
-            D_StartTitle(1);
-        }
-#else
         else if (M_CheckParm("-nosplash"))
         {
             menuactive = false;
@@ -2362,11 +2372,10 @@ static void D_DoomMainSetup(void)
         }
         else
             D_StartTitle(0);
-#endif
     }
 
     seconds = striptrailingzero((I_GetTimeMS() - startuptimer) / 1000.0f, 1);
-    C_Output("Startup took %s seconds to complete.", seconds);
+    C_Output("Startup took %s second%s to complete.", seconds, (M_StringCompare(seconds, "1") ? "" : "s"));
     free(seconds);
 
     // Ty 04/08/98 - Add 5 lines of misc. data, only if non-blank

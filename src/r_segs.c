@@ -7,7 +7,7 @@
 ========================================================================
 
   Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2020 by Brad Harding.
+  Copyright © 2013-2021 by Brad Harding.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
@@ -477,7 +477,7 @@ static void R_RenderSegLoop(void)
                 didsolidcol = true;
             }
 
-            // save texturecolumn for backdrawing of masked mid texture
+            // save texturecolumn for backdrawing of masked midtexture
             if (maskedtexture)
                 maskedtexturecol[rw_x] = texturecolumn;
         }
@@ -710,8 +710,8 @@ void R_StoreWallRange(const int start, const int stop)
             || backsector->lightlevel != frontsector->lightlevel
 
             // killough 03/07/98: Add checks for (x,y) offsets
-            || backsector->floor_xoffs != frontsector->floor_xoffs
-            || backsector->floor_yoffs != frontsector->floor_yoffs
+            || backsector->floorxoffset != frontsector->floorxoffset
+            || backsector->flooryoffset != frontsector->flooryoffset
 
             // killough 04/15/98: prevent 2s normals
             // from bleeding through deep water
@@ -725,8 +725,8 @@ void R_StoreWallRange(const int start, const int stop)
             || backsector->lightlevel != frontsector->lightlevel
 
             // killough 03/07/98: Add checks for (x,y) offsets
-            || backsector->ceiling_xoffs != frontsector->ceiling_xoffs
-            || backsector->ceiling_yoffs != frontsector->ceiling_yoffs
+            || backsector->ceilingxoffset != frontsector->ceilingxoffset
+            || backsector->ceilingyoffset != frontsector->ceilingyoffset
 
             // killough 04/15/98: prevent 2s normals
             // from bleeding through fake ceilings

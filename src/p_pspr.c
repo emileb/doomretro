@@ -7,7 +7,7 @@
 ========================================================================
 
   Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2020 by Brad Harding.
+  Copyright © 2013-2021 by Brad Harding.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
@@ -40,10 +40,8 @@
 #include "g_game.h"
 #include "hu_stuff.h"
 #include "i_gamepad.h"
-#include "i_system.h"
 #include "i_timer.h"
 #include "m_config.h"
-#include "m_menu.h"
 #include "m_random.h"
 #include "p_local.h"
 #include "p_tick.h"
@@ -58,6 +56,8 @@ int             weaponbob = weaponbob_default;
 dboolean        weaponbounce = weaponbounce_default;
 dboolean        weaponrecoil = weaponrecoil_default;
 
+uint64_t        stat_shotsfired_fists = 0;
+uint64_t        stat_shotsfired_chainsaw = 0;
 uint64_t        stat_shotsfired_pistol = 0;
 uint64_t        stat_shotsfired_shotgun = 0;
 uint64_t        stat_shotsfired_supershotgun = 0;
@@ -65,6 +65,8 @@ uint64_t        stat_shotsfired_chaingun = 0;
 uint64_t        stat_shotsfired_rocketlauncher = 0;
 uint64_t        stat_shotsfired_plasmarifle = 0;
 uint64_t        stat_shotsfired_bfg9000 = 0;
+uint64_t        stat_shotssuccessful_fists = 0;
+uint64_t        stat_shotssuccessful_chainsaw = 0;
 uint64_t        stat_shotssuccessful_pistol = 0;
 uint64_t        stat_shotssuccessful_shotgun = 0;
 uint64_t        stat_shotssuccessful_supershotgun = 0;
@@ -425,6 +427,9 @@ void A_Punch(mobj_t *actor, player_t *player, pspdef_t *psp)
     hitwall = false;
     P_LineAttack(actor, angle, MELEERANGE, slope, damage);
 
+    player->shotsfired[wp_fist]++;
+    stat_shotsfired_fists = SafeAdd(stat_shotsfired_fists, 1);
+
     if (linetarget || hitwall)
     {
         P_NoiseAlert(actor);
@@ -432,7 +437,12 @@ void A_Punch(mobj_t *actor, player_t *player, pspdef_t *psp)
 
         // turn to face target
         if (linetarget)
+        {
             actor->angle = R_PointToAngle2(actor->x, actor->y, linetarget->x, linetarget->y);
+
+            player->shotssuccessful[wp_fist]++;
+            stat_shotssuccessful_fists = SafeAdd(stat_shotssuccessful_fists, 1);
+        }
     }
 }
 
@@ -451,11 +461,17 @@ void A_Saw(mobj_t *actor, player_t *player, pspdef_t *psp)
     A_Recoil(wp_chainsaw);
     P_NoiseAlert(actor);
 
+    player->shotsfired[wp_chainsaw]++;
+    stat_shotsfired_chainsaw = SafeAdd(stat_shotsfired_chainsaw, 1);
+
     if (!linetarget)
     {
         S_StartSound(actor, sfx_sawful);
         return;
     }
+
+    player->shotssuccessful[wp_chainsaw]++;
+    stat_shotssuccessful_chainsaw = SafeAdd(stat_shotssuccessful_chainsaw, 1);
 
     S_StartSound(actor, sfx_sawhit);
 
@@ -751,8 +767,9 @@ void A_FireCGun(mobj_t *actor, player_t *player, pspdef_t *psp)
     if (!player->ammo[weaponinfo[player->readyweapon].ammotype])
         return;
 
-    P_NoiseAlert(actor);
     S_StartSound(actor, sfx_pistol);
+
+    P_NoiseAlert(actor);
     P_SubtractAmmo(1);
     P_SetPsprite(ps_flash, weaponinfo[player->readyweapon].flashstate + (unsigned int)((psp->state - &states[S_CHAIN1]) & 1));
     P_BulletSlope(actor);
@@ -797,18 +814,20 @@ void A_Light2(mobj_t *actor, player_t *player, pspdef_t *psp)
 void A_BFGSpray(mobj_t *actor, player_t *player, pspdef_t *psp)
 {
     mobj_t  *mo = actor->target;
+    angle_t an = mo->angle - ANG90 / 2;
 
     P_NoiseAlert(actor);
 
     // offset angles from its attack angle
     for (int i = 0; i < 40; i++)
     {
-        int     damage = 0;
-        angle_t an = mo->angle - ANG90 / 2 + ANG90 / 40 * i;
+        int damage = 15;
 
         // killough 08/02/98: make autoaiming prefer enemies
         if (P_AimLineAttack(mo, an, 16 * 64 * FRACUNIT, MF_FRIEND), !linetarget)
             P_AimLineAttack(mo, an, 16 * 64 * FRACUNIT, 0);
+
+        an += ANG90 / 40;
 
         if (!linetarget)
             continue;
@@ -818,7 +837,7 @@ void A_BFGSpray(mobj_t *actor, player_t *player, pspdef_t *psp)
         P_SpawnMobj(linetarget->x, linetarget->y, linetarget->z + (linetarget->height >> 2), MT_EXTRABFG);
 
         for (int j = 0; j < 15; j++)
-            damage += (M_Random() & 7) + 1;
+            damage += M_Random() & 7;
 
         P_DamageMobj(linetarget, mo, mo, damage, true);
     }

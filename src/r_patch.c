@@ -7,7 +7,7 @@
 ========================================================================
 
   Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2020 by Brad Harding.
+  Copyright © 2013-2021 by Brad Harding.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
@@ -69,8 +69,6 @@
 #include "c_console.h"
 #include "doomstat.h"
 #include "i_swap.h"
-#include "m_misc.h"
-#include "p_setup.h"
 #include "r_main.h"
 #include "w_wad.h"
 #include "z_zone.h"
@@ -372,7 +370,7 @@ static void createTextureCompositePatch(int id)
     columnsDataSize = sizeof(rcolumn_t) * composite_patch->width;
 
     // count the number of posts in each column
-    countsInColumn = (count_t *)calloc(sizeof(count_t), composite_patch->width);
+    countsInColumn = (count_t *)calloc(composite_patch->width, sizeof(count_t));
     numPostsTotal = 0;
 
     for (int i = 0; i < texture->patchcount; i++)

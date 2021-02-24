@@ -7,7 +7,7 @@
 ========================================================================
 
   Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2020 by Brad Harding.
+  Copyright © 2013-2021 by Brad Harding.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
@@ -1482,7 +1482,7 @@ static void P_LoadNodes_V4(int lump)
     W_ReleaseLumpNum(lump);
 }
 
-// MB 2020-03-01: Fix endianness for 32-bit ZDoom nodes
+// MB 2021-03-01: Fix endianness for 32-bit ZDoom nodes
 static void P_LoadZSegs(const byte *data)
 {
     for (int i = 0; i < numsegs; i++)
@@ -1575,7 +1575,7 @@ static void P_LoadZSegs(const byte *data)
     }
 }
 
-// MB 2020-03-01: Fix endianness for 32-bit ZDoom nodes
+// MB 2021-03-01: Fix endianness for 32-bit ZDoom nodes
 // <https://zdoom.org/wiki/Node#ZDoom_extended_nodes>
 static void P_LoadZNodes(int lump)
 {
@@ -1739,7 +1739,7 @@ static void P_LoadThings(int lump)
                 M_snprintf(buffer, sizeof(buffer), "%ss", mobjinfo[doomednum].name1);
 
             buffer[0] = toupper(buffer[0]);
-            C_Warning(2, "%s can't be spawned in <i><b>%s.</b></i>", buffer, gamedescription);
+            C_Warning(2, "%s can't be spawned in <i>%s.</i>", buffer, gamedescription);
             continue;
         }
 
@@ -2126,6 +2126,14 @@ static void P_CreateBlockMap(void)
     fixed_t maxx = FIXED_MIN;
     fixed_t maxy = FIXED_MIN;
 
+    // This fixes MBF's code, which has a bug where maxx/maxy
+    // are wrong if the 0th node has the largest x or y
+    if (numvertexes)
+    {
+        minx = maxx = vertexes->x >> FRACBITS;
+        miny = maxy = vertexes->y >> FRACBITS;
+    }
+
     blockmaprebuilt = true;
 
     for (i = 0; i < numvertexes; i++)
@@ -2179,7 +2187,7 @@ static void P_CreateBlockMap(void)
         } bmap_t;
 
         unsigned int    tot = bmapwidth * bmapheight;           // size of blockmap
-        bmap_t          *bmap = calloc(sizeof(*bmap), tot);     // array of blocklists
+        bmap_t          *bmap = calloc(tot, sizeof(*bmap));     // array of blocklists
 
         for (i = 0; i < numlines; i++)
         {
@@ -2310,12 +2318,12 @@ static void P_LoadBlockMap(int lump)
     if (lump >= numlumps || (lumplen = W_LumpLength(lump)) < 8 || (count = lumplen / 2) >= 0x10000)
     {
         P_CreateBlockMap();
-        C_Warning(2, "The <b>BLOCKMAP</b> lump was rebuilt.");
+        C_Warning(2, "The <b>BLOCKMAP</b> lump has been rebuilt.");
     }
     else if (M_CheckParm("-blockmap"))
     {
         P_CreateBlockMap();
-        C_Warning(2, "A <b>-blockmap</b> parameter was found on the command-line. The <b>BLOCKMAP</b> lump was rebuilt.");
+        C_Warning(1, "A <b>-blockmap</b> parameter was found on the command-line. The <b>BLOCKMAP</b> lump has been rebuilt.");
     }
     else
     {
@@ -2349,7 +2357,7 @@ static void P_LoadBlockMap(int lump)
         if (!P_VerifyBlockMap(count))
         {
             P_CreateBlockMap();
-            C_Warning(2, "The <b>BLOCKMAP</b> lump was rebuilt.");
+            C_Warning(2, "The <b>BLOCKMAP</b> lump has been rebuilt.");
         }
     }
 
@@ -2895,10 +2903,10 @@ void P_SetupLevel(int ep, int map)
     temp = titlecase(maptitle);
 
     if (M_StringCompare(playername, playername_default))
-        C_PlayerMessage("You have %s <b><i>%s</i></b>%s",
+        C_PlayerMessage("You have %s <i>%s</i>%s",
             (samelevel ? "reentered": "entered"), temp, (ispunctuation(temp[strlen(temp) - 1]) ? "" : "."));
     else
-        C_PlayerMessage("%s has %s <b><i>%s</i></b>%s",
+        C_PlayerMessage("%s has %s <i>%s</i>%s",
             playername, (samelevel ? "reentered" : "entered"), temp, (ispunctuation(temp[strlen(temp) - 1]) ? "" : "."));
 
     free(temp);
@@ -2967,9 +2975,11 @@ void P_SetupLevel(int ep, int map)
 
     markpointnum = 0;
     markpointnum_max = 0;
+    markpoints = I_Realloc(markpoints, 0);
 
     pathpointnum = 0;
     pathpointnum_max = 0;
+    pathpoints = I_Realloc(pathpoints, 0);
 
     massacre = false;
 
@@ -3089,7 +3099,7 @@ static void P_InitMapInfo(void)
             {
                 if (M_StringEndsWith(lumpinfo[MAPINFO]->wadfile->path, "NERVE.WAD"))
                 {
-                    C_Warning(0, "The map markers in PWAD <b>%s</b> are invalid.", lumpinfo[MAPINFO]->wadfile->path);
+                    C_Warning(1, "The map markers in PWAD <b>%s</b> are invalid.", lumpinfo[MAPINFO]->wadfile->path);
                     nerve = false;
                     NewDef.prevMenu = &MainDef;
                     MAPINFO = -1;
@@ -3097,7 +3107,7 @@ static void P_InitMapInfo(void)
                 }
                 else
                 {
-                    C_Warning(0, "The <b>MAPINFO</b> lump contains an invalid map marker.");
+                    C_Warning(1, "The <b>MAPINFO</b> lump contains an invalid map marker.");
                     continue;
                 }
             }
@@ -3431,7 +3441,7 @@ static void P_InitMapInfo(void)
     mapcount = mapmax;
 
     temp = commify(sc_Line);
-    C_Output("Parsed %s line%s in the <b>%sMAPINFO</b> lump in %s <b>%s</b>.",
+    C_Output("Parsed %s line%s in the <b>%sMAPINFO</b> lump in the %s <b>%s</b>.",
         temp, (sc_Line > 1 ? "s" : ""), (RMAPINFO >= 0 ? "R" : (UMAPINFO >= 0 ? "U" : "")),
         (lumpinfo[MAPINFO]->wadfile->type == IWAD ? "IWAD" : "PWAD"), lumpinfo[MAPINFO]->wadfile->path);
     free(temp);
@@ -3534,7 +3544,7 @@ dboolean P_GetMapNoJump(int map)
 void P_GetMapNoLiquids(int map)
 {
     for (int i = 0; i < noliquidlumps; i++)
-        terraintypes[mapinfo[map].liquid[i]] = SOLID;
+        terraintypes[mapinfo[map].noliquid[i]] = SOLID;
 }
 
 dboolean P_GetMapNoMouselook(int map)

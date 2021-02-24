@@ -7,7 +7,7 @@
 ========================================================================
 
   Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2020 by Brad Harding.
+  Copyright © 2013-2021 by Brad Harding.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
@@ -71,7 +71,7 @@ void AM_ToggleMaxZoom(void);
 // Called to force the automap to quit if the level is completed while it is up.
 void AM_Stop(void);
 
-void AM_SetAutomapSize(void);
+void AM_SetAutomapSize(int screensize);
 
 void AM_Init(void);
 void AM_SetColors(void);
@@ -87,8 +87,6 @@ typedef struct
 } am_frame_t;
 
 extern dboolean     message_dontfuckwithme;
-
-extern int          gamepadwait;
 
 extern mpoint_t     *markpoints;
 extern int          markpointnum;

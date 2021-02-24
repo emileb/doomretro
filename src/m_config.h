@@ -7,7 +7,7 @@
 ========================================================================
 
   Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2020 by Brad Harding.
+  Copyright © 2013-2021 by Brad Harding.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
@@ -95,9 +95,11 @@ extern dboolean     m_doubleclick_use;
 extern dboolean     m_invertyaxis;
 extern dboolean     m_novertical;
 extern int          m_sensitivity;
+extern dboolean     melt;
 extern dboolean     messages;
 extern dboolean     mouselook;
 extern int          movebob;
+extern int          playergender;
 extern char         *playername;
 extern dboolean     r_althud;
 extern int          r_berserkintensity;
@@ -187,7 +189,9 @@ extern uint64_t     stat_monsterskilled_spectres;
 extern uint64_t     stat_monsterskilled_spidermasterminds;
 extern uint64_t     stat_monsterskilled_zombiemen;
 extern uint64_t     stat_runs;
-extern uint64_t     stat_secretsrevealed;
+extern uint64_t     stat_secretsfound;
+extern uint64_t     stat_shotsfired_fists;
+extern uint64_t     stat_shotsfired_chainsaw;
 extern uint64_t     stat_shotsfired_pistol;
 extern uint64_t     stat_shotsfired_shotgun;
 extern uint64_t     stat_shotsfired_supershotgun;
@@ -195,6 +199,8 @@ extern uint64_t     stat_shotsfired_chaingun;
 extern uint64_t     stat_shotsfired_rocketlauncher;
 extern uint64_t     stat_shotsfired_plasmarifle;
 extern uint64_t     stat_shotsfired_bfg9000;
+extern uint64_t     stat_shotssuccessful_fists;
+extern uint64_t     stat_shotssuccessful_chainsaw;
 extern uint64_t     stat_shotssuccessful_pistol;
 extern uint64_t     stat_shotssuccessful_shotgun;
 extern uint64_t     stat_shotssuccessful_supershotgun;
@@ -208,7 +214,7 @@ extern uint64_t     stat_skilllevel_hurtmeplenty;
 extern uint64_t     stat_skilllevel_ultraviolence;
 extern uint64_t     stat_skilllevel_nightmare;
 extern uint64_t     stat_suicides;
-extern uint64_t     stat_time;
+extern uint64_t     stat_timeplayed;
 extern int          stillbob;
 extern dboolean     tossdrop;
 extern int          turbo;
@@ -238,13 +244,19 @@ extern int          warninglevel;
 extern int          weaponbob;
 extern dboolean     weaponbounce;
 extern dboolean     weaponrecoil;
-extern dboolean     wipe;
 
 enum
 {
     crosshair_none,
     crosshair_cross,
     crosshair_dot
+};
+
+enum
+{
+    playergender_other,
+    playergender_male,
+    playergender_female
 };
 
 enum
@@ -400,8 +412,7 @@ enum
 #define expansion_max                           2
 
 #define facebackcolor_min                       0
-#define facebackcolor_none                      5
-#define facebackcolor_default                   facebackcolor_none
+#define facebackcolor_default                   5
 #define facebackcolor_max                       255
 
 #define fade_default                            true
@@ -470,6 +481,8 @@ enum
 #define m_sensitivity_default                   16
 #define m_sensitivity_max                       128
 
+#define melt_default                            true
+
 #define messages_default                        false
 
 #define mouselook_default                       false
@@ -477,6 +490,10 @@ enum
 #define movebob_min                             0
 #define movebob_default                         75
 #define movebob_max                             100
+
+#define playergender_min                        playergender_other
+#define playergender_default                    playergender_male
+#define playergender_max                        playergender_female
 
 #define playername_default                      "you"
 
@@ -568,7 +585,7 @@ enum
 
 #define r_screensize_min                        0
 #define r_screensize_default                    7
-#define r_screensize_max                        7
+#define r_screensize_max                        8
 
 #define r_shadows_default                       true
 
@@ -596,7 +613,7 @@ enum
 #define s_channels_max                          64
 
 #define s_musicvolume_min                       0
-#define s_musicvolume_default                   67
+#define s_musicvolume_default                   100
 #define s_musicvolume_max                       100
 
 #define s_randommusic_default                   false
@@ -686,7 +703,7 @@ enum
 #define vid_windowpos_centred                   "centred"
 #define vid_windowpos_default                   vid_windowpos_centered
 
-#define vid_windowsize_default                  "768x480"
+#define vid_windowsize_default                  "854x480"
 
 #if defined(_WIN32)
 #define wad_default                             ""
@@ -704,8 +721,6 @@ enum
 
 #define weaponrecoil_default                    false
 
-#define wipe_default                            true
-
 #define GAMEPADALWAYSRUN_DEFAULT                0
 #define GAMEPADAUTOMAP_DEFAULT                  GAMEPAD_BACK
 #define GAMEPADAUTOMAPCLEARMARK_DEFAULT         0
@@ -717,6 +732,7 @@ enum
 #define GAMEPADAUTOMAPZOOMIN_DEFAULT            GAMEPAD_RIGHT_SHOULDER
 #define GAMEPADAUTOMAPZOOMOUT_DEFAULT           GAMEPAD_LEFT_SHOULDER
 #define GAMEPADBACK_DEFAULT                     0
+#define GAMEPADCONSOLE_DEFAULT                  0
 #define GAMEPADFIRE_DEFAULT                     GAMEPAD_RIGHT_TRIGGER
 #define GAMEPADFORWARD_DEFAULT                  0
 #define GAMEPADJUMP_DEFAULT                     0
@@ -815,16 +831,17 @@ typedef enum
     CAPVALUEALIAS,
     SKYVALUEALIAS,
     SCALEVALUEALIAS,
-    FACEBACKVALUEALIAS,
     ARMORTYPEVALUEALIAS,
     CROSSHAIRVALUEALIAS,
-    VSYNCVALUEALIAS
+    VSYNCVALUEALIAS,
+    PLAYERGENDERVALUEALIAS
 } valuealias_type_t;
 
 typedef struct
 {
     // Name of the variable
     char                *name;
+    char                *oldname;
 
     // Pointer to the location in memory of the variable
     void                *location;

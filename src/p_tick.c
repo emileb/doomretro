@@ -7,7 +7,7 @@
 ========================================================================
 
   Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2020 by Brad Harding.
+  Copyright © 2013-2021 by Brad Harding.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
@@ -44,7 +44,7 @@
 #include "z_zone.h"
 
 int         leveltime;
-uint64_t    stat_time = 0;
+uint64_t    stat_timeplayed = 0;
 
 //
 // THINKERS
@@ -195,36 +195,34 @@ void P_Ticker(void)
     if (menuactive && !freeze)
     {
         for (currentthinker = thinkers[th_misc].cnext; currentthinker != &thinkers[th_misc]; currentthinker = currentthinker->cnext)
-            if (currentthinker->function && currentthinker->menu)
+            if (currentthinker->menu)
                 currentthinker->function((mobj_t *)currentthinker);
 
         P_UpdateSpecials();
+        return;
     }
-    else
+
+    P_MapEnd();
+
+    if (freeze)
     {
-        P_MapEnd();
-
-        if (freeze)
-        {
-            P_MobjThinker(viewplayer->mo);
-            return;
-        }
-
-        for (currentthinker = thinkers[th_mobj].cnext; currentthinker != &thinkers[th_mobj]; currentthinker = currentthinker->cnext)
-            currentthinker->function((mobj_t *)currentthinker);
-
-        for (currentthinker = thinkers[th_misc].cnext; currentthinker != &thinkers[th_misc]; currentthinker = currentthinker->cnext)
-            if (currentthinker->function)
-                currentthinker->function((mobj_t *)currentthinker);
-
-        P_UpdateSpecials();
-
-        T_MAPMusic();
-
-        P_RespawnSpecials();
-
-        // for par times
-        leveltime++;
-        stat_time = SafeAdd(stat_time, 1);
+        P_MobjThinker(viewplayer->mo);
+        return;
     }
+
+    for (currentthinker = thinkers[th_mobj].cnext; currentthinker != &thinkers[th_mobj]; currentthinker = currentthinker->cnext)
+        currentthinker->function((mobj_t *)currentthinker);
+
+    for (currentthinker = thinkers[th_misc].cnext; currentthinker != &thinkers[th_misc]; currentthinker = currentthinker->cnext)
+        currentthinker->function((mobj_t *)currentthinker);
+
+    P_UpdateSpecials();
+
+    T_MAPMusic();
+
+    P_RespawnSpecials();
+
+    // for par times
+    leveltime++;
+    stat_timeplayed = SafeAdd(stat_timeplayed, 1);
 }

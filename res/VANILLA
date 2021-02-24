@@ -1,4 +1,4 @@
-﻿; CVARs
+﻿; CCMDs and CVARs
 alwaysrun off
 am_allmapcdwallcolor 99
 am_allmapfdwallcolor 99
@@ -32,7 +32,7 @@ fade off
 freeze off
 gp_analog off
 gp_invertyaxis off
-gp_sensitivity_vertical 64
+gp_sensitivity_horizontal 16
 gp_swapthumbsticks off
 gp_thumbsticks 1
 gp_vibrate_barrels 0%
@@ -44,6 +44,7 @@ m_acceleration off
 m_doubleclick_use on
 m_novertical off
 m_sensitivity 8
+melt on
 messages on
 mouselook off
 movebob 100%
@@ -53,7 +54,7 @@ playername "you"
 r_althud off
 r_blood red
 r_brightmaps off
-r_color 100
+r_color 100%
 r_corpses_color off
 r_corpses_gib off
 r_corpses_mirrored off
@@ -107,7 +108,6 @@ vid_widescreen off
 weaponbob 100%
 weaponbounce off
 weaponrecoil off
-wipe on
 
 ; bound controls
 bind tab +automap

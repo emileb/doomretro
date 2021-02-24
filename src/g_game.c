@@ -7,7 +7,7 @@
 ========================================================================
 
   Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2020 by Brad Harding.
+  Copyright © 2013-2021 by Brad Harding.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
@@ -109,7 +109,7 @@ static fixed_t  gamepadangleturn[] = { 640, 960 };
 
 #define NUMWEAPONKEYS   7
 
-static int *keyboardweapons[] =
+static int *keyboardweapons[NUMWEAPONKEYS] =
 {
     &keyboardweapon1,
     &keyboardweapon2,
@@ -120,7 +120,7 @@ static int *keyboardweapons[] =
     &keyboardweapon7
 };
 
-static int *gamepadweapons[] =
+static int *gamepadweapons[NUMWEAPONKEYS] =
 {
     &gamepadweapon1,
     &gamepadweapon2,
@@ -284,12 +284,12 @@ void G_BuildTiccmd(ticcmd_t *cmd)
         if (gamekeydown[keyboardright] || (gamepadbuttons & gamepadright))
             cmd->angleturn -= angleturn[(turnheld < SLOWTURNTICS ? 2 : run)];
         else if (gamepadthumbRX > 0)
-            cmd->angleturn -= (int)(gamepadangleturn[run] * gamepadthumbRXright * gamepadhorizontalsensitivity);
+            cmd->angleturn -= (int)(gamepadangleturn[run] * ((float)gamepadthumbRX / SHRT_MAX) * gamepadhorizontalsensitivity);
 
         if (gamekeydown[keyboardleft] || (gamepadbuttons & gamepadleft))
             cmd->angleturn += angleturn[(turnheld < SLOWTURNTICS ? 2 : run)];
         else if (gamepadthumbRX < 0)
-            cmd->angleturn += (int)(gamepadangleturn[run] * gamepadthumbRXleft * gamepadhorizontalsensitivity);
+            cmd->angleturn -= (int)(gamepadangleturn[run] * ((float)gamepadthumbRX / SHRT_MAX) * gamepadhorizontalsensitivity);
     }
 
     if (gamepadthumbRY)
@@ -298,7 +298,7 @@ void G_BuildTiccmd(ticcmd_t *cmd)
         {
             if (!automapactive)
             {
-                cmd->lookdir = (int)(48 * (gamepadthumbRY < 0 ? gamepadthumbRYup : gamepadthumbRYdown) * gamepadverticalsensitivity);
+                cmd->lookdir = (int)(48 * ((float)gamepadthumbRY / SHRT_MAX) * gamepadverticalsensitivity);
 
                 if (!gp_invertyaxis)
                     cmd->lookdir = -cmd->lookdir;
@@ -307,28 +307,28 @@ void G_BuildTiccmd(ticcmd_t *cmd)
         else if (gp_thumbsticks == 1)
         {
             cmd->lookdir = 0;
-            forward = (int)(forwardmove[run] * (gamepadthumbRY < 0 ? gamepadthumbRYup : gamepadthumbRYdown));
+            forward = (int)(forwardmove[run] * (float)gamepadthumbRY / SHRT_MAX);
         }
     }
 
     if (gamekeydown[keyboardforward] || gamekeydown[keyboardforward2] || (gamepadbuttons & gamepadforward))
         forward += forwardmove[run];
     else if (gamepadthumbLY < 0)
-        forward += (int)(forwardmove[run] * gamepadthumbLYup);
+        forward -= (int)(forwardmove[run] * (float)gamepadthumbLY / SHRT_MAX);
 
     if (gamekeydown[keyboardback] || gamekeydown[keyboardback2] || (gamepadbuttons & gamepadback))
         forward -= forwardmove[run];
     else if (gamepadthumbLY > 0)
-        forward -= (int)(forwardmove[run] * gamepadthumbLYdown);
+        forward -= (int)(forwardmove[run] * (float)gamepadthumbLY / SHRT_MAX);
 
     if (gamekeydown[keyboardstraferight] || gamekeydown[keyboardstraferight2] || (gamepadbuttons & gamepadstraferight))
         side += sidemove[run];
     else if (gamepadthumbLX > 0)
     {
         if (gp_thumbsticks == 2)
-            side += (int)(sidemove[run] * gamepadthumbLXright);
+            side += (int)(sidemove[run] * (float)gamepadthumbLX / SHRT_MAX);
         else
-            cmd->angleturn -= (int)(gamepadangleturn[run] * gamepadthumbLXright * gamepadhorizontalsensitivity);
+            cmd->angleturn -= (int)(gamepadangleturn[run] * ((float)gamepadthumbLX / SHRT_MAX) * gamepadhorizontalsensitivity);
     }
 
     if (gamekeydown[keyboardstrafeleft] || gamekeydown[keyboardstrafeleft2] || (gamepadbuttons & gamepadstrafeleft))
@@ -336,9 +336,9 @@ void G_BuildTiccmd(ticcmd_t *cmd)
     else if (gamepadthumbLX < 0)
     {
         if (gp_thumbsticks == 2)
-            side -= (int)(sidemove[run] * gamepadthumbLXleft);
+            side += (int)(sidemove[run] * (float)gamepadthumbLX / SHRT_MAX);
         else
-            cmd->angleturn += (int)(gamepadangleturn[run] * gamepadthumbLXleft * gamepadhorizontalsensitivity);
+            cmd->angleturn -= (int)(gamepadangleturn[run] * ((float)gamepadthumbLX / SHRT_MAX) * gamepadhorizontalsensitivity);
     }
 
     if ((gamekeydown[keyboardjump] || mousebuttons[mousejump] || (gamepadbuttons & gamepadjump)) && !nojump)
@@ -543,10 +543,6 @@ void G_DoLoadLevel(void)
     if (viewplayer->playerstate == PST_DEAD)
         viewplayer->playerstate = PST_REBORN;
 
-    if (viewplayer->playerstate == PST_REBORN
-        && (M_StringCompare(mapnum, "E1M4B") || M_StringCompare(mapnum, "E1M8B")))
-        M_StringCopy(speciallumpname, mapnum, sizeof(speciallumpname));
-
     viewplayer->damageinflicted = 0;
     viewplayer->damagereceived = 0;
     viewplayer->cheated = 0;
@@ -621,9 +617,6 @@ void G_DoLoadLevel(void)
 
     if (automapactive || mapwindow)
         AM_Start(automapactive);
-
-    if (vid_widescreen || returntowidescreen)
-        I_ToggleWidescreen(true);
 }
 
 void G_ToggleAlwaysRun(evtype_t type)
@@ -634,13 +627,23 @@ void G_ToggleAlwaysRun(evtype_t type)
     alwaysrun = !alwaysrun;
 #endif
 
+    C_StrCVAROutput(stringize(alwaysrun), (alwaysrun ? "on" : "off"));
+
     if (!consoleactive)
     {
-        HU_SetPlayerMessage((alwaysrun ? s_ALWAYSRUNON : s_ALWAYSRUNOFF), false, false);
+        if (alwaysrun)
+        {
+            HU_SetPlayerMessage(s_ALWAYSRUNON, false, false);
+            C_Output(s_ALWAYSRUNON);
+        }
+        else
+        {
+            HU_SetPlayerMessage(s_ALWAYSRUNOFF, false, false);
+            C_Output(s_ALWAYSRUNOFF);
+        }
+
         message_dontfuckwithme = true;
     }
-
-    C_StrCVAROutput(stringize(alwaysrun), (alwaysrun ? "on" : "off"));
 
     M_SaveCVARs();
 }
@@ -674,7 +677,7 @@ dboolean G_Responder(event_t *ev)
             || (ev->type == ev_gamepad
                 && gamepadwait < I_GetTime()
                 && gamepadbuttons
-                && !(gamepadbuttons &(GAMEPAD_DPAD_UP | GAMEPAD_DPAD_DOWN | GAMEPAD_DPAD_LEFT | GAMEPAD_DPAD_RIGHT)))))
+                && !(gamepadbuttons & (GAMEPAD_B | GAMEPAD_DPAD_UP | GAMEPAD_DPAD_DOWN | GAMEPAD_DPAD_LEFT | GAMEPAD_DPAD_RIGHT)))))
         {
             if (ev->type == ev_keydown && ev->data1 == keyboardalwaysrun)
             {
@@ -1066,6 +1069,9 @@ static void G_DoReborn(void)
     {
         gameaction = ga_loadlevel;
         C_InputNoRepeat("restartmap");
+
+        if (M_StringCompare(mapnum, "E1M4B") || M_StringCompare(mapnum, "E1M8B"))
+            M_StringCopy(speciallumpname, mapnum, sizeof(speciallumpname));
     }
 }
 
@@ -1105,9 +1111,9 @@ void G_ScreenShot(void)
 int pars[6][10] =
 {
     { 0 },
-    { 0,  30,  75, 120,  90, 165, 180, 180,  30, 165 },
-    { 0,  90,  90,  90, 120,  90, 360, 240,  30, 170 },
-    { 0,  90,  45,  90, 150,  90,  90, 165,  30, 135 },
+    { 0,  30,  75, 120,  90, 165, 180, 180, 165, 165 },
+    { 0,  90,  90,  90, 120,  90, 360, 240, 135, 170 },
+    { 0,  90,  45,  90, 150,  90,  90, 165, 105, 135 },
 
     // [BH] Episode 4 and 5 Par Times
     { 0, 165, 255, 135, 150, 180, 390, 135, 360, 180 },
@@ -1154,25 +1160,23 @@ int G_GetParTime(void)
 
     if (par)
         return par;
-    else
+    else if (BTSX || (!canmodify && (!nerve || gamemap > 9) && !FREEDOOM))
+        return 0;   // [BH] have no par time if this level is from a PWAD
+    else if (gamemode == commercial)
     {
-        // [BH] have no par time if this level is from a PWAD
-        if (BTSX || (!canmodify && (!nerve || gamemap > 9) && !FREEDOOM))
+        // [BH] get correct par time for No Rest For The Living
+        //  and have no par time for TNT and Plutonia
+        if (gamemission == pack_nerve && gamemap <= 9)
+            return npars[gamemap - 1];
+        else if (gamemission == pack_tnt || gamemission == pack_plut)
             return 0;
-        else if (gamemode == commercial)
-        {
-            // [BH] get correct par time for No Rest For The Living
-            //  and have no par time for TNT and Plutonia
-            if (gamemission == pack_nerve && gamemap <= 9)
-                return npars[gamemap - 1];
-            else if (gamemission == pack_tnt || gamemission == pack_plut)
-                return 0;
-            else
-                return cpars[gamemap - 1];
-        }
         else
-            return pars[gameepisode][gamemap];
+            return cpars[gamemap - 1];
     }
+    else if (gameepisode <= 5 && gamemap <= 9)
+        return pars[gameepisode][gamemap];
+    else
+        return 0;
 }
 
 static void G_DoCompleted(void)
@@ -1184,13 +1188,6 @@ static void G_DoCompleted(void)
     gameaction = ga_nothing;
 
     I_UpdateBlitFunc(false);
-
-    if (vid_widescreen)
-    {
-        I_ToggleWidescreen(false);
-        returntowidescreen = true;
-        ST_Drawer(false, true);
-    }
 
     I_Sleep(700);
 
@@ -1460,7 +1457,6 @@ void G_DoLoadGame(void)
     P_UnArchiveMap();
 
     P_RestoreTargets();
-    P_RemoveCorruptMobjs();
 
     P_MapEnd();
 
@@ -1474,9 +1470,6 @@ void G_DoLoadGame(void)
 
     if (setsizeneeded)
         R_ExecuteSetViewSize();
-
-    if (vid_widescreen)
-        I_ToggleWidescreen(true);
 
     // draw the pattern into the back screen
     R_FillBackScreen();
@@ -1649,20 +1642,17 @@ static void G_DoNewGame(void)
 {
     I_SetPalette(PLAYPAL);
 
-    if (vid_widescreen)
-        I_ToggleWidescreen(true);
-
     st_facecount = ST_STRAIGHTFACECOUNT;
     G_InitNew(d_skill, d_episode, d_map);
     gameaction = ga_nothing;
     infight = false;
 }
 
-// killough 04/10/98: New function to fix bug which caused Doom
+// killough 04/10/98: New function to fix bug which caused DOOM
 // lockups when idclev was used in conjunction with -fast.
-void G_SetFastParms(int fast_pending)
+void G_SetFastParms(dboolean fast_pending)
 {
-    static int  fast = 0;                   // remembers fast state
+    static dboolean fast = false;           // remembers fast state
 
     if (fast != fast_pending)               // only change if necessary
     {
@@ -1714,20 +1704,23 @@ void G_InitNew(skill_t skill, int ep, int map)
     if (ep < 1)
         ep = 1;
 
-    if (gamemode == retail)
+    if (!EpiCustom)
     {
-        if (sigil)
+        if (gamemode == retail)
         {
-            if (ep > 5)
-                ep = 5;
+            if (sigil)
+            {
+                if (ep > 5)
+                    ep = 5;
+            }
+            else if (ep > 4)
+                ep = 4;
         }
-        else if (ep > 4)
-            ep = 4;
-    }
-    else if (gamemode == shareware)
-    {
-        if (ep > 1)
-            ep = 1;     // only start episode 1 on shareware
+        else if (gamemode == shareware)
+        {
+            if (ep > 1)
+                ep = 1;     // only start episode 1 on shareware
+        }
     }
 
     if (map > 9 && gamemode != commercial)

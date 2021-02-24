@@ -7,7 +7,7 @@
 ========================================================================
 
   Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2020 by Brad Harding.
+  Copyright © 2013-2021 by Brad Harding.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
@@ -39,7 +39,6 @@
 #include "c_console.h"
 #include "i_gamepad.h"
 #include "m_config.h"
-#include "m_fixed.h"
 #include "m_misc.h"
 
 dboolean                    gp_analog = gp_analog_default;
@@ -85,10 +84,13 @@ void I_InitGamepad(void)
         C_Warning(1, "Gamepad support couldn't be initialized.");
     else
     {
+        int deviceindex = 0;
+
         for (int i = 0, numjoysticks = SDL_NumJoysticks(); i < numjoysticks; i++)
             if ((joystick = SDL_JoystickOpen(i)) && SDL_IsGameController(i))
             {
                 gamecontroller = SDL_GameControllerOpen(i);
+                deviceindex = i;
                 break;
             }
 
@@ -101,17 +103,28 @@ void I_InitGamepad(void)
             if (*name)
             {
                 if (M_StrCaseStr(name, "xinput"))
-                    C_OutputNoRepeat("An <i><b>XInput</b></i> gamepad is connected.");
+                    C_OutputNoRepeat("An <i>XInput</i> gamepad is connected.");
                 else
-                    C_OutputNoRepeat("A <i><b>DirectInput</b></i> gamepad called \"%s\" is connected.", name);
+                    C_OutputNoRepeat("A <i>DirectInput</i> gamepad called \"%s\" is connected.", name);
             }
             else
                 C_OutputNoRepeat("A gamepad is connected.");
 
-            if (!(haptic = SDL_HapticOpenFromJoystick(joystick)) || SDL_HapticRumbleInit(haptic) < 0)
+            if ((haptic = SDL_HapticOpen(deviceindex)) && !SDL_HapticRumbleInit(haptic))
+            {
+                if (gp_vibrate_barrels || gp_vibrate_damage || gp_vibrate_weapons)
+                {
+                    SDL_HapticRumblePlay(haptic, 0.5f, 200);
+                    SDL_Delay(300);
+                    SDL_HapticRumblePlay(haptic, 0.5f, 200);
+                }
+            }
+            else
             {
                 haptic = NULL;
-                C_Warning(1, "This gamepad doesn't support vibration.");
+
+                if (gp_vibrate_barrels || gp_vibrate_damage || gp_vibrate_weapons)
+                    C_Warning(1, "This gamepad doesn't support vibration.");
             }
 
             SDL_SetHintWithPriority(SDL_HINT_JOYSTICK_ALLOW_BACKGROUND_EVENTS, "1", SDL_HINT_OVERRIDE);

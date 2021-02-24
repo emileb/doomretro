@@ -7,7 +7,7 @@
 ========================================================================
 
   Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2020 by Brad Harding.
+  Copyright © 2013-2021 by Brad Harding.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
@@ -45,6 +45,7 @@
 #include "doomstat.h"
 #include "g_game.h"
 #include "hu_stuff.h"
+#include "i_colors.h"
 #include "i_gamepad.h"
 #include "i_swap.h"
 #include "m_config.h"
@@ -100,6 +101,8 @@ static void F_ConsoleFinaleText(void)
         C_Output(p);
         p = strtok(NULL, "\n");
     }
+
+    free(text);
 }
 
 //
@@ -350,91 +353,50 @@ void M_DrawSmallChar(int x, int y, int i, dboolean shadow);
 static void F_TextWrite(void)
 {
     // draw some of the text onto the screen
-    byte        *src;
     int         w;
     int         count = MAX(0, FixedDiv((finalecount - 10) * FRACUNIT, TextSpeed()) >> FRACBITS);
     const char  *ch = finaletext;
     int         cx = 12;
     int         cy = 10;
-    char        letter;
     char        prev = ' ';
 
     // erase the entire screen to a tiled background
     int         lumpnum = W_GetNumForName(finaleflat);
 
-    if (W_LumpLength(lumpnum) == 4096)  // 64x64 flat
+    if (W_LumpLength(lumpnum) == 64 * 64)
     {
+        byte    *src = (byte *)W_CacheLumpNum(lumpnum);
         byte    *dest = screens[0];
 
-        src = (byte *)W_CacheLumpNum(lumpnum);
-
-#if SCREENSCALE == 1
         for (int y = 0; y < SCREENHEIGHT; y++)
-        {
-            for (int x = 0; x < SCREENWIDTH / 64; x++)
+            for (int x = 0; x < SCREENWIDTH; x += 2)
             {
-                memcpy(dest, src + ((y & 63) << 6), 64);
-                dest += 64;
+                byte    dot = src[(((y >> 1) & 63) << 6) + ((x >> 1) & 63)];
+
+                *dest++ = dot;
+                *dest++ = dot;
             }
-
-            if (SCREENWIDTH & 63)
-            {
-                memcpy(dest, src + ((y & 63) << 6), SCREENWIDTH & 63);
-                dest += (SCREENWIDTH & 63);
-            }
-        }
-#else
-        for (int y = 0; y < SCREENHEIGHT; y += 2)
-            for (int x = 0; x < SCREENWIDTH / 32; x += 2)
-            {
-                for (int i = 0; i < 64; i++)
-                {
-                    int     j = i * 2;
-                    byte    dot = src[(((y / 2) & 63) << 6) + i];
-
-                    if (y * SCREENWIDTH + x + j < SCREENWIDTH * (SCREENHEIGHT - 1))
-                        *(dest + j) = dot;
-
-                    j++;
-
-                    if (y * SCREENWIDTH + x + j < SCREENWIDTH * (SCREENHEIGHT - 1))
-                        *(dest + j) = dot;
-
-                    j += SCREENWIDTH;
-
-                    if (y * SCREENWIDTH + x + j < SCREENWIDTH * (SCREENHEIGHT - 1))
-                        *(dest + j) = dot;
-
-                    j--;
-
-                    if (y * SCREENWIDTH + x + j < SCREENWIDTH * (SCREENHEIGHT - 1))
-                        *(dest + j) = dot;
-                }
-
-                dest += 128;
-            }
-#endif
     }
     else
         V_DrawPatch(0, 0, 0, W_CacheLumpNum(lumpnum));
 
     for (; count; count--)
     {
-        char    c = *ch++;
+        char    letter = *ch++;
+        char    c;
 
-        if (!c)
+        if (!letter)
             break;
 
-        if (c == '\n')
+        if (letter == '\n')
         {
             cx = 12;
             cy += (prev == '\n' ? 8 : 11);
-            prev = c;
+            prev = letter;
             continue;
         }
 
-        letter = c;
-        c = toupper(c) - HU_FONTSTART;
+        c = toupper(letter) - HU_FONTSTART;
 
         if (c < 0 || c >= HU_FONTSIZE)
         {
@@ -443,7 +405,7 @@ static void F_TextWrite(void)
             continue;
         }
 
-        if (cx > VANILLAWIDTH - 12)
+        if (cx > UNITYWIDTH - 12)
             continue;
 
         if (STCFN034)
@@ -488,7 +450,7 @@ static void F_TextWrite(void)
 // Casting by id Software.
 //   in order of appearance
 //
-#define CASTNUMMAX  17
+#define CASTNUMMAX  18
 
 typedef struct
 {
@@ -497,13 +459,14 @@ typedef struct
     mobjtype_t  type;
 } castinfo_t;
 
-static castinfo_t castorder[] =
+static castinfo_t castorder[CASTNUMMAX] =
 {
     { CC_ZOMBIE,  &s_CC_ZOMBIE,  MT_POSSESSED },
     { CC_SHOTGUN, &s_CC_SHOTGUN, MT_SHOTGUY   },
     { CC_HEAVY,   &s_CC_HEAVY,   MT_CHAINGUY  },
     { CC_IMP,     &s_CC_IMP,     MT_TROOP     },
     { CC_DEMON,   &s_CC_DEMON,   MT_SERGEANT  },
+    { CC_SPECTRE, &s_CC_SPECTRE, MT_SHADOWS   },
     { CC_LOST,    &s_CC_LOST,    MT_SKULL     },
     { CC_CACO,    &s_CC_CACO,    MT_HEAD      },
     { CC_HELL,    &s_CC_HELL,    MT_KNIGHT    },
@@ -697,7 +660,7 @@ static void F_CastTicker(void)
         }
 
         if (caststate == &states[S_PLAY_ATK1])
-            S_StartSound(NULL, sfx_dshtgn);
+            S_StartSound(viewplayer->mo, sfx_dshtgn);
     }
 
     if (castattacking)
@@ -776,7 +739,7 @@ static dboolean F_CastResponder(event_t *ev)
         }
     }
 
-    S_StartSound(NULL, sfx_dshtgn);
+    S_StartSound(viewplayer->mo, sfx_dshtgn);
 
     type = castorder[castnum].type;
 
@@ -864,7 +827,17 @@ static void F_CastDrawer(void)
     mobjtype_t      type = castorder[castnum].type;
 
     // erase the entire screen to a background
-    V_DrawPatch(0, 0, 0, W_CacheLumpName(bgcastcall));
+    if (SCREENWIDTH != VANILLAWIDTH * SCREENSCALE)
+        memset(screens[0], nearestblack, SCREENAREA);
+
+    if (gamemission == pack_plut)
+        patch = W_CacheLumpName("BOSSBAC2");
+    else if (gamemission == pack_tnt)
+        patch = W_CacheLumpName("BOSSBAC3");
+    else
+        patch = W_CacheLumpName(bgcastcall);
+
+    V_DrawWidePatch((SCREENWIDTH / SCREENSCALE - SHORT(patch->width)) / 2, 0, 0, patch);
 
     if (M_StringCompare(castorder[castnum].name, *castorder[castnum].dehackedname))
         F_CastPrint(type == MT_PLAYER ? playername : mobjinfo[type].name1);
@@ -1004,7 +977,8 @@ static void F_BunnyScroll(void)
 
     if (finalecount < 1130)
         return;
-    else if (finalecount < 1180)
+
+    if (finalecount < 1180)
     {
         V_DrawPatchWithShadow((VANILLAWIDTH - 13 * 8) / 2 + 1, (VANILLAHEIGHT - 8 * 8) / 2 + 1, W_CacheLumpName("END0"), false);
         laststage = 0;
@@ -1039,31 +1013,35 @@ static void F_ArtScreenDrawer(void)
         F_BunnyScroll();
     else
     {
-        char    *lumpname;
+        patch_t *lump;
 
         switch (gameepisode)
         {
             case 1:
-                lumpname = (gamemode == retail ? "CREDIT" : "HELP2");
+                if (gamemode == retail)
+                    lump = creditlump;
+                else
+                    lump = W_CacheLumpName("HELP2");
+
                 break;
 
             case 2:
-                lumpname = "VICTORY2";
+                lump = W_CacheLumpName("VICTORY2");
                 break;
 
             case 4:
-                lumpname = "ENDPIC";
+                lump = W_CacheLumpName("ENDPIC");
                 break;
 
             case 5:
-                lumpname = "SIGILEND";
+                lump = W_CacheLumpName("SIGILEND");
                 break;
 
             default:
                 return;
         }
 
-        V_DrawPatch(0, 0, 0, W_CacheLumpName(lumpname));
+        V_DrawWidePatch((SCREENWIDTH / SCREENSCALE - SHORT(lump->width)) / 2, 0, 0, lump);
     }
 }
 

@@ -7,7 +7,7 @@
 ========================================================================
 
   Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2020 by Brad Harding.
+  Copyright © 2013-2021 by Brad Harding.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
@@ -166,8 +166,8 @@ typedef struct sector_s
     int                 nextsec;        // -1 or number of next step sector
 
     // killough 03/07/98: floor and ceiling texture offsets
-    fixed_t             floor_xoffs, floor_yoffs;
-    fixed_t             ceiling_xoffs, ceiling_yoffs;
+    fixed_t             floorxoffset, flooryoffset;
+    fixed_t             ceilingxoffset, ceilingyoffset;
 
     // killough 04/11/98: support for lightlevels coming from another sector
     struct sector_s     *floorlightsec;
@@ -293,7 +293,7 @@ typedef struct line_s
     {
         RF_NONE     =  0,               // cph:
         RF_TOP_TILE =  1,               // Upper texture needs tiling
-        RF_MID_TILE =  2,               // Mid texture needs tiling
+        RF_MID_TILE =  2,               // Midtexture needs tiling
         RF_BOT_TILE =  4,               // Lower texture needs tiling
         RF_IGNORE   =  8,               // Renderer can skip this line
         RF_CLOSED   = 16                // Line blocks view
@@ -1017,12 +1017,12 @@ typedef struct visplane_s
     // leave pads for [minx - 1]/[maxx + 1]
     unsigned int        pad1;
 
-    unsigned int        top[SCREENWIDTH];
+    unsigned int        top[MAXWIDTH];
 
     unsigned int        pad2;
     unsigned int        pad3;
 
-    unsigned int        bottom[SCREENWIDTH];
+    unsigned int        bottom[MAXWIDTH];
 
     unsigned int        pad4;
 

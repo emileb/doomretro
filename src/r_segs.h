@@ -7,7 +7,7 @@
 ========================================================================
 
   Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2020 by Brad Harding.
+  Copyright © 2013-2021 by Brad Harding.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
@@ -40,5 +40,6 @@
 #define __R_SEGS_H__
 
 void R_RenderMaskedSegRange(drawseg_t *ds, const int x1, const int x2);
+void R_StoreWallRange(const int start, const int stop);
 
 #endif

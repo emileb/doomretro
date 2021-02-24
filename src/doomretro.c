@@ -7,7 +7,7 @@
 ========================================================================
 
   Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2020 by Brad Harding.
+  Copyright © 2013-2021 by Brad Harding.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
@@ -44,9 +44,7 @@
 #endif
 
 #include "d_main.h"
-#include "doomstat.h"
 #include "i_gamepad.h"
-#include "i_video.h"
 #include "m_argv.h"
 #include "m_config.h"
 #include "version.h"
@@ -66,7 +64,7 @@ static void I_SetProcessDPIAware(void)
 
     if (hLibrary)
     {
-        typedef BOOL    (*SETPROCESSDPIAWARE)();
+        typedef BOOL    (*SETPROCESSDPIAWARE)(void);
 
         SETPROCESSDPIAWARE  pSetProcessDPIAware = (SETPROCESSDPIAWARE)GetProcAddress(hLibrary, "SetProcessDPIAware");
 

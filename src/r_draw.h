@@ -7,7 +7,7 @@
 ========================================================================
 
   Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2020 by Brad Harding.
+  Copyright © 2013-2021 by Brad Harding.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
@@ -70,8 +70,8 @@ extern byte             *dc_black40;
 extern byte             *dc_source;
 
 extern int              fuzzpos;
-extern const int        fuzzrange[3];
-extern int              fuzztable[SCREENAREA];
+extern int              fuzzrange[3];
+extern int              fuzztable[MAXSCREENAREA];
 
 // The span blitting interface.
 // Hook in assembler or system specific BLT here.
@@ -121,7 +121,7 @@ void R_DrawPausedFuzzColumns(void);
 
 // Draw with color translation tables,
 //  for player sprite rendering,
-//  Green/Red/Blue/Indigo shirts.
+//  green/red/blue/indigo shirts.
 void R_DrawTranslatedColumn(void);
 
 void R_VideoErase(unsigned int ofs, int count);
@@ -153,6 +153,8 @@ void R_InitBuffer(int width, int height);
 // Initialize color translation tables,
 //  for player rendering etc.
 void R_InitTranslationTables(void);
+
+void R_FillBezel(void);
 
 // Rendering function.
 void R_FillBackScreen(void);

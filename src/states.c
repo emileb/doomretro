@@ -7,7 +7,7 @@
 ========================================================================
 
   Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2020 by Brad Harding.
+  Copyright © 2013-2021 by Brad Harding.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
@@ -37,7 +37,6 @@
 */
 
 #include "d_player.h"
-#include "states.h"
 
 void A_BabyMetal(mobj_t *actor, player_t *player, pspdef_t *psp);
 void A_BetaSkullAttack(mobj_t *actor, player_t *player, pspdef_t *psp);
@@ -330,7 +329,7 @@ state_t states[NUMSTATES] =
     { SPR_PLAY,   11,                    10, NULL,                   S_PLAY_DIE6         }, // S_PLAY_DIE5
     { SPR_PLAY,   12,                    10, NULL,                   S_PLAY_DIE7         }, // S_PLAY_DIE6
 
-    // Player Death (MT_MISC62)
+    // Dead Player (MT_MISC62)
     { SPR_PLAY,   13,                    -1, NULL,                   S_NULL              }, // S_PLAY_DIE7
     { SPR_PLAY,   14,                     5, NULL,                   S_PLAY_XDIE2        }, // S_PLAY_XDIE1
     { SPR_PLAY,   15,                     5, A_XScream,              S_PLAY_XDIE3        }, // S_PLAY_XDIE2

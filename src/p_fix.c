@@ -7,7 +7,7 @@
 ========================================================================
 
   Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2020 by Brad Harding.
+  Copyright © 2013-2021 by Brad Harding.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
@@ -825,11 +825,13 @@ linefix_t linefix[] =
     { doom2,            1,  12,     773,    1, "",         "",            "PANCASE2",    DEFAULT,   DEFAULT, DEFAULT,                   DEFAULT,                                         DEFAULT },
 
     { doom2,            1,  13,     147,    0, "",         "",            "",                 22,       112, DEFAULT,                   DEFAULT,                                         DEFAULT },
+    { doom2,            1,  13,     268,    0, "",         "",            "",            DEFAULT,   DEFAULT, ML_DONTDRAW,               DEFAULT,                                         DEFAULT },
     { doom2,            1,  13,     270,    0, "",         "",            "",            DEFAULT,   DEFAULT, DEFAULT,                   0,                                                     0 },
     { doom2,            1,  13,     273,    1, "GRAYVINE", "",            "",            DEFAULT,   DEFAULT, DEFAULT,                   DEFAULT,                                         DEFAULT },
     { doom2,            1,  13,     305,    1, "",         "",            "GSTONE1",     DEFAULT,   DEFAULT, DEFAULT,                   DEFAULT,                                         DEFAULT },
     { doom2,            1,  13,     308,    1, "",         "",            "GSTONE1",     DEFAULT,   DEFAULT, DEFAULT,                   DEFAULT,                                         DEFAULT },
     { doom2,            1,  13,     318,    1, "",         "",            "GSTONE1",     DEFAULT,   DEFAULT, DEFAULT,                   DEFAULT,                                         DEFAULT },
+    { doom2,            1,  13,     320,    0, "",         "",            "",            DEFAULT,   DEFAULT, ML_DONTDRAW,               DEFAULT,                                         DEFAULT },
     { doom2,            1,  13,     321,    1, "",         "",            "",                123,   DEFAULT, DEFAULT,                   DEFAULT,                                         DEFAULT },
     { doom2,            1,  13,     331,    1, "",         "",            "GSTONE1",     DEFAULT,   DEFAULT, DEFAULT,                   DEFAULT,                                         DEFAULT },
     { doom2,            1,  13,     529,    1, "",         "MIDBARS3",    "",            DEFAULT,   DEFAULT, DEFAULT,                   DEFAULT,                                         DEFAULT },

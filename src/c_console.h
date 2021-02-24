@@ -7,7 +7,7 @@
 ========================================================================
 
   Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2020 by Brad Harding.
+  Copyright © 2013-2021 by Brad Harding.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
@@ -42,6 +42,7 @@
 #include "doomdef.h"
 #include "doomtype.h"
 #include "d_event.h"
+#include "r_defs.h"
 
 #define CONSOLESTRINGSMAX       256
 
@@ -52,7 +53,6 @@
 #define NOBOLDCOLOR             -1
 #define NOBACKGROUNDCOLOR       -1
 
-#define CONSOLEWIDTH            SCREENWIDTH
 #define CONSOLEHEIGHT           (gamestate != GS_TITLESCREEN ? (SCREENHEIGHT - SBARHEIGHT) / 2 : SCREENHEIGHT - 5)
 
 #define CONSOLELINES            (gamestate != GS_TITLESCREEN ? 11 : 27)
@@ -62,15 +62,16 @@
 #define CONSOLELINEHEIGHT       14
 
 #define CONSOLESCROLLBARWIDTH   5
-#define CONSOLESCROLLBARHEIGHT  (gamestate != GS_TITLESCREEN ? 136 : 363)
-#define CONSOLESCROLLBARX       (CONSOLEWIDTH - CONSOLETEXTX - CONSOLESCROLLBARWIDTH)
-#define CONSOLESCROLLBARY       (CONSOLETEXTY + 1)
+#define CONSOLESCROLLBARHEIGHT  (gamestate != GS_TITLESCREEN ? 147 : 374)
+#define CONSOLESCROLLBARX       (SCREENWIDTH - CONSOLETEXTX - CONSOLESCROLLBARWIDTH)
 
-#define CONSOLETEXTPIXELWIDTH   (CONSOLEWIDTH - CONSOLETEXTX * 2 - (scrollbardrawn ? CONSOLESCROLLBARWIDTH + CONSOLETEXTX : 0))
+#define CONSOLETEXTPIXELWIDTH   (SCREENWIDTH - CONSOLETEXTX * 2 - (CONSOLESCROLLBARWIDTH + CONSOLETEXTX) * scrollbardrawn)
 
-#define CONSOLEINPUTPIXELWIDTH  (CONSOLEWIDTH - CONSOLETEXTX - brandwidth - 2)
+#define CONSOLEINPUTPIXELWIDTH  (SCREENWIDTH - CONSOLETEXTX - brandwidth - 2)
 
 #define CONSOLETOP              0
+
+#define WARNINGWIDTH            13
 
 #define EMPTYVALUE              "\"\""
 
@@ -93,7 +94,6 @@ typedef enum
     dividerstring,
     warningstring,
     playermessagestring,
-    obituarystring,
     headerstring,
     STRINGTYPES
 } stringtype_t;
@@ -106,28 +106,29 @@ typedef enum
 #define PLAYERSTATSHEADER       "STAT\tCURRENT MAP\tTOTAL"
 #define THINGLISTHEADER         "\tTHING\tPOSITION"
 
-typedef enum
-{
-    bindlistheader,
-    cmdlistheader,
-    cvarlistheader,
-    maplistheader,
-    mapstatsheader,
-    playerstatsheader,
-    thinglistheader
-} headertype_t;
-
 typedef struct
 {
     char                string[1024];
-    unsigned int        count;
-    unsigned int        line;
+    int                 count;
+    int                 line;
     stringtype_t        stringtype;
-    headertype_t        headertype;
-    int                 tabs[4];
-    unsigned int        tics;
+    int                 wrap;
+    int                 indent;
+    dboolean            bold;
+    dboolean            italics;
+    patch_t             *header;
+    int                 tabs[3];
+    int                 tics;
     char                timestamp[9];
 } console_t;
+
+extern patch_t          *bindlist;
+extern patch_t          *cmdlist;
+extern patch_t          *cvarlist;
+extern patch_t          *maplist;
+extern patch_t          *mapstats;
+extern patch_t          *playerstats;
+extern patch_t          *thinglist;
 
 extern console_t        *console;
 
@@ -143,8 +144,6 @@ extern char             consolecheatparm[3];
 extern char             consolecmdparm[255];
 
 extern dboolean         forceconsoleblurredraw;
-
-extern dboolean         scrollbardrawn;
 
 typedef struct
 {
@@ -178,27 +177,25 @@ void C_IntCVAROutput(char *cvar, int value);
 void C_PctCVAROutput(char *cvar, int value);
 void C_StrCVAROutput(char *cvar, char *string);
 void C_Output(const char *string, ...);
-void C_OutputWrap(const char *string, ...);
 void C_OutputNoRepeat(const char *string, ...);
-void C_TabbedOutput(const int tabs[4], const char *string, ...);
-void C_Header(const int tabs[4], const headertype_t headertype, const char *string);
+void C_TabbedOutput(const int tabs[3], const char *string, ...);
+void C_Header(const int tabs[3], patch_t *header, const char *string);
 void C_Warning(const int minwarninglevel, const char *string, ...);
 void C_PlayerMessage(const char *string, ...);
-void C_Obituary(const char *string, ...);
 void C_AddConsoleDivider(void);
-int C_TextWidth(const char *text, const dboolean formatting, const dboolean kerning);
 void C_Init(void);
 void C_ShowConsole(void);
 void C_HideConsole(void);
 void C_HideConsoleFast(void);
 void C_Drawer(void);
 dboolean C_ExecuteInputString(const char *input);
-dboolean C_ValidateInput(const char *input);
+dboolean C_ValidateInput(char *input);
 dboolean C_Responder(event_t *ev);
 void C_PrintCompileDate(void);
 void C_PrintSDLVersions(void);
 void C_UpdateFPS(void);
 void C_UpdateTimer(void);
 char *C_CreateTimeStamp(int index);
+void C_ResetWrappedLines(void);
 
 #endif

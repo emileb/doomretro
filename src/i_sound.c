@@ -7,7 +7,7 @@
 ========================================================================
 
   Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2020 by Brad Harding.
+  Copyright © 2013-2021 by Brad Harding.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
@@ -36,7 +36,7 @@
 ========================================================================
 */
 
-#include <memory.h>
+#include <string.h>
 
 #include "SDL_mixer.h"
 
@@ -63,7 +63,7 @@ static dboolean             sound_initialized;
 
 static allocated_sound_t    *channels_playing[s_channels_max];
 
-static int                  mixer_freq;
+static int                  mixer_freq = MIX_DEFAULT_FREQUENCY;
 
 // Doubly-linked list of allocated sounds.
 // When a sound is played, it is moved to the head, so that the oldest sounds not used recently are at the tail.
@@ -136,7 +136,7 @@ static allocated_sound_t *AllocateSound(sfxinfo_t *sfxinfo, int len)
     do
     {
         // Out of memory? Try to free an old sound, then loop round and try again.
-        if (!(snd = malloc(sizeof(allocated_sound_t) + len)) && !FindAndFreeSound())
+        if (!(snd = calloc(1, sizeof(allocated_sound_t) + len)) && !FindAndFreeSound())
             return NULL;
     } while (!snd);
 
@@ -191,9 +191,9 @@ static allocated_sound_t *GetAllocatedSoundBySfxInfoAndPitch(sfxinfo_t *sfxinfo,
 static allocated_sound_t *PitchShift(allocated_sound_t *insnd, int pitch)
 {
     allocated_sound_t   *outsnd;
-    int16_t             *srcbuf = (int16_t *)insnd->chunk.abuf;
-    uint32_t            srclen = insnd->chunk.alen;
+    int16_t             *srcbuf;
     int16_t             *dstbuf;
+    const uint32_t      srclen = insnd->chunk.alen;
 
     // determine ratio pitch:NORM_PITCH and apply to srclen, then invert.
     // This is an approximation of vanilla behavior based on measurements
@@ -207,6 +207,7 @@ static allocated_sound_t *PitchShift(allocated_sound_t *insnd, int pitch)
         return NULL;
 
     outsnd->pitch = pitch;
+    srcbuf = (int16_t *)insnd->chunk.abuf;
     dstbuf = (int16_t *)outsnd->chunk.abuf;
 
     // loop over output buffer. find corresponding input cell, copy over
@@ -239,20 +240,15 @@ static void ReleaseSoundOnChannel(int channel)
 }
 
 // Generic sound expansion function for any sample rate.
-static dboolean ExpandSoundData(sfxinfo_t *sfxinfo, byte *data, int samplerate, int bits, int length)
+static void ExpandSoundData(sfxinfo_t *sfxinfo, byte *data, int samplerate, int bits, int length)
 {
     unsigned int        samplecount = length / (bits / 8);
     unsigned int        expanded_length = (unsigned int)(((uint64_t)samplecount * mixer_freq) / samplerate);
     allocated_sound_t   *snd = AllocateSound(sfxinfo, expanded_length * 4);
-    int16_t             *expanded;
+    int16_t             *expanded = (int16_t *)(&snd->chunk)->abuf;
     int                 expand_ratio = (samplecount << 8) / expanded_length;
     double              dt = 1.0 / mixer_freq;
     double              alpha = dt / (1.0 / (M_PI * samplerate) + dt);
-
-    if (!snd)
-        return false;
-
-    expanded = (int16_t *)(&snd->chunk)->abuf;
 
     if (bits == 8)
         for (unsigned int i = 0; i < expanded_length; i++)
@@ -272,8 +268,6 @@ static dboolean ExpandSoundData(sfxinfo_t *sfxinfo, byte *data, int samplerate, 
     // Apply low-pass filter
     for (unsigned int i = 2; i < expanded_length * 2; i++)
         expanded[i] = (int16_t)(alpha * expanded[i] + (1 - alpha) * expanded[i - 2]);
-
-    return true;
 }
 
 // Load and convert a sound effect
@@ -310,7 +304,8 @@ dboolean CacheSFX(sfxinfo_t *sfxinfo)
         if ((bits = (data[34] | (data[35] << 8))) != 8 && bits != 16)
             return false;
 
-        return ExpandSoundData(sfxinfo, data + 44, samplerate, bits, length);
+        ExpandSoundData(sfxinfo, data + 44, samplerate, bits, length);
+        return true;
     }
     else if (lumplen >= 8 && data[0] == 0x03 && data[1] == 0x00)
     {
@@ -326,7 +321,8 @@ dboolean CacheSFX(sfxinfo_t *sfxinfo)
         if (length > lumplen - 8 || length <= 48)
             return false;
 
-        return ExpandSoundData(sfxinfo, data + 24, samplerate, bits, length - 32);
+        ExpandSoundData(sfxinfo, data + 24, samplerate, bits, length - 32);
+        return true;
     }
     else
         return false;
@@ -334,7 +330,7 @@ dboolean CacheSFX(sfxinfo_t *sfxinfo)
 
 void I_UpdateSoundParms(int channel, int vol, int sep)
 {
-    Mix_SetPanning(channel, (254 - sep) * vol / 128, sep * vol / 128);
+    Mix_SetPanning(channel, (254 - sep) * vol / MIX_MAX_VOLUME, sep * vol / MIX_MAX_VOLUME);
 }
 
 //
@@ -356,7 +352,7 @@ int I_StartSound(sfxinfo_t *sfxinfo, int channel, int vol, int sep, int pitch)
         if (!(snd = GetAllocatedSoundBySfxInfoAndPitch(sfxinfo, NORM_PITCH)))
             return -1;
 
-        if (s_randompitch && pitch && pitch != NORM_PITCH)
+        if (pitch != NORM_PITCH && s_randompitch)
         {
             allocated_sound_t   *newsnd = PitchShift(snd, pitch);
 
@@ -391,16 +387,6 @@ void I_StopSound(int channel)
 dboolean I_SoundIsPlaying(int channel)
 {
     return Mix_Playing(channel);
-}
-
-// Periodically called to update the sound system
-void I_UpdateSound(void)
-{
-    // Check all channels to see if a sound has finished
-    for (int i = 0; i < s_channels; i++)
-        if (channels_playing[i] && !I_SoundIsPlaying(i))
-            // Sound has finished playing on this channel, but sound data has not been released to cache
-            ReleaseSoundOnChannel(i);
 }
 
 dboolean I_AnySoundStillPlaying(void)
@@ -439,7 +425,8 @@ dboolean I_InitSound(void)
         C_Warning(1, "The wrong version of <b>%s</b> was found. <i>%s</i> requires v%i.%i.%i.",
             SDL_MIXER_FILENAME, PACKAGE_NAME, SDL_MIXER_MAJOR_VERSION, SDL_MIXER_MINOR_VERSION, SDL_MIXER_PATCHLEVEL);
 
-    if (Mix_OpenAudio(SAMPLERATE, MIX_DEFAULT_FORMAT, CHANNELS, CHUNKSIZE) < 0)
+    if (Mix_OpenAudioDevice(SAMPLERATE, MIX_DEFAULT_FORMAT, MIX_DEFAULT_CHANNELS, CHUNKSIZE, DEFAULT_DEVICE,
+        SDL_AUDIO_ALLOW_FREQUENCY_CHANGE) < 0)
         return false;
 
     if (!Mix_QuerySpec(&mixer_freq, &mixer_format, &mixer_channels))

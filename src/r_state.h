@@ -7,7 +7,7 @@
 ========================================================================
 
   Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2020 by Brad Harding.
+  Copyright © 2013-2021 by Brad Harding.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
@@ -63,7 +63,6 @@ extern fixed_t      *newspriteoffset;
 extern fixed_t      *newspritetopoffset;
 
 extern int          viewwidth;
-extern int          scaledviewwidth;
 extern int          viewheight;
 
 extern int          firstflat;
@@ -140,7 +139,7 @@ extern player_t     *viewplayer;
 extern angle_t      clipangle;
 
 extern int          viewangletox[FINEANGLES / 2];
-extern angle_t      xtoviewangle[SCREENWIDTH + 1];
+extern angle_t      xtoviewangle[MAXWIDTH + 1];
 
 extern visplane_t   *floorplane;
 extern visplane_t   *ceilingplane;

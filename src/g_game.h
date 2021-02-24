@@ -7,7 +7,7 @@
 ========================================================================
 
   Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2020 by Brad Harding.
+  Copyright © 2013-2021 by Brad Harding.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
@@ -87,9 +87,8 @@ void G_Ticker(void);
 dboolean G_Responder(event_t *ev);
 
 void G_ScreenShot(void);
-void I_ToggleWidescreen(dboolean toggle);
 
-void G_SetFastParms(int fast_pending);
+void G_SetFastParms(dboolean fast_pending);
 void G_SetMovementSpeed(int scale);
 void G_ToggleAlwaysRun(evtype_t type);
 

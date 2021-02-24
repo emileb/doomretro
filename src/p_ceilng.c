@@ -7,7 +7,7 @@
 ========================================================================
 
   Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2020 by Brad Harding.
+  Copyright © 2013-2021 by Brad Harding.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
@@ -38,6 +38,7 @@
 
 #include "doomstat.h"
 #include "m_config.h"
+#include "p_fix.h"
 #include "p_local.h"
 #include "p_setup.h"
 #include "p_tick.h"
@@ -56,6 +57,8 @@ static void P_GradualLightingToCeiling(ceiling_t *ceiling)
         EV_LightByAdjacentSectors(sector, FixedDiv(sector->ceilingheight - sector->floorheight, level));
 }
 
+void T_CeilingStay(ceiling_t *ceiling) {}
+
 //
 // T_MoveCeiling
 //
@@ -71,7 +74,7 @@ void T_MoveCeiling(ceiling_t *ceiling)
 
         case 1:
             // UP
-            res = T_MovePlane(ceiling->sector, ceiling->speed, ceiling->topheight, false, 1, ceiling->direction, false);
+            res = T_MovePlane(ceiling->sector, ceiling->speed, ceiling->topheight, false, 1, ceiling->direction);
 
             if (!(leveltime & 7))
                 switch (ceiling->type)
@@ -126,7 +129,7 @@ void T_MoveCeiling(ceiling_t *ceiling)
 
         case -1:
             // DOWN
-            res = T_MovePlane(ceiling->sector, ceiling->speed, ceiling->bottomheight, ceiling->crush, 1, ceiling->direction, false);
+            res = T_MovePlane(ceiling->sector, ceiling->speed, ceiling->bottomheight, ceiling->crush, 1, ceiling->direction);
 
             if (!(leveltime & 7))
                 switch (ceiling->type)
@@ -290,7 +293,7 @@ manual_ceiling:
             case lowerToFloor:
                 ceiling->bottomheight = sec->floorheight;
 
-                if (type != lowerToFloor && !(gamemission == doom2 && gamemap == 4 && canmodify))
+                if (type != lowerToFloor && !MAP04)
                     ceiling->bottomheight += 8 * FRACUNIT;
 
                 ceiling->direction = -1;
@@ -426,7 +429,7 @@ dboolean EV_CeilingCrushStop(line_t *line)
         {
             ceiling->olddirection = ceiling->direction;
             ceiling->direction = 0;
-            ceiling->thinker.function = NULL;
+            ceiling->thinker.function = &T_CeilingStay;
             result = true;
         }
     }

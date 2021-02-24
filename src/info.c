@@ -7,7 +7,7 @@
 ========================================================================
 
   Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2020 by Brad Harding.
+  Copyright © 2013-2021 by Brad Harding.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
@@ -1108,7 +1108,7 @@ mobjinfo_t mobjinfo[] =
         /* damage               */ 0,
         /* activesound          */ sfx_dmact,
         /* flags                */ (MF_SOLID | MF_SHOOTABLE | MF_FLOAT | MF_NOGRAVITY | MF_COUNTKILL),
-        /* flags2               */ (MF2_CASTSHADOW | MF2_NOLIQUIDBOB | MF2_FOOTCLIP),
+        /* flags2               */ (MF2_PASSMOBJ | MF2_CASTSHADOW | MF2_NOLIQUIDBOB | MF2_FOOTCLIP),
         /* raisestate           */ S_PAIN_RAISE1,
         /* frames               */ 0,
         /* fullbright           */ false,

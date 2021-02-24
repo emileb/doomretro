@@ -7,7 +7,7 @@
 ========================================================================
 
   Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2020 by Brad Harding.
+  Copyright © 2013-2021 by Brad Harding.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
@@ -109,7 +109,7 @@ int                 sfxVolume;
 // Maximum volume of music.
 int                 musicVolume;
 
-// Internal volume level, ranging from 0-MAX_SFX_VOLUME
+// Internal volume level, ranging from 0-MIX_MAX_VOLUME
 static int          snd_SfxVolume;
 
 // Whether songs are mus_paused
@@ -131,8 +131,13 @@ extern dboolean     serverMidiPlaying;
 static void InitSfxModule(void)
 {
     if (I_InitSound())
+    {
+        const char  *audiodriver = SDL_GetCurrentAudioDriver();
+
         C_Output("Sound effects are playing at a sample rate of %.1fkHz over %i channels%s.", SAMPLERATE / 1000.0f, s_channels,
-            (M_StringCompare(SDL_GetCurrentAudioDriver(), "directsound") ? " using the <i><b>DirectSound</b></i> API" : ""));
+            (M_StringCompare(audiodriver, "wasapi") ? " using <i>WASAPI</i>" :
+            (M_StringCompare(audiodriver, "directsound") ? " using the <i>DirectSound</i> API" : "")));
+    }
     else
     {
         C_Warning(1, "Sound effects couldn't be initialized.");
@@ -158,7 +163,7 @@ void S_Init(void)
 {
     if (M_CheckParm("-nosound"))
     {
-        C_Output("A <b>-nosound</b> parameter was found on the command-line. Both sound effects and music have been disabled.");
+        C_Warning(1, "A <b>-nosound</b> parameter was found on the command-line. Both sound effects and music have been disabled.");
         nomusic = true;
         nosfx = true;
     }
@@ -166,13 +171,13 @@ void S_Init(void)
     {
         if (M_CheckParm("-nomusic"))
         {
-            C_Output("A <b>-nomusic</b> parameter was found on the command-line. Music has been disabled.");
+            C_Warning(1, "A <b>-nomusic</b> parameter was found on the command-line. Music has been disabled.");
             nomusic = true;
         }
 
         if (M_CheckParm("-nosfx"))
         {
-            C_Output("A <b>-nosfx</b> parameter was found on the command-line. Sound effects have been disabled.");
+            C_Warning(1, "A <b>-nosfx</b> parameter was found on the command-line. Sound effects have been disabled.");
             nosfx = true;
         }
     }
@@ -180,17 +185,17 @@ void S_Init(void)
     if (!nosfx)
     {
 #if defined(_WIN32)
-        char    *audiobuffer = SDL_getenv("SDL_AUDIODRIVER");
+        char    *audiodriver = SDL_getenv("SDL_AUDIODRIVER");
 
-        if (audiobuffer)
-            C_Warning(1, "The <b>SDL_AUDIODRIVER</b> environment variable has been set to <b>\"%s\"</b>.", audiobuffer);
-
-        SDL_setenv("SDL_AUDIODRIVER", "DirectSound", false);
-        free(audiobuffer);
+        if (audiodriver)
+        {
+            C_Warning(1, "The <b>SDL_AUDIODRIVER</b> environment variable has been set to <b>\"%s\"</b>.", audiodriver);
+            free(audiodriver);
+        }
 #endif
 
         InitSfxModule();
-        S_SetSfxVolume(sfxVolume * MAX_SFX_VOLUME / 31);
+        S_SetSfxVolume(sfxVolume * MIX_MAX_VOLUME / 31);
 
         // Allocating the internal channels for mixing (the maximum number of sounds rendered simultaneously) within zone memory.
         channels = Z_Calloc(s_channels_max, sizeof(channel_t), PU_STATIC, NULL);
@@ -235,7 +240,7 @@ void S_Init(void)
     if (!nomusic)
     {
         InitMusicModule();
-        S_SetMusicVolume(musicVolume * MAX_MUSIC_VOLUME / 31);
+        S_SetMusicVolume(musicVolume * MIX_MAX_VOLUME / 31);
 
         // no sounds are playing, and they are not mus_paused
         mus_paused = false;
@@ -415,7 +420,6 @@ static dboolean S_AdjustSoundParms(mobj_t *origin, int *vol, int *sep)
     fixed_t     dist = 0;
     fixed_t     adx, ady;
     mobj_t      *listener = viewplayer->mo;
-    angle_t     angle;
     dboolean    boss = origin->flags2 & MF2_BOSS;
     fixed_t     x = origin->x;
     fixed_t     y = origin->y;
@@ -444,18 +448,17 @@ static dboolean S_AdjustSoundParms(mobj_t *origin, int *vol, int *sep)
     if (!boss && dist > S_CLIPPING_DIST)
         return false;
 
-    // angle of source to listener
-    angle = R_PointToAngle2(listener->x, listener->y, x, y);
-
-    if (angle <= listener->angle)
-        angle += 0xFFFFFFFF;
-
-    angle -= listener->angle;
-    angle >>= ANGLETOFINESHIFT;
-
     // stereo separation
     if (s_stereo)
-        *sep = NORM_SEP - FixedMul(S_STEREO_SWING, finesine[angle]);
+    {
+        // angle of source to player
+        angle_t angle = R_PointToAngle(x, y);
+
+        if (angle <= viewangle)
+            angle += 0xFFFFFFFF;
+
+        *sep = NORM_SEP - FixedMul(S_STEREO_SWING, finesine[(angle - viewangle) >> ANGLETOFINESHIFT]);
+    }
 
     // volume calculation
     *vol = (dist < S_CLOSE_DIST || boss ? snd_SfxVolume : snd_SfxVolume * (S_CLIPPING_DIST - dist) / S_ATTENUATOR);
@@ -471,7 +474,7 @@ static void S_StartSoundAtVolume(mobj_t *origin, int sfx_id, int pitch)
     int         handle;
     int         volume = snd_SfxVolume;
 
-    if (nosfx || sfx->lumpnum == -1)
+    if (sfx->lumpnum == -1 || nosfx)
         return;
 
     // Check to see if it is audible, and if not, modify the parms
@@ -479,7 +482,7 @@ static void S_StartSoundAtVolume(mobj_t *origin, int sfx_id, int pitch)
         return;
 
     // kill old sound
-    if (origin || (gamestate == GS_FINALE && sfx_id == sfx_dshtgn))
+    if (origin)
         for (cnum = 0; cnum < s_channels; cnum++)
             if (channels[cnum].sfxinfo
                 && channels[cnum].sfxinfo->singularity == sfx->singularity
@@ -558,8 +561,6 @@ void S_UpdateSounds(void)
     if (nosfx)
         return;
 
-    I_UpdateSound();
-
     for (int cnum = 0; cnum < s_channels; cnum++)
     {
         channel_t   *c = &channels[cnum];
@@ -603,7 +604,7 @@ void S_LowerMusicVolume(void)
         return;
 #endif
 
-    S_SetMusicVolume(musicVolume * MAX_MUSIC_VOLUME / 31 / LOWER_MUSIC_VOLUME_FACTOR);
+    S_SetMusicVolume(musicVolume * MIX_MAX_VOLUME / 31 / LOWER_MUSIC_VOLUME_FACTOR);
 }
 
 void S_SetSfxVolume(int volume)
@@ -815,7 +816,7 @@ void T_MAPMusic(void)
     {
         int arraypt = TIDNUM(musinfo.mapthing);
 
-        if (arraypt < MAX_MUS_ENTRIES)
+        if (arraypt >= 0 && arraypt < MAX_MUS_ENTRIES)
         {
             int lumpnum = musinfo.items[arraypt];
 

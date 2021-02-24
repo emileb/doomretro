@@ -7,7 +7,7 @@
 ========================================================================
 
   Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2020 by Brad Harding.
+  Copyright © 2013-2021 by Brad Harding.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
@@ -42,7 +42,6 @@
 
 #include "c_console.h"
 #include "d_deh.h"
-#include "d_iwad.h"
 #include "d_main.h"
 #include "doomstat.h"
 #include "i_system.h"
@@ -87,33 +86,42 @@ typedef struct
 // C:\Program Files\Path\uninstl.exe /S C:\Program Files\Path
 //
 // With some munging we can find where DOOM was installed.
+
+// [AlexMax] From the perspective of a 64-bit executable, 32-bit registry
+// keys are located in a different spot.
+#if defined(_WIN64)
+#define SOFTWARE_KEY    "SOFTWARE\\WOW6432Node"
+#else
+#define SOFTWARE_KEY    "SOFTWARE"
+#endif
+
 static registryvalue_t uninstall_values[] =
 {
     // Ultimate DOOM, CD version (Depths of DOOM trilogy)
     {
         HKEY_LOCAL_MACHINE,
-        "Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\Ultimate Doom for Windows 95",
+        SOFTWARE_KEY "\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\Ultimate Doom for Windows 95",
         "UninstallString"
     },
 
     // DOOM II, CD version (Depths of DOOM trilogy)
     {
         HKEY_LOCAL_MACHINE,
-        "Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\Doom II for Windows 95",
+        SOFTWARE_KEY "\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\Doom II for Windows 95",
         "UninstallString"
     },
 
     // Final DOOM
     {
         HKEY_LOCAL_MACHINE,
-        "Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\Final Doom for Windows 95",
+        SOFTWARE_KEY "\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\Final Doom for Windows 95",
         "UninstallString"
     },
 
     // Shareware version
     {
         HKEY_LOCAL_MACHINE,
-        "Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\Doom Shareware for Windows 95",
+        SOFTWARE_KEY "\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\Doom Shareware for Windows 95",
         "UninstallString"
     },
 };
@@ -124,35 +132,35 @@ static registryvalue_t root_path_keys[] =
     // DOOM Collector's Edition
     {
         HKEY_LOCAL_MACHINE,
-        "Software\\Activision\\DOOM Collector's Edition\\v1.0",
+        SOFTWARE_KEY "\\Activision\\DOOM Collector's Edition\\v1.0",
         "INSTALLPATH"
     },
 
     // DOOM II
     {
         HKEY_LOCAL_MACHINE,
-        "Software\\GOG.com\\Games\\1435848814",
+        SOFTWARE_KEY "\\GOG.com\\Games\\1435848814",
         "PATH"
     },
 
     // DOOM 3: BFG Edition
     {
         HKEY_LOCAL_MACHINE,
-        "Software\\GOG.com\\Games\\1135892318",
+        SOFTWARE_KEY "\\GOG.com\\Games\\1135892318",
         "PATH"
     },
 
     // Final DOOM
     {
         HKEY_LOCAL_MACHINE,
-        "Software\\GOG.com\\Games\\1435848742",
+        SOFTWARE_KEY "\\GOG.com\\Games\\1435848742",
         "PATH"
     },
 
     // Ultimate DOOM
     {
         HKEY_LOCAL_MACHINE,
-        "Software\\GOG.com\\Games\\1435827232",
+        SOFTWARE_KEY "\\GOG.com\\Games\\1435827232",
         "PATH"
     }
 };
@@ -170,20 +178,21 @@ static const char *root_path_subdirs[] =
 };
 
 // Location where Steam is installed
-static registryvalue_t steam_install_location =
+static registryvalue_t steam_install_locations[] =
 {
-    HKEY_CURRENT_USER,
-    "Software\\Valve\\Steam",
-    "SteamPath"
+    { HKEY_CURRENT_USER,  "SOFTWARE\\Valve\\Steam",      "SteamPath"   },
+    { HKEY_LOCAL_MACHINE, SOFTWARE_KEY "\\Valve\\Steam", "InstallPath" }
 };
 
 // Subdirs of the steam install directory where IWADs are found
 static const char *steam_install_subdirs[] =
 {
-    "steamapps\\common\\doom 2\\base",
+    "steamapps\\common\\Doom 2\\rerelease\\DOOM II_Data\\StreamingAssets",
+    "steamapps\\common\\Doom 2\\base",
     "steamapps\\common\\DOOM 3 BFG Edition\\base\\wads",
-    "steamapps\\common\\final doom\\base",
-    "steamapps\\common\\ultimate doom\\base"
+    "steamapps\\common\\Final Doom\\base",
+    "steamapps\\common\\Ultimate Doom\\rerelease\\DOOM_Data\\StreamingAssets",
+    "steamapps\\common\\Ultimate Doom\\base"
 };
 
 static char *GetRegistryString(registryvalue_t *reg_val)
@@ -237,7 +246,6 @@ static void CheckUninstallStrings(void)
             char    *path = unstr + len;
 
             AddIWADDir(path);
-            free(path);
         }
 
         free(val);
@@ -259,7 +267,6 @@ static void CheckInstallRootPaths(void)
             char    *path = M_StringJoin(install_path, DIR_SEPARATOR_S, root_path_subdirs[j], NULL);
 
             AddIWADDir(path);
-            free(path);
         }
 
         free(install_path);
@@ -269,20 +276,22 @@ static void CheckInstallRootPaths(void)
 // Check for DOOM downloaded via Steam
 static void CheckSteamEdition(void)
 {
-    char    *install_path = GetRegistryString(&steam_install_location);
-
-    if (!install_path)
-        return;
-
-    for (size_t i = 0; i < arrlen(steam_install_subdirs); i++)
+    for (size_t i = 0; i < arrlen(steam_install_locations); i++)
     {
-        char    *path = M_StringJoin(install_path, DIR_SEPARATOR_S, steam_install_subdirs[i], NULL);
+        char    *install_path = GetRegistryString(&steam_install_locations[i]);
 
-        AddIWADDir(path);
-        free(path);
+        if (!install_path)
+            continue;
+
+        for (size_t j = 0; j < arrlen(steam_install_subdirs); j++)
+        {
+            char    *path = M_StringJoin(install_path, DIR_SEPARATOR_S, steam_install_subdirs[j], NULL);
+
+            AddIWADDir(path);
+        }
+
+        free(install_path);
     }
-
-    free(install_path);
 }
 
 // Default install directories for DOS DOOM
@@ -378,15 +387,15 @@ static void AddXdgDirs(void)
     AddIWADPath(env, "/games/doom");
     AddIWADPath(env, "/doom");
 
-    // The convention set by RBDOOM-3-BFG is to install Doom 3: BFG
-    // Edition into this directory, under which includes the Doom
+    // The convention set by RBDOOM-3-BFG is to install DOOM 3: BFG
+    // Edition into this directory, under which includes the DOOM
     // Classic WADs.
     AddIWADPath(env, "/games/doom3bfg/base/wads");
 }
 
 #if !defined(__APPLE__)
 // Steam on Linux allows installing some select Windows games,
-// including the classic Doom series (running DOSBox via Wine). We
+// including the classic DOOM series (running DOSBox via Wine). We
 // could parse *.vdf files to more accurately detect installation
 // locations, but the defaults are likely to be good enough for just
 // about everyone.
@@ -566,9 +575,9 @@ static void BuildIWADDirList(void)
 
 #if defined(_WIN32)
     // Search the registry and find where IWADs have been installed.
-    CheckUninstallStrings();
-    CheckInstallRootPaths();
     CheckSteamEdition();
+    CheckInstallRootPaths();
+    CheckUninstallStrings();
     CheckDOSDefaults();
 #else
     AddXdgDirs();
@@ -712,7 +721,7 @@ static char *SaveGameIWADName(void)
     // different IWADs are kept separate.
     //
     // Note that we match on gamemission rather than on IWAD name.
-    // This ensures that doom1.wad and doom.wad saves are stored
+    // This ensures that DOOM1.WAD and DOOM.WAD saves are stored
     // in the same place.
     if (FREEDOOM)
         return (gamemode == commercial ? "freedoom2" : "freedoom");
@@ -760,10 +769,7 @@ void D_SetSaveGameFolder(dboolean output)
         else
             savegamefolder = M_StringJoin(savegamefolder, SaveGameIWADName(), DIR_SEPARATOR_S, NULL);
 
-#if !defined(__APPLE__)
         free(appdatafolder);
-#endif
-
         free(savegamefolder_free);
     }
 
@@ -884,10 +890,10 @@ void D_SetGameDescription(void)
     if (nerve)
     {
         if (bfgedition)
-            C_Output("Playing <i><b>%s: %s (%s)</b></i> and <i><b>%s: %s (%s).</b></i>", s_CAPTION_DOOM2, s_CAPTION_HELLONEARTH,
+            C_Output("Playing <i>%s: %s (%s)</i> and <i>%s: %s (%s).</i>", s_CAPTION_DOOM2, s_CAPTION_HELLONEARTH,
                 s_CAPTION_BFGEDITION, s_CAPTION_DOOM2, s_CAPTION_NERVE, s_CAPTION_BFGEDITION);
         else
-            C_Output("Playing <i><b>%s: %s</b></i> and <i><b>%s: %s.</b></i>", s_CAPTION_DOOM2, s_CAPTION_HELLONEARTH,
+            C_Output("Playing <i>%s: %s</i> and <i>%s: %s.</i>", s_CAPTION_DOOM2, s_CAPTION_HELLONEARTH,
                 s_CAPTION_DOOM2, s_CAPTION_NERVE);
     }
     else if (modifiedgame && !sigil && !chex && !BTSX)
@@ -895,8 +901,8 @@ void D_SetGameDescription(void)
     else
     {
         if (bfgedition)
-            C_Output("Playing <i><b>%s (%s).</b></i>", gamedescription, s_CAPTION_BFGEDITION);
+            C_Output("Playing <i>%s (%s).</i>", gamedescription, s_CAPTION_BFGEDITION);
         else
-            C_Output("Playing <i><b>%s.</b></i>", gamedescription);
+            C_Output("Playing <i>%s.</i>", gamedescription);
     }
 }

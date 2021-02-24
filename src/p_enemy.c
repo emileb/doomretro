@@ -7,7 +7,7 @@
 ========================================================================
 
   Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2020 by Brad Harding.
+  Copyright © 2013-2021 by Brad Harding.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
@@ -35,8 +35,6 @@
 
 ========================================================================
 */
-
-#include <string.h>
 
 #include "c_cmds.h"
 #include "c_console.h"
@@ -1410,12 +1408,11 @@ void A_VileChase(mobj_t *actor, player_t *player, pspdef_t *psp)
                             M_StringCopy(corpsehitname, corpsehit->name, sizeof(corpsehitname));
                         else
                             M_snprintf(corpsehitname, sizeof(corpsehitname), "%s dead%s%s",
-                                ((corpsehit->flags & MF_FRIEND) && monstercount[corpsehit->type] == 1 ? "the" :
-                                    (isvowel(corpsehit->info->name1[0]) ? "an" : "a")),
+                                ((corpsehit->flags & MF_FRIEND) && monstercount[corpsehit->type] == 1 ? "the" : "a"),
                                 ((corpsehit->flags & MF_FRIEND) ? ", friendly " : " "),
                                 (*corpsehit->info->name1 ? corpsehit->info->name1 : "monster"));
 
-                        C_Obituary("%s resurrected %s.", temp, corpsehitname);
+                        C_PlayerMessage("%s resurrected %s.", temp, corpsehitname);
                         free(temp);
                     }
 
@@ -1746,7 +1743,7 @@ void A_Scream(mobj_t *actor, player_t *player, pspdef_t *psp)
 {
     int sound = actor->info->deathsound;
 
-    if (sound == sfx_none)
+    if (!sound)
         return;
     else if (sound >= sfx_podth1 && sound <= sfx_podth3)
         sound = sfx_podth1 + M_Random() % 3;
@@ -1791,7 +1788,7 @@ void A_Pain(mobj_t *actor, player_t *player, pspdef_t *psp)
 {
     int painsound = actor->info->painsound;
 
-    if (painsound && (!actor->player || !(actor->player->cheats & CF_GODMODE)))
+    if (painsound)
         S_StartSound(actor, painsound);
 }
 

@@ -7,7 +7,7 @@
 ========================================================================
 
   Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2020 by Brad Harding.
+  Copyright © 2013-2021 by Brad Harding.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
@@ -68,12 +68,14 @@ static inline int ABS(int a)
 static inline int MAX(int a, int b)
 {
     b = a - b;
+
     return (a - (b & (b >> 31)));
 }
 
 static inline int MIN(int a, int b)
 {
     a -= b;
+
     return (b + (a & (a >> 31)));
 }
 
@@ -81,6 +83,7 @@ static inline int BETWEEN(int a, int b, int c)
 {
     b -= c;
     c = a - c - (b & (b >> 31));
+
     return (a - (c & (c >> 31)));
 }
 
@@ -111,7 +114,7 @@ static inline fixed_t FixedMod(fixed_t a, fixed_t b)
 
 static inline uint64_t SafeAdd(uint64_t a, uint64_t b)
 {
-    return (b > UINT64_MAX - a ? a : a + b);
+    return (b > UINT64_MAX - a ? UINT64_MAX : a + b);
 }
 
 #endif

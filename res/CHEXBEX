@@ -10,6 +10,7 @@ GOTHTHBONUS = Picked up a glass of water.
 GOTARMBONUS = Picked up slime repellent.
 GOTSTIM = Picked up a bowl of fruit.
 GOTMEDINEED = Picked up some needed vegetables!
+GOTMEDINEED2 = Picked up some needed vegetables!
 GOTMEDIKIT = Picked up a bowl of vegetables.
 GOTSUPER = Supercharge Breakfast!
 GOTBLUECARD = Picked up a blue key.
@@ -71,20 +72,3 @@ Speed = 0
 
 Thing 19
 Height = 0
-
-Cheat 0
-Chainsaw = joelkoenigs
-God mode = davidbrus
-Ammo & Keys = scottholman
-Ammo = mikekoenigs
-No Clipping 1 = charlesjacobi
-No Clipping 2 = charlesjacobi
-Invincibility = andrewbenson
-Berserk = deanhyers
-Invisibility = marybregi
-Radiation Suit = allen
-Auto-map = digitalcafe
-Lite-amp Goggles = joshuastorms
-Level Warp = leesnyder
-Player Position = kimhyers
-Map cheat = sherrill

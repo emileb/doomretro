@@ -7,7 +7,7 @@
 ========================================================================
 
   Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2020 by Brad Harding.
+  Copyright © 2013-2021 by Brad Harding.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
@@ -44,6 +44,7 @@
 #include "m_config.h"
 #include "r_main.h"
 #include "r_plane.h"
+#include "r_segs.h"
 #include "r_things.h"
 
 seg_t       *curline;
@@ -53,8 +54,6 @@ sector_t    *backsector;
 
 drawseg_t   *drawsegs;
 drawseg_t   *ds_p;
-
-void R_StoreWallRange(const int start, const int stop);
 
 //
 // R_ClearDrawSegs
@@ -106,12 +105,12 @@ static void R_ClipWallSegment(int first, int last, dboolean solid)
 //
 void R_InitClipSegs(void)
 {
-    memcmpsize = sizeof(frontsector->floor_xoffs) + sizeof(frontsector->floor_yoffs)
-        + sizeof(frontsector->ceiling_xoffs) + sizeof(frontsector->ceiling_yoffs)
+    memcmpsize = sizeof(frontsector->floorxoffset) + sizeof(frontsector->flooryoffset)
+        + sizeof(frontsector->ceilingxoffset) + sizeof(frontsector->ceilingyoffset)
         + sizeof(*frontsector->floorlightsec) + sizeof(*frontsector->ceilinglightsec)
         + sizeof(frontsector->floorpic) + sizeof(frontsector->ceilingpic)
         + sizeof(frontsector->lightlevel);
-    solidcol = calloc(1, SCREENWIDTH * sizeof(*solidcol));
+    solidcol = calloc(SCREENWIDTH, sizeof(*solidcol));
 }
 
 //
@@ -149,7 +148,7 @@ static void R_RecalcLineFlags(line_t *line)
         if (backsector->interpceilingheight != frontsector->interpceilingheight
             || backsector->interpfloorheight != frontsector->interpfloorheight
             || curline->sidedef->midtexture
-            || memcmp(&backsector->floor_xoffs, &frontsector->floor_xoffs, memcmpsize))
+            || memcmp(&backsector->floorxoffset, &frontsector->floorxoffset, memcmpsize))
         {
             line->r_flags = RF_NONE;
             return;
@@ -187,11 +186,10 @@ static void R_InterpolateSector(sector_t *sector)
 {
     sector_t    *heightsec = sector->heightsec;
 
-    if (vid_capfps != TICRATE
-        // Only if we moved the sector last tic.
-        && sector->oldgametime == gametime - 1)
+    // Only if we moved the sector last tic
+    if (sector->oldgametime == gametime - 1 && vid_capfps != TICRATE)
     {
-        // Interpolate between current and last floor/ceiling position.
+        // Interpolate between current and last floor/ceiling position
         if (sector->floorheight != sector->oldfloorheight)
             sector->interpfloorheight = sector->oldfloorheight
                 + FixedMul(sector->floorheight - sector->oldfloorheight, fractionaltic);
@@ -272,21 +270,21 @@ sector_t *R_FakeFlat(sector_t *sec, sector_t *tempsec, int *floorlightlevel, int
         {
             // head-below-floor hack
             tempsec->floorpic = s->floorpic;
-            tempsec->floor_xoffs = s->floor_xoffs;
-            tempsec->floor_yoffs = s->floor_yoffs;
+            tempsec->floorxoffset = s->floorxoffset;
+            tempsec->flooryoffset = s->flooryoffset;
 
             if (s->ceilingpic == skyflatnum)
             {
                 tempsec->interpfloorheight = tempsec->interpceilingheight + 1;
                 tempsec->ceilingpic = tempsec->floorpic;
-                tempsec->ceiling_xoffs = tempsec->floor_xoffs;
-                tempsec->ceiling_yoffs = tempsec->floor_yoffs;
+                tempsec->ceilingxoffset = tempsec->floorxoffset;
+                tempsec->ceilingyoffset = tempsec->flooryoffset;
             }
             else
             {
                 tempsec->ceilingpic = s->ceilingpic;
-                tempsec->ceiling_xoffs = s->ceiling_xoffs;
-                tempsec->ceiling_yoffs = s->ceiling_yoffs;
+                tempsec->ceilingxoffset = s->ceilingxoffset;
+                tempsec->ceilingyoffset = s->ceilingyoffset;
             }
 
             tempsec->lightlevel = s->lightlevel;
@@ -306,15 +304,15 @@ sector_t *R_FakeFlat(sector_t *sec, sector_t *tempsec, int *floorlightlevel, int
             tempsec->interpfloorheight = s->interpceilingheight + 1;
 
             tempsec->floorpic = tempsec->ceilingpic = s->ceilingpic;
-            tempsec->floor_xoffs = tempsec->ceiling_xoffs = s->ceiling_xoffs;
-            tempsec->floor_yoffs = tempsec->ceiling_yoffs = s->ceiling_yoffs;
+            tempsec->floorxoffset = tempsec->ceilingxoffset = s->ceilingxoffset;
+            tempsec->flooryoffset = tempsec->ceilingyoffset = s->ceilingyoffset;
 
             if (s->floorpic != skyflatnum)
             {
                 tempsec->interpceilingheight = sec->interpceilingheight;
                 tempsec->floorpic = s->floorpic;
-                tempsec->floor_xoffs = s->floor_xoffs;
-                tempsec->floor_yoffs = s->floor_yoffs;
+                tempsec->floorxoffset = s->floorxoffset;
+                tempsec->flooryoffset = s->flooryoffset;
             }
 
             tempsec->lightlevel = s->lightlevel;
@@ -334,8 +332,7 @@ sector_t *R_FakeFlat(sector_t *sec, sector_t *tempsec, int *floorlightlevel, int
 
 //
 // R_AddLine
-// Clips the given segment
-// and adds any visible pieces to the line list.
+// Clips the given segment and adds any visible pieces to the line list.
 //
 static void R_AddLine(seg_t *line)
 {
@@ -362,8 +359,7 @@ static void R_AddLine(seg_t *line)
 
     if ((int)angle1 < (int)angle2)
     {
-        // Either angle1 or angle2 is behind us, so it doesn't matter if we
-        // change it to the correct sign
+        // Either angle1 or angle2 is behind us, so it doesn't matter if we change it to the correct sign
         if (angle1 >= ANG180 && angle1 < ANG270)
             angle1 = INT_MAX;           // which is ANG180 - 1
         else
@@ -397,7 +393,7 @@ static void R_AddLine(seg_t *line)
     // Single sided line?
     if ((backsector = line->backsector))
     {
-        sector_t    tempsec;    // killough 03/08/98: ceiling/water hack
+        sector_t    tempsec;            // killough 03/08/98: ceiling/water hack
 
         // [AM] Interpolate sector movement before running clipping tests. Frontsector should already be interpolated.
         R_InterpolateSector(backsector);
@@ -423,7 +419,7 @@ static void R_AddLine(seg_t *line)
 //
 static dboolean R_CheckBBox(const fixed_t *bspcoord)
 {
-    const int checkcoord[12][4] =
+    const byte checkcoord[12][4] =
     {
         { 3, 0, 2, 1 },
         { 3, 0, 2, 0 },
@@ -438,8 +434,8 @@ static dboolean R_CheckBBox(const fixed_t *bspcoord)
         { 2, 1, 3, 0 }
     };
 
-    int         boxpos;
-    const int   *check;
+    byte        boxpos;
+    const byte  *check;
 
     angle_t     angle1;
     angle_t     angle2;
@@ -447,8 +443,7 @@ static dboolean R_CheckBBox(const fixed_t *bspcoord)
     int         sx1;
     int         sx2;
 
-    // Find the corners of the box
-    // that define the edges from current viewpoint.
+    // Find the corners of the box that define the edges from current viewpoint.
     boxpos = (viewx <= bspcoord[BOXLEFT] ? 0 : (viewx < bspcoord[BOXRIGHT] ? 1 : 2))
         + (viewy >= bspcoord[BOXTOP] ? 0 : (viewy > bspcoord[BOXBOTTOM] ? 4 : 8));
 
@@ -465,8 +460,7 @@ static dboolean R_CheckBBox(const fixed_t *bspcoord)
     // Much more efficient code now
     if ((int)angle1 < (int)angle2)
     {
-        // Either angle1 or angle2 is behind us, so it doesn't matter if we
-        // change it to the correct sign
+        // Either angle1 or angle2 is behind us, so it doesn't matter if we change it to the correct sign
         if (angle1 >= ANG180 && angle1 < ANG270)
             angle1 = INT_MAX;           // which is ANG180 - 1
         else
@@ -485,9 +479,7 @@ static dboolean R_CheckBBox(const fixed_t *bspcoord)
     if ((int)angle2 <= -(int)clipangle)
         angle2 = 0 - clipangle;         // Clip at right edge
 
-    // Find the first clippost
-    //  that touches the source post
-    //  (adjacent pixels are touching).
+    // Find the first clippost that touches the source post (adjacent pixels are touching).
     sx1 = viewangletox[(angle1 + ANG90) >> ANGLETOFINESHIFT];
     sx2 = viewangletox[(angle2 + ANG90) >> ANGLETOFINESHIFT];
 
@@ -510,10 +502,10 @@ static dboolean R_CheckBBox(const fixed_t *bspcoord)
 static void R_Subsector(int num)
 {
     subsector_t *sub = subsectors + num;
-    sector_t    tempsec;                                        // killough 03/07/98: deep water hack
+    sector_t    tempsec;                                    // killough 03/07/98: deep water hack
     sector_t    *sector = sub->sector;
-    int         floorlightlevel;                                // killough 03/16/98: set floor lightlevel
-    int         ceilinglightlevel;                              // killough 04/11/98
+    int         floorlightlevel;                            // killough 03/16/98: set floor lightlevel
+    int         ceilinglightlevel;                          // killough 04/11/98
     int         count = sub->numlines;
     seg_t       *line = segs + sub->firstline;
 
@@ -523,24 +515,24 @@ static void R_Subsector(int num)
     // killough 03/08/98, 04/04/98: Deep water/fake ceiling effect
     frontsector = R_FakeFlat(sector, &tempsec, &floorlightlevel, &ceilinglightlevel, false);
 
-    floorplane = (frontsector->interpfloorheight < viewz        // killough 03/07/98
+    floorplane = (frontsector->interpfloorheight < viewz    // killough 03/07/98
         || (frontsector->heightsec && frontsector->heightsec->ceilingpic == skyflatnum) ?
         R_FindPlane(frontsector->interpfloorheight,
-            (frontsector->floorpic == skyflatnum                // killough 10/98
+            (frontsector->floorpic == skyflatnum            // killough 10/98
                 && (frontsector->sky & PL_SKYFLAT) ? frontsector->sky : frontsector->floorpic),
-            floorlightlevel,                                    // killough 03/16/98
-            frontsector->floor_xoffs,                           // killough 03/07/98
-            frontsector->floor_yoffs) : NULL);
+            floorlightlevel,                                // killough 03/16/98
+            frontsector->floorxoffset,                      // killough 03/07/98
+            frontsector->flooryoffset) : NULL);
 
     ceilingplane = (frontsector->interpceilingheight > viewz
         || frontsector->ceilingpic == skyflatnum
         || (frontsector->heightsec && frontsector->heightsec->floorpic == skyflatnum) ?
-        R_FindPlane(frontsector->interpceilingheight,           // killough 03/08/98
-            (frontsector->ceilingpic == skyflatnum              // killough 10/98
+        R_FindPlane(frontsector->interpceilingheight,       // killough 03/08/98
+            (frontsector->ceilingpic == skyflatnum          // killough 10/98
                 && (frontsector->sky & PL_SKYFLAT) ? frontsector->sky : frontsector->ceilingpic),
-            ceilinglightlevel,                                  // killough 04/11/98
-            frontsector->ceiling_xoffs,                         // killough 03/07/98
-            frontsector->ceiling_yoffs) : NULL);
+            ceilinglightlevel,                              // killough 04/11/98
+            frontsector->ceilingxoffset,                    // killough 03/07/98
+            frontsector->ceilingyoffset) : NULL);
 
     // killough 09/18/98: Fix underwater slowdown, by passing real sector
     // instead of fake one. Improve sprite lighting by basing sprite
@@ -565,32 +557,51 @@ static void R_Subsector(int num)
 }
 
 //
-// RenderBSPNode
+// R_RenderBSPNode
 // Renders all subsectors below a given node, traversing subtree recursively.
-// Just call with BSP root.
+// [BH] Made non-recursive
+//
+#define MAX_BSP_DEPTH   256
+
 void R_RenderBSPNode(int bspnum)
 {
-    if (bspnum & NF_SUBSECTOR)
-        R_Subsector(bspnum & ~NF_SUBSECTOR);
-    else
+    int stack[MAX_BSP_DEPTH];
+    int sp = 0;
+
+    while (true)
     {
-        const node_t    *bsp = nodes + bspnum;
+        const node_t    *bsp;
+        int             side;
 
-        if (((int64_t)viewy - bsp->y) * bsp->dx + ((int64_t)bsp->x - viewx) * bsp->dy <= 0)
+        while (!(bspnum & NF_SUBSECTOR))
         {
-            if (R_CheckBBox(bsp->bbox[0]))
-                R_RenderBSPNode(bsp->children[0]);
+            if (sp == MAX_BSP_DEPTH)
+                break;
 
-            if (R_CheckBBox(bsp->bbox[1]))
-                R_RenderBSPNode(bsp->children[1]);
+            bsp = nodes + bspnum;
+            side = (((int64_t)viewy - bsp->y) * bsp->dx + ((int64_t)bsp->x - viewx) * bsp->dy > 0);
+            stack[sp++] = bspnum;
+            stack[sp++] = side;
+            bspnum = bsp->children[side];
         }
-        else
+
+        R_Subsector(bspnum == -1 ? 0 : (bspnum & ~NF_SUBSECTOR));
+
+        if (!sp)
+            return;
+
+        side = stack[--sp] ^ 1;
+        bsp = nodes + stack[--sp];
+
+        while (!R_CheckBBox(bsp->bbox[side]))
         {
-            if (R_CheckBBox(bsp->bbox[1]))
-                R_RenderBSPNode(bsp->children[1]);
+            if (!sp)
+                return;
 
-            if (R_CheckBBox(bsp->bbox[0]))
-                R_RenderBSPNode(bsp->children[0]);
+            side = stack[--sp] ^ 1;
+            bsp = nodes + stack[--sp];
         }
+
+        bspnum = bsp->children[side];
     }
 }

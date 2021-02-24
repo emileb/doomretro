@@ -7,7 +7,7 @@
 ========================================================================
 
   Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2020 by Brad Harding.
+  Copyright © 2013-2021 by Brad Harding.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
@@ -105,7 +105,7 @@ extern void (*colfunc)(void);
 extern void (*wallcolfunc)(void);
 extern void (*bmapwallcolfunc)(void);
 extern void (*segcolfunc)(void);
-extern void (*transcolfunc)(void);
+extern void (*translatedcolfunc)(void);
 extern void (*basecolfunc)(void);
 extern void (*fuzzcolfunc)(void);
 extern void (*tlcolfunc)(void);

@@ -7,7 +7,7 @@
 ========================================================================
 
   Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2020 by Brad Harding.
+  Copyright © 2013-2021 by Brad Harding.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
@@ -42,7 +42,7 @@
 #include "mmus2mid.h"
 
 // initial track size allocation
-#define TRACKBUFFERSIZE 1024L
+#define TRACKBUFFERSIZE 1024
 
 // some macros to decode mus event bit fields
 #define last(e)         ((uint8_t)((e) & 0x80))
@@ -277,10 +277,7 @@ dboolean mmuscheckformat(uint8_t *mus, int size)
     while (hptr < mus + size - sizeof(MUSheader) && hptr < mus + MAX_HEADER_SCAN && strncmp((const char *)hptr, "MUS\x1a", 4))
         hptr++;
 
-    if (hptr < mus + size - sizeof(MUSheader) && !strncmp((const char *)hptr, "MUS\x1a", 4))
-        return true;
-
-    return false;
+    return (hptr < mus + size - sizeof(MUSheader) && !strncmp((const char *)hptr, "MUS\x1a", 4));
 }
 
 //
@@ -326,7 +323,9 @@ dboolean mmus2mid(uint8_t *mus, size_t size, MIDI *mididata)
         mus = hptr;
 
     // copy the MUS header from the MUS buffer to the MUSh header structure
-    memcpy(&MUSh, mus, sizeof(MUSheader));
+    MUSh.ScoreLength = (&mus[4])[0] | ((&mus[4])[1] << 8);
+    MUSh.ScoreStart = (&mus[6])[0] | ((&mus[6])[1] << 8);
+    MUSh.channels = (&mus[8])[0] | ((&mus[8])[1] << 8);
 
     // check some things and set length of MUS buffer from internal data
     if (!(muslen = (size_t)MUSh.ScoreLength + MUSh.ScoreStart))
@@ -339,6 +338,7 @@ dboolean mmus2mid(uint8_t *mus, size_t size, MIDI *mididata)
 
     for (int i = 0; i < MIDI_TRACKS; i++)   // init the track structure's tracks
     {
+        MIDIchan2track[i] = 0;
         MUS2MIDchannel[i] = -1;             // flag for channel not used yet
         track[i].velocity = 64;
         track[i].deltaT = 0;
@@ -563,7 +563,7 @@ void FreeMIDIData(MIDI *mididata)
 //
 void MIDIToMidi(const MIDI *mididata, uint8_t **mid, int *midlen)
 {
-    int     ntrks = 0;
+    uint8_t ntrks = 0;
     uint8_t *midiptr;
 
     // calculate how long the mid buffer must be, and allocate
@@ -572,7 +572,7 @@ void MIDIToMidi(const MIDI *mididata, uint8_t **mid, int *midlen)
     for (int i = 0; i < MIDI_TRACKS; i++)
         if (mididata->track[i].len)
         {
-            total += 8 + mididata->track[i].len;        // Track hdr + track length
+            total += 8 + mididata->track[i].len;                                // Track hdr + track length
             ntrks++;
         }
 
@@ -581,7 +581,7 @@ void MIDIToMidi(const MIDI *mididata, uint8_t **mid, int *midlen)
 
     // fill in number of tracks and big endian divisions (tics/qnote)
     midihdr[10] = 0;
-    midihdr[11] = (uint8_t)ntrks;   // set number of tracks in header
+    midihdr[11] = ntrks;                                                        // set number of tracks in header
     midihdr[12] = (mididata->divisions >> 8) & 0x7F;
     midihdr[13] = mididata->divisions & 0xFF;
 

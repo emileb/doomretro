@@ -7,7 +7,7 @@
 #========================================================================
 #
 #  Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
-#  Copyright © 2013-2020 by Brad Harding.
+#  Copyright © 2013-2021 by Brad Harding.
 #
 #  DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
 #  <https://github.com/bradharding/doomretro/wiki/CREDITS>.
@@ -48,15 +48,19 @@
 console/
 savegames/
 screenshots/
+msvc/Release/CodeAnalysisResultManifest.txt
 msvc/Release/doomretro.cfg
 msvc/Release/doomretro.lib
 msvc/Release/doomretro.wad
+msvc/Debug/CodeAnalysisResultManifest.txt
 msvc/Debug/doomretro.cfg
 msvc/Debug/doomretro.lib
 msvc/Debug/doomretro.wad
+msvc/x64/Release/CodeAnalysisResultManifest.txt
 msvc/x64/Release/doomretro.cfg
 msvc/x64/Release/doomretro.lib
 msvc/x64/Release/doomretro.wad
+msvc/x64/Debug/CodeAnalysisResultManifest.txt
 msvc/x64/Debug/doomretro.cfg
 msvc/x64/Debug/doomretro.lib
 msvc/x64/Debug/doomretro.wad

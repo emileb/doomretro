@@ -7,7 +7,7 @@
 ========================================================================
 
   Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2020 by Brad Harding.
+  Copyright © 2013-2021 by Brad Harding.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
@@ -188,10 +188,10 @@ void I_PrintWindowsVersion(void)
                 M_StringCopy(infoname, (info.wProductType == VER_NT_WORKSTATION ? "10" : "Server 2016"), sizeof(infoname));
 
             if (wcslen(info.szCSDVersion) > 0)
-                C_Output("Running on %i-bit <i><b>Microsoft Windows %s%s%s (%ws)</b></i> (Build %s).",
+                C_Output("Running on %i-bit <i>Microsoft Windows %s%s%s (%ws)</i> (Build %s).",
                     bits, infoname, (*typename ? " " : ""), typename, info.szCSDVersion, build);
             else
-                C_Output("Running on %i-bit <i><b>Microsoft Windows %s%s%s</b></i> (Build %s).",
+                C_Output("Running on %i-bit <i>Microsoft Windows %s%s%s</i> (Build %s).",
                     bits, infoname, (*typename ? " " : ""), typename, build);
 
             free(build);
@@ -227,9 +227,6 @@ void I_Quit(dboolean shutdown)
 
         S_Shutdown();
 
-        if (returntowidescreen)
-            vid_widescreen = true;
-
         M_SaveCVARs();
 
         I_ShutdownGraphics();
@@ -261,14 +258,11 @@ void I_Error(const char *error, ...)
 
     if (already_quitting)
         exit(-1);
-    else
-        already_quitting = true;
+
+    already_quitting = true;
 
     // Shutdown. Here might be other errors.
     S_Shutdown();
-
-    if (returntowidescreen)
-        vid_widescreen = true;
 
 #if defined(_WIN32)
     if (previouswad)

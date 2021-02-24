@@ -7,7 +7,7 @@
 ========================================================================
 
   Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2020 by Brad Harding.
+  Copyright © 2013-2021 by Brad Harding.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
@@ -102,6 +102,7 @@ int gamepadautomaprotatemode = GAMEPADAUTOMAPROTATEMODE_DEFAULT;
 int gamepadautomapzoomin = GAMEPADAUTOMAPZOOMIN_DEFAULT;
 int gamepadautomapzoomout = GAMEPADAUTOMAPZOOMOUT_DEFAULT;
 int gamepadback = GAMEPADBACK_DEFAULT;
+int gamepadconsole = GAMEPADCONSOLE_DEFAULT;
 int gamepadfire = GAMEPADFIRE_DEFAULT;
 int gamepadforward = GAMEPADFORWARD_DEFAULT;
 int gamepadjump = GAMEPADJUMP_DEFAULT;

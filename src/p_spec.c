@@ -7,7 +7,7 @@
 ========================================================================
 
   Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2020 by Brad Harding.
+  Copyright © 2013-2021 by Brad Harding.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
@@ -48,6 +48,7 @@
 #include "m_config.h"
 #include "m_misc.h"
 #include "m_random.h"
+#include "p_fix.h"
 #include "p_local.h"
 #include "p_setup.h"
 #include "p_tick.h"
@@ -97,7 +98,7 @@ typedef struct
 
 #define MAXANIMS    32
 
-uint64_t            stat_secretsrevealed = 0;
+uint64_t            stat_secretsfound = 0;
 
 dboolean            r_liquid_bob = r_liquid_bob_default;
 
@@ -162,10 +163,11 @@ static void SetTerrainType(anim_t *anim, terraintype_t terraintype)
 //
 void P_InitPicAnims(void)
 {
-    int         size = (numflats + 1) * sizeof(dboolean);
+    size_t      size = ((size_t)numflats + 1) * sizeof(dboolean);
 
     int         lump = W_GetNumForName("ANIMATED");
     animdef_t   *animdefs = W_CacheLumpNum(lump);
+    size_t      maxanims = 0;
 
     short       NUKAGE1 = R_CheckFlatNumForName("NUKAGE1");
     short       NUKAGE3 = R_CheckFlatNumForName("NUKAGE3");
@@ -193,8 +195,6 @@ void P_InitPicAnims(void)
 
     for (int i = 0; animdefs[i].istexture != -1; i++)
     {
-        static size_t   maxanims;
-
         // killough 01/11/98 -- removed limit by array-doubling
         if (lastanim >= anims + maxanims)
         {
@@ -297,7 +297,6 @@ void P_InitPicAnims(void)
                         && basepic <= R_CheckFlatNumForName(texturepacks[j].endname))
                     {
                         SetTerrainType(lastanim, texturepacks[j].terraintype);
-                        isliquid = true;
                         break;
                     }
         }
@@ -474,7 +473,7 @@ void P_SetLifts(void)
 
 //
 // getSide
-// Will return a side_t*
+// Will return a side_t
 //  given the number of the current sector,
 //  the line number, and the side (0/1) that you want.
 //
@@ -485,7 +484,7 @@ side_t *getSide(int currentSector, int line, int side)
 
 //
 // getSector
-// Will return a sector_t*
+// Will return a sector_t
 //  given the number of the current sector,
 //  the line number and the side (0/1) that you want.
 //
@@ -508,7 +507,7 @@ dboolean twoSided(int sector, int line)
 
 //
 // getNextSector
-// Return sector_t * of sector next to current.
+// Return sector_t of sector next to current.
 // NULL if not two-sided line
 //
 sector_t *getNextSector(line_t *line, sector_t *sec)
@@ -533,7 +532,7 @@ dboolean P_IsSelfReferencingSector(sector_t *sec)
     {
         line_t  *line = sec->lines[i];
 
-        if (line->backsector && line->frontsector == line->backsector && (line->flags & ML_DONTDRAW))
+        if (line->backsector && line->frontsector == line->backsector && (line->flags & ML_DONTDRAW) && !line->special)
             count++;
     }
 
@@ -758,7 +757,7 @@ fixed_t P_FindHighestCeilingSurrounding(sector_t *sec)
 // Passed a sector number, returns the shortest lower texture on a
 // linedef bounding the sector.
 //
-// Note: If no lower texture exists 32000*FRACUNIT is returned.
+// Note: If no lower texture exists 32000 * FRACUNIT is returned.
 //       but if compatibility then MAXINT is returned
 //
 // jff 02/03/98 Add routine to find shortest lower texture
@@ -790,7 +789,7 @@ fixed_t P_FindShortestTextureAround(int secnum)
 // Passed a sector number, returns the shortest upper texture on a
 // linedef bounding the sector.
 //
-// Note: If no upper texture exists 32000*FRACUNIT is returned.
+// Note: If no upper texture exists 32000 * FRACUNIT is returned.
 //       but if compatibility then MAXINT is returned
 //
 // jff 03/20/98 Add routine to find shortest upper texture
@@ -1416,7 +1415,7 @@ void P_CrossSpecialLine(line_t *line, int side, mobj_t *thing)
 
                 if (nomonsters && (line->flags & ML_TRIGGER666))
                 {
-                    line_t  junk;
+                    line_t  junk = { 0 };
 
                     switch (gameepisode)
                     {
@@ -1450,7 +1449,7 @@ void P_CrossSpecialLine(line_t *line, int side, mobj_t *thing)
             break;
 
         case W1_Floor_RaiseToLowestCeiling:
-            if (gamemission == doom && gameepisode == 4 && gamemap == 3 && canmodify)
+            if (E4M3)
             {
                 if (EV_DoFloor(line, raiseFloorCrush))
                     line->special = 0;
@@ -1527,7 +1526,7 @@ void P_CrossSpecialLine(line_t *line, int side, mobj_t *thing)
             break;
 
         case W1_Light_ChangeTo35:
-            if (EV_LightTurnOn(line, 35))
+            if (EV_LightTurnOn(line, TICRATE))
                 line->special = 0;
 
             break;
@@ -1698,7 +1697,7 @@ void P_CrossSpecialLine(line_t *line, int side, mobj_t *thing)
             break;
 
         case WR_Light_ChangeTo35:
-            EV_LightTurnOn(line, 35);
+            EV_LightTurnOn(line, TICRATE);
             break;
 
         case WR_Light_ChangeToBrightestAdjacent:
@@ -2174,7 +2173,7 @@ void P_ShootSpecialLine(mobj_t *thing, line_t *line)
 static void P_SecretFound(void)
 {
     viewplayer->secretcount++;
-    stat_secretsrevealed = SafeAdd(stat_secretsrevealed, 1);
+    stat_secretsfound = SafeAdd(stat_secretsfound, 1);
 
     if (DSSECRET)
     {
@@ -2451,7 +2450,7 @@ dboolean EV_DoDonut(line_t *line)
 
 void P_SetTimer(int minutes)
 {
-    timer = BETWEEN(0, minutes, 600);
+    timer = minutes;
     countdown = timer * 60 * TICRATE;
 }
 
@@ -2461,8 +2460,7 @@ void P_SetTimer(int minutes)
 
 //
 // P_SpawnSpecials
-// After the map has been loaded, scan for specials
-//  that spawn thinkers
+// After the map has been loaded, scan for specials that spawn thinkers
 //
 void P_SpawnSpecials(void)
 {
@@ -2478,6 +2476,7 @@ void P_SpawnSpecials(void)
         {
             char    *temp = commify(minutes);
 
+            timer = BETWEEN(0, minutes, TIMERMAXMINUTES);
             C_Output("A <b>-timer</b> parameter was found on the command-line. The time limit for each map is %s minute%s.",
                 temp, (minutes == 1 ? "" : "s"));
             P_SetTimer(minutes);
@@ -2688,14 +2687,14 @@ void T_Scroll(scroll_t *s)
 
         case sc_floor:                          // killough 03/07/98: Scroll floor texture
             sec = sectors + s->affectee;
-            sec->floor_xoffs += dx;
-            sec->floor_yoffs += dy;
+            sec->floorxoffset += dx;
+            sec->flooryoffset += dy;
             break;
 
         case sc_ceiling:                        // killough 03/07/98: Scroll ceiling texture
             sec = sectors + s->affectee;
-            sec->ceiling_xoffs += dx;
-            sec->ceiling_yoffs += dy;
+            sec->ceilingxoffset += dx;
+            sec->ceilingyoffset += dy;
             break;
 
         case sc_carry:

@@ -7,7 +7,7 @@
 ========================================================================
 
   Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2020 by Brad Harding.
+  Copyright © 2013-2021 by Brad Harding.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
@@ -41,15 +41,17 @@
 
 #include "SDL_mixer.h"
 
-#include "r_defs.h"
 #include "sounds.h"
 
-#define CHANNELS                    2
 #define CHUNKSIZE                   1024
 #define SAMPLERATE                  44100
 
-#define MAX_MUSIC_VOLUME            MIX_MAX_VOLUME
-#define MAX_SFX_VOLUME              MIX_MAX_VOLUME
+#if !defined(__HAIKU__)
+#define DEFAULT_DEVICE              NULL
+#else
+// Triggers a segfault if no name is provided even though the default device is empty
+#define DEFAULT_DEVICE              ""
+#endif
 
 #define LOWER_MUSIC_VOLUME_FACTOR   3
 
@@ -60,7 +62,6 @@ void I_UpdateSoundParms(int channel, int vol, int sep);
 int I_StartSound(sfxinfo_t *sfxinfo, int channel, int vol, int sep, int pitch);
 void I_StopSound(int channel);
 dboolean I_SoundIsPlaying(int channel);
-void I_UpdateSound(void);
 
 dboolean I_InitMusic(void);
 void I_ShutdownMusic(void);

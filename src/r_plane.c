@@ -7,7 +7,7 @@
 ========================================================================
 
   Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2020 by Brad Harding.
+  Copyright © 2013-2021 by Brad Harding.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
@@ -40,13 +40,12 @@
 
 #include "c_console.h"
 #include "doomstat.h"
-#include "i_system.h"
 #include "m_config.h"
 #include "p_local.h"
 #include "r_sky.h"
 #include "w_wad.h"
 
-#define MAXVISPLANES    128                     // must be a power of 2
+#define MAXVISPLANES    1024                    // must be a power of 2
 
 static visplane_t   *visplanes[MAXVISPLANES];   // killough
 static visplane_t   *freetail;                  // killough
@@ -65,8 +64,8 @@ int                 *lastopening;               // dropoff overflow
 // Clip values are the solid pixel bounding the range.
 //  floorclip starts out SCREENHEIGHT
 //  ceilingclip starts out -1
-int                 floorclip[SCREENWIDTH];     // dropoff overflow
-int                 ceilingclip[SCREENWIDTH];   // dropoff overflow
+int                 floorclip[MAXWIDTH];     // dropoff overflow
+int                 ceilingclip[MAXWIDTH];   // dropoff overflow
 
 // texture mapping
 static lighttable_t **planezlight;
@@ -75,9 +74,9 @@ static fixed_t      planeheight;
 static fixed_t      xoffset, yoffset;           // killough 02/28/98: flat offsets
 
 fixed_t             *yslope;
-fixed_t             yslopes[LOOKDIRS][SCREENHEIGHT];
+fixed_t             yslopes[LOOKDIRS][MAXHEIGHT];
 
-static fixed_t      cachedheight[SCREENHEIGHT];
+static fixed_t      cachedheight[MAXHEIGHT];
 
 dboolean            r_liquid_current = r_liquid_current_default;
 dboolean            r_liquid_swirl = r_liquid_swirl_default;
@@ -89,11 +88,11 @@ static dboolean     updateswirl;
 //
 static void R_MapPlane(int y, int x1)
 {
-    static fixed_t  cacheddistance[SCREENHEIGHT];
-    static fixed_t  cachedviewcosdistance[SCREENHEIGHT];
-    static fixed_t  cachedviewsindistance[SCREENHEIGHT];
-    static fixed_t  cachedxstep[SCREENHEIGHT];
-    static fixed_t  cachedystep[SCREENHEIGHT];
+    static fixed_t  cacheddistance[MAXHEIGHT];
+    static fixed_t  cachedviewcosdistance[MAXHEIGHT];
+    static fixed_t  cachedviewsindistance[MAXHEIGHT];
+    static fixed_t  cachedxstep[MAXHEIGHT];
+    static fixed_t  cachedystep[MAXHEIGHT];
     fixed_t         distance;
     fixed_t         viewcosdistance;
     fixed_t         viewsindistance;
@@ -107,11 +106,11 @@ static void R_MapPlane(int y, int x1)
             return;
 
         cachedheight[y] = planeheight;
-        cacheddistance[y] = distance = FixedMul(planeheight, yslope[y]);
-        cachedviewcosdistance[y] = viewcosdistance = FixedMul(viewcos, distance);
-        cachedviewsindistance[y] = viewsindistance = FixedMul(viewsin, distance);
-        cachedxstep[y] = ds_xstep = FixedMul(viewsin, planeheight) / dy;
-        cachedystep[y] = ds_ystep = FixedMul(viewcos, planeheight) / dy;
+        distance = cacheddistance[y] = FixedMul(planeheight, yslope[y]);
+        viewcosdistance = cachedviewcosdistance[y] = FixedMul(viewcos, distance);
+        viewsindistance = cachedviewsindistance[y] = FixedMul(viewsin, distance);
+        ds_xstep = cachedxstep[y] = FixedMul(viewsin, planeheight) / dy;
+        ds_ystep = cachedystep[y] = FixedMul(viewcos, planeheight) / dy;
     }
     else
     {
@@ -199,10 +198,10 @@ visplane_t *R_FindPlane(fixed_t height, int picnum, int lightlevel, fixed_t x, f
     check->height = height;
     check->picnum = picnum;
     check->lightlevel = lightlevel;
-    check->left = viewwidth;
-    check->right = -1;
     check->xoffset = x;
     check->yoffset = y;
+    check->left = viewwidth;
+    check->right = -1;
     check->modified = false;
 
     memset(check->top, UINT_MAX, sizeof(check->top));
@@ -223,9 +222,9 @@ visplane_t *R_DupPlane(const visplane_t *pl, int start, int stop)
     new_pl->yoffset = pl->yoffset;
     new_pl->left = start;
     new_pl->right = stop;
+    new_pl->modified = false;
 
     memset(new_pl->top, UINT_MAX, sizeof(new_pl->top));
-
     return new_pl;
 }
 
@@ -282,7 +281,7 @@ static void R_MakeSpans(visplane_t *pl)
 {
     // spanstart holds the start of a plane span
     // initialized to 0 at start
-    static int  spanstart[SCREENHEIGHT];
+    static int  spanstart[MAXHEIGHT];
     int         stop = pl->right + 1;
 
     if (terraintypes[pl->picnum] != SOLID && r_liquid_current)
@@ -404,7 +403,7 @@ void R_InitDistortedFlats(void)
 void R_DrawPlanes(void)
 {
     if (r_liquid_swirl)
-        updateswirl = (!menuactive || !(gametime & 4)) && !consoleactive && !paused && !freeze;
+        updateswirl = ((!menuactive || !(gametime & 4)) && !consoleactive && !paused && !freeze);
 
     dc_colormap[0] = (viewplayer->fixedcolormap == INVERSECOLORMAP && r_textures ? fixedcolormap : fullcolormap);
 

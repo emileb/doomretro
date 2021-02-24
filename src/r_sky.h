@@ -7,7 +7,7 @@
 ========================================================================
 
   Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2020 by Brad Harding.
+  Copyright © 2013-2021 by Brad Harding.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
@@ -45,7 +45,7 @@
 // The sky map is 256*128*4 maps.
 #define ANGLETOSKYSHIFT     22
 
-#define SKYSTRETCH_HEIGHT   228
+#define SKYSTRETCH_HEIGHT   (r_screensize < r_screensize_max && !menuactive ? 228 : 252)
 
 extern int      skytexture;
 extern int      skytexturemid;

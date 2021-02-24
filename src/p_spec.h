@@ -7,7 +7,7 @@
 ========================================================================
 
   Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2020 by Brad Harding.
+  Copyright © 2013-2021 by Brad Harding.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
@@ -45,6 +45,8 @@ typedef enum
     floor_special,
     ceiling_special
 } special_e;
+
+#define TIMERMAXMINUTES 3600
 
 extern int              timer;
 extern int              countdown;
@@ -308,6 +310,7 @@ typedef struct platlist_s
 
 extern platlist_t   *activeplats;
 
+void T_PlatStay(plat_t *plat);
 void T_PlatRaise(plat_t *plat);
 
 dboolean EV_DoPlat(line_t *line, plattype_e type, int amount);
@@ -444,6 +447,7 @@ extern ceilinglist_t    *activeceilings;
 
 dboolean EV_DoCeiling(line_t *line, ceiling_e type);
 
+void T_CeilingStay(ceiling_t *ceiling);
 void T_MoveCeiling(ceiling_t *ceiling);
 void P_AddActiveCeiling(ceiling_t *ceiling);
 void P_RemoveActiveCeiling(ceiling_t *ceiling);
@@ -559,8 +563,7 @@ typedef enum
     pastdest
 } result_e;
 
-result_e T_MovePlane(sector_t *sector, fixed_t speed, fixed_t dest, dboolean crush, int floororceiling,
-    int direction, dboolean elevator);
+result_e T_MovePlane(sector_t *sector, fixed_t speed, fixed_t dest, dboolean crush, int floororceiling, int direction);
 dboolean EV_BuildStairs(line_t *line, fixed_t speed, fixed_t stairsize, dboolean crushing);
 dboolean EV_DoFloor(line_t *line, floor_e floortype);
 dboolean EV_DoChange(line_t *line, change_e changetype);

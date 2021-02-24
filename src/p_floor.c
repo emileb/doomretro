@@ -7,7 +7,7 @@
 ========================================================================
 
   Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2020 by Brad Harding.
+  Copyright © 2013-2021 by Brad Harding.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
@@ -58,15 +58,15 @@
 //
 // Move a plane (floor or ceiling) and check for crushing
 //
-result_e T_MovePlane(sector_t *sector, fixed_t speed, fixed_t dest, dboolean crush,
-    int floororceiling, int direction, dboolean elevator)
+result_e T_MovePlane(sector_t *sector, fixed_t speed, fixed_t dest, dboolean crush, int floororceiling, int direction)
 {
-    fixed_t oldfloorheight = sector->floorheight;
-    fixed_t oldceilingheight = sector->ceilingheight;
+    sector->oldgametime = gametime;
 
     switch (floororceiling)
     {
         case FLOOR:
+            sector->oldfloorheight = sector->floorheight;
+
             switch (direction)
             {
                 case DOWN:
@@ -76,7 +76,7 @@ result_e T_MovePlane(sector_t *sector, fixed_t speed, fixed_t dest, dboolean cru
 
                         if (P_ChangeSector(sector, crush))
                         {
-                            sector->floorheight = oldfloorheight;
+                            sector->floorheight = sector->oldfloorheight;
                             P_ChangeSector(sector, crush);
                         }
 
@@ -99,7 +99,7 @@ result_e T_MovePlane(sector_t *sector, fixed_t speed, fixed_t dest, dboolean cru
 
                         if (P_ChangeSector(sector, crush))
                         {
-                            sector->floorheight = oldfloorheight;
+                            sector->floorheight = sector->oldfloorheight;
                             P_ChangeSector(sector, crush);
                         }
 
@@ -112,7 +112,7 @@ result_e T_MovePlane(sector_t *sector, fixed_t speed, fixed_t dest, dboolean cru
 
                         if (P_ChangeSector(sector, crush))
                         {
-                            sector->floorheight = oldfloorheight;
+                            sector->floorheight = sector->oldfloorheight;
                             P_ChangeSector(sector, crush);
                             return crushed;
                         }
@@ -124,6 +124,8 @@ result_e T_MovePlane(sector_t *sector, fixed_t speed, fixed_t dest, dboolean cru
             break;
 
         case CEILING:
+            sector->oldceilingheight = sector->ceilingheight;
+
             switch (direction)
             {
                 case DOWN:
@@ -135,7 +137,7 @@ result_e T_MovePlane(sector_t *sector, fixed_t speed, fixed_t dest, dboolean cru
 
                         if (P_ChangeSector(sector, crush))
                         {
-                            sector->ceilingheight = oldceilingheight;
+                            sector->ceilingheight = sector->oldceilingheight;
                             P_ChangeSector(sector, crush);
                         }
 
@@ -150,7 +152,7 @@ result_e T_MovePlane(sector_t *sector, fixed_t speed, fixed_t dest, dboolean cru
                         {
                             if (!crush)
                             {
-                                sector->ceilingheight = oldceilingheight;
+                                sector->ceilingheight = sector->oldceilingheight;
                                 P_ChangeSector(sector, false);
                             }
 
@@ -167,7 +169,7 @@ result_e T_MovePlane(sector_t *sector, fixed_t speed, fixed_t dest, dboolean cru
 
                         if (P_ChangeSector(sector, crush))
                         {
-                            sector->ceilingheight = oldceilingheight;
+                            sector->ceilingheight = sector->oldceilingheight;
                             P_ChangeSector(sector, crush);
                         }
 
@@ -185,17 +187,6 @@ result_e T_MovePlane(sector_t *sector, fixed_t speed, fixed_t dest, dboolean cru
             break;
     }
 
-    if (!elevator)
-    {
-        sector->oldfloorheight = oldfloorheight;
-        sector->oldceilingheight = oldceilingheight;
-    }
-    else if (floororceiling == FLOOR)
-        sector->oldfloorheight = oldfloorheight;
-    else
-        sector->oldceilingheight = oldceilingheight;
-
-    sector->oldgametime = gametime;
     return ok;
 }
 
@@ -207,88 +198,88 @@ result_e T_MovePlane(sector_t *sector, fixed_t speed, fixed_t dest, dboolean cru
 void T_MoveFloor(floormove_t *floor)
 {
     sector_t    *sec = floor->sector;
-    result_e    res = T_MovePlane(sec, floor->speed, floor->floordestheight, floor->crush, 0, floor->direction, false);
+    result_e    res = T_MovePlane(sec, floor->speed, floor->floordestheight, floor->crush, 0, floor->direction);
 
-    if (!(leveltime & 7))
-        S_StartSectorSound(&sec->soundorg, sfx_stnmov);
-
-    if (res == pastdest)
+    if (res != pastdest)
     {
-        if (floor->direction == UP)
-        {
-            switch (floor->type)
-            {
-                case donutRaise:
-                case genFloorChgT:
-                case genFloorChg0:
-                    sec->special = floor->newspecial;
-                    // fall through
+        if (!(leveltime & 7))
+            S_StartSectorSound(&sec->soundorg, sfx_stnmov);
 
-                case genFloorChg:
-                    sec->floorpic = floor->texture;
-                    P_CheckTerrainType(sec);
-                    break;
-
-                default:
-                    break;
-            }
-        }
-        else if (floor->direction == DOWN)
-        {
-            switch (floor->type)
-            {
-                case lowerAndChange:
-                case genFloorChgT:
-                case genFloorChg0:
-                    sec->special = floor->newspecial;
-                    // fall through
-
-                case genFloorChg:
-                    sec->floorpic = floor->texture;
-                    P_CheckTerrainType(sec);
-                    break;
-
-                default:
-                    break;
-            }
-        }
-
-        floor->sector->floordata = NULL;
-        P_RemoveThinker(&floor->thinker);
-
-        // jff 2/26/98 implement stair retrigger lockout while still building
-        // note this only applies to the retriggerable generalized stairs
-        if (sec->stairlock == -2)               // if this sector is stairlocked
-        {
-            sec->stairlock = -1;                // thinker done, promote lock to -1
-
-            while (sec->prevsec != -1 && sectors[sec->prevsec].stairlock != -2)
-                sec = sectors + sec->prevsec;   // search for a non-done thinker
-
-            if (sec->prevsec == -1)             // if all thinkers previous are done
-            {
-                sec = floor->sector;            // search forward
-
-                while (sec->nextsec != -1 && sectors[sec->nextsec].stairlock != -2)
-                    sec = sectors + sec->nextsec;
-
-                if (sec->nextsec == -1)         // if all thinkers ahead are done too
-                {
-                    while (sec->prevsec != -1)  // clear all locks
-                    {
-                        sec->stairlock = 0;
-                        sec = sectors + sec->prevsec;
-                    }
-
-                    sec->stairlock = 0;
-                }
-            }
-        }
-
-        // [BH] don't make stop sound if floor already at its destination height
-        if (floor->stopsound)
-            S_StartSectorSound(&sec->soundorg, sfx_pstop);
+        return;
     }
+
+    if (floor->direction == UP)
+    {
+        switch (floor->type)
+        {
+            case donutRaise:
+            case genFloorChgT:
+            case genFloorChg0:
+                sec->special = floor->newspecial;
+
+            case genFloorChg:
+                sec->floorpic = floor->texture;
+                P_CheckTerrainType(sec);
+                break;
+
+            default:
+                break;
+        }
+    }
+    else if (floor->direction == DOWN)
+    {
+        switch (floor->type)
+        {
+            case lowerAndChange:
+            case genFloorChgT:
+            case genFloorChg0:
+                sec->special = floor->newspecial;
+
+            case genFloorChg:
+                sec->floorpic = floor->texture;
+                P_CheckTerrainType(sec);
+                break;
+
+            default:
+                break;
+        }
+    }
+
+    floor->sector->floordata = NULL;
+    P_RemoveThinker(&floor->thinker);
+
+    // jff 2/26/98 implement stair retrigger lockout while still building
+    // note this only applies to the retriggerable generalized stairs
+    if (sec->stairlock == -2)               // if this sector is stairlocked
+    {
+        sec->stairlock = -1;                // thinker done, promote lock to -1
+
+        while (sec->prevsec != -1 && sectors[sec->prevsec].stairlock != -2)
+            sec = sectors + sec->prevsec;   // search for a non-done thinker
+
+        if (sec->prevsec == -1)             // if all thinkers previous are done
+        {
+            sec = floor->sector;            // search forward
+
+            while (sec->nextsec != -1 && sectors[sec->nextsec].stairlock != -2)
+                sec = sectors + sec->nextsec;
+
+            if (sec->nextsec == -1)         // if all thinkers ahead are done too
+            {
+                while (sec->prevsec != -1)  // clear all locks
+                {
+                    sec->stairlock = 0;
+                    sec = sectors + sec->prevsec;
+                }
+
+                sec->stairlock = 0;
+            }
+        }
+    }
+
+    // [BH] don't make stop sound if floor already at its destination height
+    if (floor->stopsound)
+        S_StartSectorSound(&sec->soundorg, sfx_pstop);
 }
 
 //
@@ -311,20 +302,20 @@ void T_MoveElevator(elevator_t *elevator)
     if (elevator->direction == DOWN)            // moving down
     {
         // jff 4/7/98 reverse order of ceiling/floor
-        res = T_MovePlane(sec, elevator->speed, elevator->ceilingdestheight, false, 1, elevator->direction, true);
+        res = T_MovePlane(sec, elevator->speed, elevator->ceilingdestheight, false, 1, elevator->direction);
 
         // jff 4/7/98 don't move ceiling if blocked
         if (res == ok || res == pastdest)
-            T_MovePlane(sec, elevator->speed, elevator->floordestheight, false, 0, elevator->direction, true);
+            T_MovePlane(sec, elevator->speed, elevator->floordestheight, false, 0, elevator->direction);
     }
     else                                        // up
     {
         // jff 4/7/98 reverse order of ceiling/floor
-        res = T_MovePlane(sec, elevator->speed, elevator->floordestheight, false, 0, elevator->direction, true);
+        res = T_MovePlane(sec, elevator->speed, elevator->floordestheight, false, 0, elevator->direction);
 
         // jff 4/7/98 don't move floor if blocked
         if (res == ok || res == pastdest)
-            T_MovePlane(sec, elevator->speed, elevator->ceilingdestheight, false, 1, elevator->direction, true);
+            T_MovePlane(sec, elevator->speed, elevator->ceilingdestheight, false, 1, elevator->direction);
     }
 
     // make floor move sound
@@ -488,14 +479,24 @@ manual_floor:
                 floor->floordestheight = sec->floorheight + 24 * FRACUNIT;
 
                 if (E2M2)
+                {
                     sec->floorpic = R_FlatNumForName("FLOOR5_4");
+                    sec->terraintype = SOLID;
+                    sec->special = 0;
+                }
                 else if (MAP12)
+                {
                     sec->floorpic = R_FlatNumForName("FLOOR7_1");
+                    sec->terraintype = SOLID;
+                    sec->special = 0;
+                }
                 else
+                {
                     sec->floorpic = line->frontsector->floorpic;
+                    sec->special = line->frontsector->special;
+                    P_CheckTerrainType(sec);
+                }
 
-                P_CheckTerrainType(sec);
-                sec->special = line->frontsector->special;
                 break;
 
             case raiseToTexture:
@@ -595,8 +596,8 @@ void P_CheckTerrainType(sector_t *sector)
         }
         else
         {
-            sector->floor_xoffs = 0;
-            sector->floor_yoffs = 0;
+            sector->floorxoffset = 0;
+            sector->flooryoffset = 0;
         }
 
         for (msecnode_t *node = sector->touching_thinglist; node; node = node->m_snext)

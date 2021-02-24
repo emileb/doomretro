@@ -7,7 +7,7 @@
 ========================================================================
 
   Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2020 by Brad Harding.
+  Copyright © 2013-2021 by Brad Harding.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
@@ -56,7 +56,6 @@
 #include "m_misc.h"
 #include "m_random.h"
 #include "p_local.h"
-#include "p_saveg.h"
 #include "p_setup.h"
 #include "s_sound.h"
 #include "st_lib.h"
@@ -67,7 +66,7 @@
 #include "z_zone.h"
 
 #define LINEHEIGHT  17
-#define OFFSET      (vid_widescreen ? 0 : 17)
+#define OFFSET      17
 
 int             episode = episode_default;
 int             expansion = expansion_default;
@@ -123,6 +122,7 @@ static dboolean usinggamepad;
 static menu_t   *currentMenu;
 
 int             spindirection;
+int             spinspeed;
 static angle_t  playerangle;
 
 //
@@ -452,43 +452,42 @@ menu_t SaveDef =
     load1
 };
 
-static void BlurScreen(byte *screen, byte *blurscreen, int height)
+static void BlurScreen(byte *src, byte *dest, int width, int area)
 {
-    for (int i = 0; i < height; i++)
-        blurscreen[i] = grays[screen[i]];
+    for (int i = 0; i < area; i++)
+        dest[i] = grays[src[i]];
 
-    for (int y = 0; y <= height - SCREENWIDTH; y += SCREENWIDTH)
-        for (int x = y; x <= y + SCREENWIDTH - 2; x++)
-            blurscreen[x] = tinttab50[(blurscreen[x + 1] << 8) + blurscreen[x]];
+    for (int y = 0; y <= area - width; y += width)
+        for (int x = y; x <= y + width - 2; x++)
+            dest[x] = tinttab50[(dest[x + 1] << 8) + dest[x]];
 
-    for (int y = 0; y <= height - SCREENWIDTH; y += SCREENWIDTH)
-        for (int x = y + SCREENWIDTH - 2; x >= y; x--)
-            blurscreen[x] = tinttab50[(blurscreen[x - 1] << 8) + blurscreen[x]];
+    for (int y = 0; y <= area - width; y += width)
+        for (int x = y + width - 2; x > y; x--)
+            dest[x] = tinttab50[(dest[x - 1] << 8) + dest[x]];
 
-    for (int y = SCREENWIDTH; y <= height - SCREENWIDTH * 2; y += SCREENWIDTH)
-        for (int x = y; x <= y + SCREENWIDTH - 2; x++)
-            blurscreen[x] = tinttab50[(blurscreen[x + (M_BigRandom() & 3 - 1) * SCREENWIDTH
-                + (M_BigRandom() & 3 - 1)] << 8) + blurscreen[x]];
+    for (int y = width; y <= area - width * 2; y += width)
+        for (int x = y; x <= y + width - 2; x++)
+            dest[x] = tinttab50[(dest[x + width * ((M_BigRandom() & 3) - 1) + (M_BigRandom() & 3) - 1] << 8) + dest[x]];
 
-    for (int y = height - SCREENWIDTH; y >= SCREENWIDTH; y -= SCREENWIDTH)
-        for (int x = y + SCREENWIDTH - 1; x >= y + 1; x--)
-            blurscreen[x] = tinttab50[(blurscreen[x - SCREENWIDTH - 1] << 8) + blurscreen[x]];
+    for (int y = area - width; y >= width; y -= width)
+        for (int x = y + width - 1; x >= y + 1; x--)
+            dest[x] = tinttab50[(dest[x - width - 1] << 8) + dest[x]];
 
-    for (int y = 0; y <= height - SCREENWIDTH * 2; y += SCREENWIDTH)
-        for (int x = y; x <= y + SCREENWIDTH - 1; x++)
-            blurscreen[x] = tinttab50[(blurscreen[x + SCREENWIDTH] << 8) + blurscreen[x]];
+    for (int y = 0; y <= area - width * 2; y += width)
+        for (int x = y; x <= y + width - 1; x++)
+            dest[x] = tinttab50[(dest[x + width] << 8) + dest[x]];
 
-    for (int y = height - SCREENWIDTH; y >= SCREENWIDTH; y -= SCREENWIDTH)
-        for (int x = y; x <= y + SCREENWIDTH - 1; x++)
-            blurscreen[x] = tinttab50[(blurscreen[x - SCREENWIDTH] << 8) + blurscreen[x]];
+    for (int y = area - width; y >= width; y -= width)
+        for (int x = y; x <= y + width - 1; x++)
+            dest[x] = tinttab50[(dest[x - width] << 8) + dest[x]];
 
-    for (int y = 0; y <= height - SCREENWIDTH * 2; y += SCREENWIDTH)
-        for (int x = y + SCREENWIDTH - 1; x >= y + 1; x--)
-            blurscreen[x] = tinttab50[(blurscreen[x + SCREENWIDTH - 1] << 8) + blurscreen[x]];
+    for (int y = 0; y <= area - width * 2; y += width)
+        for (int x = y + width - 1; x >= y + 1; x--)
+            dest[x] = tinttab50[(dest[x + width - 1] << 8) + dest[x]];
 
-    for (int y = height - SCREENWIDTH; y >= SCREENWIDTH; y -= SCREENWIDTH)
-        for (int x = y; x <= y + SCREENWIDTH - 2; x++)
-            blurscreen[x] = tinttab50[(blurscreen[x - SCREENWIDTH + 1] << 8) + blurscreen[x]];
+    for (int y = area - width; y >= width; y -= width)
+        for (int x = y; x <= y + width - 2; x++)
+            dest[x] = tinttab50[(dest[x - width + 1] << 8) + dest[x]];
 }
 
 static int  blurtic = -1;
@@ -499,31 +498,43 @@ static int  blurtic = -1;
 //
 void M_DarkBackground(void)
 {
-    static byte blurscreen1[SCREENAREA];
-    static byte blurscreen2[(SCREENHEIGHT - SBARHEIGHT) * SCREENWIDTH];
-    const int   blurheight = (SCREENHEIGHT - (vid_widescreen && gamestate == GS_LEVEL) * SBARHEIGHT) * SCREENWIDTH;
+    static byte blurscreen1[MAXSCREENAREA];
+    static byte blurscreen2[MAXSCREENAREA];
 
     if (gametime != blurtic && (!(gametime % 3) || blurtic == -1 || vid_capfps == TICRATE))
     {
-        for (int i = 0; i < blurheight; i += SCREENWIDTH)
+        if (vid_widescreen)
         {
-            screens[0][i] = nearestblack;
-            screens[0][i + 1] = nearestblack;
-            screens[0][i + SCREENWIDTH - 2] = nearestblack;
-            screens[0][i + SCREENWIDTH - 1] = nearestblack;
+            for (int y = 2 * SCREENWIDTH; y < SCREENAREA; y += 4 * SCREENWIDTH)
+                for (int x = 0; x < SCREENWIDTH; x++)
+                {
+                    byte    *dot = *screens + x + y;
+
+                    *dot = white25[*dot];
+                }
         }
-
-        for (int y = SCREENWIDTH * 2; y < blurheight; y += SCREENWIDTH * 4)
-            for (int x = 2; x < SCREENWIDTH; x += 4)
+        else
+        {
+            for (int i = 0; i < SCREENAREA; i += SCREENWIDTH)
             {
-                byte    *dot = *screens + x + y;
-
-                *dot = white50[*dot];
+                screens[0][i] = nearestblack;
+                screens[0][i + 1] = nearestblack;
+                screens[0][i + SCREENWIDTH - 2] = nearestblack;
+                screens[0][i + SCREENWIDTH - 1] = nearestblack;
             }
 
-        BlurScreen(screens[0], blurscreen1, blurheight);
+            for (int y = 2 * SCREENWIDTH; y < SCREENAREA; y += 4 * SCREENWIDTH)
+                for (int x = 2; x < SCREENWIDTH - 2; x++)
+                {
+                    byte    *dot = *screens + x + y;
 
-        for (int i = 0; i < blurheight; i++)
+                    *dot = white25[*dot];
+                }
+        }
+
+        BlurScreen(screens[0], blurscreen1, SCREENWIDTH, SCREENAREA);
+
+        for (int i = 0; i < SCREENAREA; i++)
         {
             byte    *dot = blurscreen1 + i;
 
@@ -532,25 +543,25 @@ void M_DarkBackground(void)
 
         if (mapwindow && gamestate == GS_LEVEL)
         {
-            for (int i = 0; i < (SCREENHEIGHT - SBARHEIGHT) * SCREENWIDTH; i += SCREENWIDTH)
+            for (int i = 0; i < (int)MAPAREA; i += MAPWIDTH)
             {
                 mapscreen[i] = nearestblack;
                 mapscreen[i + 1] = nearestblack;
-                mapscreen[i + SCREENWIDTH - 2] = nearestblack;
-                mapscreen[i + SCREENWIDTH - 1] = nearestblack;
+                mapscreen[i + MAPWIDTH - 2] = nearestblack;
+                mapscreen[i + MAPWIDTH - 1] = nearestblack;
             }
 
-            for (int y = SCREENWIDTH * 2; y < blurheight; y += SCREENWIDTH * 4)
-                for (int x = 2; x < SCREENWIDTH; x += 4)
+            for (int y = 2 * MAPWIDTH; y < (int)MAPAREA; y += 4 * MAPWIDTH)
+                for (int x = 2; x < MAPWIDTH; x += 4)
                 {
                     byte    *dot = mapscreen + x + y;
 
-                    *dot = white50[*dot];
+                    *dot = white25[*dot];
                 }
 
-            BlurScreen(mapscreen, blurscreen2, (SCREENHEIGHT - SBARHEIGHT) * SCREENWIDTH);
+            BlurScreen(mapscreen, blurscreen2, MAPWIDTH, MAPAREA);
 
-            for (int i = 0; i < (SCREENHEIGHT - SBARHEIGHT) * SCREENWIDTH; i++)
+            for (int i = 0; i < (int)MAPAREA; i++)
             {
                 byte    *dot = blurscreen2 + i;
 
@@ -561,13 +572,13 @@ void M_DarkBackground(void)
         blurtic = gametime;
     }
 
-    memcpy(screens[0], blurscreen1, blurheight);
+    memcpy(screens[0], blurscreen1, SCREENAREA);
 
     if (mapwindow)
-        memcpy(mapscreen, blurscreen2, (SCREENHEIGHT - SBARHEIGHT) * SCREENWIDTH);
+        memcpy(mapscreen, blurscreen2, (size_t)MAPAREA);
 
-    if (r_detail == r_detail_low && !automapactive)
-        V_LowGraphicDetail(0, 0, SCREENWIDTH, blurheight, 2, 2 * SCREENWIDTH);
+    if (r_detail == r_detail_low)
+        V_LowGraphicDetail_Menu();
 }
 
 static byte blues[] =
@@ -596,19 +607,14 @@ static byte blues[] =
 //
 static void M_DarkBlueBackground(void)
 {
-    for (int y = 0; y < SCREENAREA; y += SCREENWIDTH * 2)
-        for (int x = y; x < y + SCREENWIDTH; x += 2)
-        {
-            byte    *dot = *screens + x;
-            byte    *copy;
+    V_LowGraphicDetail_Menu();
 
-            *dot = nearestcolors[blues[*dot]];
-            copy = dot + 1;
-            *copy = *dot;
-            copy += SCREENWIDTH;
-            *copy-- = *dot;
-            *copy = *dot;
-        }
+    for (int i = 0; i < SCREENAREA; i++)
+    {
+        byte    *dot = *screens + i;
+
+        *dot = blues[*dot];
+    }
 }
 
 //
@@ -627,7 +633,7 @@ static void M_DrawChar(int x, int y, int i, dboolean overlapping)
             if (dot == '\xC8')
             {
                 if (!overlapping)
-                    V_DrawPixel(x + x1, y + y1, 251, true);
+                    V_DrawPixel(x + x1, y + y1, PINK, true);
             }
             else
                 V_DrawPixel(x + x1, y + y1, (int)dot, true);
@@ -659,11 +665,11 @@ static struct
 } bigkern[] = {
     { '-', 'V', -2 }, { 'O', 'A', -1 }, { 'P', 'a', -3 }, { 'V', 'o', -2 },
     { 'f', 'e', -1 }, { 'f', 'f', -1 }, { 'f', 'o', -1 }, { 'l', 'e', -1 },
-    { 'l', 't', -1 }, { 'l', 'u', -1 }, { 'o', 'a', -1 }, { 'o', 't', -1 },
-    { 'p', 'a', -2 }, { 't', 'o', -1 }, { 'v', 'e', -1 }, { 'y', ',', -3 },
-    { 'y', '.', -2 }, { 'y', 'o', -1 }, { 't', 'a', -1 }, { 'l', 'o', -1 },
-    { ' ', 'V', -2 }, { ' ', 'y', -2 }, { ' ', 't', -1 }, { 'l', ' ', -1 },
-    { 'L', 'S', -1 }, { 't', ' ', -1 }, {  0,   0,   0 }
+    { 'l', 't', -1 }, { 'o', 'a', -1 }, { 'o', 't', -1 }, { 'p', 'a', -2 },
+    { 't', 'o', -1 }, { 'v', 'e', -1 }, { 'y', ',', -3 }, { 'y', '.', -2 },
+    { 'y', 'o', -1 }, { 't', 'a', -1 }, { 'l', 'o', -1 }, { ' ', 'V', -2 },
+    { ' ', 'y', -2 }, { ' ', 't', -1 }, { 'l', ' ', -1 }, { 'L', 'S', -1 },
+    { 't', ' ', -1 }, {  0,   0,   0 }
 };
 
 static struct
@@ -797,10 +803,10 @@ static void M_SplitString(char *string)
 //
 static void M_DrawPatchWithShadow(int x, int y, patch_t *patch)
 {
-    if (SHORT(patch->height) == VANILLAHEIGHT)
-        V_DrawPagePatch(patch);
-    else
+    if (SHORT(patch->height) < VANILLAHEIGHT)
         V_DrawPatchWithShadow(x, y, patch, false);
+    else
+        V_DrawPagePatch(patch);
 }
 
 //
@@ -809,10 +815,10 @@ static void M_DrawPatchWithShadow(int x, int y, patch_t *patch)
 //
 static void M_DrawCenteredPatchWithShadow(int y, patch_t *patch)
 {
-    if (SHORT(patch->height) == VANILLAHEIGHT)
-        V_DrawPagePatch(patch);
-    else
+    if (SHORT(patch->height) < VANILLAHEIGHT)
         V_DrawPatchWithShadow((VANILLAWIDTH - SHORT(patch->width)) / 2 + SHORT(patch->leftoffset), y, patch, false);
+    else
+        V_DrawPagePatch(patch);
 }
 
 //
@@ -838,17 +844,18 @@ static void M_ReadSaveStrings(void)
             continue;
         }
 
-        fread(&savegamestrings[i], 1, SAVESTRINGSIZE, handle);
-
-        if (savegamestrings[i][0])
+        if (fread(&savegamestrings[i], 1, SAVESTRINGSIZE, handle))
         {
-            savegames = true;
-            LoadGameMenu[i].status = 1;
-        }
-        else
-        {
-            M_StringCopy(&savegamestrings[i][0], s_EMPTYSTRING, sizeof(savegamestrings[i]));
-            LoadGameMenu[i].status = 0;
+            if (savegamestrings[i][0])
+            {
+                savegames = true;
+                LoadGameMenu[i].status = 1;
+            }
+            else
+            {
+                M_StringCopy(&savegamestrings[i][0], s_EMPTYSTRING, sizeof(savegamestrings[i]));
+                LoadGameMenu[i].status = 0;
+            }
         }
 
         fclose(handle);
@@ -1022,7 +1029,6 @@ static void M_LoadSelect(int choice)
 
         M_StringCopy(name, P_SaveGameFile(choice), sizeof(name));
         S_StartSound(NULL, sfx_pistol);
-        I_Sleep(1000);
         functionkey = 0;
         quickSaveSlot = choice;
         M_ClearMenus();
@@ -1412,7 +1418,7 @@ static void M_DrawReadThis(void)
     if (W_CheckNumForName(lumpname) >= 0)
     {
         if (automapactive)
-            V_FillRect(0, 0, 0, SCREENWIDTH, SCREENHEIGHT, nearestcolors[245], false);
+            memset(screens[0], nearestcolors[245], SCREENAREA);
         else
         {
             viewplayer->fixedcolormap = 0;
@@ -1420,11 +1426,21 @@ static void M_DrawReadThis(void)
         }
 
         if (hacx)
+        {
+            if (SCREENWIDTH != VANILLAWIDTH * SCREENSCALE)
+                memset(screens[0], nearestblack, SCREENAREA);
+
             V_DrawPatch(0, 0, 0, W_CacheLumpName("HELP"));
+        }
         else if (autosigil)
             V_DrawPatchWithShadow(0, 0, W_CacheLumpNum(W_GetSecondNumForName(lumpname)), false);
         else if (W_CheckMultipleLumps(lumpname) > 2)
+        {
+            if (SCREENWIDTH != VANILLAWIDTH * SCREENSCALE)
+                memset(screens[0], nearestblack, SCREENAREA);
+
             V_DrawPatch(0, 0, 0, W_CacheLumpName(lumpname));
+        }
         else
             V_DrawPatchWithShadow(0, 0, W_CacheLumpName(lumpname), false);
     }
@@ -1470,7 +1486,7 @@ static void M_SfxVol(int choice)
         case 0:
             if (sfxVolume > 0)
             {
-                S_SetSfxVolume(--sfxVolume * MAX_SFX_VOLUME / 31);
+                S_SetSfxVolume(--sfxVolume * MIX_MAX_VOLUME / 31);
                 S_StartSound(NULL, sfx_stnmov);
                 s_sfxvolume = sfxVolume * 100 / 31;
                 C_PctCVAROutput(stringize(s_sfxvolume), s_sfxvolume);
@@ -1482,7 +1498,7 @@ static void M_SfxVol(int choice)
         case 1:
             if (sfxVolume < 31)
             {
-                S_SetSfxVolume(++sfxVolume * MAX_SFX_VOLUME / 31);
+                S_SetSfxVolume(++sfxVolume * MIX_MAX_VOLUME / 31);
                 S_StartSound(NULL, sfx_stnmov);
                 s_sfxvolume = sfxVolume * 100 / 31;
                 C_PctCVAROutput(stringize(s_sfxvolume), s_sfxvolume);
@@ -1508,7 +1524,7 @@ static void M_MusicVol(int choice)
                 if (gamestate == GS_LEVEL)
                     S_LowerMusicVolume();
                 else
-                    S_SetMusicVolume(musicVolume * MAX_MUSIC_VOLUME / 31);
+                    S_SetMusicVolume(musicVolume * MIX_MAX_VOLUME / 31);
 
                 S_StartSound(NULL, sfx_stnmov);
                 s_musicvolume = musicVolume * 100 / 31;
@@ -1526,7 +1542,7 @@ static void M_MusicVol(int choice)
                 if (gamestate == GS_LEVEL)
                     S_LowerMusicVolume();
                 else
-                    S_SetMusicVolume(musicVolume * MAX_MUSIC_VOLUME / 31);
+                    S_SetMusicVolume(musicVolume * MIX_MAX_VOLUME / 31);
 
                 S_StartSound(NULL, sfx_stnmov);
                 s_musicvolume = musicVolume * 100 / 31;
@@ -1573,7 +1589,7 @@ static void M_DrawMainMenu(void)
 // M_Episode
 //
 static int      epi;
-static dboolean EpiCustom;
+dboolean        EpiCustom;
 static short    EpiMenuMap[] = { 1, 1, 1, 1, -1, -1, -1, -1 };
 static short    EpiMenuEpi[] = { 1, 2, 3, 4, -1, -1, -1, -1 };
 
@@ -1729,7 +1745,6 @@ static void M_ChooseSkill(int choice)
 
     HU_DrawDisk();
     S_StartSound(NULL, sfx_pistol);
-    I_Sleep(1000);
     quickSaveSlot = -1;
     M_ClearMenus();
     viewplayer->cheats = 0;
@@ -1866,8 +1881,8 @@ static void M_DrawOptions(void)
             M_DrawString(OptionsDef.x + 173, OptionsDef.y + 16 * detail + OFFSET, s_M_HIGH);
     }
 
-    M_DrawThermo(OptionsDef.x - 1, OptionsDef.y + 16 * (scrnsize + 1) + OFFSET + !hacx, 9,
-        (float)(r_screensize + (vid_widescreen || (returntowidescreen && gamestate != GS_LEVEL)) + !r_hud), 7.2f, 8);
+    M_DrawThermo(OptionsDef.x - 1, OptionsDef.y + 16 * (scrnsize + 1) + OFFSET + !hacx, 9, (float)(r_screensize
+        + (r_screensize < r_screensize_max - 1 ? 0 : (r_screensize == r_screensize_max - 1 ? vid_widescreen : 1 + !r_hud))), 6.54f, 8);
 
     if (usinggamepad && !M_MSENS)
         M_DrawThermo(OptionsDef.x - 1, OptionsDef.y + 16 * (mousesens + 1) + OFFSET + !hacx, 9,
@@ -1923,12 +1938,6 @@ void M_EndingGame(void)
 {
     endinggame = true;
 
-    if (vid_widescreen)
-    {
-        I_ToggleWidescreen(false);
-        returntowidescreen = true;
-    }
-
     if (gamemission == pack_nerve)
         gamemission = doom2;
 
@@ -1959,7 +1968,6 @@ static void M_EndGameResponse(int key)
     viewactive = false;
     automapactive = false;
     S_StartSound(NULL, sfx_swtchx);
-    I_Sleep(1000);
     MainDef.lastOn = 0;
     st_palette = 0;
     M_EndingGame();
@@ -2064,15 +2072,19 @@ void M_QuitDOOM(int choice)
     static char endstring[320];
     static char line1[160];
     static char line2[160];
+    static int  r = -1;
 
     quitting = true;
 
     if (deh_strlookup[p_QUITMSG].assigned == 2)
         M_StringCopy(line1, s_QUITMSG, sizeof(line1));
+    else if (gamemission == doom)
+        M_snprintf(line1, sizeof(line1), *endmsg[(r = M_RandomIntNoRepeat(0, NUM_QUITMESSAGES - 1, r))], OPERATINGSYSTEM);
     else
-        M_snprintf(line1, sizeof(line1), *endmsg[M_Random() % NUM_QUITMESSAGES + (gamemission != doom) * NUM_QUITMESSAGES], WINDOWS);
+        M_snprintf(line1, sizeof(line1), *endmsg[NUM_QUITMESSAGES + (r = M_RandomIntNoRepeat(0, NUM_QUITMESSAGES - 1, r))],
+            OPERATINGSYSTEM);
 
-    M_snprintf(line2, sizeof(line2), (usinggamepad ? s_DOSA : s_DOSY), WINDOWS);
+    M_snprintf(line2, sizeof(line2), (usinggamepad ? s_DOSA : s_DOSY), OPERATINGSYSTEM);
     M_snprintf(endstring, sizeof(endstring), "%s\n\n%s", line1, line2);
 
 #ifndef __ANDROID__
@@ -2198,92 +2210,72 @@ static void M_SizeDisplay(int choice)
     switch (choice)
     {
         case 0:
-            if (vid_widescreen || (returntowidescreen && gamestate != GS_LEVEL))
+            if (r_screensize == r_screensize_max && !r_hud)
             {
-                if (!r_hud)
-                {
-                    r_hud = true;
-                    C_StrCVAROutput(stringize(r_hud), "on");
-                }
-                else if (vid_widescreen)
-                {
-                    I_ToggleWidescreen(false);
-
-                    if (menuactive && !automapactive)
-                        R_SetViewSize(8);
-
-                    C_StrCVAROutput(stringize(vid_widescreen), "off");
-                }
-                else
-                    returntowidescreen = false;
-
+                r_hud = true;
+                C_StrCVAROutput(stringize(r_hud), "on");
                 S_StartSound(NULL, sfx_stnmov);
-                M_SaveCVARs();
+            }
+            else if (r_screensize == r_screensize_max - 1 && vid_widescreen)
+            {
+                vid_widescreen = false;
+                C_StrCVAROutput(stringize(vid_widescreen), "off");
+                I_RestartGraphics(false);
+                S_StartSound(NULL, sfx_stnmov);
             }
             else if (r_screensize > r_screensize_min)
             {
-                r_screensize--;
-                R_SetViewSize(menuactive && gamestate == GS_LEVEL && !automapactive ? 8 : r_screensize);
-                C_IntCVAROutput(stringize(r_screensize), r_screensize);
+                C_IntCVAROutput(stringize(r_screensize), --r_screensize);
+                R_SetViewSize(menuactive ? r_screensize_max : r_screensize);
+                AM_SetAutomapSize(automapactive ? r_screensize_max : r_screensize);
+
+                if (r_screensize == r_screensize_max - 1)
+                    r_hud = false;
+
                 S_StartSound(NULL, sfx_stnmov);
-                M_SaveCVARs();
             }
+            else
+                return;
 
             break;
 
         case 1:
-            if (vid_widescreen || (returntowidescreen && gamestate != GS_LEVEL))
+            if (r_screensize == r_screensize_max && r_hud)
             {
-                if (r_hud)
-                {
-                    r_hud = false;
-                    C_StrCVAROutput(stringize(r_hud), "off");
-                    S_StartSound(NULL, sfx_stnmov);
-                    M_SaveCVARs();
-                }
+                r_hud = false;
+                C_StrCVAROutput(stringize(r_hud), "off");
+                S_StartSound(NULL, sfx_stnmov);
             }
-            else if (r_screensize == r_screensize_max)
+            else if (r_screensize == r_screensize_max - 1 && !vid_widescreen && !nowidescreen)
             {
-                if (gamestate != GS_LEVEL)
-                {
-                    returntowidescreen = true;
+                vid_widescreen = true;
+                C_StrCVAROutput(stringize(vid_widescreen), "on");
+                I_RestartGraphics(false);
+                S_StartSound(NULL, sfx_stnmov);
+            }
+            else if (r_screensize < r_screensize_max)
+            {
+                C_IntCVAROutput(stringize(r_screensize), ++r_screensize);
+                R_SetViewSize(menuactive ? r_screensize_max : r_screensize);
+                AM_SetAutomapSize(automapactive ? r_screensize_max : r_screensize);
+
+                if (r_screensize == r_screensize_max)
                     r_hud = true;
-                }
-                else
-                {
-                    I_ToggleWidescreen(true);
-
-                    if (vid_widescreen)
-                    {
-                        if (menuactive && !automapactive)
-                            R_SetViewSize(7);
-
-                        C_StrCVAROutput(stringize(vid_widescreen), "on");
-                    }
-                    else
-                    {
-                        R_SetViewSize(++r_screensize);
-                        C_IntCVAROutput(stringize(r_screensize), r_screensize);
-                    }
-                }
 
                 S_StartSound(NULL, sfx_stnmov);
-                M_SaveCVARs();
             }
             else
-            {
-                r_screensize++;
-                R_SetViewSize(menuactive && gamestate == GS_LEVEL && !automapactive ? 8 : r_screensize);
-                C_IntCVAROutput(stringize(r_screensize), r_screensize);
-                S_StartSound(NULL, sfx_stnmov);
-                M_SaveCVARs();
-            }
+                return;
 
             break;
     }
 
+    M_SaveCVARs();
+
     blurtic = -1;
-    skippsprinterp = true;
+
+    if (r_playersprites)
+        skippsprinterp = true;
 }
 
 //
@@ -2311,7 +2303,7 @@ static void M_DrawThermo(int x, int y, int thermWidth, float thermDot, float fac
     M_DrawPatchWithShadow(xx, y, W_CacheLumpName("M_THERMR"));
 
     for (int i = x + 9; i < x + (thermWidth + 1) * 8 + 1; i++)
-        V_DrawPixel(i - hacx, y + (hacx ? 9 : 13), 251, true);
+        V_DrawPixel(i - hacx, y + (hacx ? 9 : 13), PINK, true);
 
     V_DrawPatch(x + offset + (int)(thermDot * factor), y, 0, W_CacheLumpName("M_THERMO"));
 }
@@ -2361,7 +2353,7 @@ int M_StringWidth(char *string)
 //
 static int M_StringHeight(char *string)
 {
-    int h = 8;
+    int h = 0;
     int len = (int)strlen(string);
 
     for (int i = 0; i < len; i++)
@@ -2455,7 +2447,7 @@ static void M_WriteText(int x, int y, char *string, dboolean shadow)
     }
 }
 
-void M_ShowHelp(int choice)
+static void M_ShowHelp(int choice)
 {
     functionkey = KEY_F1;
     inhelpscreens = true;
@@ -2464,21 +2456,15 @@ void M_ShowHelp(int choice)
     itemOn = 0;
     S_StartSound(NULL, sfx_swtchn);
 
-    if (vid_widescreen)
-    {
-        I_ToggleWidescreen(false);
-        returntowidescreen = true;
-    }
-
     if (!automapactive && gamestate == GS_LEVEL)
-        R_SetViewSize(8);
+        R_SetViewSize(r_screensize_max);
 }
 
-void M_ChangeGamma(dboolean shift)
+static void M_ChangeGamma(dboolean shift)
 {
     static int  gammawait;
 
-    if (gammawait >= I_GetTime() || gamestate != GS_LEVEL || inhelpscreens)
+    if (gammawait < I_GetTime())
     {
         if (shift)
         {
@@ -2492,8 +2478,6 @@ void M_ChangeGamma(dboolean shift)
         }
 
         r_gamma = gammalevels[gammaindex];
-
-        S_StartSound(NULL, sfx_stnmov);
 
         if (r_gamma == 1.0f)
             C_StrCVAROutput(stringize(r_gamma), "off");
@@ -2510,9 +2494,10 @@ void M_ChangeGamma(dboolean shift)
 
             C_StrCVAROutput(stringize(r_gamma), buffer);
         }
-    }
 
-    gammawait = I_GetTime() + HU_MSGTIMEOUT;
+        gammawait = I_GetTime() + 4;
+        S_StartSound(NULL, sfx_stnmov);
+    }
 
     if (r_gamma == 1.0f)
     {
@@ -2637,6 +2622,15 @@ dboolean M_Responder(event_t *ev)
                 gamepadwait = I_GetTime() + 8;
                 usinggamepad = true;
             }
+
+            // open console
+            else if ((gamepadbuttons & gamepadconsole) && gamepadwait < I_GetTime())
+            {
+                gamepadwait = I_GetTime() + 8;
+                usinggamepad = true;
+                C_ShowConsole();
+                return false;
+            }
         }
     }
 
@@ -2736,6 +2730,12 @@ dboolean M_Responder(event_t *ev)
                 return true;
             }
 
+            return false;
+        }
+
+        if (key == keyboardscreenshot)
+        {
+            G_ScreenShot();
             return false;
         }
 
@@ -2912,10 +2912,21 @@ dboolean M_Responder(event_t *ev)
         {
             keydown = key;
 
-            if (automapactive || !viewactive || inhelpscreens)
+            if (automapactive || inhelpscreens)
                 return false;
 
-            M_SizeDisplay(0);
+            if (viewactive)
+                M_SizeDisplay(0);
+            else if (vid_widescreen && SHORT(pagelump->width) > VANILLAWIDTH)
+            {
+                vid_widescreen = false;
+                r_screensize = r_screensize_max - 1;
+                r_hud = false;
+                R_SetViewSize(r_screensize);
+                I_RestartGraphics(false);
+                S_StartSound(NULL, sfx_stnmov);
+            }
+
             return false;
         }
 
@@ -2924,10 +2935,20 @@ dboolean M_Responder(event_t *ev)
         {
             keydown = key;
 
-            if (automapactive || !viewactive || inhelpscreens)
+            if (automapactive || inhelpscreens)
                 return false;
 
-            M_SizeDisplay(1);
+            if (viewactive)
+                M_SizeDisplay(1);
+            else if (!vid_widescreen && SHORT(pagelump->width) > VANILLAWIDTH && !nowidescreen)
+            {
+                vid_widescreen = true;
+                r_screensize = r_screensize_max - 1;
+                R_SetViewSize(r_screensize);
+                I_RestartGraphics(false);
+                S_StartSound(NULL, sfx_stnmov);
+            }
+
             return false;
         }
 
@@ -2957,12 +2978,7 @@ dboolean M_Responder(event_t *ev)
                 S_StartSound(NULL, sfx_swtchx);
 
                 if (inhelpscreens)
-                {
                     R_SetViewSize(r_screensize);
-
-                    if (returntowidescreen && gamestate == GS_LEVEL)
-                        I_ToggleWidescreen(true);
-                }
             }
             else
                 M_ShowHelp(0);
@@ -3043,17 +3059,6 @@ dboolean M_Responder(event_t *ev)
             return true;
         }
 
-        // Toggle graphic detail
-        else if (key == KEY_F5 && !functionkey && viewactive && !keydown)
-        {
-            keydown = key;
-            functionkey = KEY_F5;
-            M_ChangeDetail(0);
-            functionkey = 0;
-            S_StartSound(NULL, sfx_swtchn);
-            return false;
-        }
-
         // Quicksave
         else if (key == KEY_F6 && (!functionkey || functionkey == KEY_F6) && (viewactive || automapactive)
             && !keydown && viewplayer->health > 0)
@@ -3108,6 +3113,17 @@ dboolean M_Responder(event_t *ev)
             M_QuitDOOM(0);
             return true;
         }
+    }
+
+    // Toggle graphic detail
+    if (key == KEY_F5 && !functionkey && !automapactive && !keydown)
+    {
+        keydown = key;
+        functionkey = KEY_F5;
+        M_ChangeDetail(0);
+        functionkey = 0;
+        S_StartSound(NULL, sfx_swtchn);
+        return false;
     }
 
     // gamma toggle
@@ -3183,7 +3199,10 @@ dboolean M_Responder(event_t *ev)
 
                     if (currentMenu == &MainDef)
                     {
-                        if ((itemOn == 2 && !savegames) || (itemOn == 3 && (gamestate != GS_LEVEL || viewplayer->health <= 0)))
+                        if (itemOn == 2 && !savegames)
+                            itemOn++;
+
+                        if (itemOn == 3 && (gamestate != GS_LEVEL || viewplayer->health <= 0))
                             itemOn++;
                     }
                     else if (currentMenu == &OptionsDef && !itemOn && gamestate != GS_LEVEL)
@@ -3263,7 +3282,10 @@ dboolean M_Responder(event_t *ev)
 
                     if (currentMenu == &MainDef)
                     {
-                        if ((itemOn == 2 && !savegames) || (itemOn == 3 && (gamestate != GS_LEVEL || viewplayer->health <= 0)))
+                        if (itemOn == 3 && (gamestate != GS_LEVEL || viewplayer->health <= 0))
+                            itemOn--;
+
+                        if (itemOn == 2 && !savegames)
                             itemOn--;
                     }
                     else if (currentMenu == &OptionsDef && !itemOn && gamestate != GS_LEVEL)
@@ -3351,10 +3373,6 @@ dboolean M_Responder(event_t *ev)
                 M_ClearMenus();
                 S_StartSound(NULL, sfx_swtchx);
                 R_SetViewSize(r_screensize);
-
-                if (returntowidescreen && gamestate == GS_LEVEL)
-                    I_ToggleWidescreen(true);
-
                 return true;
             }
 
@@ -3408,7 +3426,6 @@ dboolean M_Responder(event_t *ev)
                 currentMenu = currentMenu->prevMenu;
                 itemOn = currentMenu->lastOn;
                 S_StartSound(NULL, sfx_swtchn);
-                D_FadeScreen();
             }
             else
             {
@@ -3418,18 +3435,12 @@ dboolean M_Responder(event_t *ev)
                 gamepadbuttons = 0;
                 ev->data1 = 0;
                 firstevent = true;
-
-                if (!inhelpscreens)
-                    D_FadeScreen();
             }
+
+            D_FadeScreen();
 
             if (inhelpscreens)
-            {
                 R_SetViewSize(r_screensize);
-
-                if (returntowidescreen && gamestate == GS_LEVEL)
-                    I_ToggleWidescreen(true);
-            }
 
             M_SetWindowCaption();
             return true;
@@ -3614,13 +3625,14 @@ void M_StartControlPanel(void)
     if (gamestate == GS_LEVEL)
     {
         playerangle = viewplayer->mo->angle;
+        spinspeed = 0;
 
-        if (!vid_widescreen && !automapactive && !inhelpscreens)
-            R_SetViewSize(8);
+        if (!inhelpscreens)
+            R_SetViewSize(r_screensize_max);
 
         if (automapactive)
         {
-            AM_SetAutomapSize();
+            AM_SetAutomapSize(r_screensize_max);
 
             if (!am_rotatemode)
                 viewplayer->mo->angle = ANG90;
@@ -3629,8 +3641,7 @@ void M_StartControlPanel(void)
         S_LowerMusicVolume();
     }
 
-    if (!inhelpscreens)
-        D_FadeScreen();
+    D_FadeScreen();
 }
 
 //
@@ -3652,7 +3663,7 @@ void M_Drawer(void)
 {
     static short    x, y;
 
-    // Horiz. & Vertically center string and print it.
+    // Center string and print it.
     if (messagetoprint)
     {
         char    string[80];
@@ -3660,15 +3671,12 @@ void M_Drawer(void)
 
         M_DarkBackground();
 
-        if (vid_widescreen && gamestate == GS_LEVEL)
-            y = viewwindowy / 2 + (viewheight / 2 - M_StringHeight(messageString)) / 2 - 1;
-        else
-            y = (VANILLAHEIGHT - M_StringHeight(messageString)) / 2 - 1;
+        y = (VANILLAHEIGHT - M_StringHeight(messageString)) / 2 - 1;
 
         while (messageString[start] != '\0')
         {
-            int len = (int)strlen(messageString + start);
-            int foundnewline = 0;
+            int         len = (int)strlen(messageString + start);
+            dboolean    foundnewline = false;
 
             for (int i = 0; i < len; i++)
                 if (messageString[start + i] == '\n')
@@ -3678,7 +3686,7 @@ void M_Drawer(void)
                     if (i < sizeof(string))
                         string[i] = '\0';
 
-                    foundnewline = 1;
+                    foundnewline = true;
                     start += i + 1;
                     break;
                 }
@@ -3718,11 +3726,10 @@ void M_Drawer(void)
     {
         // DRAW SKULL
         char    *skullName[] = { "M_SKULL1", "M_SKULL2" };
+        patch_t *patch = W_CacheLumpName(skullName[whichSkull]);
 
         if (currentMenu == &LoadDef || currentMenu == &SaveDef)
         {
-            patch_t *patch = W_CacheLumpName(skullName[whichSkull]);
-
             if (currentMenu == &LoadDef)
             {
                 int old = itemOn;
@@ -3746,9 +3753,8 @@ void M_Drawer(void)
         }
         else
         {
-            patch_t         *patch = W_CacheLumpName(skullName[whichSkull]);
-            int             yy = y + itemOn * (LINEHEIGHT - 1) - 5 + OFFSET + chex;
-            unsigned int    max = currentMenu->numitems;
+            int yy = y + itemOn * (LINEHEIGHT - 1) - 5 + OFFSET + chex;
+            int max = currentMenu->numitems;
 
             if (currentMenu == &OptionsDef && !itemOn && gamestate != GS_LEVEL)
                 itemOn++;
@@ -3761,7 +3767,7 @@ void M_Drawer(void)
             else
                 M_DrawPatchWithShadow(x - 26, yy + 2, patch);
 
-            for (unsigned int i = 0; i < max; i++)
+            for (int i = 0; i < max; i++)
             {
                 if (currentMenu->menuitems[i].routine)
                 {
@@ -3779,8 +3785,8 @@ void M_Drawer(void)
                     }
                     else if (M_StringCompare(name, "M_MSENS") && !M_MSENS)
                         M_DrawString(x, y + OFFSET, (usinggamepad ? s_M_GAMEPADSENSITIVITY : s_M_MOUSESENSITIVITY));
-                    else if (W_CheckNumForName(name) < 0)   // Custom Episode
-                        M_WriteText(x, y + OFFSET, *text, true);
+                    else if (W_CheckNumForName(name) < 0 && **text)   // Custom Episode
+                        M_DrawString(x, y + OFFSET, *text);
                     else if (W_CheckMultipleLumps(name) > 1 || lumpinfo[W_GetNumForName(name)]->wadfile->type == PWAD)
                         M_DrawPatchWithShadow(x, y + OFFSET, W_CacheLumpName(name));
                     else if (**text)
@@ -3816,13 +3822,13 @@ void M_ClearMenus(void)
 
         viewplayer->mo->angle = playerangle;
 
-        if (!vid_widescreen && !automapactive && !inhelpscreens)
+        if (!inhelpscreens)
             R_SetViewSize(r_screensize);
 
         if (automapactive)
-            AM_SetAutomapSize();
+            AM_SetAutomapSize(r_screensize);
 
-        S_SetMusicVolume(musicVolume * MAX_MUSIC_VOLUME / 31);
+        S_SetMusicVolume(musicVolume * MIX_MAX_VOLUME / 31);
     }
 }
 
@@ -3864,6 +3870,9 @@ void M_Init(void)
     spindirection = ((M_Random() & 1) ? 1 : -1);
 
     M_BigSeed((unsigned int)time(NULL));
+
+    for (int i = 0; i < 256; i++)
+        blues[i] = nearestcolors[blues[i]];
 
     if (autostart)
     {

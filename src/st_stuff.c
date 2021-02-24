@@ -7,7 +7,7 @@
 ========================================================================
 
   Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2020 by Brad Harding.
+  Copyright © 2013-2021 by Brad Harding.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
@@ -223,6 +223,8 @@ patch_t                     *brdr_tr;
 patch_t                     *brdr_bl;
 patch_t                     *brdr_br;
 
+dboolean                    st_drawbrdr;
+
 // used to use appropriately pained face
 static int                  st_oldhealth = -1;
 
@@ -278,7 +280,7 @@ cheatseq_t cheat_clev = CHEAT("idclev", 0);
 cheatseq_t cheat_clev_xy = CHEAT("idclev", 2);
 cheatseq_t cheat_mypos = CHEAT("idmypos", 0);
 cheatseq_t cheat_amap = CHEAT("iddt", 0);
-cheatseq_t cheat_buddha = CHEAT("mumu", 0);
+cheatseq_t cheat_buddha = CHEAT("yinghao", 0);
 
 static dboolean movekey(char key)
 {
@@ -310,72 +312,71 @@ static void ST_InitCheats(void)
     cheat_amap.movekey = movekey(cheat_amap.sequence[0]);
 }
 
-#define NONE        -1
 #define IDMUS_MAX   60
 
 static const int mus[IDMUS_MAX][6] =
 {
     /* xy      shareware    registered   commercial   retail      bfgedition   nerve      */
-    /* 00 */ { NONE,        NONE,        NONE,        NONE,       NONE,        NONE       },
-    /* 01 */ { NONE,        NONE,        mus_runnin,  NONE,       mus_runnin,  mus_messag },
-    /* 02 */ { NONE,        NONE,        mus_stalks,  NONE,       mus_stalks,  mus_ddtblu },
-    /* 03 */ { NONE,        NONE,        mus_countd,  NONE,       mus_countd,  mus_doom   },
-    /* 04 */ { NONE,        NONE,        mus_betwee,  NONE,       mus_betwee,  mus_shawn  },
-    /* 05 */ { NONE,        NONE,        mus_doom,    NONE,       mus_doom,    mus_in_cit },
-    /* 06 */ { NONE,        NONE,        mus_the_da,  NONE,       mus_the_da,  mus_the_da },
-    /* 07 */ { NONE,        NONE,        mus_shawn,   NONE,       mus_shawn,   mus_in_cit },
-    /* 08 */ { NONE,        NONE,        mus_ddtblu,  NONE,       mus_ddtblu,  mus_shawn  },
-    /* 09 */ { NONE,        NONE,        mus_in_cit,  NONE,       mus_in_cit,  mus_ddtblu },
-    /* 10 */ { NONE,        NONE,        mus_dead,    NONE,       mus_dead,    NONE       },
-    /* 11 */ { mus_e1m1,    mus_e1m1,    mus_stlks2,  mus_e1m1,   mus_stlks2,  NONE       },
-    /* 12 */ { mus_e1m2,    mus_e1m2,    mus_theda2,  mus_e1m2,   mus_theda2,  NONE       },
-    /* 13 */ { mus_e1m3,    mus_e1m3,    mus_doom2,   mus_e1m3,   mus_doom2,   NONE       },
-    /* 14 */ { mus_e1m4,    mus_e1m4,    mus_ddtbl2,  mus_e1m4,   mus_ddtbl2,  NONE       },
-    /* 15 */ { mus_e1m5,    mus_e1m5,    mus_runni2,  mus_e1m5,   mus_runni2,  NONE       },
-    /* 16 */ { mus_e1m6,    mus_e1m6,    mus_dead2,   mus_e1m6,   mus_dead2,   NONE       },
-    /* 17 */ { mus_e1m7,    mus_e1m7,    mus_stlks3,  mus_e1m7,   mus_stlks3,  NONE       },
-    /* 18 */ { mus_e1m8,    mus_e1m8,    mus_romero,  mus_e1m8,   mus_romero,  NONE       },
-    /* 19 */ { mus_e1m9,    mus_e1m9,    mus_shawn2,  mus_e1m9,   mus_shawn2,  NONE       },
-    /* 20 */ { NONE,        NONE,        mus_messag,  NONE,       mus_messag,  NONE       },
-    /* 21 */ { NONE,        mus_e2m1,    mus_count2,  mus_e2m1,   mus_count2,  NONE       },
-    /* 22 */ { NONE,        mus_e2m2,    mus_ddtbl3,  mus_e2m2,   mus_ddtbl3,  NONE       },
-    /* 23 */ { NONE,        mus_e2m3,    mus_ampie,   mus_e2m3,   mus_ampie,   NONE       },
-    /* 24 */ { NONE,        mus_e2m4,    mus_theda3,  mus_e2m4,   mus_theda3,  NONE       },
-    /* 25 */ { NONE,        mus_e2m5,    mus_adrian,  mus_e2m5,   mus_adrian,  NONE       },
-    /* 26 */ { NONE,        mus_e2m6,    mus_messg2,  mus_e2m6,   mus_messg2,  NONE       },
-    /* 27 */ { NONE,        mus_e2m7,    mus_romer2,  mus_e2m7,   mus_romer2,  NONE       },
-    /* 28 */ { NONE,        mus_e2m8,    mus_tense,   mus_e2m8,   mus_tense,   NONE       },
-    /* 29 */ { NONE,        mus_e2m9,    mus_shawn3,  mus_e2m9,   mus_shawn3,  NONE       },
-    /* 30 */ { NONE,        NONE,        mus_openin,  NONE,       mus_openin,  NONE       },
-    /* 31 */ { NONE,        mus_e3m1,    mus_evil,    mus_e3m1,   mus_evil,    NONE       },
-    /* 32 */ { NONE,        mus_e3m2,    mus_ultima,  mus_e3m2,   mus_ultima,  NONE       },
-    /* 33 */ { NONE,        mus_e3m3,    NONE,        mus_e3m3,   mus_read_m,  NONE       },
-    /* 34 */ { NONE,        mus_e3m4,    NONE,        mus_e3m4,   NONE,        NONE       },
-    /* 35 */ { NONE,        mus_e3m5,    NONE,        mus_e3m5,   NONE,        NONE       },
-    /* 36 */ { NONE,        mus_e3m6,    NONE,        mus_e3m6,   NONE,        NONE       },
-    /* 37 */ { NONE,        mus_e3m7,    NONE,        mus_e3m7,   NONE,        NONE       },
-    /* 38 */ { NONE,        mus_e3m8,    NONE,        mus_e3m8,   NONE,        NONE       },
-    /* 39 */ { NONE,        mus_e3m9,    NONE,        mus_e3m9,   NONE,        NONE       },
-    /* 40 */ { NONE,        NONE,        NONE,        NONE,       NONE,        NONE       },
-    /* 41 */ { NONE,        NONE,        NONE,        mus_e3m4,   NONE,        NONE       },
-    /* 42 */ { NONE,        NONE,        NONE,        mus_e3m2,   NONE,        NONE       },
-    /* 43 */ { NONE,        NONE,        NONE,        mus_e3m3,   NONE,        NONE       },
-    /* 44 */ { NONE,        NONE,        NONE,        mus_e1m5,   NONE,        NONE       },
-    /* 45 */ { NONE,        NONE,        NONE,        mus_e2m7,   NONE,        NONE       },
-    /* 46 */ { NONE,        NONE,        NONE,        mus_e2m4,   NONE,        NONE       },
-    /* 47 */ { NONE,        NONE,        NONE,        mus_e2m6,   NONE,        NONE       },
-    /* 48 */ { NONE,        NONE,        NONE,        mus_e2m5,   NONE,        NONE       },
-    /* 49 */ { NONE,        NONE,        NONE,        mus_e1m9,   NONE,        NONE       },
-    /* 50 */ { NONE,        NONE,        NONE,        NONE,       NONE,        NONE       },
-    /* 51 */ { NONE,        NONE,        NONE,        mus_e5m1,   NONE,        NONE       },
-    /* 52 */ { NONE,        NONE,        NONE,        mus_e5m2,   NONE,        NONE       },
-    /* 53 */ { NONE,        NONE,        NONE,        mus_e5m3,   NONE,        NONE       },
-    /* 54 */ { NONE,        NONE,        NONE,        mus_e5m4,   NONE,        NONE       },
-    /* 55 */ { NONE,        NONE,        NONE,        mus_e5m5,   NONE,        NONE       },
-    /* 56 */ { NONE,        NONE,        NONE,        mus_e5m6,   NONE,        NONE       },
-    /* 57 */ { NONE,        NONE,        NONE,        mus_e5m7,   NONE,        NONE       },
-    /* 58 */ { NONE,        NONE,        NONE,        mus_e5m8,   NONE,        NONE       },
-    /* 59 */ { NONE,        NONE,        NONE,        mus_e5m9,   NONE,        NONE       }
+    /* 00 */ { mus_none,    mus_none,    mus_none,    mus_none,   mus_none,    mus_none   },
+    /* 01 */ { mus_none,    mus_none,    mus_runnin,  mus_none,   mus_runnin,  mus_messag },
+    /* 02 */ { mus_none,    mus_none,    mus_stalks,  mus_none,   mus_stalks,  mus_ddtblu },
+    /* 03 */ { mus_none,    mus_none,    mus_countd,  mus_none,   mus_countd,  mus_doom   },
+    /* 04 */ { mus_none,    mus_none,    mus_betwee,  mus_none,   mus_betwee,  mus_shawn  },
+    /* 05 */ { mus_none,    mus_none,    mus_doom,    mus_none,   mus_doom,    mus_in_cit },
+    /* 06 */ { mus_none,    mus_none,    mus_the_da,  mus_none,   mus_the_da,  mus_the_da },
+    /* 07 */ { mus_none,    mus_none,    mus_shawn,   mus_none,   mus_shawn,   mus_in_cit },
+    /* 08 */ { mus_none,    mus_none,    mus_ddtblu,  mus_none,   mus_ddtblu,  mus_shawn  },
+    /* 09 */ { mus_none,    mus_none,    mus_in_cit,  mus_none,   mus_in_cit,  mus_ddtblu },
+    /* 10 */ { mus_none,    mus_none,    mus_dead,    mus_none,   mus_dead,    mus_none   },
+    /* 11 */ { mus_e1m1,    mus_e1m1,    mus_stlks2,  mus_e1m1,   mus_stlks2,  mus_none   },
+    /* 12 */ { mus_e1m2,    mus_e1m2,    mus_theda2,  mus_e1m2,   mus_theda2,  mus_none   },
+    /* 13 */ { mus_e1m3,    mus_e1m3,    mus_doom2,   mus_e1m3,   mus_doom2,   mus_none   },
+    /* 14 */ { mus_e1m4,    mus_e1m4,    mus_ddtbl2,  mus_e1m4,   mus_ddtbl2,  mus_none   },
+    /* 15 */ { mus_e1m5,    mus_e1m5,    mus_runni2,  mus_e1m5,   mus_runni2,  mus_none   },
+    /* 16 */ { mus_e1m6,    mus_e1m6,    mus_dead2,   mus_e1m6,   mus_dead2,   mus_none   },
+    /* 17 */ { mus_e1m7,    mus_e1m7,    mus_stlks3,  mus_e1m7,   mus_stlks3,  mus_none   },
+    /* 18 */ { mus_e1m8,    mus_e1m8,    mus_romero,  mus_e1m8,   mus_romero,  mus_none   },
+    /* 19 */ { mus_e1m9,    mus_e1m9,    mus_shawn2,  mus_e1m9,   mus_shawn2,  mus_none   },
+    /* 20 */ { mus_none,    mus_none,    mus_messag,  mus_none,   mus_messag,  mus_none   },
+    /* 21 */ { mus_none,    mus_e2m1,    mus_count2,  mus_e2m1,   mus_count2,  mus_none   },
+    /* 22 */ { mus_none,    mus_e2m2,    mus_ddtbl3,  mus_e2m2,   mus_ddtbl3,  mus_none   },
+    /* 23 */ { mus_none,    mus_e2m3,    mus_ampie,   mus_e2m3,   mus_ampie,   mus_none   },
+    /* 24 */ { mus_none,    mus_e2m4,    mus_theda3,  mus_e2m4,   mus_theda3,  mus_none   },
+    /* 25 */ { mus_none,    mus_e2m5,    mus_adrian,  mus_e2m5,   mus_adrian,  mus_none   },
+    /* 26 */ { mus_none,    mus_e2m6,    mus_messg2,  mus_e2m6,   mus_messg2,  mus_none   },
+    /* 27 */ { mus_none,    mus_e2m7,    mus_romer2,  mus_e2m7,   mus_romer2,  mus_none   },
+    /* 28 */ { mus_none,    mus_e2m8,    mus_tense,   mus_e2m8,   mus_tense,   mus_none   },
+    /* 29 */ { mus_none,    mus_e2m9,    mus_shawn3,  mus_e2m9,   mus_shawn3,  mus_none   },
+    /* 30 */ { mus_none,    mus_none,    mus_openin,  mus_none,   mus_openin,  mus_none   },
+    /* 31 */ { mus_none,    mus_e3m1,    mus_evil,    mus_e3m1,   mus_evil,    mus_none   },
+    /* 32 */ { mus_none,    mus_e3m2,    mus_ultima,  mus_e3m2,   mus_ultima,  mus_none   },
+    /* 33 */ { mus_none,    mus_e3m3,    mus_none,    mus_e3m3,   mus_read_m,  mus_none   },
+    /* 34 */ { mus_none,    mus_e3m4,    mus_none,    mus_e3m4,   mus_none,    mus_none   },
+    /* 35 */ { mus_none,    mus_e3m5,    mus_none,    mus_e3m5,   mus_none,    mus_none   },
+    /* 36 */ { mus_none,    mus_e3m6,    mus_none,    mus_e3m6,   mus_none,    mus_none   },
+    /* 37 */ { mus_none,    mus_e3m7,    mus_none,    mus_e3m7,   mus_none,    mus_none   },
+    /* 38 */ { mus_none,    mus_e3m8,    mus_none,    mus_e3m8,   mus_none,    mus_none   },
+    /* 39 */ { mus_none,    mus_e3m9,    mus_none,    mus_e3m9,   mus_none,    mus_none   },
+    /* 40 */ { mus_none,    mus_none,    mus_none,    mus_none,   mus_none,    mus_none   },
+    /* 41 */ { mus_none,    mus_none,    mus_none,    mus_e3m4,   mus_none,    mus_none   },
+    /* 42 */ { mus_none,    mus_none,    mus_none,    mus_e3m2,   mus_none,    mus_none   },
+    /* 43 */ { mus_none,    mus_none,    mus_none,    mus_e3m3,   mus_none,    mus_none   },
+    /* 44 */ { mus_none,    mus_none,    mus_none,    mus_e1m5,   mus_none,    mus_none   },
+    /* 45 */ { mus_none,    mus_none,    mus_none,    mus_e2m7,   mus_none,    mus_none   },
+    /* 46 */ { mus_none,    mus_none,    mus_none,    mus_e2m4,   mus_none,    mus_none   },
+    /* 47 */ { mus_none,    mus_none,    mus_none,    mus_e2m6,   mus_none,    mus_none   },
+    /* 48 */ { mus_none,    mus_none,    mus_none,    mus_e2m5,   mus_none,    mus_none   },
+    /* 49 */ { mus_none,    mus_none,    mus_none,    mus_e1m9,   mus_none,    mus_none   },
+    /* 50 */ { mus_none,    mus_none,    mus_none,    mus_none,   mus_none,    mus_none   },
+    /* 51 */ { mus_none,    mus_none,    mus_none,    mus_e5m1,   mus_none,    mus_none   },
+    /* 52 */ { mus_none,    mus_none,    mus_none,    mus_e5m2,   mus_none,    mus_none   },
+    /* 53 */ { mus_none,    mus_none,    mus_none,    mus_e5m3,   mus_none,    mus_none   },
+    /* 54 */ { mus_none,    mus_none,    mus_none,    mus_e5m4,   mus_none,    mus_none   },
+    /* 55 */ { mus_none,    mus_none,    mus_none,    mus_e5m5,   mus_none,    mus_none   },
+    /* 56 */ { mus_none,    mus_none,    mus_none,    mus_e5m6,   mus_none,    mus_none   },
+    /* 57 */ { mus_none,    mus_none,    mus_none,    mus_e5m7,   mus_none,    mus_none   },
+    /* 58 */ { mus_none,    mus_none,    mus_none,    mus_e5m8,   mus_none,    mus_none   },
+    /* 59 */ { mus_none,    mus_none,    mus_none,    mus_e5m9,   mus_none,    mus_none   }
 };
 
 //
@@ -383,28 +384,19 @@ static const int mus[IDMUS_MAX][6] =
 //
 static void ST_RefreshBackground(void)
 {
-    if (st_statusbaron)
+    R_FillBezel();
+
+    if (STBAR >= 3)
     {
-#if SCREENSCALE == 1
-        if (STBAR >= 3)
-        {
-            V_DrawSTBARPatch(ST_X, VANILLAHEIGHT - VANILLASBARHEIGHT, sbar);
-            V_DrawPatch(ST_ARMSBGX + hacx * 4, VANILLAHEIGHT - VANILLASBARHEIGHT, 0, armsbg);
-        }
-        else
-            V_DrawSTBARPatch(ST_X, VANILLAHEIGHT - VANILLASBARHEIGHT, sbar);
-#else
-        if (STBAR >= 3)
-        {
-            V_DrawSTBARPatch(ST_X, VANILLAHEIGHT - VANILLASBARHEIGHT, sbar);
-            V_DrawPatch(ST_ARMSBGX + hacx * 4, VANILLAHEIGHT - VANILLASBARHEIGHT, 0, armsbg);
-        }
-        else if (r_detail == r_detail_low)
-            V_DrawSTBARPatch(ST_X, VANILLAHEIGHT - VANILLASBARHEIGHT, sbar);
-        else
-            V_DrawBigPatch(ST_X, ST_Y, sbar2);
-#endif
+        V_DrawWidePatch((SCREENWIDTH / SCREENSCALE - SHORT(sbar->width)) / 2, VANILLAHEIGHT - VANILLASBARHEIGHT, 0, sbar);
+        V_DrawPatch(ST_ARMSBGX + hacx * 4, VANILLAHEIGHT - VANILLASBARHEIGHT, 0, armsbg);
     }
+    else if (r_detail == r_detail_low)
+        V_DrawWidePatch((SCREENWIDTH / SCREENSCALE - SHORT(sbar->width)) / 2, VANILLAHEIGHT - VANILLASBARHEIGHT, 0, sbar);
+    else if (vid_widescreen)
+        V_DrawBigPatch((SCREENWIDTH - SHORT(sbar2->width)) / 2, ST_Y, sbar2);
+    else
+        V_DrawBigWidePatch(ST_X, SCREENHEIGHT - SBARHEIGHT, 0, sbar2);
 }
 
 static int ST_CalcPainOffset(void);
@@ -475,7 +467,7 @@ dboolean ST_Responder(event_t *ev)
                 dboolean    berserkgiven = false;
                 dboolean    weaponsgiven = false;
 
-                // [BH] note if doesn't have full armor before giving it
+                // [BH] note if player doesn't have full armor before giving it
                 if (viewplayer->armorpoints < idfa_armor || viewplayer->armortype < idfa_armor_class)
                 {
                     armorgiven = true;
@@ -483,7 +475,7 @@ dboolean ST_Responder(event_t *ev)
                     viewplayer->armortype = idfa_armor_class;
                 }
 
-                // [BH] note if any weapons given that player didn't have already
+                // [BH] note if player given any weapons that they don't have already
                 weaponsgiven = P_GiveAllWeapons();
 
                 // [BH] give player a berserk power-up so they can still use fists
@@ -496,7 +488,7 @@ dboolean ST_Responder(event_t *ev)
 
                 // [BH] show evil grin if player was given any new weapons
                 if (weaponsgiven && !(viewplayer->cheats & CF_GODMODE) && !viewplayer->powers[pw_invulnerability]
-                    && (!vid_widescreen || (r_hud && !r_althud)))
+                    && (r_hud && !r_althud))
                 {
                     st_facecount = ST_EVILGRINCOUNT;
                     st_faceindex = ST_CalcPainOffset() + ST_EVILGRINOFFSET;
@@ -531,7 +523,7 @@ dboolean ST_Responder(event_t *ev)
                 dboolean    keysgiven = false;
                 dboolean    weaponsgiven = false;
 
-                // [BH] note if doesn't have full armor before giving it
+                // [BH] note if player doesn't have full armor before giving it
                 if (viewplayer->armorpoints < idkfa_armor || viewplayer->armortype < idkfa_armor_class)
                 {
                     armorgiven = true;
@@ -539,7 +531,7 @@ dboolean ST_Responder(event_t *ev)
                     viewplayer->armortype = idkfa_armor_class;
                 }
 
-                // [BH] note if any weapons given that player didn't have already
+                // [BH] note if player given any weapons that they don't have already
                 weaponsgiven = P_GiveAllWeapons();
 
                 // [BH] give player a berserk power-up so they can still use fists
@@ -550,13 +542,12 @@ dboolean ST_Responder(event_t *ev)
 
                 ammogiven = P_GiveFullAmmo();
 
-                // [BH] only give the player the keycards or skull keys from the
-                //  current level, and note if any keys given
+                // [BH] only give player the keycards or skull keys from the current level, and note if any keys given
                 keysgiven = P_GiveAllCardsInMap();
 
                 // [BH] show evil grin if player was given any new weapons
                 if (weaponsgiven && !(viewplayer->cheats & CF_GODMODE) && !viewplayer->powers[pw_invulnerability]
-                    && (!vid_widescreen || (r_hud && !r_althud)))
+                    && (r_hud && !r_althud))
                 {
                     st_facecount = ST_EVILGRINCOUNT;
                     st_faceindex = ST_CalcPainOffset() + ST_EVILGRINOFFSET;
@@ -608,7 +599,7 @@ dboolean ST_Responder(event_t *ev)
                         else
                             musnum = mus[musnum][gamemode];
 
-                        if (musnum != NONE)
+                        if (musnum != mus_none)
                         {
                             static char msg[80];
                             char        *temp = uppercase(S_music[musnum].name1);
@@ -717,8 +708,11 @@ dboolean ST_Responder(event_t *ev)
                         }
                         else
                         {
-                            C_Output(s_STSTR_BEHOLDON);
-                            HU_SetPlayerMessage(s_STSTR_BEHOLDON, false, false);
+                            static char message[128];
+
+                            M_snprintf(message, sizeof(message), s_STSTR_BEHOLDON, powerupnames[i]);
+                            C_Output(message);
+                            HU_SetPlayerMessage(message, false, false);
                         }
 
                         stat_cheated = SafeAdd(stat_cheated, 1);
@@ -762,8 +756,11 @@ dboolean ST_Responder(event_t *ev)
                         }
                         else
                         {
-                            C_Output(s_STSTR_BEHOLDOFF);
-                            HU_SetPlayerMessage(s_STSTR_BEHOLDOFF, false, false);
+                            static char message[128];
+
+                            M_snprintf(message, sizeof(message), s_STSTR_BEHOLDOFF, powerupnames[i]);
+                            C_Output(message);
+                            HU_SetPlayerMessage(message, false, false);
                         }
                     }
 
@@ -918,6 +915,7 @@ dboolean ST_Responder(event_t *ev)
             {
                 S_StartSound(NULL, sfx_getpow);
                 C_Input(cheat_amap.sequence);
+                D_FadeScreen();
 
                 if (viewplayer->cheats & CF_ALLMAP)
                 {
@@ -1020,7 +1018,8 @@ dboolean ST_Responder(event_t *ev)
         }
 
 #ifndef __ANDROID__ // Stop keyboard hiding on every key
-        C_HideConsole();
+        if (!messagetoprint)
+            C_HideConsole();
 #endif
     }
 
@@ -1209,7 +1208,7 @@ static void ST_UpdateWidgets(void)
 
 void ST_Ticker(void)
 {
-    if (!vid_widescreen)
+    if (r_screensize < r_screensize_max)
     {
         if (!freeze && !paused && !menuactive && !consoleactive)
         {
@@ -1242,14 +1241,16 @@ static void ST_DoPaletteStuff(void)
 
     if (viewplayer->powers[pw_strength]
         && (viewplayer->pendingweapon == wp_fist || (viewplayer->readyweapon == wp_fist && viewplayer->pendingweapon == wp_nochange))
-        && viewplayer->health > 0 && r_berserkintensity)
+        && viewplayer->health > 0)
     {
         int bonuscount = viewplayer->bonuscount;
 
         if (bonuscount)
             palette = STARTBONUSPALS + MIN((bonuscount + 7) >> 3, NUMBONUSPALS) - 1;
+        else if (viewplayer->cheats & CF_GODMODE)
+            palette = r_berserkintensity;
         else
-            palette = MIN((viewplayer->damagecount >> 3) + r_berserkintensity + 3 * doom4vanilla, NUMREDPALS);
+            palette = MIN((viewplayer->damagecount >> 3) + r_berserkintensity, NUMREDPALS);
     }
     else
     {
@@ -1305,7 +1306,7 @@ static void ST_DrawWidgets(dboolean refresh)
         STlib_UpdateArmsIcon(&w_arms[5], refresh, 5);
     }
 
-    if (facebackcolor != facebackcolor_none)
+    if (facebackcolor != facebackcolor_default)
         V_FillRect(0, ST_FACEBACKX, ST_FACEBACKY, ST_FACEBACKWIDTH, ST_FACEBACKHEIGHT, nearestcolors[facebackcolor], false);
 
     STlib_UpdateMultIcon(&w_faces, refresh);
@@ -1315,12 +1316,13 @@ static void ST_DrawWidgets(dboolean refresh)
     STlib_UpdateMultIcon(&w_keyboxes[2], refresh);
 }
 
-void ST_DoRefresh(void)
+static void ST_DoRefresh(void)
 {
     st_firsttime = false;
 
     // draw status bar background to off-screen buff
-    ST_RefreshBackground();
+    if (st_statusbaron)
+        ST_RefreshBackground();
 
     // and refresh all widgets
     ST_DrawWidgets(true);
@@ -1337,10 +1339,10 @@ void ST_Drawer(dboolean fullscreen, dboolean refresh)
     // Do red-/gold-shifts from damage/items
     ST_DoPaletteStuff();
 
-    if (vid_widescreen || (menuactive && !consoleactive) || inhelpscreens)
+    if (r_screensize == r_screensize_max || (menuactive && !consoleactive) || inhelpscreens)
         return;
 
-    st_statusbaron = (!fullscreen || automapactive);
+    st_statusbaron = !fullscreen;
     st_firsttime = (st_firsttime || refresh);
 
     // If just after ST_Start(), refresh all
@@ -1471,7 +1473,6 @@ static void ST_LoadCallback(char *lumpname, patch_t **variable)
 static void ST_InitData(void)
 {
     st_firsttime = true;
-    st_statusbaron = true;
     st_faceindex = 0;
     st_palette = -1;
     st_oldhealth = -1;
@@ -1541,7 +1542,10 @@ void ST_Init(void)
 {
     ST_LoadUnloadGraphics(&ST_LoadCallback);
 
-    screens[4] = malloc(ST_WIDTH * SBARHEIGHT);
+    st_drawbrdr = (lumpinfo[W_GetNumForName("BRDR_B")]->wadfile->type == PWAD ||
+        lumpinfo[W_GetNumForName((gamemode == commercial ? "GRNROCK" : "FLOOR7_2"))]->wadfile->type == IWAD);
+
+    screens[4] = malloc((size_t)ST_WIDTH * SBARHEIGHT);
 
     // [BH] fix evil grin being displayed when picking up first item after
     // loading save game or entering IDFA/IDKFA cheat
@@ -1552,11 +1556,7 @@ void ST_Init(void)
     if (gamemode == shareware)
         maxammo[am_cell] = 0;
 
-#if SCREENSCALE == 1
-    usesmallnums = false;
-#else
     usesmallnums = ((!STYSNUM0 && STBAR == 2) || gamemode == shareware);
-#endif
 
     STLib_Init();
     ST_InitCheats();

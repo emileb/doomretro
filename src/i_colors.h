@@ -7,7 +7,7 @@
 ========================================================================
 
   Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2020 by Brad Harding.
+  Copyright © 2013-2021 by Brad Harding.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
@@ -42,9 +42,10 @@
 #include "doomtype.h"
 #include "r_defs.h"
 
+#define PINK    251
+
 extern byte *tinttab20;
 extern byte *tinttab25;
-extern byte *tinttab30;
 extern byte *tinttab33;
 extern byte *tinttab40;
 extern byte *tinttab50;
@@ -76,10 +77,10 @@ extern byte nearestwhite;
 extern byte *black25;
 extern byte *black40;
 extern byte *yellow15;
-extern byte *white50;
+extern byte *white25;
 
 void I_InitTintTables(byte *palette);
-int FindNearestColor(byte *palette, int red, int green, int blue);
+int FindNearestColor(byte *palette, const int red, const int green, const int blue);
 void FindNearestColors(byte *palette);
 
 int FindDominantColor(patch_t *patch, byte *palette);

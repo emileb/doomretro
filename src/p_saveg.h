@@ -7,7 +7,7 @@
 ========================================================================
 
   Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2020 by Brad Harding.
+  Copyright © 2013-2021 by Brad Harding.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
@@ -62,7 +62,7 @@ enum
     tc_glow,
     tc_elevator,        // jff 02/22/98 new elevator type thinker
     tc_scroll,          // killough 03/07/98: new scroll effect thinker
-    tc_pusher,          // phares 03/22/98:  new push/pull effect thinker
+    tc_pusher,          // phares 03/22/98: new push/pull effect thinker
     tc_fireflicker,     // killough 10/04/98
     tc_button,
     tc_endspecials
@@ -96,7 +96,6 @@ void P_ArchiveMap(void);
 void P_UnArchiveMap(void);
 
 void P_RestoreTargets(void);
-void P_RemoveCorruptMobjs(void);
 
 extern FILE *save_stream;
 

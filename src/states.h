@@ -7,7 +7,7 @@
 ========================================================================
 
   Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2020 by Brad Harding.
+  Copyright © 2013-2021 by Brad Harding.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
@@ -39,7 +39,6 @@
 #if !defined(__STATES_H__)
 #define __STATES_H__
 
-#include "doomtype.h"
 #include "d_think.h"
 #include "sprites.h"
 
@@ -851,8 +850,8 @@ typedef enum
     S_ARM1A,
     S_ARM2,
     S_ARM2A,
+    S_BAR1,
     S_BAR2,
-    S_BAR3,
     S_BEXP,
     S_BEXP2,
     S_BEXP3,
@@ -1145,7 +1144,7 @@ typedef enum
     S_MUSHROOM,
 
     // [BH] DOOM Retro states
-    S_BAR1,
+    S_BAR3,
     S_TRAIL,
     S_TRAIL2,
     S_TRAIL3,
