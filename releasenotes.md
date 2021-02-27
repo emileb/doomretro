@@ -1,11 +1,34 @@
 ![](https://github.com/bradharding/www.doomretro.com/raw/master/releasenotes.png)
 
+#### DOOM Retro v4.0.4
+
+* *DOOM Retro* is now compiled using v16.8.6 of [*Microsoft Visual Studio Community 2019*](https://www.visualstudio.com/vs/).
+* SSAA (supersampling anti-aliasing) is now still applied if the `r_detail` CVAR is `low`, the `r_supersampling` CVAR is `on`, but the `r_lowpixelsize` CVAR is not its default of `2×2`.
+* The `r_lowpixelsize` CVAR can no longer be `1×1`.
+* Further improvements have been made in supporting older, non-widescreen displays.
+* Minor changes have been made to text that is output to the console.
+* Minor changes have been made to the help screen displayed using the <kbd>F1</kbd> key.
+* Minor improvements have been made to the status bar when the `r_detail` CVAR is `high`.
+* The spacing of the map title in the automap has been improved.
+* The corpses of monsters will now still be spawned at the start of a map when the `nomonsters` CCMD has been entered in the console, or the `-nomonsters` parameter has been specified on the command-line.
+* The effects of changing the `con_edgecolor` CVAR in the console are now immediate.
+* The following changes have been made when a pain elemental spawns a lost soul:
+  * If a lost soul is spawned outside of a map, an obituary will no longer appear in the console if the `con_obituaries` CVAR is `on`.
+  * The lost souls are now included in the stats displayed by the `playerstats` CCMD, and on the intermission screen once the player has finished a map.
+* The correct background is now displayed on the intermission screen when playing the 4th episode of *The Ultimate DOOM*.
+* The menu will no longer automatically open at startup when playing the *BFG Edition* of *DOOM II: Hell On Earth*.
+* A bug has been fixed whereby the wrong `TITLEPIC` lump would be displayed in some instances.
+
+![](https://github.com/bradharding/www.doomretro.com/raw/master/wiki/bigdivider.png)
+
+###### Friday, February 19, 2021
+
 #### DOOM Retro v4.0.3
 
 * Optimizations have been made to further improve the overall performance and stability of *DOOM Retro*.
 * *DOOM Retro* will no longer crash on older, non-widescreen displays.
 * A fade transition will now be applied when using the `am_path` CVAR in the console to toggle the player’s path in the automap and the `fade` CVAR is `on`.
-* Gamepads will now briefly vibrate during startup to indicate they are connected and support vibration, if any of the `gp_vibrate_barrels`, `gp_vibrate_damage` or `gp_vibrate_weapons` CVARs are greater than `0`.
+* Gamepads will now briefly vibrate during startup to indicate they are connected and support vibration, if any of the `gp_vibrate_barrels`, `gp_vibrate_damage` or `gp_vibrate_weapons` CVARs are greater than `0%`.
 * Player messages and the widescreen HUD are now slightly less translucent when the `r_hud_translucency` CVAR is `on`.
 * Minor changes have been made to some player messages.
 * The following changes have been made to *DOOM II’s* cast sequence:
@@ -1779,7 +1802,7 @@
 * The extreme edges of both the menu and console backgrounds have been softened slightly.
 * *DOOM Retro’s* title and version in the console are now white.
 * A bug has been fixed whereby using the `map` CCMD when no game was being played would cause a crash.
-* The player will now be thrust away with the correct amount of force when attacked by an Arch-vile, or within the blast radius of a rocket or barrel explosion.
+* The player will now be thrust away with the correct amount of force when attacked by an arch-vile, or within the blast radius of a rocket or barrel explosion.
 * A time limit for each map can now be set using the `-timer` command-line parameter.
 
 ![](https://github.com/bradharding/www.doomretro.com/raw/master/wiki/bigdivider.png)

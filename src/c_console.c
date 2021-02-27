@@ -674,7 +674,6 @@ void C_Init(void)
     consoledividercolor = nearestcolors[consoledividercolor] << 8;
     consolescrollbartrackcolor = nearestcolors[consolescrollbartrackcolor] << 8;
     consolescrollbarfacecolor = nearestcolors[consolescrollbarfacecolor];
-    consoleedgecolor = nearestcolors[con_edgecolor] << 8;
 
     consolecolors[inputstring] = consoleinputtooutputcolor;
     consolecolors[outputstring] = consoleoutputcolor;
@@ -1255,6 +1254,8 @@ void C_Drawer(void)
         // cancel any screen shake
         I_UpdateBlitFunc(false);
 
+        consoleedgecolor = nearestcolors[con_edgecolor] << 8;
+
         // draw background and bottom edge
         C_DrawBackground();
 
@@ -1581,23 +1582,28 @@ dboolean C_ValidateInput(char *input)
 
             if (sscanf(input, "%127s %127[^\n]", cmd, parms) > 0)
             {
-                M_StripQuotes(parms);
+                char    *temp = M_StringDuplicate(parms);
+
+                M_StripQuotes(temp);
 
                 if ((M_StringCompare(cmd, consolecmds[i].name) || M_StringCompare(cmd, consolecmds[i].alternate))
-                    && consolecmds[i].func1(consolecmds[i].name, parms)
-                    && (consolecmds[i].parameters || !*parms))
+                    && consolecmds[i].func1(consolecmds[i].name, temp)
+                    && (consolecmds[i].parameters || !*temp))
                 {
                     if (!executingalias && !resettingcvar)
                     {
-                        if (parms[0] != '\0')
+                        if (temp[0] != '\0')
                             C_Input((input[length - 1] == '%' ? "%s %s%" : "%s %s"), cmd, parms);
                         else
                             C_Input("%s%s", cmd, (input[length - 1] == ' ' ? " " : ""));
                     }
 
-                    consolecmds[i].func2(consolecmds[i].name, parms);
+                    consolecmds[i].func2(consolecmds[i].name, temp);
+                    free(temp);
                     return true;
                 }
+
+                free(temp);
             }
         }
     }

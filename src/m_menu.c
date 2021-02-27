@@ -1427,7 +1427,7 @@ static void M_DrawReadThis(void)
 
         if (hacx)
         {
-            if (SCREENWIDTH != VANILLAWIDTH * SCREENSCALE)
+            if (SCREENWIDTH != NONWIDEWIDTH)
                 memset(screens[0], nearestblack, SCREENAREA);
 
             V_DrawPatch(0, 0, 0, W_CacheLumpName("HELP"));
@@ -1436,7 +1436,7 @@ static void M_DrawReadThis(void)
             V_DrawPatchWithShadow(0, 0, W_CacheLumpNum(W_GetSecondNumForName(lumpname)), false);
         else if (W_CheckMultipleLumps(lumpname) > 2)
         {
-            if (SCREENWIDTH != VANILLAWIDTH * SCREENSCALE)
+            if (SCREENWIDTH != NONWIDEWIDTH)
                 memset(screens[0], nearestblack, SCREENAREA);
 
             V_DrawPatch(0, 0, 0, W_CacheLumpName(lumpname));
@@ -3859,6 +3859,8 @@ void M_Ticker(void)
 //
 void M_Init(void)
 {
+    M_BigSeed((unsigned int)time(NULL));
+
     currentMenu = &MainDef;
     menuactive = false;
     itemOn = currentMenu->lastOn;
@@ -3867,9 +3869,7 @@ void M_Init(void)
     messageString = NULL;
     messageLastMenuActive = false;
     quickSaveSlot = -1;
-    spindirection = ((M_Random() & 1) ? 1 : -1);
-
-    M_BigSeed((unsigned int)time(NULL));
+    spindirection = ((M_BigRandom() & 1) ? 1 : -1);
 
     for (int i = 0; i < 256; i++)
         blues[i] = nearestcolors[blues[i]];

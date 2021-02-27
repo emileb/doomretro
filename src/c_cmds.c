@@ -437,7 +437,7 @@ consolecmd_t consolecmds[] =
     CCMD(alias, "", null_func1, alias_cmd_func2, true, ALIASCMDFORMAT,
         "Creates an <i><b>alias</b></i> that executes a string of <i><b>commands</b></i>."),
     CVAR_BOOL(alwaysrun, "", bool_cvars_func1, alwaysrun_cvar_func2, BOOLVALUEALIAS,
-        "Toggles the player to always run when they move."),
+        "Toggles the player to always run instead of walk."),
     CVAR_INT(am_allmapcdwallcolor, am_allmapcdwallcolour, color_cvars_func1, color_cvars_func2, CF_NONE, NOVALUEALIAS,
         "The color of unmapped lines in the automap indicating a change in ceiling height once the player has a computer area map "
         "power-up (<b>0</b> to <b>255</b>)."),
@@ -479,7 +479,7 @@ consolecmd_t consolecmds[] =
     CVAR_INT(am_thingcolor, am_thingcolour, color_cvars_func1, color_cvars_func2, CF_NONE, NOVALUEALIAS,
         "The color of things in the automap (<b>0</b> to <b>255</b>)."),
     CVAR_INT(am_tswallcolor, am_tswallcolour, color_cvars_func1, color_cvars_func2, CF_NONE, NOVALUEALIAS,
-        "The color of lines in the automap with no change in height (<b>0</b> to <b>255</b>)."),
+        "The color of lines in the automap indicating no change in height (<b>0</b> to <b>255</b>)."),
     CVAR_INT(am_wallcolor, am_wallcolour, color_cvars_func1, color_cvars_func2, CF_NONE, NOVALUEALIAS,
         "The color of solid walls in the automap (<b>0</b> to <b>255</b>)."),
     CVAR_INT(ammo, "", player_cvars_func1, player_cvars_func2, CF_NONE, NOVALUEALIAS,
@@ -4199,7 +4199,7 @@ static void nomonsters_cmd_func2(char *cmd, char *parms)
                     const mobjtype_t    type = thing->type;
                     const int           flags = thing->flags;
 
-                    if (((flags & MF_SHOOTABLE) || (flags & MF_CORPSE) || (thing->flags2 & MF2_MONSTERMISSILE))
+                    if (((flags & MF_SHOOTABLE) || (thing->flags2 & MF2_MONSTERMISSILE))
                         && type != MT_PLAYER && type != MT_BARREL && type != MT_BOSSBRAIN)
                         P_RemoveMobj(thing);
 
@@ -4873,10 +4873,10 @@ static void C_PlayerStats_Game(void)
     free(temp1);
     free(temp2);
 
-    temp1 = commify(viewplayer->itemspickedup_ammo_cells);
-    temp2 = commify(stat_itemspickedup_ammo_cells);
-    C_TabbedOutput(tabs, "\t%s cell%s\t%s cell%s",
-        temp1, (viewplayer->itemspickedup_ammo_cells == 1 ? "" : "s"), temp2, (stat_itemspickedup_ammo_cells == 1 ? "" : "s"));
+    temp1 = commify(viewplayer->itemspickedup_ammo_shells);
+    temp2 = commify(stat_itemspickedup_ammo_shells);
+    C_TabbedOutput(tabs, "\t%s shell%s\t%s shell%s",
+        temp1, (viewplayer->itemspickedup_ammo_shells == 1 ? "" : "s"), temp2, (stat_itemspickedup_ammo_shells == 1 ? "" : "s"));
     free(temp1);
     free(temp2);
 
@@ -4887,10 +4887,10 @@ static void C_PlayerStats_Game(void)
     free(temp1);
     free(temp2);
 
-    temp1 = commify(viewplayer->itemspickedup_ammo_shells);
-    temp2 = commify(stat_itemspickedup_ammo_shells);
-    C_TabbedOutput(tabs, "\t%s shell%s\t%s shell%s",
-        temp1, (viewplayer->itemspickedup_ammo_shells == 1 ? "" : "s"), temp2, (stat_itemspickedup_ammo_shells == 1 ? "" : "s"));
+    temp1 = commify(viewplayer->itemspickedup_ammo_cells);
+    temp2 = commify(stat_itemspickedup_ammo_cells);
+    C_TabbedOutput(tabs, "\t%s cell%s\t%s cell%s",
+        temp1, (viewplayer->itemspickedup_ammo_cells == 1 ? "" : "s"), temp2, (stat_itemspickedup_ammo_cells == 1 ? "" : "s"));
     free(temp1);
     free(temp2);
 
@@ -5322,16 +5322,16 @@ static void C_PlayerStats_NoGame(void)
     C_TabbedOutput(tabs, "   Ammo\t-\t%s bullet%s", temp1, (stat_itemspickedup_ammo_bullets == 1 ? "" : "s"));
     free(temp1);
 
-    temp1 = commify(stat_itemspickedup_ammo_cells);
-    C_TabbedOutput(tabs, "\t-\t%s cell%s", temp1 , (stat_itemspickedup_ammo_cells == 1 ? "" : "s"));
+    temp1 = commify(stat_itemspickedup_ammo_shells);
+    C_TabbedOutput(tabs, "\t-\t%s shell%s", temp1, (stat_itemspickedup_ammo_shells == 1 ? "" : "s"));
     free(temp1);
 
     temp1 = commify(stat_itemspickedup_ammo_rockets);
     C_TabbedOutput(tabs, "\t-\t%s rocket%s", temp1, (stat_itemspickedup_ammo_rockets == 1 ? "" : "s"));
     free(temp1);
 
-    temp1 = commify(stat_itemspickedup_ammo_shells);
-    C_TabbedOutput(tabs, "\t-\t%s shell%s", temp1, (stat_itemspickedup_ammo_shells == 1 ? "" : "s"));
+    temp1 = commify(stat_itemspickedup_ammo_cells);
+    C_TabbedOutput(tabs, "\t-\t%s cell%s", temp1 , (stat_itemspickedup_ammo_cells == 1 ? "" : "s"));
     free(temp1);
 
     temp1 = commify(stat_itemspickedup_armor);
@@ -7205,8 +7205,8 @@ static void str_cvars_func2(char *cmd, char *parms)
             {
                 if (!M_StringCompare(parms, *(char **)consolecmds[i].variable) && !(consolecmds[i].flags & CF_READONLY))
                 {
-                    M_StripQuotes(parms);
                     *(char **)consolecmds[i].variable = M_StringDuplicate(parms);
+                    M_StripQuotes(*(char **)consolecmds[i].variable);
                     M_SaveCVARs();
                 }
             }
@@ -7770,6 +7770,9 @@ static void playergender_cvar_func2(char *cmd, char *parms)
 static void playername_cvar_func2(char *cmd, char *parms)
 {
     str_cvars_func2(cmd, (M_StringCompare(parms, EMPTYVALUE) ? playername_default : parms));
+
+    if (!M_StringCompare(parms, playername_default))
+        playername[0] = toupper(playername[0]);
 }
 
 //
@@ -8115,10 +8118,8 @@ static void r_lowpixelsize_cvar_func2(char *cmd, char *parms)
     if (*parms)
     {
         r_lowpixelsize = M_StringDuplicate(parms);
-        GetPixelSize(false);
-
-        if (!M_StringCompare(r_lowpixelsize, parms))
-            M_SaveCVARs();
+        M_SaveCVARs();
+        GetPixelSize();
     }
     else
     {
@@ -8264,7 +8265,7 @@ static void r_supersampling_cvar_func2(char *cmd, char *parms)
         {
             r_supersampling = value;
             M_SaveCVARs();
-            GetPixelSize(false);
+            GetPixelSize();
         }
     }
     else

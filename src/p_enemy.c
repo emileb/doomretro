@@ -1698,13 +1698,17 @@ static void A_PainShootSkull(mobj_t *actor, angle_t angle)
         || newmobj->z < newmobj->subsector->sector->floorheight)
     {
         // kill it immediately
+        massacre = true;    // [BH] set this to avoid obituary
         P_DamageMobj(newmobj, actor, actor, 10000, true);
+        massacre = false;
         return;
     }
 
     // killough 07/20/98: PEs shoot lost souls with the same friendliness
     newmobj->flags = ((newmobj->flags & ~MF_FRIEND) | (actor->flags & MF_FRIEND));
-    newmobj->flags &= ~MF_COUNTKILL;
+
+    // [BH] count lost soul in player stats
+    monstercount[MT_SKULL]++;
 
     // killough 08/29/98: add to appropriate thread
     P_UpdateThinker(&newmobj->thinker);

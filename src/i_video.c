@@ -1890,7 +1890,7 @@ static void I_GetScreenDimensions(void)
     }
     else
     {
-        SCREENWIDTH = VANILLAWIDTH * SCREENSCALE;
+        SCREENWIDTH = NONWIDEWIDTH;
         WIDEFOVDELTA = 0;
         WIDESCREENDELTA = 0;
         clearframefunc = &I_ClearFrame;
@@ -1898,7 +1898,7 @@ static void I_GetScreenDimensions(void)
 
     SCREENAREA = SCREENWIDTH * SCREENHEIGHT;
 
-    GetPixelSize(true);
+    GetPixelSize();
 }
 
 void I_RestartGraphics(dboolean recreatewindow)

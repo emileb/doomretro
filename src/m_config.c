@@ -221,9 +221,9 @@ static default_t cvars[NUMCVARS] =
     CONFIG_VARIABLE_INT_UNSIGNED (gamessaved,                       stat_gamessaved,                       stat_gamessaved,                       NOVALUEALIAS          ),
     CONFIG_VARIABLE_INT_UNSIGNED (itemspickedup,                    stat_itemspickedup,                    stat_itemspickedup,                    NOVALUEALIAS          ),
     CONFIG_VARIABLE_INT_UNSIGNED (itemspickedup_ammo_bullets,       stat_itemspickedup_ammo_bullets,       stat_itemspickedup_ammo_bullets,       NOVALUEALIAS          ),
-    CONFIG_VARIABLE_INT_UNSIGNED (itemspickedup_ammo_cells,         stat_itemspickedup_ammo_cells,         stat_itemspickedup_ammo_cells,         NOVALUEALIAS          ),
-    CONFIG_VARIABLE_INT_UNSIGNED (itemspickedup_ammo_rockets,       stat_itemspickedup_ammo_rockets,       stat_itemspickedup_ammo_rockets,       NOVALUEALIAS          ),
     CONFIG_VARIABLE_INT_UNSIGNED (itemspickedup_ammo_shells,        stat_itemspickedup_ammo_shells,        stat_itemspickedup_ammo_shells,        NOVALUEALIAS          ),
+    CONFIG_VARIABLE_INT_UNSIGNED (itemspickedup_ammo_rockets,       stat_itemspickedup_ammo_rockets,       stat_itemspickedup_ammo_rockets,       NOVALUEALIAS          ),
+    CONFIG_VARIABLE_INT_UNSIGNED (itemspickedup_ammo_cells,         stat_itemspickedup_ammo_cells,         stat_itemspickedup_ammo_cells,         NOVALUEALIAS          ),
     CONFIG_VARIABLE_INT_UNSIGNED (itemspickedup_armor,              stat_itemspickedup_armor,              stat_itemspickedup_armor,              NOVALUEALIAS          ),
     CONFIG_VARIABLE_INT_UNSIGNED (itemspickedup_health,             stat_itemspickedup_health,             stat_itemspickedup_health,             NOVALUEALIAS          ),
     CONFIG_VARIABLE_INT_UNSIGNED (mapscompleted,                    stat_mapscompleted,                    stat_mapscompleted,                    NOVALUEALIAS          ),
@@ -645,7 +645,7 @@ static void M_CheckCVARs(void)
     if (con_obituaries != false && con_obituaries != true)
         con_obituaries = con_obituaries_default;
 
-    if (crosshair != crosshair_none && crosshair != crosshair_cross && crosshair != crosshair_dot)
+    if (crosshair < crosshair_min || crosshair > crosshair_max)
         crosshair = crosshair_default;
 
     if (crosshaircolor < crosshaircolor_min || crosshaircolor > crosshaircolor_max)
@@ -725,19 +725,20 @@ static void M_CheckCVARs(void)
 
     movebob = BETWEEN(movebob_min, movebob, movebob_max);
 
-    if (playergender != playergender_other && playergender != playergender_male && playergender != playergender_female)
+    if (playergender < playergender_min || playergender > playergender_max)
         playergender = playergender_default;
 
     if (!*playername)
         playername = M_StringDuplicate(playername_default);
+    else if (!M_StringCompare(playername, playername_default))
+        playername[0] = toupper(playername[0]);
 
     if (r_althud != false && r_althud != true)
         r_althud = r_althud_default;
 
     r_berserkintensity = BETWEEN(r_berserkintensity_min, r_berserkintensity, r_berserkintensity_max);
 
-    if (r_blood != r_blood_none && r_blood != r_blood_red && r_blood != r_blood_all && r_blood != r_blood_green
-        && r_blood != r_blood_nofuzz)
+    if (r_blood < r_blood_min || r_blood > r_blood_max)
         r_blood = r_blood_default;
 
     r_bloodsplats_max = BETWEEN(r_bloodsplats_max_min, r_bloodsplats_max, r_bloodsplats_max_max);
@@ -832,11 +833,16 @@ static void M_CheckCVARs(void)
 
     r_screensize = BETWEEN(r_screensize_min, r_screensize, r_screensize_max);
 
-    if (r_screensize < r_screensize_max && r_hud)
+    if (r_screensize < r_screensize_max)
+    {
         r_hud = false;
-
-    if (r_screensize == r_screensize_max && !vid_widescreen)
+        vid_widescreen = false;
+    }
+    else if (r_screensize == r_screensize_max && !vid_widescreen)
+    {
+        r_hud = false;
         r_screensize = r_screensize_max - 1;
+    }
 
     if (r_shadows != false && r_shadows != true)
         r_shadows = r_shadows_default;
@@ -912,11 +918,9 @@ static void M_CheckCVARs(void)
     if (!M_StringCompare(vid_scaleapi, vid_scaleapi_software)
 #if defined(_WIN32)
         && !M_StringCompare(vid_scaleapi, vid_scaleapi_direct3d)
-#endif
-#if defined(__APPLE__)
+#elif defined(__APPLE__)
         && !M_StringCompare(vid_scaleapi, vid_scaleapi_metal)
-#endif
-#if !defined(_WIN32)
+#else
         && !M_StringCompare(vid_scaleapi, vid_scaleapi_opengles)
         && !M_StringCompare(vid_scaleapi, vid_scaleapi_opengles2)
 #endif
@@ -930,7 +934,7 @@ static void M_CheckCVARs(void)
 
     vid_showfps = vid_showfps_default;
 
-    if (vid_vsync != vid_vsync_adaptive && vid_vsync != vid_vsync_off && vid_vsync != vid_vsync_on)
+    if (vid_vsync < vid_vsync_min || vid_vsync > vid_vsync_max)
         vid_vsync = vid_vsync_default;
 
     if (vid_widescreen != false && vid_widescreen != true)
@@ -1041,10 +1045,8 @@ void M_LoadCVARs(char *filename)
         }
 
         // Find the setting in the list
-        for (int i = 0; i < arrlen(cvars); i++)
+        for (int i = 0; i < NUMCVARS; i++)
         {
-            char    *s;
-
             if (!M_StringCompare(cvar, cvars[i].name) && !M_StringCompare(cvar, cvars[i].oldname))
                 continue;       // not this one
 
@@ -1052,11 +1054,14 @@ void M_LoadCVARs(char *filename)
             switch (cvars[i].type)
             {
                 case DEFAULT_STRING:
-                    s = M_StringDuplicate(value + 1);
-                    s[strlen(s) - 1] = '\0';
-                    *(char **)cvars[i].location = s;
+                {
+                    char    *temp = M_StringDuplicate(value + 1);
+
+                    temp[strlen(temp) - 1] = '\0';
+                    *(char **)cvars[i].location = temp;
                     cvarcount++;
                     break;
+                }
 
                 case DEFAULT_INT32:
                 {

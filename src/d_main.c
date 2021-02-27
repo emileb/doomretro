@@ -549,7 +549,7 @@ void D_PageDrawer(void)
         if (prevtic != pagetic)
         {
             if (logotic >= 77 && logotic < 94)
-                V_DrawBigPatch((SCREENWIDTH - VANILLAWIDTH * SCREENSCALE) / 2 + 143, 167, logolump[94 - logotic]);
+                V_DrawBigPatch((SCREENWIDTH - NONWIDEWIDTH) / 2 + 143, 167, logolump[94 - logotic]);
 
             I_SetSimplePalette(&splashpal[(pagetic < 9 ? 9 - pagetic : (pagetic > 94 ? pagetic - 94 : 0)) * 768]);
             prevtic = pagetic;
@@ -558,7 +558,7 @@ void D_PageDrawer(void)
     else
     {
         // [crispy] fill pillarboxes in widescreen mode
-        if (SCREENWIDTH != VANILLAWIDTH * SCREENSCALE)
+        if (SCREENWIDTH != NONWIDEWIDTH)
             memset(screens[0], nearestblack, SCREENAREA);
 
         V_DrawWidePatch((SCREENWIDTH / SCREENSCALE - SHORT(pagelump->width)) / 2, 0, 0, pagelump);
@@ -589,8 +589,8 @@ void D_DoAdvanceTitle(void)
     if (!titlesequence)
     {
         titlesequence = 1;
-        V_DrawBigPatch((SCREENWIDTH - VANILLAWIDTH * SCREENSCALE) / 2 + 12, 366, fineprintlump);
-        V_DrawBigPatch((SCREENWIDTH - VANILLAWIDTH * SCREENSCALE) / 2 + 143, 167, logolump[0]);
+        V_DrawBigPatch((SCREENWIDTH - NONWIDEWIDTH) / 2 + 12, 366, fineprintlump);
+        V_DrawBigPatch((SCREENWIDTH - NONWIDEWIDTH) / 2 + 143, 167, logolump[0]);
         return;
     }
     else if (titlesequence == 1)
@@ -604,9 +604,6 @@ void D_DoAdvanceTitle(void)
 
             if (alwaysrun)
                 C_StrCVAROutput(stringize(alwaysrun), "on");
-
-            if (!TITLEPIC && !devparm)
-                M_StartControlPanel();
         }
 
         if (pagelump == creditlump)
@@ -1128,7 +1125,7 @@ static int D_OpenWADLauncher(void)
     ofn.nMaxFileTitle = 0;
     ofn.lpstrInitialDir = iwadfolder;
     ofn.Flags = (OFN_HIDEREADONLY | OFN_ALLOWMULTISELECT | OFN_PATHMUSTEXIST | OFN_EXPLORER);
-    ofn.lpstrTitle = "Where\u2019s All the Data?\0";
+    ofn.lpstrTitle = "Where's All the Data?\0";
 
     fileopenedok = GetOpenFileName(&ofn);
 #elif defined(__APPLE__)
@@ -2088,7 +2085,6 @@ static void D_DoomMainSetup(void)
 
     FREEDM = (W_CheckNumForName("FREEDM") >= 0);
 
-    DMENUPIC = (W_CheckNumForName("DMENUPIC") >= 0);
     M_DOOM = (W_CheckMultipleLumps("M_DOOM") > 1);
     M_EPISOD = (W_CheckMultipleLumps("M_EPISOD") > 1);
     M_GDHIGH = (W_CheckMultipleLumps("M_GDHIGH") > 1);
@@ -2314,10 +2310,10 @@ static void D_DoomMainSetup(void)
 
     if (autosigil)
     {
-        titlelump = W_CacheLastLumpName((TITLEPIC ? "TITLEPI2" : (DMENUPIC ? "DMENUPIC" : "INTERPIC")));
+        titlelump = W_CacheLastLumpName("TITLEPI2");
         creditlump = W_CacheLastLumpName("CREDIT1");
     }
-    else if (W_CheckMultipleLumps("TITLEPIC") > 1)
+    else if (W_CheckMultipleLumps("TITLEPIC"))
     {
         titlelump = W_CacheLumpName("TITLEPIC");
         creditlump = W_CacheLastLumpName("CREDIT");

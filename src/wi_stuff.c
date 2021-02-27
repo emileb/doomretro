@@ -1149,7 +1149,7 @@ static void WI_LoadData(void)
     // them with the status bar code
 
     // Background image
-    if (gamemode == commercial || (gamemode == retail && wbs->epsd == 3))
+    if (gamemode == commercial)
     {
         int lumpnum = P_GetMapEnterPic(gamemap);
 
@@ -1162,6 +1162,8 @@ static void WI_LoadData(void)
         else
             lump = W_CacheLumpName("INTERPIC");
     }
+    else if (gamemode == retail && wbs->epsd == 3)
+        lump = W_CacheLumpName("INTERPI1");
     else if (sigil && wbs->epsd == 4)
         lump = W_CacheLumpName("SIGILINT");
     else
@@ -1173,7 +1175,7 @@ static void WI_LoadData(void)
     }
 
     // [crispy] fill pillarboxes in widescreen mode
-    if (SCREENWIDTH != VANILLAWIDTH * SCREENSCALE)
+    if (SCREENWIDTH != NONWIDEWIDTH)
         memset(screens[1], nearestblack, SCREENAREA);
 
     V_DrawWidePatch((SCREENWIDTH / SCREENSCALE - SHORT(lump->width)) / 2, 0, 1, lump);
