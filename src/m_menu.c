@@ -2689,6 +2689,9 @@ dboolean M_Responder(event_t *ev)
     {
         key = ev->data1;
         usinggamepad = false;
+#ifdef __ANDROID__ // Trying to fix buttons not working if key_up is not received
+        keydown = 0;
+#endif
     }
     else if (ev->type == ev_keyup)
     {
