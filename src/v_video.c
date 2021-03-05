@@ -54,17 +54,13 @@
 #include "p_setup.h"
 #include "r_draw.h"
 #include "r_main.h"
+#include "v_video.h"
 #include "version.h"
 #include "w_wad.h"
 #include "z_zone.h"
 
 #define WHITE       4
 #define LIGHTGRAY   82
-
-#define DX          ((NONWIDEWIDTH << FRACBITS) / VANILLAWIDTH)
-#define DXI         ((VANILLAWIDTH << FRACBITS) / NONWIDEWIDTH)
-#define DY          ((SCREENHEIGHT << FRACBITS) / VANILLAHEIGHT)
-#define DYI         ((VANILLAHEIGHT << FRACBITS) / SCREENHEIGHT)
 
 byte        *screens[5];
 int         lowpixelwidth;
@@ -246,9 +242,9 @@ void V_DrawWidePatch(int x, int y, int scrn, patch_t *patch)
     }
 }
 
-void V_DrawBigWidePatch(int x, int y, int scrn, patch_t *patch)
+void V_DrawBigWidePatch(int x, int y, patch_t *patch)
 {
-    byte    *desttop;
+    byte    *desttop = &screens[0][y * SCREENWIDTH + x];
     int     w = SHORT(patch->width);
     int     col = 0;
 
@@ -257,8 +253,6 @@ void V_DrawBigWidePatch(int x, int y, int scrn, patch_t *patch)
         col = (w - SCREENWIDTH) / 2;
         w = SCREENWIDTH + col;
     }
-
-    desttop = &screens[scrn][y * SCREENWIDTH + x];
 
     for (; col < w; col++, desttop++)
     {

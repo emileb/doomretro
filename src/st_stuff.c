@@ -396,7 +396,7 @@ static void ST_RefreshBackground(void)
     else if (vid_widescreen)
         V_DrawBigPatch((SCREENWIDTH - SHORT(sbar2->width)) / 2, ST_Y, sbar2);
     else
-        V_DrawBigWidePatch(ST_X, SCREENHEIGHT - SBARHEIGHT, 0, sbar2);
+        V_DrawBigWidePatch(ST_X, SCREENHEIGHT - SBARHEIGHT, sbar2);
 }
 
 static int ST_CalcPainOffset(void);
@@ -1336,7 +1336,7 @@ static void ST_DiffDraw(void)
 
 void ST_Drawer(dboolean fullscreen, dboolean refresh)
 {
-    // Do red-/gold-shifts from damage/items
+    // Do red/gold-shifts from damage/items
     ST_DoPaletteStuff();
 
     if (r_screensize == r_screensize_max || (menuactive && !consoleactive) || inhelpscreens)

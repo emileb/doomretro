@@ -1,5 +1,20 @@
 ![](https://github.com/bradharding/www.doomretro.com/raw/master/releasenotes.png)
 
+#### DOOM Retro v4.0.5
+
+* *DOOM Retro* is now compiled using v16.9 of [*Microsoft Visual Studio Community 2019*](https://www.visualstudio.com/vs/).
+* Minor changes have been made to text that is output to the console.
+* The finale at the end of the 3rd episode of *DOOM* is now displayed correctly.
+* You may no longer toggle widescreen using the <kbd>+</kbd> and <kbd>&ndash;</kbd> keys, or open the help screen using the <kbd>F1</kbd> key, when on an intermission or finale screen.
+* Certain fade transitions are now applied to the finales of both *DOOM* and *DOOM II: Hell On Earth* when the `fade` CVAR is `on`.
+* When displaying certain lumps from a PWAD that are only 320 pixels wide, and the `vid_widescreen` CVAR is `on`, the color of the surrounding pillarboxes will now be based on the most used color along the left and right edges of those lumps, rather than always be black.
+* A bug has been fixed whereby the wrong credits screen would be displayed in some instances.
+* The background of the help screen displayed using the <kbd>F1</kbd> key now won’t animate.
+
+![](https://github.com/bradharding/www.doomretro.com/raw/master/wiki/bigdivider.png)
+
+###### Friday, February 26, 2021
+
 #### DOOM Retro v4.0.4
 
 * *DOOM Retro* is now compiled using v16.8.6 of [*Microsoft Visual Studio Community 2019*](https://www.visualstudio.com/vs/).

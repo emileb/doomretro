@@ -49,6 +49,7 @@
 #include "i_gamepad.h"
 #include "i_swap.h"
 #include "m_config.h"
+#include "m_menu.h"
 #include "m_misc.h"
 #include "m_random.h"
 #include "s_sound.h"
@@ -93,12 +94,12 @@ extern dboolean         acceleratestage;        // accelerate intermission scree
 //
 static void F_ConsoleFinaleText(void)
 {
-    char    *text = M_StringDuplicate(finaletext);
+    char    *text = M_StringJoin("\"", finaletext, "\"", NULL);
     char    *p = strtok(text, "\n");
 
     while (p)
     {
-        C_Output(p);
+        C_Output("<i>%s%s</i>", (p[0] == '\"' ? "" : "   "), p);
         p = strtok(NULL, "\n");
     }
 
@@ -108,7 +109,6 @@ static void F_ConsoleFinaleText(void)
 //
 // F_StartFinale
 //
-
 void F_StartFinale(void)
 {
     char    *intertext = P_GetInterText(gamemap);
@@ -348,8 +348,6 @@ void F_Ticker(void)
 //
 // F_TextWrite
 //
-void M_DrawSmallChar(int x, int y, int i, dboolean shadow);
-
 static void F_TextWrite(void)
 {
     // draw some of the text onto the screen
@@ -548,6 +546,8 @@ static void F_CastTicker(void)
 
         if (++castnum == CASTNUMMAX)
             castnum = 0;
+        else
+            D_FadeScreen();
 
         if (mobjinfo[castorder[castnum].type].seesound)
             S_StartSound(NULL, F_RandomizeSound(mobjinfo[castorder[castnum].type].seesound));
@@ -768,6 +768,9 @@ static dboolean F_CastResponder(event_t *ev)
     return true;
 }
 
+//
+// F_CastPrint
+//
 static void F_CastPrint(const char *text)
 {
     const char  *ch = text;
@@ -826,16 +829,16 @@ static void F_CastDrawer(void)
     int             y = VANILLAHEIGHT - 30;
     mobjtype_t      type = castorder[castnum].type;
 
-    // erase the entire screen to a background
-    if (SCREENWIDTH != NONWIDEWIDTH)
-        memset(screens[0], nearestblack, SCREENAREA);
-
     if (gamemission == pack_plut)
         patch = W_CacheLumpName("BOSSBAC2");
     else if (gamemission == pack_tnt)
         patch = W_CacheLumpName("BOSSBAC3");
     else
         patch = W_CacheLumpName(bgcastcall);
+
+    // erase the entire screen to a background
+    if (SCREENWIDTH != NONWIDEWIDTH)
+        memset(screens[0], FindDominantEdgeColor(patch), SCREENAREA);
 
     V_DrawWidePatch((SCREENWIDTH / SCREENSCALE - SHORT(patch->width)) / 2, 0, 0, patch);
 
@@ -923,24 +926,24 @@ static void F_CastDrawer(void)
 //
 // F_DrawPatchCol
 //
-static void F_DrawPatchCol(int x, patch_t *patch, int col, fixed_t fracstep)
+static void F_DrawPatchCol(int x, patch_t *patch, int col)
 {
     column_t    *column = (column_t *)((byte *)patch + LONG(patch->columnofs[col]));
-    byte        *desttop = screens[0] + x;
+    byte        *desttop = &screens[0][x];
 
     // step through the posts in a column
     while (column->topdelta != 0xFF)
     {
-        int     count = (column->length << FRACBITS) / fracstep;
-        fixed_t frac = 0;
-        byte    *dest = &desttop[column->topdelta * SCREENWIDTH];
+        int     srccol = 0;
         byte    *source = (byte *)column + 3;
+        byte    *dest = &desttop[((column->topdelta * DY) >> FRACBITS) * SCREENWIDTH];
+        int     count = (column->length * DY) >> FRACBITS;
 
         while (count--)
         {
-            *dest = source[frac >> FRACBITS];
+            *dest = source[srccol >> FRACBITS];
+            srccol += DYI;
             dest += SCREENWIDTH;
-            frac += fracstep;
         }
 
         column = (column_t *)((byte *)column + column->length + 4);
@@ -952,49 +955,56 @@ static void F_DrawPatchCol(int x, patch_t *patch, int col, fixed_t fracstep)
 //
 static void F_BunnyScroll(void)
 {
-    int             scrolled = BETWEEN(0, VANILLAWIDTH - (finalecount - 230) / 2, VANILLAWIDTH);
-    patch_t         *p1 = W_CacheLumpName("PFUB2");
-    patch_t         *p2 = W_CacheLumpName("PFUB1");
-    char            name[10];
-    int             stage;
-    static int      laststage;
-    const fixed_t   yscale = (VANILLAHEIGHT << FRACBITS) / SCREENHEIGHT;
-    const fixed_t   xscale = (VANILLAWIDTH << FRACBITS) / SCREENWIDTH;
-    fixed_t         frac = 0;
+    int     scrolled = BETWEEN(0, VANILLAWIDTH - (finalecount - 230) / 2, VANILLAWIDTH);
+    patch_t *p1 = W_CacheLumpName("PFUB2");
+    patch_t *p2 = W_CacheLumpName("PFUB1");
+    int     p1offset = (VANILLAWIDTH - SHORT(p1->width)) / 2;
+    int     p2offset = VANILLAWIDTH + (SHORT(p2->width) == VANILLAWIDTH ? -p1offset : p1offset);
 
-    for (int x = 0; x < VANILLAWIDTH; x++)
+    for (int x = 0; x < SCREENWIDTH; x++)
     {
-        do
+        int x2 = ((x * DXI) >> FRACBITS) - WIDESCREENDELTA + scrolled;
+
+        if (x2 < p2offset)
+            F_DrawPatchCol(x, p1, x2 - p1offset);
+        else
+            F_DrawPatchCol(x, p2, x2 - p2offset);
+    }
+
+    if (finalecount >= 1130)
+    {
+        static int  laststage;
+
+        if (finalecount < 1180)
         {
-            if (x + scrolled < VANILLAWIDTH)
-                F_DrawPatchCol(frac / xscale, p1, x + scrolled, yscale);
-            else
-                F_DrawPatchCol(frac / xscale, p2, x + scrolled - VANILLAWIDTH, yscale);
+            if (finalecount == 1130 && fade)
+                D_FadeScreen();
 
-            frac += xscale;
-        } while ((frac >> FRACBITS) <= x);
+            V_DrawPatchWithShadow((VANILLAWIDTH - 104) / 2 + 1, (VANILLAHEIGHT - 64) / 2 + 1,
+                W_CacheLumpName("END0"), false);
+            laststage = 0;
+        }
+        else
+        {
+            char    name[10];
+            int     stage = MIN((finalecount - 1180) / 5, 6);
+
+            if (stage > laststage)
+            {
+                S_StartSound(NULL, sfx_pistol);
+                laststage = stage;
+            }
+
+            M_snprintf(name, sizeof(name), "END%i", stage);
+            V_DrawPatchWithShadow((VANILLAWIDTH - 104) / 2 + 1, (VANILLAHEIGHT - 64) / 2 + 1,
+                W_CacheLumpName(name), false);
+        }
     }
-
-    if (finalecount < 1130)
-        return;
-
-    if (finalecount < 1180)
-    {
-        V_DrawPatchWithShadow((VANILLAWIDTH - 13 * 8) / 2 + 1, (VANILLAHEIGHT - 8 * 8) / 2 + 1, W_CacheLumpName("END0"), false);
-        laststage = 0;
-        return;
-    }
-
-    if ((stage = MIN((finalecount - 1180) / 5, 6)) > laststage)
-    {
-        S_StartSound(NULL, sfx_pistol);
-        laststage = stage;
-    }
-
-    M_snprintf(name, sizeof(name), "END%i", stage);
-    V_DrawPatchWithShadow((VANILLAWIDTH - 13 * 8) / 2 + 1, (VANILLAHEIGHT - 8 * 8) / 2 + 1, W_CacheLumpName(name), false);
 }
 
+//
+// F_ArtScreenDrawer
+//
 static void F_ArtScreenDrawer(void)
 {
     int lumpnum = P_GetMapEndPic(gamemap);
@@ -1018,11 +1028,7 @@ static void F_ArtScreenDrawer(void)
         switch (gameepisode)
         {
             case 1:
-                if (gamemode == retail)
-                    lump = creditlump;
-                else
-                    lump = W_CacheLumpName("HELP2");
-
+                lump = (gamemode == retail ? creditlump : W_CacheLumpName("HELP2"));
                 break;
 
             case 2:

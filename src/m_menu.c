@@ -1428,7 +1428,7 @@ static void M_DrawReadThis(void)
         if (hacx)
         {
             if (SCREENWIDTH != NONWIDEWIDTH)
-                memset(screens[0], nearestblack, SCREENAREA);
+                memset(screens[0], FindDominantEdgeColor(W_CacheLumpName("HELP")), SCREENAREA);
 
             V_DrawPatch(0, 0, 0, W_CacheLumpName("HELP"));
         }
@@ -1437,7 +1437,7 @@ static void M_DrawReadThis(void)
         else if (W_CheckMultipleLumps(lumpname) > 2)
         {
             if (SCREENWIDTH != NONWIDEWIDTH)
-                memset(screens[0], nearestblack, SCREENAREA);
+                memset(screens[0], FindDominantEdgeColor(W_CacheLumpName(lumpname)), SCREENAREA);
 
             V_DrawPatch(0, 0, 0, W_CacheLumpName(lumpname));
         }
@@ -2915,12 +2915,12 @@ dboolean M_Responder(event_t *ev)
         {
             keydown = key;
 
-            if (automapactive || inhelpscreens)
+            if (automapactive || inhelpscreens || gamestate == GS_INTERMISSION || gamestate == GS_FINALE)
                 return false;
 
             if (viewactive)
                 M_SizeDisplay(0);
-            else if (vid_widescreen && SHORT(pagelump->width) > VANILLAWIDTH)
+            else if (vid_widescreen)
             {
                 vid_widescreen = false;
                 r_screensize = r_screensize_max - 1;
@@ -2938,12 +2938,12 @@ dboolean M_Responder(event_t *ev)
         {
             keydown = key;
 
-            if (automapactive || inhelpscreens)
+            if (automapactive || inhelpscreens || gamestate == GS_INTERMISSION || gamestate == GS_FINALE)
                 return false;
 
             if (viewactive)
                 M_SizeDisplay(1);
-            else if (!vid_widescreen && SHORT(pagelump->width) > VANILLAWIDTH && !nowidescreen)
+            else if (!vid_widescreen && !nowidescreen)
             {
                 vid_widescreen = true;
                 r_screensize = r_screensize_max - 1;
@@ -2972,6 +2972,9 @@ dboolean M_Responder(event_t *ev)
         // Help key
         else if (key == KEY_F1 && (!functionkey || functionkey == KEY_F1) && !keydown)
         {
+            if (gamestate == GS_INTERMISSION || gamestate == GS_FINALE)
+                return false;
+
             keydown = key;
 
             if (functionkey == KEY_F1)

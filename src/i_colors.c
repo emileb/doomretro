@@ -52,13 +52,13 @@
 
 static byte filter[256] =
 {
-    0,   X,   0,   0,   R|B, 0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0, // 000 to 015
-    R,   R,   R,   R,   R,   R,   R,   R,   R,   R,   R,   R,   R,   R,   R,   R, // 016 to 031
-    R,   R,   R,   R,   R,   R,   R,   R,   R,   R,   R,   R,   R,   R,   R,   R, // 032 to 047
-    W,   W,   W,   W,   W,   W,   W,   W,   W,   W,   W,   W,   W,   W,   W,   W, // 048 to 063
-    0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   X,   X,   X, // 064 to 079
-    R,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0, // 080 to 095
-    0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0, // 096 to 111
+    0,   X,   0,   0,   R|B, 0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0, //   0 to  15
+    R,   R,   R,   R,   R,   R,   R,   R,   R,   R,   R,   R,   R,   R,   R,   R, //  16 to  31
+    R,   R,   R,   R,   R,   R,   R,   R,   R,   R,   R,   R,   R,   R,   R,   R, //  32 to  47
+    W,   W,   W,   W,   W,   W,   W,   W,   W,   W,   W,   W,   W,   W,   W,   W, //  48 to  63
+    0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   X,   X,   X, //  64 to  79
+    R,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0, //  80 to  95
+    0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0, //  96 to 111
     G,   G,   G,   G,   G,   G,   G,   G,   G,   G,   G,   G,   G,   G,   G,   G, // 112 to 127
     0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0, // 128 to 143
     0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0, // 144 to 159
@@ -79,9 +79,9 @@ static byte filter[256] =
 #define EXTRAS      X
 
 #define BLACK       0
-#define RED         176
+#define RED       176
 #define WHITE       4
-#define YELLOW      160
+#define YELLOW    160
 
 static byte *tinttab15;
 
@@ -177,11 +177,11 @@ void FindNearestColors(byte *palette)
     white25 = &tinttab25[nearestwhite << 8];
 }
 
-int FindDominantColor(patch_t *patch, byte *palette)
+int FindDominantBrightColor(patch_t *patch, byte *palette)
 {
     const int   w = SHORT(patch->width);
     int         dominantcolor = 0;
-    int         dominantcolorcount = 0;
+    int         dominantcolorcount = 1;
     byte        colorcount[256] = { 0 };
 
     for (int col = 0; col < w; col++)
@@ -213,6 +213,47 @@ int FindDominantColor(patch_t *patch, byte *palette)
             dominantcolorcount = colorcount[i];
         }
     }
+
+    return dominantcolor;
+}
+
+int FindDominantEdgeColor(patch_t *patch)
+{
+    int         dominantcolor = 0;
+    int         dominantcolorcount = 1;
+    byte        colorcount[256] = { 0 };
+    column_t    *column = (column_t *)((byte *)patch + LONG(patch->columnofs[0]));
+
+    while (column->topdelta != 0xFF)
+    {
+        byte    *source = (byte *)column + 3;
+        int     count = column->length;
+
+        while (count--)
+            colorcount[*source++]++;
+
+        column = (column_t *)((byte *)column + column->length + 4);
+    }
+
+    column = (column_t *)((byte *)patch + LONG(patch->columnofs[SHORT(patch->width) - 1]));
+
+    while (column->topdelta != 0xFF)
+    {
+        byte    *source = (byte *)column + 3;
+        int     count = column->length;
+
+        while (count--)
+            colorcount[*source++]++;
+
+        column = (column_t *)((byte *)column + column->length + 4);
+    }
+
+    for (int i = 0; i < 256; i++)
+        if (colorcount[i] > dominantcolorcount)
+        {
+            dominantcolor = i;
+            dominantcolorcount = colorcount[i];
+        }
 
     return dominantcolor;
 }

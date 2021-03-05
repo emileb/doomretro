@@ -500,6 +500,8 @@ int             logotic = 3 * TICRATE;
 patch_t         *pagelump;
 patch_t         *creditlump;
 
+static int      pillarboxcolor;
+
 static patch_t  *fineprintlump;
 static patch_t  *logolump[18];
 static patch_t  *titlelump;
@@ -559,7 +561,7 @@ void D_PageDrawer(void)
     {
         // [crispy] fill pillarboxes in widescreen mode
         if (SCREENWIDTH != NONWIDEWIDTH)
-            memset(screens[0], nearestblack, SCREENAREA);
+            memset(screens[0], pillarboxcolor, SCREENAREA);
 
         V_DrawWidePatch((SCREENWIDTH / SCREENSCALE - SHORT(pagelump->width)) / 2, 0, 0, pagelump);
     }
@@ -610,6 +612,7 @@ void D_DoAdvanceTitle(void)
             forcewipe = true;
 
         pagelump = titlelump;
+        pillarboxcolor = FindDominantEdgeColor(pagelump);
         pagetic = 20 * TICRATE;
 
         if (splashscreen)
@@ -629,6 +632,7 @@ void D_DoAdvanceTitle(void)
     {
         forcewipe = true;
         pagelump = creditlump;
+        pillarboxcolor = FindDominantEdgeColor(pagelump);
         pagetic = 10 * TICRATE;
     }
 
@@ -2313,38 +2317,64 @@ static void D_DoomMainSetup(void)
         titlelump = W_CacheLastLumpName("TITLEPI2");
         creditlump = W_CacheLastLumpName("CREDIT1");
     }
-    else if (W_CheckMultipleLumps("TITLEPIC"))
-    {
-        titlelump = W_CacheLumpName("TITLEPIC");
-        creditlump = W_CacheLastLumpName("CREDIT");
-    }
     else
-        switch (gamemission)
-        {
-            case doom:
-                titlelump = W_CacheLumpName(gamemode == retail ? "TITLEPI2" : "TITLEPI1");
-                creditlump = W_CacheLumpName("CREDIT1");
-                break;
+    {
+        int titlepics = W_CheckMultipleLumps("TITLEPIC");
+        int credits = W_CheckMultipleLumps("CREDIT");
 
-            case doom2:
-            case pack_nerve:
-                titlelump = W_CacheLumpName("TITLEPI3");
-                creditlump = W_CacheLumpName("CREDIT2");
-                break;
+        if ((titlepics == 1 && lumpinfo[W_GetNumForName("TITLEPIC")]->wadfile->type == PWAD) || titlepics > 1)
+            titlelump = W_CacheLumpName("TITLEPIC");
+        else
+            switch (gamemission)
+            {
+                case doom:
+                    titlelump = W_CacheLumpName(gamemode == retail ? "TITLEPI2" : "TITLEPI1");
+                    break;
 
-            case pack_plut:
-                titlelump = W_CacheLumpName("TITLEPI4");
-                creditlump = W_CacheLumpName("CREDIT2");
-                break;
+                case doom2:
+                case pack_nerve:
+                    titlelump = W_CacheLumpName("TITLEPI3");
+                    break;
 
-            case pack_tnt:
-                titlelump = W_CacheLumpName("TITLEPI5");
-                creditlump = W_CacheLumpName("CREDIT2");
-                break;
+                case pack_plut:
+                    titlelump = W_CacheLumpName("TITLEPI4");
+                    break;
 
-            case none:
-                break;
-        }
+                case pack_tnt:
+                    titlelump = W_CacheLumpName("TITLEPI5");
+                    break;
+
+                case none:
+                    break;
+            }
+
+        if ((credits == 1 && lumpinfo[W_GetNumForName("CREDIT")]->wadfile->type == PWAD) || credits > 1)
+            creditlump = W_CacheLumpName("CREDIT");
+        else
+            switch (gamemission)
+            {
+                case doom:
+                    creditlump = W_CacheLumpName("CREDIT1");
+                    break;
+
+                case doom2:
+                case pack_nerve:
+                    creditlump = W_CacheLumpName("CREDIT2");
+                    break;
+
+                case pack_plut:
+                    creditlump = W_CacheLumpName("CREDIT2");
+                    break;
+
+                case pack_tnt:
+                    creditlump = W_CacheLumpName("CREDIT2");
+                    break;
+
+                case none:
+                    break;
+            }
+
+    }
 
     if (gameaction != ga_loadgame)
     {

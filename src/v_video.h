@@ -46,6 +46,11 @@
 // VIDEO
 //
 
+#define DX  ((NONWIDEWIDTH << FRACBITS) / VANILLAWIDTH)
+#define DXI ((VANILLAWIDTH << FRACBITS) / NONWIDEWIDTH)
+#define DY  ((SCREENHEIGHT << FRACBITS) / VANILLAHEIGHT)
+#define DYI ((VANILLAHEIGHT << FRACBITS) / SCREENHEIGHT)
+
 // Screen 0 is the screen updated by I_Update screen.
 // Screen 1 is an extra buffer.
 extern byte *screens[5];
@@ -67,7 +72,7 @@ void V_FillSoftTransRect(int scrn, int x, int y, int width, int height, int colo
 void V_DrawPatch(int x, int y, int scrn, patch_t *patch);
 void V_DrawWidePatch(int x, int y, int scrn, patch_t *patch);
 void V_DrawBigPatch(int x, int y, patch_t *patch);
-void V_DrawBigWidePatch(int x, int y, int scrn, patch_t *patch);
+void V_DrawBigWidePatch(int x, int y, patch_t *patch);
 void V_DrawConsolePatch(int x, int y, patch_t *patch, int color, int maxwidth);
 void V_DrawConsoleBrandingPatch(int x, int y, patch_t *patch, int color);
 void V_DrawConsoleInputTextPatch(int x, int y, patch_t *patch, int width, int color,
