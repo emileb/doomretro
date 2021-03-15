@@ -1705,7 +1705,8 @@ static void P_WriteObituary(mobj_t *target, mobj_t *inflicter, mobj_t *source, d
                             (gibbed ? "gibbed" : "killed"),
                             (isvowel(inflicter->info->name1[0]) ? "an" : "a"),
                             (*inflicter->info->name1 ? inflicter->info->name1 : "monster"),
-                            (isvowel(mobjinfo[inflicter->inflicter].name1[0]) ? "an" : "a"),
+                            (inflicter->type == inflicter->inflicter ? "another" :
+                                (isvowel(mobjinfo[inflicter->inflicter].name1[0]) ? "an" : "a")),
                             mobjinfo[inflicter->inflicter].name1);
                     else
                         C_PlayerMessage("%s was %s by %s %s that %s %s exploded.",
@@ -1713,7 +1714,8 @@ static void P_WriteObituary(mobj_t *target, mobj_t *inflicter, mobj_t *source, d
                             (gibbed ? "gibbed" : "killed"),
                             (isvowel(inflicter->info->name1[0]) ? "an" : "a"),
                             (*inflicter->info->name1 ? inflicter->info->name1 : "monster"),
-                            (isvowel(mobjinfo[inflicter->inflicter].name1[0]) ? "an" : "a"),
+                            (inflicter->type == inflicter->inflicter ? "another" :
+                                (isvowel(mobjinfo[inflicter->inflicter].name1[0]) ? "an" : "a")),
                             mobjinfo[inflicter->inflicter].name1);
                 }
             }
@@ -1752,7 +1754,8 @@ static void P_WriteObituary(mobj_t *target, mobj_t *inflicter, mobj_t *source, d
                         (gibbed ? "gibbed" : "killed"),
                         (isvowel(inflicter->info->name1[0]) ? "an" : "a"),
                         (*inflicter->info->name1 ? inflicter->info->name1 : "monster"),
-                        (inflicter->type == target->type ? "another" : (isvowel(mobjinfo[inflicter->inflicter].name1[0]) ? "an" : "a")),
+                        (inflicter->type == inflicter->inflicter ? "another" :
+                            (isvowel(mobjinfo[inflicter->inflicter].name1[0]) ? "an" : "a")),
                         mobjinfo[inflicter->inflicter].name1);
 
                 free(temp);
@@ -1860,7 +1863,7 @@ static void P_WriteObituary(mobj_t *target, mobj_t *inflicter, mobj_t *source, d
                         M_StringCopy(targetname, target->name, sizeof(targetname));
                     else
                         M_snprintf(targetname, sizeof(targetname), "%s %s%s",
-                            ((target->flags &MF_FRIEND) && monstercount[target->type] == 1 ? "the" :
+                            ((target->flags & MF_FRIEND) && monstercount[target->type] == 1 ? "the" :
                                 (isvowel(target->info->name1[0]) ? "an" : "a")),
                             ((target->flags & MF_FRIEND) ? "friendly " : ""),
                             (*target->info->name1 ? target->info->name1 : "monster"));
@@ -1877,7 +1880,7 @@ static void P_WriteObituary(mobj_t *target, mobj_t *inflicter, mobj_t *source, d
                     M_StringCopy(sourcename, source->name, sizeof(sourcename));
                 else
                     M_snprintf(sourcename, sizeof(sourcename), "%s %s%s",
-                        ((source->flags &MF_FRIEND) && monstercount[source->type] == 1 ? "the" :
+                        ((source->flags & MF_FRIEND) && monstercount[source->type] == 1 ? "the" :
                             (isvowel(source->info->name1[0]) ? "an" : "a")),
                         ((source->flags & MF_FRIEND) ? "friendly " : ""),
                         (*source->info->name1 ? source->info->name1 : "monster"));
@@ -2030,8 +2033,13 @@ void P_KillMobj(mobj_t *target, mobj_t *inflicter, mobj_t *source)
         stat_barrelsexploded = SafeAdd(stat_barrelsexploded, 1);
     }
 
-    if (type == MT_BARREL && source)
-        P_SetTarget(&target->target, source);
+    if (type == MT_BARREL)
+    {
+        if (inflicter)
+            P_SetTarget(&target->target, inflicter);
+        else if (source)
+            P_SetTarget(&target->target, source);
+    }
 
     if (inflicter)
         target->inflicter = inflicter->type;
@@ -2187,6 +2195,9 @@ void P_DamageMobj(mobj_t *target, mobj_t *inflicter, mobj_t *source, int damage,
 
                 if (M_Random() & 1)
                     target->flags2 ^= MF2_MIRRORED;
+
+                if (con_obituaries)
+                    P_WriteObituary(target, inflicter, source, true);
             }
         }
 
@@ -2267,6 +2278,9 @@ void P_DamageMobj(mobj_t *target, mobj_t *inflicter, mobj_t *source, int damage,
              damagecount = 8;
 
         tplayer->damagecount = MIN(damagecount, 100);
+
+        if (r_shake_damage)
+            I_UpdateBlitFunc(tplayer->damagecount);
 
         if (gp_vibrate_damage)
         {

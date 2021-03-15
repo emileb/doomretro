@@ -1714,7 +1714,8 @@ static void A_PainShootSkull(mobj_t *actor, angle_t angle)
     P_UpdateThinker(&newmobj->thinker);
 
     // [BH] put in attack state
-    P_SetMobjState(newmobj, S_SKULL_ATK2);
+    if (!states[S_PAIN_STND].dehacked)
+        P_SetMobjState(newmobj, S_SKULL_ATK2);
 
     P_SetTarget(&newmobj->target, actor->target);
     A_SkullAttack(newmobj, NULL, NULL);
@@ -1985,7 +1986,7 @@ void A_BrainAwake(mobj_t *actor, player_t *player, pspdef_t *psp)
 
 void A_BrainPain(mobj_t *actor, player_t *player, pspdef_t *psp)
 {
-    S_StartSoundOnce(NULL, sfx_bospn);
+    S_StartSound(NULL, sfx_bospn);
 }
 
 void A_BrainScream(mobj_t *actor, player_t *player, pspdef_t *psp)

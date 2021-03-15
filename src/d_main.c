@@ -559,7 +559,6 @@ void D_PageDrawer(void)
     }
     else
     {
-        // [crispy] fill pillarboxes in widescreen mode
         if (SCREENWIDTH != NONWIDEWIDTH)
             memset(screens[0], pillarboxcolor, SCREENAREA);
 
@@ -606,6 +605,9 @@ void D_DoAdvanceTitle(void)
 
             if (alwaysrun)
                 C_StrCVAROutput(stringize(alwaysrun), "on");
+
+            if (DMENUPIC && !devparm)
+                M_StartControlPanel();
         }
 
         if (pagelump == creditlump)
@@ -795,11 +797,37 @@ static void LoadCfgFile(char *path)
         M_LoadCVARs(cfgpath);
 }
 
-static dboolean D_IsDOOMIWAD(char *filename)
+static dboolean D_IsDOOM1IWAD(char *filename)
 {
-    return (M_StringEndsWith(filename, "DOOM.WAD") || M_StringEndsWith(filename, "DOOM1.WAD")
-        || M_StringEndsWith(filename, "DOOM2.WAD") || M_StringEndsWith(filename, "PLUTONIA.WAD")
-        || M_StringEndsWith(filename, "TNT.WAD") || (hacx = M_StringEndsWith(filename, "HACX.WAD")));
+    char    *file = leafname(filename);
+
+    return (M_StringCompare(file, "DOOM.WAD")
+        || M_StringCompare(file, "DOOM1.WAD")
+        || M_StringCompare(file, "DOOMU.WAD")
+        || M_StringCompare(file, "BFGDOOM.WAD")
+        || M_StringCompare(file, "DOOMBFG.WAD")
+        || M_StringCompare(file, "DOOMUNITY.WAD"));
+}
+
+static dboolean D_IsDOOM2IWAD(char *filename)
+{
+    char    *file = leafname(filename);
+
+    return (M_StringCompare(file, "DOOM2.WAD")
+        || M_StringCompare(file, "DOOM2F.WAD")
+        || M_StringCompare(file, "BFGDOOM2.WAD")
+        || M_StringCompare(file, "DOOM2BFG.WAD")
+        || M_StringCompare(file, "DOOM2UNITY.WAD")
+        || M_StringCompare(file, "PLUTONIA.WAD")
+        || M_StringCompare(file, "PLUTONIAUNITY.WAD")
+        || M_StringCompare(file, "TNT.WAD")
+        || M_StringCompare(file, "TNTUNITY.WAD")
+        || (hacx = M_StringCompare(file, "HACX.WAD")));
+}
+
+dboolean D_IsDOOMIWAD(char *filename)
+{
+    return (D_IsDOOM1IWAD(filename) || D_IsDOOM2IWAD(filename));
 }
 
 static dboolean D_IsUnsupportedIWAD(char *filename)
@@ -819,7 +847,7 @@ static dboolean D_IsUnsupportedIWAD(char *filename)
     };
 
     for (int i = 0; i < arrlen(unsupported); i++)
-        if (M_StringEndsWith(filename, unsupported[i].iwad))
+        if (M_StringCompare(leafname(filename), unsupported[i].iwad))
         {
             char    buffer[1024];
 
@@ -850,52 +878,55 @@ static dboolean D_IsDehFile(char *filename)
 
 static void D_CheckSupportedPWAD(char *filename)
 {
-    if (M_StringEndsWith(filename, "SIGIL.wad") || M_StringEndsWith(filename, "SIGIL_v1_1.wad")
-        || M_StringEndsWith(filename, "SIGIL_v1_2.wad") || M_StringEndsWith(filename, "SIGIL_v1_21.wad"))
+    if (M_StringCompare(leafname(filename), "SIGIL.wad")
+        || M_StringCompare(leafname(filename), "SIGIL_v1_1.wad")
+        || M_StringCompare(leafname(filename), "SIGIL_v1_2.wad")
+        || M_StringCompare(leafname(filename), "SIGIL_v1_21.wad"))
     {
         sigil = true;
         episode = 5;
     }
-    else if (M_StringEndsWith(filename, "NERVE.WAD"))
+    else if (M_StringCompare(leafname(filename), "NERVE.WAD"))
     {
         nerve = true;
         expansion = 2;
     }
-    else if (M_StringEndsWith(filename, "chex.wad"))
+    else if (M_StringCompare(leafname(filename), "chex.wad"))
         chex = chex1 = true;
-    else if (M_StringEndsWith(filename, "chex2.wad"))
+    else if (M_StringCompare(leafname(filename), "chex2.wad"))
         chex = chex2 = true;
-    else if (M_StringEndsWith(filename, "btsx_e1.wad"))
+    else if (M_StringCompare(leafname(filename), "btsx_e1.wad"))
         BTSX = BTSXE1 = true;
-    else if (M_StringEndsWith(filename, "btsx_e1a.wad"))
+    else if (M_StringCompare(leafname(filename), "btsx_e1a.wad"))
         BTSX = BTSXE1 = BTSXE1A = true;
-    else if (M_StringEndsWith(filename, "btsx_e1b.wad"))
+    else if (M_StringCompare(leafname(filename), "btsx_e1b.wad"))
         BTSX = BTSXE1 = BTSXE1B = true;
-    else if (M_StringEndsWith(filename, "btsx_e2a.wad"))
+    else if (M_StringCompare(leafname(filename), "btsx_e2a.wad"))
         BTSX = BTSXE2 = BTSXE2A = true;
-    else if (M_StringEndsWith(filename, "btsx_e2b.wad"))
+    else if (M_StringCompare(leafname(filename), "btsx_e2b.wad"))
         BTSX = BTSXE2 = BTSXE2B = true;
-    else if (M_StringEndsWith(filename, "btsx_e3a.wad"))
+    else if (M_StringCompare(leafname(filename), "btsx_e3a.wad"))
         BTSX = BTSXE3 = BTSXE3A = true;
-    else if (M_StringEndsWith(filename, "btsx_e3b.wad"))
+    else if (M_StringCompare(leafname(filename), "btsx_e3b.wad"))
         BTSX = BTSXE3 = BTSXE3B = true;
-    else if (M_StringEndsWith(filename, "e1m4b.wad"))
+    else if (M_StringCompare(leafname(filename), "e1m4b.wad"))
         E1M4B = true;
-    else if (M_StringEndsWith(filename, "e1m8b.wad"))
+    else if (M_StringCompare(leafname(filename), "e1m8b.wad"))
         E1M8B = true;
-    else if (M_StringEndsWith(filename, "d1spfx18.wad") || M_StringEndsWith(filename, "d2spfx18.wad"))
+    else if (M_StringCompare(leafname(filename), "d1spfx18.wad")
+        || M_StringCompare(leafname(filename), "d2spfx18.wad"))
         sprfix18 = true;
-    else if (M_StringEndsWith(filename, "eviternity.wad"))
+    else if (M_StringCompare(leafname(filename), "eviternity.wad"))
         eviternity = true;
-    else if (M_StringEndsWith(filename, "d4v.wad"))
+    else if (M_StringCompare(leafname(filename), "d4v.wad"))
         doom4vanilla = true;
-    else if (M_StringEndsWith(filename, "remnant.wad"))
+    else if (M_StringCompare(leafname(filename), "remnant.wad"))
         remnant = true;
 }
 
 static dboolean D_IsUnsupportedPWAD(char *filename)
 {
-    return (error = (M_StringEndsWith(filename, PACKAGE_WAD)));
+    return (error = (M_StringCompare(leafname(filename), PACKAGE_WAD)));
 }
 
 static dboolean D_CheckParms(void)
@@ -917,7 +948,7 @@ static dboolean D_CheckParms(void)
                 iwadfolder = M_StringDuplicate(folder);
 
                 // if DOOM.WAD is selected, load SIGIL.WAD automatically if present
-                if (M_StringEndsWith(myargv[1], "DOOM.WAD") && IsUltimateDOOM(myargv[1]))
+                if (D_IsDOOM1IWAD(myargv[1]) && IsUltimateDOOM(myargv[1]))
                 {
                     char    fullpath[MAX_PATH];
 
@@ -959,7 +990,7 @@ static dboolean D_CheckParms(void)
                     }
                 }
                 // if DOOM2.WAD is selected, load NERVE.WAD automatically if present
-                else if (M_StringEndsWith(myargv[1], "DOOM2.WAD"))
+                else if (D_IsDOOM2IWAD(myargv[1]))
                 {
                     char    fullpath[MAX_PATH];
 
@@ -1223,7 +1254,7 @@ static int D_OpenWADLauncher(void)
                     iwadfolder = M_StringDuplicate(folder);
 
                     // if DOOM.WAD is selected, load SIGIL.WAD automatically if present
-                    if (M_StringEndsWith(file, "DOOM.WAD") && IsUltimateDOOM(file))
+                    if (D_IsDOOM1IWAD(file) && IsUltimateDOOM(file))
                     {
                         char    fullpath[MAX_PATH];
 
@@ -1265,7 +1296,7 @@ static int D_OpenWADLauncher(void)
                         }
                     }
                     // if DOOM2.WAD is selected, load NERVE.WAD automatically if present
-                    else if (M_StringEndsWith(file, "DOOM2.WAD"))
+                    else if (D_IsDOOM2IWAD(file))
                     {
                         char    fullpath[MAX_PATH];
 
@@ -1443,7 +1474,7 @@ static int D_OpenWADLauncher(void)
                     {
                         iwadfound = 1;
                         sharewareiwad = M_StringCompare(iwadpass1, "DOOM1.WAD");
-                        isDOOM2 = M_StringCompare(iwadpass1, "DOOM2.WAD");
+                        isDOOM2 = D_IsDOOM2IWAD(iwadpass1);
 
 #if defined(_WIN32)
                         if (!guess)
@@ -1489,7 +1520,7 @@ static int D_OpenWADLauncher(void)
                         {
                             iwadfound = 1;
                             sharewareiwad = M_StringCompare(iwadpass2, "DOOM1.WAD");
-                            isDOOM2 = M_StringCompare(iwadpass2, "DOOM2.WAD");
+                            isDOOM2 = D_IsDOOM2IWAD(iwadpass2);
 
 #if defined(_WIN32)
                             if (!guess)
@@ -2333,7 +2364,11 @@ static void D_DoomMainSetup(void)
 
                 case doom2:
                 case pack_nerve:
-                    titlelump = W_CacheLumpName("TITLEPI3");
+                    if ((DMENUPIC = (bfgedition && gamemode == commercial)))
+                        titlelump = W_CacheLumpName("DMENUPIC");
+                    else
+                        titlelump = W_CacheLumpName("TITLEPI3");
+
                     break;
 
                 case pack_plut:

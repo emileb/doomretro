@@ -1409,7 +1409,7 @@ static void M_DrawReadThis(void)
     char    lumpname[6] = "HELP1";
 
     if (gamemode == shareware)
-        M_StringCopy(lumpname, (W_CheckNumForName("HELP3") >= 0 ? "HELP3" : "HELP2"), sizeof(lumpname));
+        M_StringCopy(lumpname, "HELP3", sizeof(lumpname));
     else if (gamemode == registered)
         M_StringCopy(lumpname, "HELP2", sizeof(lumpname));
     else if (gamemode == commercial)
@@ -1417,32 +1417,48 @@ static void M_DrawReadThis(void)
 
     if (W_CheckNumForName(lumpname) >= 0)
     {
-        if (automapactive)
-            memset(screens[0], nearestcolors[245], SCREENAREA);
-        else
+        if (hacx || FREEDOOM)
         {
-            viewplayer->fixedcolormap = 0;
-            M_DarkBlueBackground();
-        }
+            patch_t *lump = W_CacheLastLumpName(gamemode == commercial ? "HELP" : "HELP1");
 
-        if (hacx)
-        {
             if (SCREENWIDTH != NONWIDEWIDTH)
-                memset(screens[0], FindDominantEdgeColor(W_CacheLumpName("HELP")), SCREENAREA);
+                memset(screens[0], FindDominantEdgeColor(lump), SCREENAREA);
 
-            V_DrawPatch(0, 0, 0, W_CacheLumpName("HELP"));
+            V_DrawPatch(0, 0, 0, lump);
         }
         else if (autosigil)
-            V_DrawPatchWithShadow(0, 0, W_CacheLumpNum(W_GetSecondNumForName(lumpname)), false);
+        {
+            if (automapactive)
+                memset(screens[0], nearestcolors[245], SCREENAREA);
+            else
+            {
+                viewplayer->fixedcolormap = 0;
+                M_DarkBlueBackground();
+            }
+
+            V_DrawPatchWithShadow(0, 0, W_CacheSecondLumpName(lumpname), false);
+        }
         else if (W_CheckMultipleLumps(lumpname) > 2)
         {
-            if (SCREENWIDTH != NONWIDEWIDTH)
-                memset(screens[0], FindDominantEdgeColor(W_CacheLumpName(lumpname)), SCREENAREA);
+            patch_t *lump = W_CacheLumpName(lumpname);
 
-            V_DrawPatch(0, 0, 0, W_CacheLumpName(lumpname));
+            if (SCREENWIDTH != NONWIDEWIDTH)
+                memset(screens[0], FindDominantEdgeColor(lump), SCREENAREA);
+
+            V_DrawPatch(0, 0, 0, lump);
         }
         else
+        {
+            if (automapactive)
+                memset(screens[0], nearestcolors[245], SCREENAREA);
+            else
+            {
+                viewplayer->fixedcolormap = 0;
+                M_DarkBlueBackground();
+            }
+
             V_DrawPatchWithShadow(0, 0, W_CacheLumpName(lumpname), false);
+        }
     }
 }
 

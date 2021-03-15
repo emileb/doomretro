@@ -1145,11 +1145,10 @@ static void WI_LoadData(void)
 
     WI_LoadUnloadData(&WI_LoadCallback);
 
-    // These two graphics are special cased because we're sharing
-    // them with the status bar code
-
     // Background image
-    if (gamemode == commercial)
+    if (FREEDOOM || hacx)
+        lump = W_CacheLastLumpName("INTERPIC");
+    else if (gamemode == commercial)
     {
         int lumpnum = P_GetMapEnterPic(gamemap);
 
@@ -1174,7 +1173,6 @@ static void WI_LoadData(void)
         lump = W_CacheLumpName(temp);
     }
 
-    // [crispy] fill pillarboxes in widescreen mode
     if (SCREENWIDTH != NONWIDEWIDTH)
         memset(screens[1], FindDominantEdgeColor(lump), SCREENAREA);
 

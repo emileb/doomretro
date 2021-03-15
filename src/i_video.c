@@ -1585,11 +1585,11 @@ static void SetVideoMode(dboolean createwindow, dboolean output)
         }
     }
 
-
 #ifdef __ANDROID__
     if( M_CheckParm("-android_aspect") )
 #endif
-    if (SDL_RenderSetLogicalSize(renderer, SCREENWIDTH * !(vid_widescreen && vid_fullscreen), ACTUALHEIGHT) < 0)
+    if (SDL_RenderSetLogicalSize(renderer, SCREENWIDTH * !vid_widescreen, ACTUALHEIGHT) < 0)
+
         I_SDLError(SDL_RenderSetLogicalSize);
 
 

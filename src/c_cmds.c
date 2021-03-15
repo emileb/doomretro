@@ -499,7 +499,7 @@ consolecmd_t consolecmds[] =
     CVAR_BOOL(autouse, "", bool_cvars_func1, bool_cvars_func2, BOOLVALUEALIAS,
         "Toggles automatically using doors and switches in front of the player"),
     CCMD(bind, "", null_func1, bind_cmd_func2, true, BINDCMDFORMAT,
-        "Binds an <i><b>action</b></i> or string of <i><b>commands</b></i> to a <i><b>control</b></i>."),
+        "Binds an <b>+</b><i><b>action</b></i> or string of <i><b>commands</b></i> to a <i><b>control</b></i>."),
     CCMD(bindlist, "", null_func1, bindlist_cmd_func2, false, "",
         "Lists all bound controls."),
     CVAR_BOOL(centerweapon, centreweapon, bool_cvars_func1, bool_cvars_func2, BOOLVALUEALIAS,
@@ -528,7 +528,7 @@ consolecmd_t consolecmds[] =
         "The currently selected <i>DOOM</i> episode in the menu (<b>1</b> to <b>5</b>)."),
     CCMD(exec, "", null_func1, exec_cmd_func2, true, EXECCMDFORMAT,
         "Executes a series of commands stored in a file."),
-    CCMD(exitmap, "", game_func1, exitmap_cmd_func2, false, "",
+    CCMD(exitmap, "", alive_func1, exitmap_cmd_func2, false, "",
         "Exits the current map."),
     CVAR_INT(expansion, "", int_cvars_func1, expansion_cvar_func2, CF_NONE, NOVALUEALIAS,
         "The currently selected <i>DOOM II</i> expansion in the menu (<b>1</b> or <b>2</b>)."),
@@ -794,9 +794,9 @@ consolecmd_t consolecmds[] =
     CVAR_INT(turbo, "", turbo_cvar_func1, turbo_cvar_func2, CF_PERCENT, NOVALUEALIAS,
         "The speed the player moves (<b>10%</b> to <b>400%</b>)."),
     CCMD(unbind, "", null_func1, unbind_cmd_func2, true, UNBINDCMDFORMAT,
-        "Unbinds the +<i><b>action</b></i> from a <i><b>control</b></i>."),
+        "Unbinds the <b>+</b><i><b>action</b></i> from a <i><b>control</b></i>."),
     CVAR_BOOL(units, "", units_cvar_func1, units_cvar_func2, UNITSVALUEALIAS,
-        "The units used in the <b>mapstats</b> and <b>playerstats</b> CCMDs (<b>imperial</b> or <b>metric</b>)."),
+        "The units used by the <b>mapstats</b> and <b>playerstats</b> CCMDs (<b>imperial</b> or <b>metric</b>)."),
     CCMD(vanilla, "", null_func1, vanilla_cmd_func2, true, "[<b>on</b>|<b>off</b>]",
         "Toggles vanilla mode."),
     CVAR_STR(version, "", null_func1, str_cvars_func2, CF_READONLY,
@@ -1929,6 +1929,9 @@ static void exitmap_cmd_func2(char *cmd, char *parms)
 {
     G_ExitLevel();
     C_HideConsoleFast();
+    viewplayer->cheated++;
+    stat_cheated = SafeAdd(stat_cheated, 1);
+    M_SaveCVARs();
 }
 
 //
@@ -6784,9 +6787,10 @@ static void thinglist_cmd_func2(char *cmd, char *parms)
         if (*mobj->name)
             M_StringCopy(name, mobj->name, sizeof(name));
         else
-            M_snprintf(name, sizeof(name), "%s%s", ((mobj->flags & MF_CORPSE) && !(mobj->flags2 & MF2_DECORATION) ? "dead " :
+            M_snprintf(name, sizeof(name), "%s%s%s", ((mobj->flags & MF_CORPSE) && !(mobj->flags2 & MF2_DECORATION) ? "dead " :
                 ((mobj->flags & MF_FRIEND) && mobj->type != MT_PLAYER ? "friendly " : ((mobj->flags & MF_DROPPED) ? "dropped " : ""))),
-                (mobj->type == MT_PLAYER && mobj != viewplayer->mo ? "voodoo doll" : (*mobj->info->name1 ? mobj->info->name1 : "-")));
+                (mobj->type == MT_PLAYER && mobj != viewplayer->mo ? "voodoo doll" : (*mobj->info->name1 ? mobj->info->name1 : "-")),
+                ((mobj->flags & MF_MISSILE) ? " projectile" : ""));
 
         temp2 = sentencecase(name);
         C_TabbedOutput(tabs, "%s%s\t%s\t(%i,%i,%i)", (mobj->id >= 0 ? temp1 : "-"), (mobj->id >= 0 ? "." : ""),
