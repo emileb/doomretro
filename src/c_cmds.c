@@ -7,7 +7,7 @@
 ========================================================================
 
   Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2021 by Brad Harding.
+  Copyright © 2013-2021 by Brad Harding <mailto:brad@doomretro.com>.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
@@ -640,7 +640,7 @@ consolecmd_t consolecmds[] =
     CCMD(notarget, "", game_func1, notarget_cmd_func2, true, "[<b>on</b>|<b>off</b>]",
         "Toggles monsters not seeing the player as a target."),
     CCMD(pistolstart, "", null_func1, pistolstart_cmd_func2, true, "[<b>on</b>|<b>off</b>]",
-        "Toggles the player starting each map with only a pistol."),
+        "Toggles the player starting each map with 100% health, no armor, and a pistol with 50 bullets."),
     CCMD(play, "", play_cmd_func1, play_cmd_func2, true, PLAYCMDFORMAT,
         "Plays a <i><b>sound effect</b></i> or <i><b>music</b></i> lump."),
     CVAR_INT(playergender, "", playergender_cvar_func1, playergender_cvar_func2, CF_NONE, PLAYERGENDERVALUEALIAS,
@@ -1655,11 +1655,8 @@ static FILE *condumpfile = NULL;
 //
 // condump CCMD
 //
-void C_DumpConsoleStringToFile(int index)
+static void C_DumpConsoleStringToFile(int index)
 {
-    if (!condumpfile)
-        return;
-
     if (console[index].stringtype == dividerstring)
         fprintf(condumpfile, "%s\n", DIVIDERSTRING);
     else
@@ -1767,9 +1764,13 @@ static void condump_cmd_func2(char *cmd, char *parms)
         for (int i = 1; i < consolestrings; i++)
             C_DumpConsoleStringToFile(i);
 
+        fclose(condumpfile);
+
         C_Output("Dumped %s lines from the console to <b>%s</b>.", temp, filename);
         free(temp);
     }
+    else
+        C_Warning(0, "<b>%s</b> couldn't be created.", filename);
 }
 
 //
@@ -1904,11 +1905,14 @@ static void exec_cmd_func2(char *cmd, char *parms)
     }
     else
     {
-        FILE    *file = fopen(parms, "r");
+        FILE    *file = fopen(parms, "rt");
         char    strparm[256] = "";
 
         if (!file)
+        {
+            C_Warning(0, "<b>%s</b> couldn't be opened.", parms);
             return;
+        }
 
         while (fgets(strparm, 256, file) != NULL)
         {
@@ -3707,28 +3711,28 @@ static void mapstats_cmd_func2(char *cmd, char *parms)
         if (M_StringCompare(wadname, "DOOM.WAD"))
         {
             if (bfgedition)
-                C_TabbedOutput(tabs, "Release date\tOctober 16, 2012");
+                C_TabbedOutput(tabs, "Release date\tTuesday, October 16, 2012");
             else if (gameepisode == 4)
-                C_TabbedOutput(tabs, "Release date\tApril 30, 1995");
+                C_TabbedOutput(tabs, "Release date\tSunday, April 30, 1995");
             else
-                C_TabbedOutput(tabs, "Release date\tDecember 10, 1993");
+                C_TabbedOutput(tabs, "Release date\tFriday, December 10, 1993");
         }
         else if (M_StringCompare(wadname, "SIGIL_v1_21.wad")
             || M_StringCompare(wadname, "SIGIL_v1_2.wad")
             || M_StringCompare(wadname, "SIGIL_v1_1.wad")
             || M_StringCompare(wadname, "SIGIL.wad"))
-            C_TabbedOutput(tabs, "Release date\tMay 22, 2019");
+            C_TabbedOutput(tabs, "Release date\tWednesday, May 22, 2019");
         else if (M_StringCompare(wadname, "DOOM2.WAD"))
         {
             if (bfgedition)
-                C_TabbedOutput(tabs, "Release date\tOctober 16, 2012");
+                C_TabbedOutput(tabs, "Release date\tTuesday, October 16, 2012");
             else
-                C_TabbedOutput(tabs, "Release date\tSeptember 30, 1994");
+                C_TabbedOutput(tabs, "Release date\tFriday, September 30, 1994");
         }
         else if (M_StringCompare(wadname, "NERVE.WAD"))
-            C_TabbedOutput(tabs, "Release date\tMay 26, 2010");
+            C_TabbedOutput(tabs, "Release date\tWednesday, May 26, 2010");
         else if (M_StringCompare(wadname, "PLUTONIA.WAD") || M_StringCompare(wadname, "TNT.WAD"))
-            C_TabbedOutput(tabs, "Release date\tJune 17, 1996");
+            C_TabbedOutput(tabs, "Release date\tMonday, June 17, 1996");
 
         if (wadtype == PWAD)
             C_TabbedOutput(tabs, "IWAD\t%s%s", leafname(lumpinfo[W_GetLastNumForName("PLAYPAL")]->wadfile->path),
@@ -5125,27 +5129,14 @@ static void C_PlayerStats_Game(void)
     }
 
     if (favoriteweapon1 == wp_nochange && favoriteweapon2 == wp_nochange)
-    {
-        temp1 = sentencecase(weaponinfo[wp_pistol].description);
-        C_TabbedOutput(tabs, "Favorite weapon\t%s\t%s", temp1, temp1);
-        free(temp1);
-    }
+        C_TabbedOutput(tabs, "Favorite weapon\tThe %s\t The %s",
+            weaponinfo[wp_pistol].description, weaponinfo[wp_pistol].description);
     else if (favoriteweapon1 == wp_nochange)
-    {
-        temp1 = sentencecase(weaponinfo[wp_pistol].description);
-        temp2 = sentencecase(weaponinfo[favoriteweapon2].description);
-        C_TabbedOutput(tabs, "Favorite weapon\t%s\t%s", temp1, temp2);
-        free(temp1);
-        free(temp2);
-    }
+        C_TabbedOutput(tabs, "Favorite weapon\tThe %s\tThe %s",
+            weaponinfo[wp_pistol].description, weaponinfo[favoriteweapon2].description);
     else
-    {
-        temp1 = sentencecase(weaponinfo[favoriteweapon1].description);
-        temp2 = sentencecase(weaponinfo[favoriteweapon2].description);
-        C_TabbedOutput(tabs, "Favorite weapon\t%s\t%s", temp1, temp2);
-        free(temp1);
-        free(temp2);
-    }
+        C_TabbedOutput(tabs, "Favorite weapon\tThe %s\tThe %s",
+            weaponinfo[favoriteweapon1].description, weaponinfo[favoriteweapon2].description);
 
     C_TabbedOutput(tabs, "Distance traveled\t%s\t%s",
         distance(viewplayer->distancetraveled, true), distance(stat_distancetraveled, true));
@@ -5473,13 +5464,9 @@ static void C_PlayerStats_NoGame(void)
     }
 
     if (favoriteweapon1 == wp_nochange)
-        C_TabbedOutput(tabs, "Favorite weapon\t-\t-");
+        C_TabbedOutput(tabs, "Favorite weapon\t-\tThe %s", sentencecase(weaponinfo[wp_pistol].description));
     else
-    {
-        temp1 = sentencecase(weaponinfo[favoriteweapon1].description);
-        C_TabbedOutput(tabs, "Favorite weapon\t-\t%s", temp1);
-        free(temp1);
-    }
+        C_TabbedOutput(tabs, "Favorite weapon\t-\tThe %s", sentencecase(weaponinfo[favoriteweapon1].description));
 
     C_TabbedOutput(tabs, "Distance traveled\t-\t%s", distance(stat_distancetraveled, true));
 }
@@ -6780,7 +6767,7 @@ static void thinglist_cmd_func2(char *cmd, char *parms)
     for (thinker_t *th = thinkers[th_mobj].cnext; th != &thinkers[th_mobj]; th = th->cnext)
     {
         mobj_t  *mobj = (mobj_t *)th;
-        char    name[100];
+        char    name[33];
         char    *temp1 = commify(mobj->id);
         char    *temp2;
 
@@ -6931,7 +6918,7 @@ static void vanilla_cmd_func2(char *cmd, char *parms)
 
         SC_Close();
 
-        buddha = viewplayer->cheats & CF_BUDDHA;
+        buddha = (viewplayer->cheats & CF_BUDDHA);
         viewplayer->cheats &= ~CF_BUDDHA;
 
         hud = r_hud;
@@ -7329,6 +7316,13 @@ static void am_path_cvar_func2(char *cmd, char *parms)
 {
     bool_cvars_func2(cmd, parms);
 
+    if (am_path)
+    {
+        viewplayer->cheated++;
+        stat_cheated = SafeAdd(stat_cheated, 1);
+        M_SaveCVARs();
+    }
+
     if (automapactive)
         D_FadeScreen();
 }
@@ -7561,6 +7555,7 @@ static void mouselook_cvar_func2(char *cmd, char *parms)
         {
             R_InitSkyMap();
             R_InitColumnFunctions();
+            D_FadeScreen();
 
             if (!mouselook)
             {
@@ -7773,10 +7768,18 @@ static void playergender_cvar_func2(char *cmd, char *parms)
 //
 static void playername_cvar_func2(char *cmd, char *parms)
 {
+    char    *temp;
+
     str_cvars_func2(cmd, (M_StringCompare(parms, EMPTYVALUE) ? playername_default : parms));
 
-    if (!M_StringCompare(parms, playername_default))
-        playername[0] = toupper(playername[0]);
+    temp = M_StringDuplicate(playername);
+
+    if (M_StringCompare(temp, playername_default))
+        temp = lowercase(temp);
+    else
+        temp[0] = toupper(temp[0]);
+
+    playername = temp;
 }
 
 //
@@ -8147,12 +8150,11 @@ static void r_screensize_cvar_func2(char *cmd, char *parms)
 
         if (strlen(parms) == 1 && value >= r_screensize_min && value <= r_screensize_max && value != r_screensize)
         {
-            if (value == 8)
-                r_hud = true;
-
             r_screensize = value;
-            M_SaveCVARs();
+            S_StartSound(NULL, sfx_stnmov);
             R_SetViewSize(r_screensize);
+            r_hud = (r_screensize == r_screensize_max);
+            M_SaveCVARs();
 
             if (r_playersprites)
                 skippsprinterp = true;

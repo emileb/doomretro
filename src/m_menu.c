@@ -7,7 +7,7 @@
 ========================================================================
 
   Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2021 by Brad Harding.
+  Copyright © 2013-2021 by Brad Harding <mailto:brad@doomretro.com>.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
@@ -184,11 +184,11 @@ enum
 
 static menuitem_t MainMenu[] =
 {
-    { 1, "M_NGAME",  M_NewGame,  &s_M_NEWGAME  },
-    { 1, "M_OPTION", M_Options,  &s_M_OPTIONS  },
-    { 1, "M_LOADG",  M_LoadGame, &s_M_LOADGAME },
-    { 1, "M_SAVEG",  M_SaveGame, &s_M_SAVEGAME },
-    { 1, "M_QUITG",  M_QuitDOOM, &s_M_QUITGAME }
+    { 1, "M_NGAME",  &M_NewGame,  &s_M_NEWGAME  },
+    { 1, "M_OPTION", &M_Options,  &s_M_OPTIONS  },
+    { 1, "M_LOADG",  &M_LoadGame, &s_M_LOADGAME },
+    { 1, "M_SAVEG",  &M_SaveGame, &s_M_SAVEGAME },
+    { 1, "M_QUITG",  &M_QuitDOOM, &s_M_QUITGAME }
 };
 
 menu_t MainDef =
@@ -196,7 +196,7 @@ menu_t MainDef =
     5,
     NULL,
     MainMenu,
-    M_DrawMainMenu,
+    &M_DrawMainMenu,
     98, 77,
     new_game
 };
@@ -220,16 +220,16 @@ enum
 
 static menuitem_t EpisodeMenu[] =
 {
-    { 1, "M_EPI1", M_Episode, &s_M_EPISODE1 },
-    { 1, "M_EPI2", M_Episode, &s_M_EPISODE2 },
-    { 1, "M_EPI3", M_Episode, &s_M_EPISODE3 },
-    { 1, "M_EPI4", M_Episode, &s_M_EPISODE4 },
-    { 1, "M_EPI5", M_Episode, &s_M_EPISODE5 },
+    { 1, "M_EPI1", &M_Episode, &s_M_EPISODE1 },
+    { 1, "M_EPI2", &M_Episode, &s_M_EPISODE2 },
+    { 1, "M_EPI3", &M_Episode, &s_M_EPISODE3 },
+    { 1, "M_EPI4", &M_Episode, &s_M_EPISODE4 },
+    { 1, "M_EPI5", &M_Episode, &s_M_EPISODE5 },
 
     // Some extra empty episodes for extensibility through UMAPINFO
-    { 1, "M_EPI6", M_Episode, &s_M_EPISODE6 },
-    { 1, "M_EPI7", M_Episode, &s_M_EPISODE7 },
-    { 1, "M_EPI8", M_Episode, &s_M_EPISODE8 }
+    { 1, "M_EPI6", &M_Episode, &s_M_EPISODE6 },
+    { 1, "M_EPI7", &M_Episode, &s_M_EPISODE7 },
+    { 1, "M_EPI8", &M_Episode, &s_M_EPISODE8 }
 };
 
 menu_t EpiDef =
@@ -237,7 +237,7 @@ menu_t EpiDef =
     ep_end,
     &MainDef,
     EpisodeMenu,
-    M_DrawEpisode,
+    &M_DrawEpisode,
     41, 69,
     ep1
 };
@@ -255,8 +255,8 @@ enum
 
 static menuitem_t ExpansionMenu[] =
 {
-    { 1, "M_EPI1", M_Expansion, &s_M_EXPANSION1 },
-    { 1, "M_EPI2", M_Expansion, &s_M_EXPANSION2 }
+    { 1, "M_EPI1", &M_Expansion, &s_M_EXPANSION1 },
+    { 1, "M_EPI2", &M_Expansion, &s_M_EXPANSION2 }
 };
 
 menu_t ExpDef =
@@ -264,7 +264,7 @@ menu_t ExpDef =
     ex_end,
     &MainDef,
     ExpansionMenu,
-    M_DrawExpansion,
+    &M_DrawExpansion,
     41, 69,
     ex1
 };
@@ -285,11 +285,11 @@ enum
 
 static menuitem_t NewGameMenu[] =
 {
-    { 1, "M_JKILL", M_ChooseSkill, &s_M_SKILLLEVEL1 },
-    { 1, "M_ROUGH", M_ChooseSkill, &s_M_SKILLLEVEL2 },
-    { 1, "M_HURT",  M_ChooseSkill, &s_M_SKILLLEVEL3 },
-    { 1, "M_ULTRA", M_ChooseSkill, &s_M_SKILLLEVEL4 },
-    { 1, "M_NMARE", M_ChooseSkill, &s_M_SKILLLEVEL5 }
+    { 1, "M_JKILL", &M_ChooseSkill, &s_M_SKILLLEVEL1 },
+    { 1, "M_ROUGH", &M_ChooseSkill, &s_M_SKILLLEVEL2 },
+    { 1, "M_HURT",  &M_ChooseSkill, &s_M_SKILLLEVEL3 },
+    { 1, "M_ULTRA", &M_ChooseSkill, &s_M_SKILLLEVEL4 },
+    { 1, "M_NMARE", &M_ChooseSkill, &s_M_SKILLLEVEL5 }
 };
 
 menu_t NewDef =
@@ -297,7 +297,7 @@ menu_t NewDef =
     newg_end,
     &EpiDef,
     NewGameMenu,
-    M_DrawNewGame,
+    &M_DrawNewGame,
     45, 69,
     hurtme
 };
@@ -321,14 +321,14 @@ enum
 
 static menuitem_t OptionsMenu[] =
 {
-    {  1, "M_ENDGAM", M_EndGame,           &s_M_ENDGAME          },
-    {  1, "M_MESSG",  M_ChangeMessages,    &s_M_MESSAGES         },
-    {  1, "M_DETAIL", M_ChangeDetail,      &s_M_GRAPHICDETAIL    },
-    {  2, "M_SCRNSZ", M_SizeDisplay,       &s_M_SCREENSIZE       },
-    { -1, "",         0,                   NULL                  },
-    {  2, "M_MSENS",  M_ChangeSensitivity, &s_M_MOUSESENSITIVITY },
-    { -1, "",         0,                   NULL                  },
-    {  1, "M_SVOL",   M_Sound,             &s_M_SOUNDVOLUME      }
+    {  1, "M_ENDGAM", &M_EndGame,           &s_M_ENDGAME          },
+    {  1, "M_MESSG",  &M_ChangeMessages,    &s_M_MESSAGES         },
+    {  1, "M_DETAIL", &M_ChangeDetail,      &s_M_GRAPHICDETAIL    },
+    {  2, "M_SCRNSZ", &M_SizeDisplay,       &s_M_SCREENSIZE       },
+    { -1, "",         NULL,                 NULL                  },
+    {  2, "M_MSENS",  &M_ChangeSensitivity, &s_M_MOUSESENSITIVITY },
+    { -1, "",         NULL,                 NULL                  },
+    {  1, "M_SVOL",   &M_Sound,             &s_M_SOUNDVOLUME      }
 };
 
 static menu_t OptionsDef =
@@ -336,7 +336,7 @@ static menu_t OptionsDef =
     opt_end,
     &MainDef,
     OptionsMenu,
-    M_DrawOptions,
+    &M_DrawOptions,
     56, 33,
     endgame
 };
@@ -349,7 +349,7 @@ enum
 
 static menuitem_t ReadMenu[] =
 {
-    { 1, "", M_FinishReadThis, NULL }
+    { 1, "", &M_FinishReadThis, NULL }
 };
 
 static menu_t ReadDef =
@@ -357,7 +357,7 @@ static menu_t ReadDef =
     read_end,
     &ReadDef,
     ReadMenu,
-    M_DrawReadThis,
+    &M_DrawReadThis,
     330, 175,
     rdthsempty
 };
@@ -377,10 +377,10 @@ enum
 
 static menuitem_t SoundMenu[] =
 {
-    {  2, "M_SFXVOL", M_SfxVol,   &s_M_SFXVOLUME   },
-    { -1, "",         0,          NULL             },
-    {  2, "M_MUSVOL", M_MusicVol, &s_M_MUSICVOLUME },
-    { -1, "",         0,          NULL             }
+    {  2, "M_SFXVOL", &M_SfxVol,   &s_M_SFXVOLUME   },
+    { -1, "",         NULL,        NULL             },
+    {  2, "M_MUSVOL", &M_MusicVol, &s_M_MUSICVOLUME },
+    { -1, "",         NULL,        NULL             }
 };
 
 static menu_t SoundDef =
@@ -388,7 +388,7 @@ static menu_t SoundDef =
     sound_end,
     &OptionsDef,
     SoundMenu,
-    M_DrawSound,
+    &M_DrawSound,
     89, 64,
     sfx_vol
 };
@@ -410,12 +410,12 @@ enum
 
 static menuitem_t LoadGameMenu[] =
 {
-    { 1, "", M_LoadSelect, NULL },
-    { 1, "", M_LoadSelect, NULL },
-    { 1, "", M_LoadSelect, NULL },
-    { 1, "", M_LoadSelect, NULL },
-    { 1, "", M_LoadSelect, NULL },
-    { 1, "", M_LoadSelect, NULL }
+    { 1, "", &M_LoadSelect, NULL },
+    { 1, "", &M_LoadSelect, NULL },
+    { 1, "", &M_LoadSelect, NULL },
+    { 1, "", &M_LoadSelect, NULL },
+    { 1, "", &M_LoadSelect, NULL },
+    { 1, "", &M_LoadSelect, NULL }
 };
 
 menu_t LoadDef =
@@ -423,7 +423,7 @@ menu_t LoadDef =
     load_end,
     &MainDef,
     LoadGameMenu,
-    M_DrawLoad,
+    &M_DrawLoad,
     67, 51,
     load1
 };
@@ -434,12 +434,12 @@ menu_t LoadDef =
 
 static menuitem_t SaveGameMenu[] =
 {
-    { 1, "", M_SaveSelect, NULL },
-    { 1, "", M_SaveSelect, NULL },
-    { 1, "", M_SaveSelect, NULL },
-    { 1, "", M_SaveSelect, NULL },
-    { 1, "", M_SaveSelect, NULL },
-    { 1, "", M_SaveSelect, NULL }
+    { 1, "", &M_SaveSelect, NULL },
+    { 1, "", &M_SaveSelect, NULL },
+    { 1, "", &M_SaveSelect, NULL },
+    { 1, "", &M_SaveSelect, NULL },
+    { 1, "", &M_SaveSelect, NULL },
+    { 1, "", &M_SaveSelect, NULL }
 };
 
 menu_t SaveDef =
@@ -447,7 +447,7 @@ menu_t SaveDef =
     load_end,
     &MainDef,
     SaveGameMenu,
-    M_DrawSave,
+    &M_DrawSave,
     67, 51,
     load1
 };
@@ -465,8 +465,8 @@ static void BlurScreen(byte *src, byte *dest, int width, int area)
         for (int x = y + width - 2; x > y; x--)
             dest[x] = tinttab50[(dest[x - 1] << 8) + dest[x]];
 
-    for (int y = width; y <= area - width * 2; y += width)
-        for (int x = y; x <= y + width - 2; x++)
+    for (int y = width; y <= area - width * 3; y += width)
+        for (int x = y; x <= y + width - 3; x++)
             dest[x] = tinttab50[(dest[x + width * ((M_BigRandom() & 3) - 1) + (M_BigRandom() & 3) - 1] << 8) + dest[x]];
 
     for (int y = area - width; y >= width; y -= width)
@@ -902,12 +902,14 @@ static dboolean M_CheckSaveGame(int *ep, int *map, int slot)
             ExpDef.lastOn = ex1;
             expansion = 1;
             gamemission = doom2;
+            M_SaveCVARs();
             return true;
         }
         else
             return false;
     }
-    else if (mission == pack_nerve)
+
+    if (mission == pack_nerve)
     {
         if (gamemission == pack_nerve)
             return true;
@@ -917,6 +919,7 @@ static dboolean M_CheckSaveGame(int *ep, int *map, int slot)
             ExpDef.lastOn = ex2;
             expansion = 2;
             gamemission = pack_nerve;
+            M_SaveCVARs();
             return true;
         }
         else
@@ -1031,15 +1034,15 @@ static void M_LoadSelect(int choice)
         S_StartSound(NULL, sfx_pistol);
         functionkey = 0;
         quickSaveSlot = choice;
-        M_ClearMenus();
         G_LoadGame(name);
     }
     else
     {
-        M_ClearMenus();
         C_ShowConsole();
         C_Warning(1, "This savegame requires a different WAD.");
     }
+
+    M_ClearMenus();
 }
 
 //
@@ -1585,19 +1588,17 @@ static void M_DrawMainMenu(void)
         MainDef.x = 97;
         MainDef.y = 72;
     }
+    else if (gamemode == commercial)
+        M_DrawCenteredPatchWithShadow(11 + OFFSET, patch);
     else
     {
         int y = 11 + OFFSET;
-        int dot1 = screens[0][(y * SCREENWIDTH + 98) * 2];
-        int dot2 = screens[0][((y + 1) * SCREENWIDTH + 99) * 2];
+        int dot1 = screens[0][(y * SCREENWIDTH + 98 + WIDESCREENDELTA) * SCREENSCALE];
+        int dot2 = screens[0][((y + 1) * SCREENWIDTH + 99 + WIDESCREENDELTA) * SCREENSCALE];
 
         M_DrawCenteredPatchWithShadow(y, patch);
-
-        if (gamemode != commercial)
-        {
-            V_DrawPixel(98, y, dot1, false);
-            V_DrawPixel(99, y + 1, dot2, false);
-        }
+        V_DrawPixel(98, y, dot1, false);
+        V_DrawPixel(99, y + 1, dot2, false);
     }
 }
 
@@ -2235,7 +2236,7 @@ static void M_SizeDisplay(int choice)
             else if (r_screensize == r_screensize_max - 1 && vid_widescreen)
             {
                 vid_widescreen = false;
-                C_StrCVAROutput(stringize(vid_widescreen), "off");
+                C_Output("%s %s", stringize(vid_widescreen), "off");
                 I_RestartGraphics(false);
                 S_StartSound(NULL, sfx_stnmov);
             }
@@ -2265,7 +2266,7 @@ static void M_SizeDisplay(int choice)
             else if (r_screensize == r_screensize_max - 1 && !vid_widescreen && !nowidescreen)
             {
                 vid_widescreen = true;
-                C_StrCVAROutput(stringize(vid_widescreen), "on");
+                C_Output("%s %s", stringize(vid_widescreen), "on");
                 I_RestartGraphics(false);
                 S_StartSound(NULL, sfx_stnmov);
             }
@@ -3138,7 +3139,7 @@ dboolean M_Responder(event_t *ev)
     }
 
     // Toggle graphic detail
-    if (key == KEY_F5 && !functionkey && !automapactive && !keydown)
+    if (key == KEY_F5 && !functionkey && (r_screensize < r_screensize_max || !automapactive) && !keydown)
     {
         keydown = key;
         functionkey = KEY_F5;

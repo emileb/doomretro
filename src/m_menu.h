@@ -7,7 +7,7 @@
 ========================================================================
 
   Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2021 by Brad Harding.
+  Copyright © 2013-2021 by Brad Harding <mailto:brad@doomretro.com>.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
@@ -91,6 +91,7 @@ void M_EndingGame(void);
 
 void M_DarkBackground(void);
 void M_DrawSmallChar(int x, int y, int i, dboolean shadow);
+void M_DrawString(int x, int y, char *string);
 void M_DrawCenteredString(int y, char *string);
 int M_StringWidth(char *string);
 

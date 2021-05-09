@@ -7,7 +7,7 @@
 ========================================================================
 
   Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2021 by Brad Harding.
+  Copyright © 2013-2021 by Brad Harding <mailto:brad@doomretro.com>.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
@@ -253,21 +253,21 @@ static void ExpandSoundData(sfxinfo_t *sfxinfo, byte *data, int samplerate, int 
     if (bits == 8)
         for (unsigned int i = 0; i < expanded_length; i++)
         {
-            byte    src = data[(i * expand_ratio) >> 8];
+            int src = data[(i * expand_ratio) >> 8];
 
             expanded[i * 2] = expanded[i * 2 + 1] = (src | (src << 8)) - 32768;
         }
     else
         for (unsigned int i = 0; i < expanded_length; i++)
         {
-            byte    src = ((i * expand_ratio) >> 8) * 2;
+            int src = ((i * expand_ratio) >> 8) * 2;
 
             expanded[i * 2] = expanded[i * 2 + 1] = (data[src] | (data[src + 1] << 8));
         }
 
     // Apply low-pass filter
     for (unsigned int i = 2; i < expanded_length * 2; i++)
-        expanded[i] = (int16_t)(alpha * expanded[i] + (1 - alpha) * expanded[i - 2]);
+        expanded[i] = (int16_t)(alpha * expanded[i] + (1.0 - alpha) * expanded[i - 2]);
 }
 
 // Load and convert a sound effect
@@ -352,7 +352,7 @@ int I_StartSound(sfxinfo_t *sfxinfo, int channel, int vol, int sep, int pitch)
         if (!(snd = GetAllocatedSoundBySfxInfoAndPitch(sfxinfo, NORM_PITCH)))
             return -1;
 
-        if (pitch != NORM_PITCH && s_randompitch)
+        if (s_randompitch && pitch && pitch != NORM_PITCH)
         {
             allocated_sound_t   *newsnd = PitchShift(snd, pitch);
 

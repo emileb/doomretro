@@ -7,7 +7,7 @@
 ========================================================================
 
   Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2021 by Brad Harding.
+  Copyright © 2013-2021 by Brad Harding <mailto:brad@doomretro.com>.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
@@ -198,7 +198,7 @@ static dboolean P_CheckMissileRange(mobj_t *actor)
 
     dist = (P_ApproxDistance(actor->x - target->x, actor->y - target->y) >> FRACBITS) - 64;
 
-    if (!actor->info->meleestate)
+    if (actor->info->meleestate == S_NULL)
         dist -= 128;                    // no melee attack, so fire more
 
     if (actor->info->maxattackrange > 0 && dist > actor->info->maxattackrange)
@@ -702,7 +702,7 @@ static dboolean P_LookForPlayer(mobj_t *actor, dboolean allaround)
 
             // killough 12/98:
             // get out of refiring loop, to avoid hitting player accidentally
-            if (actor->info->missilestate)
+            if (actor->info->missilestate != S_NULL)
             {
                 P_SetMobjState(actor, actor->info->seestate);
                 actor->flags &= ~MF_JUSTHIT;
@@ -887,7 +887,7 @@ void A_Chase(mobj_t *actor, player_t *player, pspdef_t *psp)
     }
 
     // check for melee attack
-    if (info->meleestate && P_CheckMeleeRange(actor))
+    if (info->meleestate != S_NULL && P_CheckMeleeRange(actor))
     {
         if (info->attacksound)
             S_StartSound(actor, info->attacksound);
@@ -895,14 +895,14 @@ void A_Chase(mobj_t *actor, player_t *player, pspdef_t *psp)
         P_SetMobjState(actor, info->meleestate);
 
         // killough 08/98: remember an attack
-        if (!info->missilestate)
+        if (info->missilestate == S_NULL)
             actor->flags |= MF_JUSTHIT;
 
         return;
     }
 
     // check for missile attack
-    if (info->missilestate)
+    if (info->missilestate != S_NULL)
         if (!(gameskill < sk_nightmare && !fastparm && actor->movecount))
             if (P_CheckMissileRange(actor))
             {
@@ -935,7 +935,7 @@ void A_Chase(mobj_t *actor, player_t *player, pspdef_t *psp)
             // (Current target was good, or no new target was found.)
             // If monster is a missile-less friend, give up pursuit and
             // return to player, if no attacks have occurred recently.
-            if (!actor->info->missilestate && (actor->flags & MF_FRIEND))
+            if (actor->info->missilestate == S_NULL && (actor->flags & MF_FRIEND))
             {
                 if (actor->flags & MF_JUSTHIT)          // if recent action,
                     actor->flags &= ~MF_JUSTHIT;        // keep fighting
@@ -1389,8 +1389,8 @@ void A_VileChase(mobj_t *actor, player_t *player, pspdef_t *psp)
                     // [BH] display an obituary message in the console
                     if (con_obituaries)
                     {
-                        char    actorname[100];
-                        char    corpsehitname[100];
+                        char    actorname[33];
+                        char    corpsehitname[33];
                         char    *temp;
 
                         if (*actor->name)
@@ -1470,6 +1470,7 @@ void A_Fire(mobj_t *actor, player_t *player, pspdef_t *psp)
 
 void A_StartFire(mobj_t *actor, player_t *player, pspdef_t *psp)
 {
+    S_StartSound(actor, sfx_flamst);
     A_Fire(actor, NULL, NULL);
 }
 
@@ -1500,6 +1501,8 @@ void A_VileTarget(mobj_t *actor, player_t *player, pspdef_t *psp)
     P_SetTarget(&fog->tracer, target);
 
     S_StartSound(fog, sfx_flamst);
+    S_UnlinkSound(fog);
+
     A_Fire(fog, NULL, NULL);
 }
 
@@ -2267,7 +2270,7 @@ void A_Spawn(mobj_t *actor, player_t *player, pspdef_t *psp)
         {
             mobj_t  *newmobj = P_SpawnMobj(actor->x, actor->y, (actor->state->misc2 << FRACBITS) + actor->z, type);
 
-            newmobj->flags = (newmobj->flags & ~MF_FRIEND) | (actor->flags & MF_FRIEND);
+            newmobj->flags = ((newmobj->flags & ~MF_FRIEND) | (actor->flags & MF_FRIEND));
 
             if (newmobj->flags & MF_COUNTKILL)
             {

@@ -7,7 +7,7 @@
 ========================================================================
 
   Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2021 by Brad Harding.
+  Copyright © 2013-2021 by Brad Harding <mailto:brad@doomretro.com>.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
@@ -1237,7 +1237,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, dboolean message, dbo
         case SPR_SGN2:
             temp = viewplayer->weaponowned[wp_supershotgun];
 
-            if (!P_GiveWeapon(wp_supershotgun, (special->flags & MF_DROPPED), stat))
+            if (!P_GiveWeapon(wp_supershotgun, false, stat))
                 return;
 
             if (!temp)
@@ -1721,7 +1721,7 @@ static void P_WriteObituary(mobj_t *target, mobj_t *inflicter, mobj_t *source, d
             }
             else
             {
-                char    targetname[100];
+                char    targetname[33];
                 char    *temp;
 
                 if (*target->name)
@@ -1775,7 +1775,7 @@ static void P_WriteObituary(mobj_t *target, mobj_t *inflicter, mobj_t *source, d
                             weaponinfo[readyweapon].description);
                     else
                     {
-                        char    targetname[100];
+                        char    targetname[33];
 
                         if (*target->name)
                             M_StringCopy(targetname, target->name, sizeof(targetname));
@@ -1810,11 +1810,10 @@ static void P_WriteObituary(mobj_t *target, mobj_t *inflicter, mobj_t *source, d
                                 (playergender == playergender_male ? "his" :
                                     (playergender == playergender_female ? "her" : "their")),
                                 weaponinfo[readyweapon].description);
-
                     }
                     else
                     {
-                        char    targetname[100];
+                        char    targetname[33];
 
                         if (*target->name)
                             M_StringCopy(targetname, target->name, sizeof(targetname));
@@ -1857,7 +1856,7 @@ static void P_WriteObituary(mobj_t *target, mobj_t *inflicter, mobj_t *source, d
                 }
                 else
                 {
-                    char    targetname[100];
+                    char    targetname[33];
 
                     if (*target->name)
                         M_StringCopy(targetname, target->name, sizeof(targetname));
@@ -1873,7 +1872,7 @@ static void P_WriteObituary(mobj_t *target, mobj_t *inflicter, mobj_t *source, d
             }
             else
             {
-                char    sourcename[100];
+                char    sourcename[33];
                 char    *temp;
 
                 if (*source->name)
@@ -1894,7 +1893,7 @@ static void P_WriteObituary(mobj_t *target, mobj_t *inflicter, mobj_t *source, d
                         playername);
                 else
                 {
-                    char    targetname[100];
+                    char    targetname[33];
 
                     if (*target->name)
                         M_StringCopy(targetname, target->name, sizeof(targetname));
@@ -2067,7 +2066,7 @@ void P_KillMobj(mobj_t *target, mobj_t *inflicter, mobj_t *source)
     else
         target->flags2 &= ~MF2_NOLIQUIDBOB;
 
-    if ((gibbed = (gibhealth < 0 && target->health < gibhealth && info->xdeathstate && !(source && source->type == MT_DOGS))))
+    if ((gibbed = (gibhealth < 0 && target->health < gibhealth && info->xdeathstate != S_NULL && !(source && source->type == MT_DOGS))))
         P_SetMobjState(target, info->xdeathstate);
     else
         P_SetMobjState(target, info->deathstate);
@@ -2129,12 +2128,12 @@ void P_DamageMobj(mobj_t *target, mobj_t *inflicter, mobj_t *source, int damage,
     player_t    *splayer = NULL;
     player_t    *tplayer;
     int         flags = target->flags;
-    dboolean    corpse = flags & MF_CORPSE;
+    dboolean    corpse = (flags & MF_CORPSE);
     int         type = target->type;
     mobjinfo_t  *info = &mobjinfo[type];
     dboolean    justhit = false;
 
-    if (!(flags & MF_SHOOTABLE) && (!corpse || !r_corpses_slide))
+    if (!(flags & (MF_SHOOTABLE | MF_BOUNCES)) && (!corpse || !r_corpses_slide))
         return;
 
     if (type == MT_BARREL && corpse && target == inflicter)
@@ -2185,9 +2184,9 @@ void P_DamageMobj(mobj_t *target, mobj_t *inflicter, mobj_t *source, int damage,
         {
             int state = info->xdeathstate;
 
-            if (state && target->state < &states[state])
+            if (state != S_NULL && target->state < &states[state])
             {
-                while (states[state].tics >= 0)
+                while (states[state].nextstate != S_NULL)
                     state++;
 
                 P_SetMobjState(target, state);
@@ -2361,7 +2360,7 @@ void P_ResurrectMobj(mobj_t *target)
 
     target->height = info->height;
     target->radius = info->radius;
-    target->flags = info->flags | (target->flags & MF_FRIEND);
+    target->flags = (info->flags | (target->flags & MF_FRIEND));
     target->flags2 = info->flags2;
     target->health = info->spawnhealth;
     target->shadowoffset = info->shadowoffset;

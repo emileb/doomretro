@@ -7,7 +7,7 @@
 ========================================================================
 
   Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2021 by Brad Harding.
+  Copyright © 2013-2021 by Brad Harding <mailto:brad@doomretro.com>.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
@@ -50,11 +50,11 @@
 
 //
 // Called in st_stuff module, which handles the input.
-// Returns a 1 if the cheat was successful, 0 if failed.
+// Returns true if the cheat was successful, false if failed.
 //
 char    cheatkey = '\0';
 
-int cht_CheckCheat(cheatseq_t *cht, unsigned char key)
+dboolean cht_CheckCheat(cheatseq_t *cht, unsigned char key)
 {
     if (*consolecheat && M_StringCompare(consolecheat, cht->sequence))
     {

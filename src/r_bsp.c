@@ -7,7 +7,7 @@
 ========================================================================
 
   Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2021 by Brad Harding.
+  Copyright © 2013-2021 by Brad Harding <mailto:brad@doomretro.com>.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
@@ -379,12 +379,10 @@ static void R_AddLine(seg_t *line)
         angle2 = 0 - clipangle;         // Clip at right edge
 
     // The seg is in the view range, but not necessarily visible.
-    angle1 = (angle1 + ANG90) >> ANGLETOFINESHIFT;
-    angle2 = (angle2 + ANG90) >> ANGLETOFINESHIFT;
 
     // killough 01/31/98: Here is where "slime trails" can SOMETIMES occur:
-    x1 = viewangletox[angle1];
-    x2 = viewangletox[angle2];
+    x1 = viewangletox[(angle1 + ANG90) >> ANGLETOFINESHIFT];
+    x2 = viewangletox[(angle2 + ANG90) >> ANGLETOFINESHIFT];
 
     // Does not cross a pixel?
     if (x1 >= x2)

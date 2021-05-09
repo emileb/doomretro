@@ -7,7 +7,7 @@
 ========================================================================
 
   Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2021 by Brad Harding.
+  Copyright © 2013-2021 by Brad Harding <mailto:brad@doomretro.com>.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
@@ -102,16 +102,12 @@ void R_DrawTranslucentRedToBlue33Column(void);
 void R_DrawRedToGreenColumn(void);
 void R_DrawTranslucentRedToGreen33Column(void);
 void R_DrawPlayerSpriteColumn(void);
-void R_DrawSuperShotgunColumn(void);
-void R_DrawTranslucentSuperShotgunColumn(void);
 void R_DrawShadowColumn(void);
 void R_DrawFuzzyShadowColumn(void);
 void R_DrawSolidShadowColumn(void);
 void R_DrawSolidFuzzyShadowColumn(void);
 void R_DrawBloodSplatColumn(void);
 void R_DrawSolidBloodSplatColumn(void);
-void R_DrawMegaSphereColumn(void);
-void R_DrawSolidMegaSphereColumn(void);
 
 // The Spectre/Invisibility effect.
 void R_DrawFuzzColumn(void);

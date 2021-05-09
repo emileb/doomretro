@@ -7,7 +7,7 @@
 ========================================================================
 
   Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2021 by Brad Harding.
+  Copyright © 2013-2021 by Brad Harding <mailto:brad@doomretro.com>.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
@@ -141,8 +141,6 @@ struct mapinfo_s
 // MAP related Lookup tables.
 // Store VERTEXES, LINEDEFS, SIDEDEFS, etc.
 //
-static int          mapcount;
-
 int                 numvertexes;
 vertex_t            *vertexes;
 
@@ -784,13 +782,11 @@ static void P_LoadSegs(int lump)
         // e6y: fix wrong side index
         if (side != 0 && side != 1)
         {
-            char    *temp1 = commify(i);
-            char    *temp2 = commify(side);
+            char    *temp = commify(i);
 
-            C_Warning(2, "Seg %s has a wrong side index of %s. It has been changed to 1.", temp1, temp2);
+            C_Warning(2, "Seg %s has an invalid side. It has been changed to 1.", temp);
             side = 1;
-            free(temp1);
-            free(temp2);
+            free(temp);
         }
 
         // e6y: check for wrong indexes
@@ -892,7 +888,7 @@ static void P_LoadSegs(int lump)
                         else
                         {
                             if (!li->sidedef->toptexture)
-                                C_Warning(2, "The missing top texture of linedef %s is now <b>%.8s</b>.",
+                                C_Warning(2, "The missing top texture of linedef %s has been changed to <b>%.8s</b>.",
                                     temp, linefix[j].toptexture);
                             else
                                 C_Warning(2, "The top texture of linedef %s has been changed from <b>%.8s</b> to <b>%.8s</b>.",
@@ -913,7 +909,7 @@ static void P_LoadSegs(int lump)
                         else
                         {
                             if (!li->sidedef->midtexture)
-                                C_Warning(2, "The missing middle texture of linedef %s is now <b>%.8s</b>.",
+                                C_Warning(2, "The missing middle texture of linedef %s has been changed to <b>%.8s</b>.",
                                     temp, linefix[j].middletexture);
                             else
                                 C_Warning(2, "The middle texture of linedef %s has been changed from <b>%.8s</b> to <b>%.8s</b>.",
@@ -934,7 +930,7 @@ static void P_LoadSegs(int lump)
                         else
                         {
                             if (!li->sidedef->bottomtexture)
-                                C_Warning(2, "The missing bottom texture of linedef %s is now <b>%.8s</b>.",
+                                C_Warning(2, "The missing bottom texture of linedef %s has been changed to <b>%.8s</b>.",
                                     temp, linefix[j].bottomtexture);
                             else
                                 C_Warning(2, "The bottom texture of linedef %s has been changed from <b>%.8s</b> to <b>%.8s</b>.",
@@ -997,10 +993,18 @@ static void P_LoadSegs(int lump)
                         char    *temp = commify(linedefnum);
 
                         if (linefix[j].special)
-                            C_Warning(2, "The %sline special of linedef %s has been changed from %i (\"%s\") to %i (\"%s\").",
-                                (li->linedef->special < BOOMLINESPECIALS ? "" : (li->linedef->special < MBFLINESPECIALS ?
-                                "<i>MBF</i>-compatible " : "<i>BOOM</i>-compatible ")), temp, li->linedef->special,
-                                linespecials[li->linedef->special], linefix[j].special, linespecials[linefix[j].special]);
+                        {
+                            if (li->linedef->special)
+                                C_Warning(2, "The %sline special of linedef %s has been changed from %i (\"%s\") to %i (\"%s\").",
+                                    (li->linedef->special < BOOMLINESPECIALS ? "" : (li->linedef->special < MBFLINESPECIALS ?
+                                    "<i>MBF</i>-compatible " : "<i>BOOM</i>-compatible ")), temp, li->linedef->special,
+                                    linespecials[li->linedef->special], linefix[j].special, linespecials[linefix[j].special]);
+                            else
+                                C_Warning(2, "The %sline special %i (\"%s\") has been added to linedef %s.",
+                                    (li->linedef->special < BOOMLINESPECIALS ? "" : (li->linedef->special < MBFLINESPECIALS ?
+                                    "<i>MBF</i>-compatible " : "<i>BOOM</i>-compatible ")), linefix[j].special,
+                                    linespecials[linefix[j].special], temp);
+                        }
                         else
                             C_Warning(2, "The %sline special of linedef %s has been removed.",
                                 (li->linedef->special < BOOMLINESPECIALS ? "" : (li->linedef->special < MBFLINESPECIALS ?
@@ -1087,13 +1091,11 @@ static void P_LoadSegs_V4(int lump)
         // e6y: fix wrong side index
         if (side != 0 && side != 1)
         {
-            char    *temp1 = commify(i);
-            char    *temp2 = commify(side);
+            char    *temp = commify(i);
 
-            C_Warning(2, "Seg %s has a wrong side index of %s. It has been changed to 1.", temp1, temp2);
+            C_Warning(2, "Seg %s has an invalid side. It has been changed to 1.", temp);
             side = 1;
-            free(temp1);
-            free(temp2);
+            free(temp);
         }
 
         // e6y: check for wrong indexes
@@ -1326,9 +1328,13 @@ static void P_LoadSectors(int lump)
                     {
                         char    *temp = commify(sectorfix[j].sector);
 
-                        C_Warning(2, "The special of sector %s has been changed from %i (\"%s\") to %i (\"%s\").",
-                            temp, ss->special, sectorspecials[ss->special],
-                            sectorfix[j].special, sectorspecials[sectorfix[j].special]);
+                        if (ss->special)
+                            C_Warning(2, "The special of sector %s has been changed from %i (\"%s\") to %i (\"%s\").",
+                                temp, ss->special, sectorspecials[ss->special],
+                                sectorfix[j].special, sectorspecials[sectorfix[j].special]);
+                        else
+                            C_Warning(2, "A special of %i (\"%s\") has been added to sector %s.",
+                                sectorfix[j].special, sectorspecials[sectorfix[j].special], temp);
 
                         ss->special = sectorfix[j].special;
                         free(temp);
@@ -1518,13 +1524,11 @@ static void P_LoadZSegs(const byte *data)
         // e6y: fix wrong side index
         if (side != 0 && side != 1)
         {
-            char    *temp1 = commify(i);
-            char    *temp2 = commify(side);
+            char    *temp = commify(i);
 
-            C_Warning(2, "Seg %s has a wrong side index of %s. It has been changed to 1.", temp1, temp2);
+            C_Warning(2, "Seg %s has an invalid side. It has been changed to 1.", temp);
             side = 1;
-            free(temp1);
-            free(temp2);
+            free(temp);
         }
 
         // e6y: check for wrong indexes
@@ -1707,7 +1711,7 @@ static void P_LoadZNodes(int lump)
 //
 // P_LoadThings
 //
-static void P_LoadThings(int lump)
+static void P_LoadThings(int map, int lump)
 {
     const mapthing_t    *data = (const mapthing_t *)W_CacheLumpNum(lump);
     int                 numthings;
@@ -1715,7 +1719,8 @@ static void P_LoadThings(int lump)
     if (!data || !(numthings = W_LumpLength(lump) / sizeof(mapthing_t)))
         I_Error("There are no things in this map.");
 
-    M_BigSeed(numthings);
+    M_BigSeed(gamemission == doom && map == 1 && canmodify ? BIGSEED : numthings);
+
     numspawnedthings = 0;
     numdecorations = 0;
 
@@ -2731,14 +2736,13 @@ void P_MapName(int ep, int map)
 
     if (strlen(maptitle) >= 4)
     {
-        if (toupper(maptitle[0]) == 'M' && toupper(maptitle[1]) == 'A' && toupper(maptitle[2]) == 'P'
-            && isdigit((int)maptitle[3]) && isdigit((int)maptitle[4]))
+        if (maptitle[0] == 'm' && maptitle[1] == 'a' && maptitle[2] == 'p' && isdigit((int)maptitle[3]) && isdigit((int)maptitle[4]))
         {
             maptitle[0] = 'M';
             maptitle[1] = 'A';
             maptitle[2] = 'P';
         }
-        else if (toupper(maptitle[0]) == 'E' && isdigit((int)maptitle[1]) && toupper(maptitle[2]) == 'M' && isdigit((int)maptitle[3]))
+        else if (maptitle[0] == 'e' && isdigit((int)maptitle[1]) && maptitle[2] == 'm' && isdigit((int)maptitle[3]))
         {
             maptitle[0] = 'E';
             maptitle[2] = 'M';
@@ -2985,7 +2989,7 @@ void P_SetupLevel(int ep, int map)
     P_GetMapNoLiquids((ep - 1) * 10 + map);
     P_SetLiquids();
 
-    P_LoadThings(lumpnum + ML_THINGS);
+    P_LoadThings((ep - 1) * 10 + map, lumpnum + ML_THINGS);
 
     P_InitCards();
 
@@ -3436,7 +3440,6 @@ static void P_InitMapInfo(void)
     }
 
     SC_Close();
-    mapcount = mapmax;
 
     temp = commify(sc_Line);
     C_Output("Parsed %s line%s in the <b>%sMAPINFO</b> lump in the %s <b>%s</b>.",

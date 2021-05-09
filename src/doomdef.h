@@ -7,7 +7,7 @@
 ========================================================================
 
   Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2021 by Brad Harding.
+  Copyright © 2013-2021 by Brad Harding <mailto:brad@doomretro.com>.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
@@ -67,8 +67,11 @@
 #define PACKEDATTR  __attribute__((packed))
 #endif
 
+#define FORMATATTR(x, y) __attribute__((format(printf, x, y)))
+
 #else
 #define PACKEDATTR
+#define FORMATATTR(x, y)
 #endif
 
 //
@@ -109,15 +112,13 @@ typedef enum
 #define VANILLAWIDTH        320
 #define VANILLAHEIGHT       200
 
-#define ACTUALHEIGHT        (6 * SCREENHEIGHT / 5)
-
-#define UNITYWIDTH          426
+#define ACTUALHEIGHT        (SCREENHEIGHT * 6 / 5)
 
 #define VANILLASBARHEIGHT   32
 
 #define SCREENSCALE         2
 
-#define MAXWIDTH            (VANILLAWIDTH * 4)  // [crispy]
+#define MAXWIDTH            (VANILLAWIDTH * 8)  // [crispy]
 #define MAXHEIGHT           (VANILLAHEIGHT * 2) // [crispy]
 
 #define NONWIDEWIDTH        (VANILLAWIDTH * SCREENSCALE)

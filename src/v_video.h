@@ -7,7 +7,7 @@
 ========================================================================
 
   Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2021 by Brad Harding.
+  Copyright © 2013-2021 by Brad Harding <mailto:brad@doomretro.com>.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
@@ -46,14 +46,16 @@
 // VIDEO
 //
 
-#define DX  ((NONWIDEWIDTH << FRACBITS) / VANILLAWIDTH)
-#define DXI ((VANILLAWIDTH << FRACBITS) / NONWIDEWIDTH)
-#define DY  ((SCREENHEIGHT << FRACBITS) / VANILLAHEIGHT)
-#define DYI ((VANILLAHEIGHT << FRACBITS) / SCREENHEIGHT)
+#define DX          ((NONWIDEWIDTH << FRACBITS) / VANILLAWIDTH)
+#define DXI         ((VANILLAWIDTH << FRACBITS) / NONWIDEWIDTH)
+#define DY          ((SCREENHEIGHT << FRACBITS) / VANILLAHEIGHT)
+#define DYI         ((VANILLAHEIGHT << FRACBITS) / SCREENHEIGHT)
+
+#define NUMSCREENS  4
 
 // Screen 0 is the screen updated by I_Update screen.
 // Screen 1 is an extra buffer.
-extern byte *screens[5];
+extern byte *screens[NUMSCREENS];
 
 extern int  lowpixelwidth;
 extern int  lowpixelheight;
@@ -73,7 +75,7 @@ void V_DrawPatch(int x, int y, int scrn, patch_t *patch);
 void V_DrawWidePatch(int x, int y, int scrn, patch_t *patch);
 void V_DrawBigPatch(int x, int y, patch_t *patch);
 void V_DrawBigWidePatch(int x, int y, patch_t *patch);
-void V_DrawConsolePatch(int x, int y, patch_t *patch, int color, int maxwidth);
+void V_DrawConsolePatch(int x, int y, patch_t *patch, int maxwidth);
 void V_DrawConsoleBrandingPatch(int x, int y, patch_t *patch, int color);
 void V_DrawConsoleInputTextPatch(int x, int y, patch_t *patch, int width, int color,
     int backgroundcolor, dboolean italics, byte *translucency);
@@ -105,8 +107,10 @@ void V_DrawFlippedTranslucentRedPatch(int x, int y, patch_t *patch);
 void V_DrawPatchToTempScreen(int x, int y, patch_t *patch);
 void V_DrawHUDText(int x, int y, byte *screen, patch_t *patch, int screenwidth);
 void V_DrawTranslucentHUDText(int x, int y, byte *screen, patch_t *patch, int screenwidth);
-void V_DrawAltHUDText(int x, int y, byte *screen, patch_t *patch, dboolean italics, int color, int screenwidth);
-void V_DrawTranslucentAltHUDText(int x, int y, byte *screen, patch_t *patch, dboolean italics, int color, int screenwidth);
+void V_DrawAltHUDText(int x, int y, byte *screen, patch_t *patch,
+    dboolean italics, int color, int screenwidth, byte *tinttab);
+void V_DrawTranslucentAltHUDText(int x, int y, byte *screen, patch_t *patch,
+    dboolean italics, int color, int screenwidth, byte *tinttab);
 void V_DrawPagePatch(patch_t *patch);
 
 void V_DrawPixel(int x, int y, byte color, dboolean drawshadow);

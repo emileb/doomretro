@@ -7,7 +7,7 @@
 ========================================================================
 
   Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2021 by Brad Harding.
+  Copyright © 2013-2021 by Brad Harding <mailto:brad@doomretro.com>.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
@@ -222,7 +222,7 @@ dboolean P_UseSpecialLine(mobj_t *thing, line_t *line, int side)
     if (side)
         return false;
 
-    // jff 02/04/98 add check here for generalized floor/ceil mover
+    // jff 02/04/98 add check here for generalized floor/ceiling mover
     if ((special = line->special) >= GenCrusherBase && special < GenEnd)
     {
         // pointer to line function is NULL by default, set non-null if

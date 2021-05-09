@@ -7,7 +7,7 @@
 ========================================================================
 
   Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2021 by Brad Harding.
+  Copyright © 2013-2021 by Brad Harding <mailto:brad@doomretro.com>.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
@@ -68,6 +68,9 @@ static lighttable_t     **spritelights;         // killough 01/25/98 made static
 int                     negonearray[MAXWIDTH];
 int                     viewheightarray[MAXWIDTH];
 
+static int              cliptop[MAXWIDTH];
+static int              clipbot[MAXWIDTH];
+
 //
 // INITIALIZATION FUNCTIONS
 //
@@ -92,7 +95,6 @@ dboolean                r_liquid_clipsprites = r_liquid_clipsprites_default;
 dboolean                r_playersprites = r_playersprites_default;
 
 extern dboolean         drawbloodsplats;
-extern dboolean         SHT2A0;
 
 //
 // R_InstallSpriteLump
@@ -654,13 +656,13 @@ static void R_ProjectSprite(mobj_t *thing)
             rot = (ang - thing->angle + (angle_t)(ANG45 / 2) * 9 - (angle_t)(ANG180 / 16)) >> 28;
 
         lump = sprframe->lump[rot];
-        flip = (sprframe->flip & (1 << rot)) || (flags2 & MF2_MIRRORED);
+        flip = ((sprframe->flip & (1 << rot)) || (flags2 & MF2_MIRRORED));
     }
     else
     {
         // use single rotation for all views
         lump = sprframe->lump[0];
-        flip = (sprframe->flip & 1) || (flags2 & MF2_MIRRORED);
+        flip = ((sprframe->flip & 1) || (flags2 & MF2_MIRRORED));
     }
 
     if (thing->state->dehacked || !r_fixspriteoffsets)
@@ -1053,9 +1055,7 @@ static void R_DrawPlayerSprite(pspdef_t *psp, dboolean invisibility, dboolean al
     }
     else
     {
-        if (spr == SPR_SHT2 && !frame && !SHT2A0 && nearestcolors[71] == 71)
-            vis->colfunc = supershotguncolfunc;
-        else if (r_translucency)
+        if (r_translucency)
         {
             if (spr == SPR_SHT2)
                 vis->colfunc = ((frame & FF_FRAMEMASK) && (frame & FF_FULLBRIGHT)
@@ -1157,8 +1157,6 @@ static void R_DrawPlayerSprites(void)
 //
 static void R_DrawBloodSplatSprite(const bloodsplatvissprite_t *splat)
 {
-    int             cliptop[MAXWIDTH];
-    int             clipbot[MAXWIDTH];
     const int       x1 = splat->x1;
     const int       x2 = splat->x2;
     const fixed_t   scale = splat->scale;
@@ -1264,8 +1262,6 @@ static void R_SortVisSprites(void)
 
 static void R_DrawSprite(const vissprite_t *spr)
 {
-    int             cliptop[MAXWIDTH];
-    int             clipbot[MAXWIDTH];
     const int       x1 = spr->x1;
     const int       x2 = spr->x2;
     const fixed_t   scale = spr->scale;

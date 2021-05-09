@@ -7,7 +7,7 @@
 ========================================================================
 
   Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2021 by Brad Harding.
+  Copyright © 2013-2021 by Brad Harding <mailto:brad@doomretro.com>.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
@@ -129,11 +129,10 @@ extern void (*tlredtogreen33colfunc)(void);
 extern void (*psprcolfunc)(void);
 extern void (*spanfunc)(void);
 extern void (*bloodsplatcolfunc)(void);
-extern void (*megaspherecolfunc)(void);
-extern void (*supershotguncolfunc)(void);
 
 //
 // Utility functions.
+//
 int R_PointOnSide(fixed_t x, fixed_t y, const node_t *node);
 int R_PointOnSegSide(fixed_t x, fixed_t y, seg_t *line);
 angle_t R_PointToAngle(fixed_t x, fixed_t y);

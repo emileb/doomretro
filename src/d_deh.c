@@ -7,7 +7,7 @@
 ========================================================================
 
   Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2021 by Brad Harding.
+  Copyright © 2013-2021 by Brad Harding <mailto:brad@doomretro.com>.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
@@ -2955,7 +2955,7 @@ static void deh_procPars(DEHFILE *fpin, char *line) // extension
                 else
                 {
                     if (devparm)
-                        C_Output("Changed par time for MAP%02d from %i to %i seconds", level, cpars[level - 1], partime);
+                        C_Output("Changed par time for MAP%02i from %i to %i seconds", level, cpars[level - 1], partime);
 
                     cpars[level - 1] = partime;
                 }

@@ -7,7 +7,7 @@
 ========================================================================
 
   Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2021 by Brad Harding.
+  Copyright © 2013-2021 by Brad Harding <mailto:brad@doomretro.com>.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
@@ -56,6 +56,7 @@
 #include "m_misc.h"
 #include "s_sound.h"
 #include "version.h"
+#include "w_wad.h"
 
 #if defined(_WIN32)
 extern char *previouswad;
@@ -235,6 +236,8 @@ void I_Quit(dboolean shutdown)
         I_ShutdownTimer();
     }
 
+    W_CloseFiles();
+
 #if defined(_WIN32)
     I_ShutdownWindows32();
 #endif
@@ -275,6 +278,8 @@ void I_Error(const char *error, ...)
     I_ShutdownKeyboard();
     I_ShutdownGamepad();
     I_ShutdownTimer();
+
+    W_CloseFiles();
 
 #if defined(_WIN32)
     I_ShutdownWindows32();

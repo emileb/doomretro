@@ -7,7 +7,7 @@
 ========================================================================
 
   Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2021 by Brad Harding.
+  Copyright © 2013-2021 by Brad Harding <mailto:brad@doomretro.com>.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
@@ -106,6 +106,8 @@ void P_SetPsprite(size_t position, statenum_t stnum);
 #define PLAYERSLOPE(a)      ((((a)->lookdir / MLOOKUNIT) << FRACBITS) / 153)
 
 extern dboolean autousing;
+extern int      deadlookdir;
+extern fixed_t  animatedliquiddiffs[64];
 
 void P_CalcHeight(void);
 void P_MovePlayer(void);
@@ -247,6 +249,7 @@ void P_UseLines(void);
 
 dboolean P_ChangeSector(sector_t *sector, dboolean crunch);
 void P_FreeSecNodeList(void);
+void P_DelSeclist(msecnode_t *node);
 
 extern mobj_t   *linetarget;    // who got hit (or NULL)
 
@@ -254,6 +257,7 @@ fixed_t P_AimLineAttack(mobj_t *t1, angle_t angle, fixed_t distance, int mask);
 
 void P_LineAttack(mobj_t *t1, angle_t angle, fixed_t distance, fixed_t slope, int damage);
 
+dboolean PIT_RadiusAttack(mobj_t *thing);
 void P_RadiusAttack(mobj_t *spot, mobj_t *source, int damage, dboolean verticality);
 
 int P_GetMoveFactor(const mobj_t *mo, int *frictionp);      // killough 08/28/98

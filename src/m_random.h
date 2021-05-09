@@ -7,7 +7,7 @@
 ========================================================================
 
   Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2021 by Brad Harding.
+  Copyright © 2013-2021 by Brad Harding <mailto:brad@doomretro.com>.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
@@ -38,6 +38,8 @@
 
 #if !defined(__M_RANDOM_H__)
 #define __M_RANDOM_H__
+
+#define BIGSEED 143
 
 #define RAND    rndtable[(seed = (seed + 1) & 255)]
 #define BIGRAND ((bigseed = 214013 * bigseed + 2531011) >> 16)

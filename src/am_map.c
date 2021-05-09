@@ -7,7 +7,7 @@
 ========================================================================
 
   Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2021 by Brad Harding.
+  Copyright © 2013-2021 by Brad Harding <mailto:brad@doomretro.com>.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
@@ -549,7 +549,7 @@ void AM_ToggleGrid(void)
 }
 
 //
-// adds a marker at the current location
+// adds a mark at the current location
 //
 void AM_AddMark(void)
 {
@@ -1417,13 +1417,7 @@ static void AM_DrawFline(int x0, int y0, int x1, int y1, byte *color,
             y0 *= MAPWIDTH;
             putdot(x0, y0, color);
 
-            if (dx == dy)
-            {
-                // diagonal line
-                while (x0 != x1)
-                    putdot((x0 += sx), (y0 += sy), color);
-            }
-            else if (dx > dy)
+            if (dx > dy)
             {
                 // x-major line
                 int error = (dy <<= 1) - dx;
@@ -1432,13 +1426,13 @@ static void AM_DrawFline(int x0, int y0, int x1, int y1, byte *color,
 
                 while (x0 != x1)
                 {
-                    const int   mask = ~(error >> 31);
+                    const int   mask = ~((int64_t)error >> 31);
 
                     putdot((x0 += sx), (y0 += (sy & mask)), color);
                     error += dy - (dx & mask);
                 }
             }
-            else
+            else if (dx < dy)
             {
                 // y-major line
                 int error = (dx <<= 1) - dy;
@@ -1448,12 +1442,16 @@ static void AM_DrawFline(int x0, int y0, int x1, int y1, byte *color,
 
                 while (y0 != y1)
                 {
-                    const int   mask = ~(error >> 31);
+                    const int   mask = ~((int64_t)error >> 31);
 
                     putdot((x0 += (sx & mask)), (y0 += sy), color);
                     error += dx - (dy & mask);
                 }
             }
+            else
+                // diagonal line
+                while (x0 != x1)
+                    putdot((x0 += sx), (y0 += sy), color);
         }
     }
 }

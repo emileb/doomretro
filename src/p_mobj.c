@@ -7,7 +7,7 @@
 ========================================================================
 
   Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2021 by Brad Harding.
+  Copyright © 2013-2021 by Brad Harding <mailto:brad@doomretro.com>.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
@@ -78,12 +78,7 @@ static fixed_t floatbobdiffs[64] =
      17277,  19062,  20663,  22066,  23256,  24222,  24955,  25447
 };
 
-extern fixed_t  animatedliquiddiffs[64];
-extern int      deadlookdir;
-
 void A_Recoil(weapontype_t weapon);
-void G_PlayerReborn(void);
-void P_DelSeclist(msecnode_t *node);
 
 //
 // P_SetMobjState
@@ -856,11 +851,11 @@ void P_RemoveMobj(mobj_t *mobj)
     {
         itemrespawnqueue[iqueuehead] = mobj->spawnpoint;
         itemrespawntime[iqueuehead] = leveltime;
-        iqueuehead = (iqueuehead + 1) & (ITEMQUEUESIZE - 1);
+        iqueuehead = ((iqueuehead + 1) & (ITEMQUEUESIZE - 1));
 
         // lose one off the end?
         if (iqueuehead == iqueuetail)
-            iqueuetail = (iqueuetail + 1) & (ITEMQUEUESIZE - 1);
+            iqueuetail = ((iqueuetail + 1) & (ITEMQUEUESIZE - 1));
     }
 
     // unlink from sector and block lists
@@ -990,7 +985,7 @@ void P_RespawnSpecials(void)
         C_PlayerMessage("%s %s has respawned.", (isvowel(mo->info->name1[0]) ? "An" : "A"), mo->info->name1);
 
     // pull it from the queue
-    iqueuetail = (iqueuetail + 1) & (ITEMQUEUESIZE - 1);
+    iqueuetail = ((iqueuetail + 1) & (ITEMQUEUESIZE - 1));
 }
 
 //
@@ -1001,7 +996,8 @@ void P_SetPlayerViewHeight(void)
     mobj_t  *mo = viewplayer->mo;
 
     for (const struct msecnode_s *seclist = mo->touching_sectorlist; seclist; seclist = seclist->m_tnext)
-        mo->z = MAX(mo->z, seclist->m_sector->floorheight);
+        if (seclist->m_sector->floorheight + mo->height < seclist->m_sector->ceilingheight)
+            mo->z = MAX(mo->z, seclist->m_sector->floorheight);
 
     mo->floorz = mo->z;
 
@@ -1046,7 +1042,6 @@ static void P_SpawnPlayer(const mapthing_t *mthing)
     viewplayer->psprites[ps_weapon].sx = 0;
     viewplayer->mo->momx = 0;
     viewplayer->mo->momy = 0;
-    viewplayer->mo->pitch = NORM_PITCH;
     viewplayer->momx = 0;
     viewplayer->momy = 0;
     viewplayer->lookdir = 0;
@@ -1426,10 +1421,10 @@ void P_SpawnBlood(fixed_t x, fixed_t y, fixed_t z, angle_t angle, int damage, mo
         th->angle = angle;
         angle += M_BigSubRandom() * 0xB60B60;
 
-        if (damage <= 12 && th->state->nextstate)
+        if (damage <= 12 && th->state->nextstate != S_NULL)
             P_SetMobjState(th, th->state->nextstate);
 
-        if (damage < 9 && th->state->nextstate)
+        if (damage < 9 && th->state->nextstate != S_NULL)
             P_SetMobjState(th, th->state->nextstate);
     }
 }
@@ -1607,7 +1602,8 @@ void P_SpawnPlayerMissile(mobj_t *source, mobjtype_t type)
 
     P_NoiseAlert(source);
 
-    if (type == MT_ROCKET && r_rockettrails && !hacx && viewplayer->readyweapon == wp_missile && !doom4vanilla)
+    if (type == MT_ROCKET && r_rockettrails && !(th->flags & MF_BOUNCES) && viewplayer->readyweapon == wp_missile
+        && !hacx && !doom4vanilla)
     {
         th->flags2 |= MF2_SMOKETRAIL;
         puffcount = 0;

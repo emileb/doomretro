@@ -7,7 +7,7 @@
 ========================================================================
 
   Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2021 by Brad Harding.
+  Copyright © 2013-2021 by Brad Harding <mailto:brad@doomretro.com>.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
@@ -62,7 +62,7 @@
 #define WHITE       4
 #define LIGHTGRAY   82
 
-byte        *screens[5];
+byte        *screens[NUMSCREENS];
 int         lowpixelwidth;
 int         lowpixelheight;
 char        screenshotfolder[MAX_PATH];
@@ -207,11 +207,11 @@ void V_DrawWidePatch(int x, int y, int scrn, patch_t *patch)
     int     w = SHORT(patch->width);
     int     col = 0;
 
-    if (w > VANILLAWIDTH && !vid_widescreen)
+    if (w > SCREENWIDTH / SCREENSCALE)
     {
         x = 0;
-        col = (w - VANILLAWIDTH) / 2;
-        w = VANILLAWIDTH + col;
+        col = (w - SCREENWIDTH / SCREENSCALE) / 2;
+        w = SCREENWIDTH / SCREENSCALE + col;
     }
 
     w <<= FRACBITS;
@@ -574,7 +574,7 @@ void V_DrawConsoleOutputTextPatch(int x, int y, patch_t *patch, int width, int c
     }
 }
 
-void V_DrawConsolePatch(int x, int y, patch_t *patch, int color, int maxwidth)
+void V_DrawConsolePatch(int x, int y, patch_t *patch, int maxwidth)
 {
     byte        *desttop = &screens[0][y * SCREENWIDTH + x];
     const int   w = MIN(SHORT(patch->width), maxwidth);
@@ -776,7 +776,7 @@ void V_DrawTranslucentHUDText(int x, int y, byte *screen, patch_t *patch, int sc
     }
 }
 
-void V_DrawAltHUDText(int x, int y, byte *screen, patch_t *patch, dboolean italics, int color, int screenwidth)
+void V_DrawAltHUDText(int x, int y, byte *screen, patch_t *patch, dboolean italics, int color, int screenwidth, byte *tinttab)
 {
     byte        *desttop = &screen[y * screenwidth + x];
     const int   w = SHORT(patch->width);
@@ -814,11 +814,10 @@ void V_DrawAltHUDText(int x, int y, byte *screen, patch_t *patch, dboolean itali
     }
 }
 
-void V_DrawTranslucentAltHUDText(int x, int y, byte *screen, patch_t *patch, dboolean italics, int color, int screenwidth)
+void V_DrawTranslucentAltHUDText(int x, int y, byte *screen, patch_t *patch, dboolean italics, int color, int screenwidth, byte *tinttab)
 {
     byte        *desttop = &screen[y * screenwidth + x];
     const int   w = SHORT(patch->width);
-    byte        *tinttab = (automapactive ? tinttab25 : tinttab60);
     const int   italicize[] = { 2, 2, 2, 1, 1, 1, 1, 0, 0, 0, 0, -1, -1, -1 };
 
     for (int col = 0; col < w; col++, desttop++)
@@ -842,7 +841,7 @@ void V_DrawTranslucentAltHUDText(int x, int y, byte *screen, patch_t *patch, dbo
                     if (italics)
                         dot += italicize[i];
 
-                    *dot = tinttab[(*dot << 8) + color];
+                    *dot = tinttab[(color << 8) + *dot];
                 }
 
                 dest += screenwidth;
@@ -1728,7 +1727,7 @@ void V_InvertScreen(void)
 //
 void V_Init(void)
 {
-    byte                *base = Z_Malloc(MAXSCREENAREA * 4, PU_STATIC, NULL);
+    byte                *base = Z_Malloc(MAXSCREENAREA * NUMSCREENS, PU_STATIC, NULL);
     const SDL_version   *linked = IMG_Linked_Version();
     int                 p;
 
@@ -1740,10 +1739,10 @@ void V_Init(void)
         C_Warning(1, "The wrong version of <b>%s</b> was found. <i>%s</i> requires v%i.%i.%i.",
             SDL_IMAGE_FILENAME, PACKAGE_NAME, SDL_IMAGE_MAJOR_VERSION, SDL_IMAGE_MINOR_VERSION, SDL_IMAGE_PATCHLEVEL);
 
-    for (int i = 0; i < 4; i++)
+    for (int i = 0; i < NUMSCREENS; i++)
         screens[i] = &base[i * MAXSCREENAREA];
 
-    if ((p = M_CheckParmWithArgs("-shotdir", 1, 1)))
+    if ((p = M_CheckParmsWithArgs("-shot", "-shotdir", "", 1, 1)))
         M_StringCopy(screenshotfolder, myargv[p + 1], sizeof(screenshotfolder));
     else
     {

@@ -7,7 +7,7 @@
 ========================================================================
 
   Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2021 by Brad Harding.
+  Copyright © 2013-2021 by Brad Harding <mailto:brad@doomretro.com>.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
@@ -107,6 +107,8 @@ unsigned int W_LumpNameHash(const char *s);
 void W_ReleaseLumpNum(int lumpnum);
 
 #define W_ReleaseLumpName(name)     W_ReleaseLumpNum(W_GetNumForName(name))
+
+void W_CloseFiles(void);
 
 GameMission_t IWADRequiredByPWAD(char *pwadname);
 dboolean HasDehackedLump(const char *pwadname);

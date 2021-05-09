@@ -7,7 +7,7 @@
 ========================================================================
 
   Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2021 by Brad Harding.
+  Copyright © 2013-2021 by Brad Harding <mailto:brad@doomretro.com>.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
@@ -603,6 +603,8 @@ void G_DoLoadLevel(void)
 
     stat_mapsstarted = SafeAdd(stat_mapsstarted, 1);
 
+    I_UpdateBlitFunc(false);
+
     M_SetWindowCaption();
 
     if (automapactive || mapwindow)
@@ -1067,19 +1069,6 @@ static void G_DoReborn(void)
 
 void G_ScreenShot(void)
 {
-    if (idbehold)
-    {
-        idbehold = false;
-        C_Input(cheat_powerup[6].sequence);
-        C_Output(s_STSTR_BEHOLD);
-    }
-    else if (gamestate == GS_LEVEL && !(viewplayer->cheats & CF_MYPOS))
-    {
-        HU_ClearMessages();
-        D_Display();
-        D_Display();
-    }
-
     if (V_ScreenShot())
     {
         static char buffer[512];
@@ -1091,7 +1080,7 @@ void G_ScreenShot(void)
         C_Output("<b>%s</b> was saved.", lbmpath1);
 
         if (*lbmpath2)
-            C_Output("<b>%s</b> was saved.", lbmpath2);
+            C_Output("<b>%s</b> was also saved.", lbmpath2);
     }
     else
         C_Warning(0, "A screenshot couldn't be taken.");

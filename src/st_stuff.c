@@ -7,7 +7,7 @@
 ========================================================================
 
   Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2021 by Brad Harding.
+  Copyright © 2013-2021 by Brad Harding <mailto:brad@doomretro.com>.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
@@ -587,9 +587,6 @@ dboolean ST_Responder(event_t *ev)
                 {
                     int musnum = (buffer[0] - '0') * 10 + (buffer[1] - '0');
 
-                    S_StartSound(NULL, sfx_getpow);
-                    C_Input("%s%c%c", cheat_mus_xy.sequence, buffer[0], buffer[1]);
-
                     if (musnum < IDMUS_MAX)
                     {
                         if (gamemission == pack_nerve)
@@ -603,6 +600,9 @@ dboolean ST_Responder(event_t *ev)
                         {
                             static char msg[80];
                             char        *temp = uppercase(S_music[musnum].name1);
+
+                            S_StartSound(NULL, sfx_getpow);
+                            C_Input("%s%c%c", cheat_mus_xy.sequence, buffer[0], buffer[1]);
 
                             S_ChangeMusic(musnum, 1, true, false);
 
@@ -1365,11 +1365,13 @@ static void ST_LoadUnloadGraphics(load_callback_t callback)
     {
         M_snprintf(namebuf, sizeof(namebuf), "STTNUM%i", i);
         callback(namebuf, &tallnum[i]);
+
         M_snprintf(namebuf, sizeof(namebuf), "STYSNUM%i", i);
         callback(namebuf, &shortnum[i]);
     }
 
     callback("STTPRCNT", &tallpercent);
+
     emptytallpercent = V_IsEmptyPatch(tallpercent);
     tallpercentwidth = (emptytallpercent ? 0 : SHORT(tallpercent->width));
 
@@ -1419,12 +1421,16 @@ static void ST_LoadUnloadGraphics(load_callback_t callback)
 
         M_snprintf(namebuf, sizeof(namebuf), "STFTR%i0", i);          // turn right
         callback(namebuf, &faces[facenum++]);
+
         M_snprintf(namebuf, sizeof(namebuf), "STFTL%i0", i);          // turn left
         callback(namebuf, &faces[facenum++]);
+
         M_snprintf(namebuf, sizeof(namebuf), "STFOUCH%i", i);         // ouch!
         callback(namebuf, &faces[facenum++]);
+
         M_snprintf(namebuf, sizeof(namebuf), "STFEVL%i", i);          // evil grin ;)
         callback(namebuf, &faces[facenum++]);
+
         M_snprintf(namebuf, sizeof(namebuf), "STFKILL%i", i);         // pissed off
         callback(namebuf, &faces[facenum++]);
     }
@@ -1497,15 +1503,17 @@ static void ST_CreateWidgets(void)
     STlib_InitPercent(&w_health, ST_HEALTHX, ST_HEALTHY + (STBAR != 2 && !BTSX), tallnum, &viewplayer->health, tallpercent);
 
     // weapons owned
-    STlib_InitMultIcon(&w_arms[0], ST_ARMSX, ST_ARMSY, arms[0], &viewplayer->weaponowned[1]);
+    STlib_InitMultIcon(&w_arms[0], ST_ARMSX, ST_ARMSY, arms[0], &viewplayer->weaponowned[wp_pistol]);
     STlib_InitMultIcon(&w_arms[1], ST_ARMSX + ST_ARMSXSPACE, ST_ARMSY, arms[1], &st_shotguns);
-    STlib_InitMultIcon(&w_arms[2], ST_ARMSX + 2 * ST_ARMSXSPACE, ST_ARMSY, arms[2], &viewplayer->weaponowned[3]);
-    STlib_InitMultIcon(&w_arms[3], ST_ARMSX, ST_ARMSY + ST_ARMSYSPACE, arms[3], &viewplayer->weaponowned[4]);
+    STlib_InitMultIcon(&w_arms[2], ST_ARMSX + 2 * ST_ARMSXSPACE, ST_ARMSY, arms[2], &viewplayer->weaponowned[wp_chaingun]);
+    STlib_InitMultIcon(&w_arms[3], ST_ARMSX, ST_ARMSY + ST_ARMSYSPACE, arms[3], &viewplayer->weaponowned[wp_missile]);
 
     if (gamemode != shareware)
     {
-        STlib_InitMultIcon(&w_arms[4], ST_ARMSX + ST_ARMSXSPACE, ST_ARMSY + ST_ARMSYSPACE, arms[4], &viewplayer->weaponowned[5]);
-        STlib_InitMultIcon(&w_arms[5], ST_ARMSX + 2 * ST_ARMSXSPACE, ST_ARMSY + ST_ARMSYSPACE, arms[5], &viewplayer->weaponowned[6]);
+        STlib_InitMultIcon(&w_arms[4], ST_ARMSX + ST_ARMSXSPACE, ST_ARMSY + ST_ARMSYSPACE, arms[4],
+            &viewplayer->weaponowned[wp_plasma]);
+        STlib_InitMultIcon(&w_arms[5], ST_ARMSX + 2 * ST_ARMSXSPACE, ST_ARMSY + ST_ARMSYSPACE, arms[5],
+            &viewplayer->weaponowned[wp_bfg]);
     }
 
     // faces
@@ -1544,8 +1552,6 @@ void ST_Init(void)
 
     st_drawbrdr = (lumpinfo[W_GetNumForName("BRDR_B")]->wadfile->type == PWAD ||
         lumpinfo[W_GetNumForName((gamemode == commercial ? "GRNROCK" : "FLOOR7_2"))]->wadfile->type == IWAD);
-
-    screens[4] = malloc((size_t)ST_WIDTH * SBARHEIGHT);
 
     // [BH] fix evil grin being displayed when picking up first item after
     // loading save game or entering IDFA/IDKFA cheat

@@ -7,7 +7,7 @@
 ========================================================================
 
   Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2021 by Brad Harding.
+  Copyright © 2013-2021 by Brad Harding <mailto:brad@doomretro.com>.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
@@ -344,8 +344,8 @@ linefix_t linefix[] =
     { doom,             3,   2,     452,    0, "",         "",            "",            DEFAULT,        -7, DEFAULT,                   DEFAULT,                                         DEFAULT },
     { doom,             3,   2,     454,    0, "",         "",            "",            DEFAULT,        -7, DEFAULT,                   DEFAULT,                                         DEFAULT },
 
-    { doom,             3,   3,     790,    0, "",                 "",    "",            DEFAULT,        -6, DEFAULT,                   DEFAULT,                                         DEFAULT },
-    { doom,             3,   3,     791,    0, "",                 "",    "",            DEFAULT,        -6, DEFAULT,                   DEFAULT,                                         DEFAULT },
+    { doom,             3,   3,     790,    0, "",         "",            "",            DEFAULT,        -6, DEFAULT,                   DEFAULT,                                         DEFAULT },
+    { doom,             3,   3,     791,    0, "",         "",            "",            DEFAULT,        -6, DEFAULT,                   DEFAULT,                                         DEFAULT },
     { doom,             3,   3,     854,    1, "",         "MIDGRATE",    "",            DEFAULT,   DEFAULT, DEFAULT,                   DEFAULT,                                         DEFAULT },
     { doom,             3,   3,     855,    1, "",         "MIDGRATE",    "",            DEFAULT,   DEFAULT, DEFAULT,                   DEFAULT,                                         DEFAULT },
     { doom,             3,   3,     910,    0, "",         "",            "",            DEFAULT,   DEFAULT, DEFAULT,                   DEFAULT,                                               0 },
@@ -1071,10 +1071,10 @@ linefix_t linefix[] =
     { doom2,            1,  31,     459,    0, "ZDOORB1",  "",            "",            DEFAULT,   DEFAULT, DEFAULT,                   DEFAULT,                                         DEFAULT },
     { doom2,            1,  31,     569,    0, "ZDOORB1",  "",            "",            DEFAULT,   DEFAULT, DEFAULT,                   DEFAULT,                                         DEFAULT },
     { doom2,            1,  31,     594,    0, "ZDOORB1",  "",            "",            DEFAULT,   DEFAULT, DEFAULT,                   DEFAULT,                                         DEFAULT },
-    { doom2,            1,  31,     666,    0,        "",  "",            "",                 25,   DEFAULT, DEFAULT,                   DEFAULT,                                         DEFAULT },
-    { doom2,            1,  31,     668,    0,        "",  "",            "",                 25,   DEFAULT, DEFAULT,                   DEFAULT,                                         DEFAULT },
-    { doom2,            1,  31,     670,    0,        "",  "",            "",                 25,   DEFAULT, DEFAULT,                   DEFAULT,                                         DEFAULT },
-    { doom2,            1,  31,     672,    0,        "",  "",            "",                 25,   DEFAULT, DEFAULT,                   DEFAULT,                                         DEFAULT },
+    { doom2,            1,  31,     666,    0, "",         "",            "",                 25,   DEFAULT, DEFAULT,                   DEFAULT,                                         DEFAULT },
+    { doom2,            1,  31,     668,    0, "",         "",            "",                 25,   DEFAULT, DEFAULT,                   DEFAULT,                                         DEFAULT },
+    { doom2,            1,  31,     670,    0, "",         "",            "",                 25,   DEFAULT, DEFAULT,                   DEFAULT,                                         DEFAULT },
+    { doom2,            1,  31,     672,    0, "",         "",            "",                 25,   DEFAULT, DEFAULT,                   DEFAULT,                                         DEFAULT },
 
     { doom2,            1,  32,     30,     0, "",         "",            "",            DEFAULT,         0, DEFAULT,                   DEFAULT,                                         DEFAULT },
     { doom2,            1,  32,     31,     0, "",         "",            "",            DEFAULT,         0, DEFAULT,                   DEFAULT,                                         DEFAULT },
@@ -1591,6 +1591,9 @@ sectorfix_t sectorfix[] =
     { pack_plut,        1,  16,     96, "",        "",             DEFAULT,       DEFAULT, DamageNegative10Or20PercentHealth, DEFAULT },
     { pack_plut,        1,  16,     97, "",        "NUKAGE1",      DEFAULT,       DEFAULT, DEFAULT,                           DEFAULT },
     { pack_plut,        1,  16,    104, "",        "NUKAGE1",      DEFAULT,       DEFAULT, DEFAULT,                           DEFAULT },
+
+    { pack_plut,        1,  24,     41, "",        "FLAT5_5",      DEFAULT,       DEFAULT, DEFAULT,                           DEFAULT },
+    { pack_plut,        1,  24,     42, "",        "FLAT5_5",      DEFAULT,       DEFAULT, DEFAULT,                           DEFAULT },
 
     { pack_plut,        1,  26,    156, "",        "",             DEFAULT,       DEFAULT, Normal,                            DEFAULT },
 

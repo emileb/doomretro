@@ -7,7 +7,7 @@
 ========================================================================
 
   Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2021 by Brad Harding.
+  Copyright © 2013-2021 by Brad Harding <mailto:brad@doomretro.com>.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
@@ -664,10 +664,10 @@ mobjinfo_t mobjinfo[] =
         /* fullbright           */ false,
         /* blood                */ MT_BLOOD,
         /* shadowoffset         */ 2 * FRACUNIT,
-        /* name1                */ "demon",
-        /* plural1              */ "demons",
-        /* name2                */ "pinky demon",
-        /* plural2              */ "pinky demons",
+        /* name1                */ "pinky demon",
+        /* plural1              */ "pinky demons",
+        /* name2                */ "demon",
+        /* plural2              */ "demons",
         /* name3                */ "pinky",
         /* plural3              */ "pinkies"
     },
@@ -799,8 +799,8 @@ mobjinfo_t mobjinfo[] =
         /* fullbright           */ false,
         /* blood                */ MT_GREENBLOOD,
         /* shadowoffset         */ 4 * FRACUNIT,
-        /* name1                */ "baron of Hell",
-        /* plural1              */ "barons of Hell",
+        /* name1                */ "baron of hell",
+        /* plural1              */ "barons of hell",
         /* name2                */ "baron",
         /* plural2              */ "barons",
         /* name3                */ "",
@@ -5119,9 +5119,9 @@ mobjinfo_t mobjinfo[] =
         /* fullbright           */ false,
         /* blood                */ MT_BLUEBLOOD,
         /* shadowoffset         */ 0,
-        /* name1                */ "dead cacodemon",
-        /* plural1              */ "dead cacodemons",
-        /* name2                */ "",
+        /* name1                */ "cacodemon's corpse",
+        /* plural1              */ "",
+        /* name2                */ "dead cacodemon",
         /* plural2              */ "",
         /* name3                */ "",
         /* plural3              */ ""
@@ -5164,9 +5164,9 @@ mobjinfo_t mobjinfo[] =
         /* fullbright           */ false,
         /* blood                */ MT_BLOOD,
         /* shadowoffset         */ 0,
-        /* name1                */ "dead marine",
-        /* plural1              */ "dead marines",
-        /* name2                */ "",
+        /* name1                */ "marine's corpse",
+        /* plural1              */ "",
+        /* name2                */ "dead player",
         /* plural2              */ "",
         /* name3                */ "",
         /* plural3              */ ""
@@ -5209,9 +5209,9 @@ mobjinfo_t mobjinfo[] =
         /* fullbright           */ false,
         /* blood                */ MT_BLOOD,
         /* shadowoffset         */ 0,
-        /* name1                */ "dead zombieman",
-        /* plural1              */ "dead zombiemen",
-        /* name2                */ "",
+        /* name1                */ "zombieman's corpse",
+        /* plural1              */ "",
+        /* name2                */ "dead zombieman",
         /* plural2              */ "",
         /* name3                */ "",
         /* plural3              */ ""
@@ -5254,12 +5254,12 @@ mobjinfo_t mobjinfo[] =
         /* fullbright           */ false,
         /* blood                */ MT_BLOOD,
         /* shadowoffset         */ 0,
-        /* name1                */ "dead demon",
-        /* plural1              */ "dead demons",
-        /* name2                */ "dead pinky demon",
-        /* plural2              */ "dead pinky demons",
-        /* name3                */ "dead pinky",
-        /* plural3              */ "dead pinkies"
+        /* name1                */ "pinky demon's corpse",
+        /* plural1              */ "",
+        /* name2                */ "dead demon",
+        /* plural2              */ "",
+        /* name3                */ "",
+        /* plural3              */ ""
     },
 
     // Dead Lost Soul, invisible (MT_MISC65)
@@ -5299,8 +5299,8 @@ mobjinfo_t mobjinfo[] =
         /* fullbright           */ false,
         /* blood                */ 0,
         /* shadowoffset         */ 0,
-        /* name1                */ "dead lost soul",
-        /* plural1              */ "dead lost souls",
+        /* name1                */ "lost soul's corpse",
+        /* plural1              */ "",
         /* name2                */ "",
         /* plural2              */ "",
         /* name3                */ "",
@@ -5344,9 +5344,9 @@ mobjinfo_t mobjinfo[] =
         /* fullbright           */ false,
         /* blood                */ MT_BLOOD,
         /* shadowoffset         */ 0,
-        /* name1                */ "dead imp",
-        /* plural1              */ "dead imps",
-        /* name2                */ "",
+        /* name1                */ "imp's corpse",
+        /* plural1              */ "",
+        /* name2                */ "dead imp",
         /* plural2              */ "",
         /* name3                */ "",
         /* plural3              */ ""
@@ -5389,9 +5389,9 @@ mobjinfo_t mobjinfo[] =
         /* fullbright           */ false,
         /* blood                */ MT_BLOOD,
         /* shadowoffset         */ 0,
-        /* name1                */ "dead shotgun guy",
-        /* plural1              */ "dead shotgun guys",
-        /* name2                */ "",
+        /* name1                */ "shotgun guy's corpse",
+        /* plural1              */ "",
+        /* name2                */ "dead shotgun guy",
         /* plural2              */ "",
         /* name3                */ "",
         /* plural3              */ ""

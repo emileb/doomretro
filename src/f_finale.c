@@ -7,7 +7,7 @@
 ========================================================================
 
   Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2021 by Brad Harding.
+  Copyright © 2013-2021 by Brad Harding <mailto:brad@doomretro.com>.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
@@ -286,7 +286,7 @@ dboolean F_Responder(event_t *ev)
 
 static fixed_t TextSpeed(void)
 {
-    return (midstage ? NEWTEXTSPEED : (midstage = acceleratestage) ? (acceleratestage = false), NEWTEXTSPEED : TEXTSPEED);
+    return (midstage ? NEWTEXTSPEED : ((midstage = acceleratestage) ? (acceleratestage = false), NEWTEXTSPEED : TEXTSPEED));
 }
 
 //
@@ -403,7 +403,7 @@ static void F_TextWrite(void)
             continue;
         }
 
-        if (cx > UNITYWIDTH - 12)
+        if (cx > VANILLAWIDTH - 12)
             continue;
 
         if (STCFN034)
@@ -959,7 +959,7 @@ static void F_BunnyScroll(void)
     patch_t *p2 = (FREEDOOM || hacx ? W_CacheLastLumpName("PFUB1") : W_CacheLumpName("PFUB1"));
     int     p1offset = (VANILLAWIDTH - SHORT(p1->width)) / 2;
     int     p2offset = VANILLAWIDTH + (SHORT(p2->width) == VANILLAWIDTH ? -p1offset : p1offset);
-    int     pillarwidth = (SCREENWIDTH - (SHORT(p1->width) << FRACBITS) / DXI) / 2;
+    int     pillarwidth = MAX(0, (SCREENWIDTH - (SHORT(p1->width) << FRACBITS) / DXI) / 2);
 
     if (pillarwidth && SCREENWIDTH != NONWIDEWIDTH)
         memset(screens[0], FindDominantEdgeColor(p1), SCREENAREA);
@@ -980,7 +980,7 @@ static void F_BunnyScroll(void)
 
         if (finalecount < 1180)
         {
-            if (finalecount == 1130 && fade)
+            if (finalecount == 1130)
                 D_FadeScreen();
 
             V_DrawPatchWithShadow((VANILLAWIDTH - 104) / 2 + 1, (VANILLAHEIGHT - 64) / 2 + 1,
@@ -998,9 +998,9 @@ static void F_BunnyScroll(void)
                 laststage = stage;
             }
 
-            M_snprintf(name, sizeof(name), (FREEDOOM || hacx ? W_CacheLastLumpName("END%i") : W_CacheLumpName("END%i")), stage);
+            M_snprintf(name, sizeof(name), "END%i", stage);
             V_DrawPatchWithShadow((VANILLAWIDTH - 104) / 2 + 1, (VANILLAHEIGHT - 64) / 2 + 1,
-                W_CacheLumpName(name), false);
+                (FREEDOOM || hacx ? W_CacheLastLumpName(name) : W_CacheLumpName(name)), false);
         }
     }
 }

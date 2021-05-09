@@ -1,5 +1,67 @@
 ![](https://github.com/bradharding/www.doomretro.com/raw/master/releasenotes.png)
 
+#### DOOM Retro v4.0.9
+
+* Optimizations have been made to further improve the overall performance and stability of *DOOM Retro*.
+* Minor improvements have been made to some title screens.
+* Minor changes have been made to text that is output to the console.
+* A dead player’s negative health will now always be positioned correctly in the widescreen HUD.
+* A crash will no longer occur during the finale at the end of the third episode of *DOOM*.
+* The `r_blood` CVAR is now `nofuzz` by default.
+* A bug has been fixed whereby the `r_hud` CVAR would be left `on` when changing the `r_screensize` CVAR in the console in some instances.
+* A sound is now made when changing the `r_screensize` CVAR in the console.
+
+![](https://github.com/bradharding/www.doomretro.com/raw/master/wiki/bigdivider.png)
+
+###### Friday, April 16, 2021
+
+#### DOOM Retro v4.0.8
+
+* *DOOM Retro* is now compiled using v16.9.4 of [*Microsoft Visual Studio Community 2019*](https://www.visualstudio.com/vs/).
+* Minor changes have been made to text that is output to the console.
+* The `condump` CCMD will no longer continue to dump every line of text that is output to the console after it is entered.
+* Minor improvements have been made to the `DMENUPIC` lump.
+* Minor changes have been made to the help screen displayed using the <kbd>F1</kbd> key.
+* A bug has been fixed whereby the console couldn’t be opened using the <kbd>~</kbd> key on certain keyboards.
+* The player will no longer be spawned into a map such that they could be stuck in the ceiling.
+* Player messages will now quickly fade off of the screen if the `fade` CVAR is `on` when the alternate widescreen HUD is displayed.
+* The `vid_showfps` CVAR can now be `on` at startup if set in a `.cfg` file that is either loaded using the WAD launcher or specified on the command-line.
+* Dead monsters may now be spawned again using the `spawn` CCMD.
+* A bug has been fixed whereby things with the `MF_BOUNCES` flag wouldn’t explode.
+* More fixes have been applied to certain maps when the `r_fixmaperrors` CVAR is `on`.
+* `-shot` may be now be used as an alternative to `-shotdir` on the command-line.
+* A bug has been fixed whereby corpses wouldn’t gib correctly in some rare instances if the `r_corpses_gib` CVAR was `on`.
+
+![](https://github.com/bradharding/www.doomretro.com/raw/master/wiki/bigdivider.png)
+
+###### Friday, April 2, 2021
+
+#### DOOM Retro v4.0.7
+
+* Optimizations have been made to further improve the overall performance and stability of *DOOM Retro*.
+* *DOOM Retro* is now compiled using v16.9.3 of [*Microsoft Visual Studio Community 2019*](https://www.visualstudio.com/vs/).
+* Even wider versions of the title, credits, intermission and finale screens will now be used on ultra-wide displays when the `vid_widescreen` CVAR is `on`.
+* *DOOM Retro’s* window can now be resized properly if the `vid_fullscreen` CVAR is `off` and the `vid_widescreen` CVAR is `on`.
+* Minor changes have been made to text that is output to the console.
+* The <kbd>F5</kbd> key may now be used to toggle the graphic detail while the automap is open and the status bar is visible (that is, when the `r_screensize` CVAR is less than `8`).
+* Player messages will now quickly fade off of the screen if the `fade` CVAR is `on`.
+* The `messages` CVAR is now `on` by default.
+* Any screen shake will now be canceled when warping to another map using the `IDCLEV` cheat or loading a savegame in some instances.
+* The credits screen will now be displayed for the same amount of time as the title screen.
+* The correct title screen is now displayed when playing *DOOM (Shareware)*, *Final DOOM: The Plutonia Experiment* or *Final DOOM: TNT - Evilution*.
+* The *id Software* logo is no longer missing from certain title screens.
+* The correct credits screen is now displayed for the registered version of *DOOM*.
+* *Vanilla DOOM’s* notorious [blockmap bug](http://doom2.net/doom2/research/things.html) has now finally been fixed.
+* Par times are now shown on the intermission screen when playing [*Chex Quest*](https://doomwiki.org/wiki/Chex_Quest).
+* A bug has been fixed whereby some sound effect lumps in the [WAV format](https://en.wikipedia.org/wiki/WAV) wouldn’t play correctly.
+* The pitch of sounds made by monster projectiles are no longer randomized if the `s_randompitch` CVAR is `on`.
+* The player’s weapon sprite is no longer cut off when reloading the super shotgun after firing it, and if the `vid_widescreen` CVAR is `on` and the `r_screensize` CVAR is `8`.
+* Minor improvements have been made to the support of [*Freedoom: Phase 2*](https://freedoom.github.io/).
+
+![](https://github.com/bradharding/www.doomretro.com/raw/master/wiki/bigdivider.png)
+
+###### Sunday, March 14, 2021
+
 #### DOOM Retro v4.0.6
 
 * Optimizations have been made to further improve the overall performance and stability of *DOOM Retro*.
@@ -24,7 +86,7 @@
 
 * *DOOM Retro* is now compiled using v16.9 of [*Microsoft Visual Studio Community 2019*](https://www.visualstudio.com/vs/).
 * Minor changes have been made to text that is output to the console.
-* The finale at the end of the 3rd episode of *DOOM* is now displayed correctly.
+* The finale at the end of the third episode of *DOOM* is now displayed correctly.
 * You may no longer toggle widescreen using the <kbd>+</kbd> and <kbd>&ndash;</kbd> keys, or open the help screen using the <kbd>F1</kbd> key, when on an intermission or finale screen.
 * Certain fade transitions are now applied to the finales of both *DOOM* and *DOOM II: Hell On Earth* when the `fade` CVAR is `on`.
 * When displaying certain lumps from a PWAD that are only 320 pixels wide, and the `vid_widescreen` CVAR is `on`, the color of the surrounding pillarboxes will now be based on the most used color along the left and right edges of those lumps, rather than always be black.

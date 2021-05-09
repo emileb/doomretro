@@ -7,7 +7,7 @@
 ========================================================================
 
   Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2021 by Brad Harding.
+  Copyright © 2013-2021 by Brad Harding <mailto:brad@doomretro.com>.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
@@ -298,7 +298,7 @@ manual_plat:
 //
 // P_ActivateInStasis
 // Activate a plat that has been put in stasis
-// (stopped perpetual floor, instant floor/ceil toggle)
+// (stopped perpetual floor, instant floor/ceiling toggle)
 //
 void P_ActivateInStasis(int tag)
 {

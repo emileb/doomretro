@@ -7,7 +7,7 @@
 ========================================================================
 
   Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2021 by Brad Harding.
+  Copyright © 2013-2021 by Brad Harding <mailto:brad@doomretro.com>.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
@@ -64,7 +64,7 @@ typedef struct
     dboolean    movekey;
 } cheatseq_t;
 
-int cht_CheckCheat(cheatseq_t *cht, unsigned char key);
+dboolean cht_CheckCheat(cheatseq_t *cht, unsigned char key);
 
 void cht_GetParam(cheatseq_t *cht, char *buffer);
 

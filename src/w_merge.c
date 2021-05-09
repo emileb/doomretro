@@ -7,7 +7,7 @@
 ========================================================================
 
   Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2021 by Brad Harding.
+  Copyright © 2013-2021 by Brad Harding <mailto:brad@doomretro.com>.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
@@ -79,8 +79,6 @@ static searchlist_t     pwad_flats;
 static sprite_frame_t   *sprite_frames;
 static int              num_sprite_frames;
 static int              sprite_frames_alloced = 128;
-
-dboolean                SHT2A0;
 
 // Search in a list to find a lump with a particular name
 // Linear search (slow!)
@@ -267,22 +265,23 @@ static void AddSpriteLump(lumpinfo_t *lump)
     int             angle_num;
     static int      MISFA0;
     static int      MISFB0;
-    dboolean        ispackagewad = M_StringEndsWith(lump->wadfile->path, PACKAGE_WAD);
+    static int      SHT2A0;
+    static int      SHT2E0;
+    dboolean        ispackagewad = M_StringCompare(leafname(lump->wadfile->path), PACKAGE_WAD);
 
     if (!ValidSpriteLumpName(lump->name))
         return;
 
     if (lump->wadfile->type == PWAD)
     {
-        if (M_StringCompare(lump->name, "SHT2A0") && !BTSX)
-            SHT2A0 = true;
-
         if (!ispackagewad)
         {
             int i = 0;
 
             MISFA0 += M_StringCompare(lump->name, "MISFA0");
             MISFB0 += M_StringCompare(lump->name, "MISFB0");
+            SHT2A0 += M_StringCompare(lump->name, "SHT2A0");
+            SHT2E0 += M_StringCompare(lump->name, "SHT2E0");
 
             while (*weaponsprites[i].spr1)
             {
@@ -301,8 +300,17 @@ static void AddSpriteLump(lumpinfo_t *lump)
         }
     }
 
-    if (ispackagewad && M_StringStartsWith(lump->name, "MISF") && ((MISFA0 >= 2 || MISFB0 >= 2) || hacx || FREEDOOM))
-        return;
+    if (ispackagewad)
+    {
+        if (M_StringStartsWith(lump->name, "MISF") && ((MISFA0 >= 2 || MISFB0 >= 2) || hacx || FREEDOOM))
+            return;
+
+        if (M_StringCompare(lump->name, "SHT2A0") && (SHT2A0 >= 2 || hacx || FREEDOOM))
+            return;
+
+        if (M_StringCompare(lump->name, "SHT2E0") && (SHT2E0 >= 2 || hacx || FREEDOOM))
+            return;
+    }
 
     // first angle
     sprite = FindSpriteFrame(lump->name, lump->name[4]);

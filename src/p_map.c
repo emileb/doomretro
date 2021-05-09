@@ -7,7 +7,7 @@
 ========================================================================
 
   Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2021 by Brad Harding.
+  Copyright © 2013-2021 by Brad Harding <mailto:brad@doomretro.com>.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
@@ -1144,7 +1144,7 @@ void P_ApplyTorque(mobj_t *mo)
     int xh = P_GetSafeBlockX((tmbbox[BOXRIGHT] = x + radius) - bmaporgx);
     int yl = P_GetSafeBlockY((tmbbox[BOXBOTTOM] = y - radius) - bmaporgy);
     int yh = P_GetSafeBlockY((tmbbox[BOXTOP] = y + radius) - bmaporgy);
-    int flags2 = mo->flags2;            // Remember the current state, for gear-change
+    int flags2 = mo->flags2;                    // Remember the current state, for gear-change
 
     tmthing = mo;
     validcount++;                               // prevents checking same line twice
@@ -1902,7 +1902,7 @@ static dboolean bombverticality;
 // "bombsource" is the creature
 // that caused the explosion at "bombspot".
 //
-static dboolean PIT_RadiusAttack(mobj_t *thing)
+dboolean PIT_RadiusAttack(mobj_t *thing)
 {
     fixed_t     dist;
     mobjtype_t  type;

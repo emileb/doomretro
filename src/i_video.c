@@ -7,7 +7,7 @@
 ========================================================================
 
   Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2021 by Brad Harding.
+  Copyright © 2013-2021 by Brad Harding <mailto:brad@doomretro.com>.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
@@ -684,6 +684,8 @@ static void I_GetEvent(void)
 
                                 free(temp1);
                                 free(temp2);
+
+                                I_RestartGraphics(false);
                             }
 
                             break;
@@ -1355,7 +1357,7 @@ static char *getaspectratio(int width, int height)
         height *= 2;
     }
 
-    M_snprintf(ratio, sizeof(ratio), "%i:%i", width, height);
+    M_snprintf(ratio, sizeof(ratio), "%s %i:%i", (width == 8 ? "an" : "a"), width, height);
     return ratio;
 }
 
@@ -1485,7 +1487,7 @@ static void SetVideoMode(dboolean createwindow, dboolean output)
                 char    *temp1 = commify(width);
                 char    *temp2 = commify(height);
 
-                C_Output("Staying at the native desktop resolution of %sx%s with a %s aspect ratio.",
+                C_Output("Staying at the native desktop resolution of %sx%s with %s aspect ratio.",
                     temp1, temp2, getaspectratio(width, height));
 
                 free(temp1);
@@ -1507,7 +1509,7 @@ static void SetVideoMode(dboolean createwindow, dboolean output)
                 char    *temp1 = commify(width);
                 char    *temp2 = commify(height);
 
-                C_Output("Switched to a resolution of %sx%s with a %s aspect ratio.", temp1, temp2, getaspectratio(width, height));
+                C_Output("Switched to a resolution of %sx%s with %s aspect ratio.", temp1, temp2, getaspectratio(width, height));
 
                 free(temp1);
                 free(temp2);
@@ -1799,7 +1801,7 @@ static void SetVideoMode(dboolean createwindow, dboolean output)
             (playpalwad->type == IWAD ? "IWAD" : "PWAD"), playpalwad->path);
 
         if (gammaindex == 10)
-            C_Output("Gamma correction is off.");
+            C_Output("There is no gamma correction.");
         else
         {
             char    text[128];
@@ -1871,19 +1873,26 @@ static void I_GetScreenDimensions(void)
 {
     if (vid_widescreen)
     {
-        int w = 16;
-        int h = 10;
+        int width;
+        int height;
 
-        if (displays[displayindex].w * ACTUALHEIGHT >= displays[displayindex].h * SCREENWIDTH)
+        if (vid_fullscreen)
         {
-            w = displays[displayindex].w;
-            h = displays[displayindex].h;
+            width = displays[displayindex].w;
+            height = displays[displayindex].h;
+        }
+        else
+        {
+            GetWindowSize();
+
+            width = windowwidth;
+            height = windowheight;
         }
 
-        SCREENWIDTH = MIN((w * ACTUALHEIGHT / h + 1) & ~3, MAXWIDTH);
+        SCREENWIDTH = MIN((width * ACTUALHEIGHT / height + 1) & ~3, MAXWIDTH);
 
         // r_fov * 0.82 is vertical FOV for 4:3 aspect ratio
-        WIDEFOVDELTA = (int)(atan(w / (h / tan(r_fov * 0.82 * M_PI / 360.0))) * 360.0 / M_PI) - r_fov;
+        WIDEFOVDELTA = (int)(atan(width / (height / tan(r_fov * 0.82 * M_PI / 360.0))) * 360.0 / M_PI) - r_fov;
         WIDESCREENDELTA = ((SCREENWIDTH - NONWIDEWIDTH) / SCREENSCALE) / 2;
 
         clearframefunc = (vid_fullscreen ? &nullfunc : &I_ClearFrame);
@@ -1947,10 +1956,10 @@ void I_ToggleFullscreen(void)
     S_StartSound(NULL, sfx_stnmov);
 
     if (vid_fullscreen)
-        C_StrCVAROutput(stringize(vid_fullscreen), "on");
+        C_Output("%s %s", stringize(vid_fullscreen), "on");
     else
     {
-        C_StrCVAROutput(stringize(vid_fullscreen), "off");
+        C_Output("%s %s", stringize(vid_fullscreen), "off");
 
         SDL_SetWindowSize(window, windowwidth, windowheight);
 
@@ -2083,12 +2092,6 @@ void I_InitGraphics(void)
         memset(mapscreen, nearestblack, MAPAREA);
         mapblitfunc();
     }
-
-    for (int i = SDL_SCANCODE_A; i <= SDL_SCANCODE_RETURN; i++)
-        translatekey[i] = SDL_GetKeyFromScancode(i);
-
-    for (int i = SDL_SCANCODE_MINUS; i <= SDL_SCANCODE_SLASH; i++)
-        translatekey[i] = SDL_GetKeyFromScancode(i);
 
     while (SDL_PollEvent(&dummy));
 }

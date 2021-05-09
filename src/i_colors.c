@@ -7,7 +7,7 @@
 ========================================================================
 
   Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2021 by Brad Harding.
+  Copyright © 2013-2021 by Brad Harding <mailto:brad@doomretro.com>.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
@@ -223,11 +223,11 @@ int FindDominantEdgeColor(patch_t *patch)
     int         color = 0;
     const int   width = SHORT(patch->width);
 
-    if (width >= 20)
+    if (width >= 8)
     {
         int colors[256] = { 0 };
 
-        for (int x = 0; x < 20; x++)
+        for (int x = 0; x < 8; x++)
         {
             column_t    *column = (column_t *)((byte *)patch + LONG(patch->columnofs[x]));
             byte        *source = (byte *)column + 3;
@@ -237,7 +237,7 @@ int FindDominantEdgeColor(patch_t *patch)
                 colors[*source++]++;
         }
 
-        for (int x = width - 20; x < width; x++)
+        for (int x = width - 8; x < width; x++)
         {
             column_t    *column = (column_t *)((byte *)patch + LONG(patch->columnofs[x]));
             byte        *source = (byte *)column + 3;

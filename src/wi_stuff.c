@@ -7,7 +7,7 @@
 ========================================================================
 
   Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2021 by Brad Harding.
+  Copyright © 2013-2021 by Brad Harding <mailto:brad@doomretro.com>.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
@@ -43,6 +43,7 @@
 #include "i_colors.h"
 #include "i_swap.h"
 #include "m_config.h"
+#include "m_menu.h"
 #include "m_misc.h"
 #include "m_random.h"
 #include "p_setup.h"
@@ -392,7 +393,7 @@ static void WI_DrawLF(void)
         char    name[9];
 
         if (gamemode == commercial)
-            M_snprintf(name, sizeof(name), "CWILV%02d", wbs->last);
+            M_snprintf(name, sizeof(name), "CWILV%02i", wbs->last);
         else
             M_snprintf(name, sizeof(name), "WILV%i%i", wbs->epsd, wbs->last);
 
@@ -450,7 +451,7 @@ static void WI_DrawEL(void)
         char    name[9];
 
         if (gamemode == commercial)
-            M_snprintf(name, sizeof(name), "CWILV%02d", wbs->next);
+            M_snprintf(name, sizeof(name), "CWILV%02i", wbs->next);
         else
             M_snprintf(name, sizeof(name), "WILV%i%i", wbs->epsd, wbs->next);
 
@@ -796,11 +797,11 @@ static void WI_InitStats(void)
     cnt_pause = TICRATE;
 
     if (M_StringCompare(playername, playername_default))
-        C_PlayerMessage("You have finished <i>%s</i>%s",
-            mapname, (ispunctuation(mapname[strlen(mapname) - 1]) ? "" : "."));
+        C_PlayerMessage("You finished <i>%s</i>%s",
+            mapname, (ispunctuation(mapname[strlen(mapname) - 1]) ? "" : "!"));
     else
-        C_PlayerMessage("%s has finished <i>%s</i>%s",
-            playername, mapname, (ispunctuation(mapname[strlen(mapname) - 1]) ? "" : "."));
+        C_PlayerMessage("%s finished <i>%s</i>%s",
+            playername, mapname, (ispunctuation(mapname[strlen(mapname) - 1]) ? "" : "!"));
 
     C_TabbedOutput(tabs, "Kills\t<b>%i%%</b>", (wbs->skills * 100) / wbs->maxkills);
     C_TabbedOutput(tabs, "Items\t<b>%i%%</b>", (wbs->sitems * 100) / wbs->maxitems);
@@ -940,8 +941,6 @@ static void WI_UpdateStats(void)
     }
 }
 
-void M_DrawString(int x, int y, char *string);
-
 static void WI_DrawStats(void)
 {
     // line height
@@ -1046,7 +1045,7 @@ static void WI_LoadUnloadData(load_callback_t callback)
     {
         for (int i = 0; i < NUMCMAPS; i++)
         {
-            M_snprintf(name, sizeof(name), "CWILV%02d", i);
+            M_snprintf(name, sizeof(name), "CWILV%02i", i);
             callback(name, &lnames[i]);
         }
     }
@@ -1078,7 +1077,7 @@ static void WI_LoadUnloadData(load_callback_t callback)
                     if (wbs->epsd != 1 || j != 8)
                     {
                         // animations
-                        M_snprintf(name, sizeof(name), "WIA%i%02d%02d", wbs->epsd, j, i);
+                        M_snprintf(name, sizeof(name), "WIA%i%02i%02i", wbs->epsd, j, i);
                         callback(name, &a->p[i]);
                     }
                     else

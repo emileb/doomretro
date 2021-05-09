@@ -7,7 +7,7 @@
 ========================================================================
 
   Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2021 by Brad Harding.
+  Copyright © 2013-2021 by Brad Harding <mailto:brad@doomretro.com>.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
@@ -85,7 +85,7 @@ dboolean                idbehold;
 dboolean                s_STSTR_BEHOLD2;
 
 static hu_stext_t       w_message;
-static int              message_counter;
+int                     message_counter;
 
 static dboolean         headsupactive;
 
@@ -117,7 +117,7 @@ static void (*hudfunc)(int x, int y, patch_t *patch, byte *translucency);
 static void (*hudnumfunc)(int x, int y, patch_t *patch, byte *translucency);
 
 static void (*althudfunc)(int x, int y, patch_t *patch, int from, int to);
-void (*althudtextfunc)(int x, int y, byte *screen, patch_t *patch, dboolean italics, int color, int screenwidth);
+void (*althudtextfunc)(int x, int y, byte *screen, patch_t *patch, dboolean italics, int color, int screenwidth, byte *tinttab);
 static void (*fillrectfunc)(int scrn, int x, int y, int width, int height, int color, dboolean right);
 static void (*fillrectfunc2)(int scrn, int x, int y, int width, int height, int color, dboolean right);
 
@@ -204,7 +204,7 @@ void HU_Init(void)
     {
         char    buffer[9];
 
-        M_snprintf(buffer, sizeof(buffer), "STCFN%03d", j++);
+        M_snprintf(buffer, sizeof(buffer), "STCFN%03i", j++);
         hu_font[i] = W_CacheLumpName(buffer);
     }
 
@@ -368,7 +368,7 @@ static int HUDNumberWidth(int val)
         width += SHORT(tallnum[(val %= 100) / 10]->width);
     }
     else if (val >= 10)
-        width = SHORT(tallnum[val / 10]->width);
+        width += SHORT(tallnum[val / 10]->width);
 
     return (width + SHORT(tallnum[val % 10]->width));
 }
@@ -1130,7 +1130,7 @@ void HU_Drawer(void)
         else
         {
             if (vid_widescreen)
-                w_title.x = (r_screensize == r_screensize_max - 1 ? WIDESCREENDELTA * SCREENSCALE : 8);
+                w_title.x = (r_screensize == r_screensize_max - 1 ? HU_TITLEX + WIDESCREENDELTA * SCREENSCALE : 8);
 
             w_title.y = MAPHEIGHT - hu_font[0]->height * SCREENSCALE - 4;
             HUlib_DrawAutomapTextLine(&w_title, false);
@@ -1188,7 +1188,7 @@ void HU_Erase(void)
 
 void HU_Ticker(void)
 {
-    const dboolean  idmypos = viewplayer->cheats & CF_MYPOS;
+    const dboolean  idmypos = (viewplayer->cheats & CF_MYPOS);
 
     // tic down message counter if message is up
     if (!idmypos && !(message_counter = MAX(message_counter - 1, 0)) && !menuactive && !consoleactive)

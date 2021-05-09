@@ -7,7 +7,7 @@
 ========================================================================
 
   Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2021 by Brad Harding.
+  Copyright © 2013-2021 by Brad Harding <mailto:brad@doomretro.com>.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
@@ -181,7 +181,6 @@ static int          startuptimer;
 
 dboolean            realframe;
 static dboolean     error;
-static dboolean     guess;
 
 struct tm           gamestarttime;
 
@@ -635,7 +634,7 @@ void D_DoAdvanceTitle(void)
         forcewipe = true;
         pagelump = creditlump;
         pillarboxcolor = FindDominantEdgeColor(pagelump);
-        pagetic = 10 * TICRATE;
+        pagetic = 20 * TICRATE;
     }
 
     if (W_CheckMultipleLumps("TITLEPIC") >= (bfgedition ? 1 : 2))
@@ -818,10 +817,6 @@ static dboolean D_IsDOOM2IWAD(char *filename)
         || M_StringCompare(file, "BFGDOOM2.WAD")
         || M_StringCompare(file, "DOOM2BFG.WAD")
         || M_StringCompare(file, "DOOM2UNITY.WAD")
-        || M_StringCompare(file, "PLUTONIA.WAD")
-        || M_StringCompare(file, "PLUTONIAUNITY.WAD")
-        || M_StringCompare(file, "TNT.WAD")
-        || M_StringCompare(file, "TNTUNITY.WAD")
         || (hacx = M_StringCompare(file, "HACX.WAD")));
 }
 
@@ -920,6 +915,9 @@ static void D_CheckSupportedPWAD(char *filename)
         eviternity = true;
     else if (M_StringCompare(leafname(filename), "d4v.wad"))
         doom4vanilla = true;
+    else if (M_StringCompare(leafname(filename), "rekkr.wad")
+        || M_StringCompare(leafname(filename), "rekkrsa.wad"))
+        rekkr = true;
     else if (M_StringCompare(leafname(filename), "remnant.wad"))
         remnant = true;
 }
@@ -1179,6 +1177,7 @@ static int D_OpenWADLauncher(void)
     if (fileopenedok)
     {
         dboolean    onlyoneselected;
+        dboolean    guess = false;
 
 #if defined(__APPLE__)
         NSArray     *urls = [panel URLs];
@@ -1227,7 +1226,7 @@ static int D_OpenWADLauncher(void)
                     guess = true;
 
                     if (!M_StringEndsWith(temp, leafname(file)))
-                        C_Warning(1, "<b>%s</b> couldn't be found. Did you mean <b>%s</b>?", leafname(file), leafname(temp));
+                        C_Warning(1, "<b>%s</b> couldn't be found so <b>%s</b> was loaded instead.", leafname(file), leafname(temp));
 
                     file = M_StringDuplicate(temp);
                     free(temp);
@@ -1873,12 +1872,9 @@ static void D_DoomMainSetup(void)
 #endif
 
     I_PrintSystemInfo();
-
     C_PrintSDLVersions();
 
     iwadfile = D_FindIWAD();
-
-    modifiedgame = false;
 
     for (int i = 0; i < MAXALIASES; i++)
     {
@@ -2339,13 +2335,13 @@ static void D_DoomMainSetup(void)
     {
         char    buffer[9];
 
-        M_snprintf(buffer, sizeof(buffer), "DRLOGO%02d", i + 1);
+        M_snprintf(buffer, sizeof(buffer), "DRLOGO%02i", i + 1);
         logolump[i] = W_CacheLumpName(buffer);
     }
 
     if (autosigil)
     {
-        titlelump = W_CacheLastLumpName("TITLEPI2");
+        titlelump = W_CacheLastLumpName("TITLEPI3");
         creditlump = W_CacheLastLumpName("CREDIT1");
     }
     else
@@ -2359,7 +2355,8 @@ static void D_DoomMainSetup(void)
             switch (gamemission)
             {
                 case doom:
-                    titlelump = W_CacheLumpName(gamemode == retail ? "TITLEPI2" : "TITLEPI1");
+                    titlelump = W_CacheLumpName(gamemode == shareware ? "TITLEPI1" :
+                        (gamemode == registered ? "TITLEPI2" : "TITLEPI3"));
                     break;
 
                 case doom2:
@@ -2367,16 +2364,16 @@ static void D_DoomMainSetup(void)
                     if ((DMENUPIC = (bfgedition && gamemode == commercial)))
                         titlelump = W_CacheLumpName("DMENUPIC");
                     else
-                        titlelump = W_CacheLumpName("TITLEPI3");
+                        titlelump = W_CacheLumpName("TITLEPI4");
 
                     break;
 
                 case pack_plut:
-                    titlelump = W_CacheLumpName("TITLEPI4");
+                    titlelump = W_CacheLumpName("TITLEPI5");
                     break;
 
                 case pack_tnt:
-                    titlelump = W_CacheLumpName("TITLEPI5");
+                    titlelump = W_CacheLumpName("TITLEPI6");
                     break;
 
                 case none:

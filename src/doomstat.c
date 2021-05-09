@@ -7,7 +7,7 @@
 ========================================================================
 
   Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2021 by Brad Harding.
+  Copyright © 2013-2021 by Brad Harding <mailto:brad@doomretro.com>.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
@@ -68,10 +68,11 @@ dboolean        E1M8B;
 dboolean        sprfix18;
 dboolean        eviternity;
 dboolean        doom4vanilla;
+dboolean        rekkr;
 dboolean        remnant;
 
 // Set if homebrew PWAD stuff has been added.
-dboolean        modifiedgame;
+dboolean        modifiedgame = false;
 
 dboolean        DMENUPIC = false;
 dboolean        DSSECRET;

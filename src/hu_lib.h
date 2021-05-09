@@ -7,7 +7,7 @@
 ========================================================================
 
   Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2021 by Brad Harding.
+  Copyright © 2013-2021 by Brad Harding <mailto:brad@doomretro.com>.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
@@ -42,7 +42,7 @@
 // We are referring to patches.
 #include "r_defs.h"
 
-#define HU_TITLEX           0
+#define HU_TITLEX           (1 * SCREENSCALE)
 
 // font stuff
 #define HU_MAXLINES         4
@@ -118,7 +118,7 @@ void HUlib_DrawSText(hu_stext_t *s, dboolean external);
 // erases all stext lines
 void HUlib_EraseSText(hu_stext_t *s);
 
-extern void (*althudtextfunc)(int, int, byte *, patch_t *, dboolean, int, int);
+extern void (*althudtextfunc)(int, int, byte *, patch_t *, dboolean, int, int, byte *);
 
 extern dboolean s_STSTR_BEHOLD2;
 extern byte     tempscreen[MAXSCREENAREA];

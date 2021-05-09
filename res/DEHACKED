@@ -1,5 +1,5 @@
 [STRINGS]
-VERSION = DOOM Retro v4.0.6
+VERSION = DOOM Retro v4.0.9
 D_DEVSTR = Development mode ON.
 PRESSKEY = (Press any key to continue.)
 PRESSYN = (Press 'Y' or 'N' to continue.)
@@ -261,7 +261,7 @@ STSTR_BEHOLD = inVuln, bSrk, Inviso, Rad, Allmap or Lite-amp?
 STSTR_BEHOLDON = %s power-up toggled ON.
 STSTR_BEHOLDOFF = %s power-up toggled OFF.
 STSTR_BUDDHAON = "Miss you." - NL
-STSTR_BUDDHAOFF = "Miss you too." - BH
+STSTR_BUDDHAOFF = "Clearly you don't." - BH
 STSTR_CHOPPERS = "...doesn't suck." - GM
 STSTR_CLEV = Warping to %s...
 STSTR_CLEVSAME = Restarting %s...

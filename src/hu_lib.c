@@ -7,7 +7,7 @@
 ========================================================================
 
   Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
-  Copyright © 2013-2021 by Brad Harding.
+  Copyright © 2013-2021 by Brad Harding <mailto:brad@doomretro.com>.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
   <https://github.com/bradharding/doomretro/wiki/CREDITS>.
@@ -145,6 +145,7 @@ static void HUlib_DrawAltHUDTextLine(hu_textline_t *l)
     int             x = 10;
     int             color = nearestwhite;
     int             len = l->len;
+    byte            *tinttab = (automapactive ? tinttab75 : tinttab60);
 
     if (!automapactive)
     {
@@ -153,8 +154,18 @@ static void HUlib_DrawAltHUDTextLine(hu_textline_t *l)
             (viewplayer->fixedcolormap == INVERSECOLORMAP ? colormaps[0][32 * 256 + nearestwhite] : nearestblack));
     }
 
+    if (fade)
+    {
+        if (message_counter <= 2)
+            tinttab = tinttab20;
+        else if (message_counter <= 4)
+            tinttab = tinttab25;
+        else if (message_counter <= 6)
+            tinttab = tinttab33;
+    }
+
     if (idbehold)
-        althudtextfunc(x, HU_ALTHUDMSGY + 12, screens[0], altunderscores, false, color, SCREENWIDTH);
+        althudtextfunc(x, HU_ALTHUDMSGY + 12, screens[0], altunderscores, false, color, SCREENWIDTH, tinttab);
 
     for (int i = 0; i < len; i++)
     {
@@ -213,7 +224,7 @@ static void HUlib_DrawAltHUDTextLine(hu_textline_t *l)
                 }
             }
 
-            althudtextfunc(x, HU_ALTHUDMSGY, screens[0], patch, italics, color, SCREENWIDTH);
+            althudtextfunc(x, HU_ALTHUDMSGY, screens[0], patch, italics, color, SCREENWIDTH, tinttab);
             x += SHORT(patch->width);
             prevletter = letter;
         }
@@ -257,7 +268,7 @@ void HUlib_DrawAltAutomapTextLine(hu_textline_t *l, dboolean external)
             j++;
         }
 
-        althudtextfunc(x, SCREENHEIGHT - 16, fb1, patch, false, nearestwhite, (external ? MAPWIDTH : SCREENWIDTH));
+        althudtextfunc(x, SCREENHEIGHT - 16, fb1, patch, false, nearestwhite, (external ? MAPWIDTH : SCREENWIDTH), tinttab75);
         x += SHORT(patch->width);
         prevletter = letter;
     }
@@ -294,6 +305,8 @@ static void HUlib_DrawTextLine(hu_textline_t *l, dboolean external)
     unsigned char   prev = '\0';
     byte            *fb1 = screens[0];
     byte            *fb2 = screens[(r_screensize < r_screensize_max - 1 && !automapactive)];
+    byte            *tinttab1 = tinttab50;
+    byte            *tinttab2 = tinttab75;
     int             len = l->len;
     const dboolean  idmypos = (viewplayer->cheats & CF_MYPOS);
 
@@ -405,7 +418,26 @@ static void HUlib_DrawTextLine(hu_textline_t *l, dboolean external)
 
     // [BH] draw entire message from buffer onto screen
     maxx = (l->x + tw + 1) * SCREENSCALE;
-    maxy = (y + 11) * SCREENSCALE;
+    maxy = (y + 10) * SCREENSCALE;
+
+    if (fade)
+    {
+        if (message_counter <= 2)
+        {
+            tinttab1 = tinttab20;
+            tinttab2 = tinttab20;
+        }
+        else if (message_counter <= 4)
+        {
+            tinttab1 = tinttab25;
+            tinttab2 = tinttab40;
+        }
+        else if (message_counter <= 6)
+        {
+            tinttab1 = tinttab33;
+            tinttab2 = tinttab60;
+        }
+    }
 
     for (int yy = MAX(0, l->y - 1); yy < maxy; yy++)
         for (int xx = l->x; xx < maxx; xx++)
@@ -415,11 +447,11 @@ static void HUlib_DrawTextLine(hu_textline_t *l, dboolean external)
             byte    *dest1 = &fb1[dot];
 
             if (!*source)
-                *dest1 = tinttab50[(nearestblack << 8) + fb2[dot]];
+                *dest1 = tinttab1[(nearestblack << 8) + fb2[dot]];
             else if (*source != PINK)
             {
                 if (r_hud_translucency)
-                    *dest1 = tinttab75[(*source << 8) + fb2[dot]];
+                    *dest1 = tinttab2[(*source << 8) + fb2[dot]];
                 else
                     *dest1 = *source;
             }
