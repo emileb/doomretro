@@ -6,7 +6,7 @@
 
 ========================================================================
 
-  Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
+  Copyright © 1993-2021 by id Software LLC, a ZeniMax Media company.
   Copyright © 2013-2021 by Brad Harding <mailto:brad@doomretro.com>.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
@@ -39,11 +39,16 @@
 #if !defined(__M_CONFIG_H__)
 #define __M_CONFIG_H__
 
+#include "i_gamepad.h"
+#include "p_local.h"
+#include "version.h"
+
 extern dboolean     alwaysrun;
 extern int          am_allmapcdwallcolor;
 extern int          am_allmapfdwallcolor;
 extern int          am_allmapwallcolor;
 extern int          am_backcolor;
+extern int          am_bluedoorcolor;
 extern int          am_cdwallcolor;
 extern int          am_crosshaircolor;
 extern dboolean     am_external;
@@ -56,11 +61,13 @@ extern int          am_markcolor;
 extern dboolean     am_path;
 extern int          am_pathcolor;
 extern int          am_playercolor;
+extern int          am_reddoorcolor;
 extern dboolean     am_rotatemode;
 extern int          am_teleportercolor;
 extern int          am_thingcolor;
 extern int          am_tswallcolor;
 extern int          am_wallcolor;
+extern int          am_yellowdoorcolor;
 extern dboolean     autoaim;
 extern dboolean     autoload;
 extern dboolean     autosave;
@@ -87,6 +94,7 @@ extern int          gp_thumbsticks;
 extern int          gp_vibrate_barrels;
 extern int          gp_vibrate_damage;
 extern int          gp_vibrate_weapons;
+extern dboolean     groupmessages;
 extern dboolean     infighting;
 extern dboolean     infiniteheight;
 extern char         *iwadfolder;
@@ -118,7 +126,7 @@ extern dboolean     r_corpses_slide;
 extern dboolean     r_corpses_smearblood;
 extern int          r_detail;
 extern dboolean     r_diskicon;
-extern dboolean     r_dither;
+extern dboolean     r_ditheredlighting;
 extern dboolean     r_fixmaperrors;
 extern dboolean     r_fixspriteoffsets;
 extern dboolean     r_floatbob;
@@ -171,18 +179,19 @@ extern uint64_t     stat_itemspickedup_health;
 extern uint64_t     stat_mapscompleted;
 extern uint64_t     stat_mapsstarted;
 extern uint64_t     stat_monsterskilled;
+extern uint64_t     stat_monsterskilled_infighting;
 extern uint64_t     stat_monsterskilled_arachnotrons;
 extern uint64_t     stat_monsterskilled_archviles;
 extern uint64_t     stat_monsterskilled_baronsofhell;
 extern uint64_t     stat_monsterskilled_cacodemons;
 extern uint64_t     stat_monsterskilled_cyberdemons;
-extern uint64_t     stat_monsterskilled_demons;
 extern uint64_t     stat_monsterskilled_heavyweapondudes;
 extern uint64_t     stat_monsterskilled_hellknights;
 extern uint64_t     stat_monsterskilled_imps;
 extern uint64_t     stat_monsterskilled_lostsouls;
 extern uint64_t     stat_monsterskilled_mancubi;
 extern uint64_t     stat_monsterskilled_painelementals;
+extern uint64_t     stat_monsterskilled_pinkydemons;
 extern uint64_t     stat_monsterskilled_revenants;
 extern uint64_t     stat_monsterskilled_shotgunguys;
 extern uint64_t     stat_monsterskilled_spectres;
@@ -305,6 +314,10 @@ enum
 #define am_backcolor_default                    0
 #define am_backcolor_max                        255
 
+#define am_bluedoorcolor_min                    0
+#define am_bluedoorcolor_default                160
+#define am_bluedoorcolor_max                    255
+
 #define am_cdwallcolor_min                      0
 #define am_cdwallcolor_default                  160
 #define am_cdwallcolor_max                      255
@@ -343,6 +356,10 @@ enum
 #define am_playercolor_default                  4
 #define am_playercolor_max                      255
 
+#define am_reddoorcolor_min                     0
+#define am_reddoorcolor_default                 160
+#define am_reddoorcolor_max                     255
+
 #define am_rotatemode_default                   true
 
 #define am_teleportercolor_min                  0
@@ -360,6 +377,10 @@ enum
 #define am_wallcolor_min                        0
 #define am_wallcolor_default                    176
 #define am_wallcolor_max                        255
+
+#define am_yellowdoorcolor_min                  0
+#define am_yellowdoorcolor_default              160
+#define am_yellowdoorcolor_max                  255
 
 #define ammo_min                                0
 #define ammo_default                            50
@@ -455,6 +476,8 @@ enum
 #define gp_vibrate_weapons_default              100
 #define gp_vibrate_weapons_max                  200
 
+#define groupmessages_default                   true
+
 #define health_min                             -100
 #define health_default                          100
 #define health_max                              INT_MAX
@@ -508,7 +531,7 @@ enum
 #define r_blood_max                             r_blood_nofuzz
 
 #define r_bloodsplats_max_min                   0
-#define r_bloodsplats_max_default               65536
+#define r_bloodsplats_max_default               131072
 #define r_bloodsplats_max_max                   1048576
 
 #define r_bloodsplats_total_min                 0
@@ -541,7 +564,7 @@ enum
 
 #define r_diskicon_default                      false
 
-#define r_dither_default                        false
+#define r_ditheredlighting_default              true
 
 #define r_fixmaperrors_default                  true
 
@@ -561,7 +584,7 @@ enum
 
 #define r_homindicator_default                  false
 
-#define r_hud_default                           true
+#define r_hud_default                           false
 
 #define r_hud_translucency_default              true
 
@@ -808,6 +831,13 @@ enum
 #define MOUSESCREENSHOT_DEFAULT                -1
 #define MOUSESTRAFE_DEFAULT                    -1
 #define MOUSEUSE_DEFAULT                       -1
+#define MOUSEWEAPON1_DEFAULT                   -1
+#define MOUSEWEAPON2_DEFAULT                   -1
+#define MOUSEWEAPON3_DEFAULT                   -1
+#define MOUSEWEAPON4_DEFAULT                   -1
+#define MOUSEWEAPON5_DEFAULT                   -1
+#define MOUSEWEAPON6_DEFAULT                   -1
+#define MOUSEWEAPON7_DEFAULT                   -1
 
 typedef enum
 {

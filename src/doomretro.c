@@ -6,7 +6,7 @@
 
 ========================================================================
 
-  Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
+  Copyright © 1993-2021 by id Software LLC, a ZeniMax Media company.
   Copyright © 2013-2021 by Brad Harding <mailto:brad@doomretro.com>.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
@@ -58,23 +58,6 @@ int windowborderheight = 0;
 #define SM_CXPADDEDBORDER   92
 #endif
 
-static void I_SetProcessDPIAware(void)
-{
-    HMODULE hLibrary = LoadLibrary("user32.dll");
-
-    if (hLibrary)
-    {
-        typedef BOOL    (*SETPROCESSDPIAWARE)(void);
-
-        SETPROCESSDPIAWARE  pSetProcessDPIAware = (SETPROCESSDPIAWARE)GetProcAddress(hLibrary, "SetProcessDPIAware");
-
-        if (pSetProcessDPIAware)
-            pSetProcessDPIAware();
-
-        FreeLibrary(hLibrary);
-    }
-}
-
 static WNDPROC  oldProc;
 static HICON    icon;
 
@@ -90,7 +73,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
     }
     else if (msg == WM_SYSCOMMAND)
     {
-        if ((wParam & 0xFFF0) == SC_MAXIMIZE)
+        if ((wParam & 0xFFF0) == SC_MAXIMIZE && !splashscreen)
         {
             I_ToggleFullscreen();
             return true;
@@ -100,7 +83,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
     }
     else if (msg == WM_SYSKEYDOWN)
     {
-        if (wParam == VK_RETURN && !(lParam & 0x40000000))
+        if (wParam == VK_RETURN && !(lParam & 0x40000000) && !splashscreen)
         {
             I_ToggleFullscreen();
             return true;
@@ -218,7 +201,9 @@ int main(int argc, char **argv)
 #endif
 {
     myargc = argc;
-    myargv = argv;
+
+    if((myargv = (char **)malloc(sizeof(myargv[0]) * myargc)))
+        memcpy(myargv, argv, sizeof(myargv[0]) * myargc);
 
 #if defined(_WIN32)
     hInstanceMutex = CreateMutex(NULL, true, PACKAGE_MUTEX);
@@ -238,8 +223,6 @@ int main(int argc, char **argv)
     SystemParametersInfo(SPI_GETFILTERKEYS, sizeof(FILTERKEYS), &g_StartupFilterKeys, 0);
 
     I_AccessibilityShortcutKeys(false);
-
-    I_SetProcessDPIAware();
 #endif
 
     D_DoomMain();

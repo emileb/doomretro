@@ -6,7 +6,7 @@
 
 ========================================================================
 
-  Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
+  Copyright © 1993-2021 by id Software LLC, a ZeniMax Media company.
   Copyright © 2013-2021 by Brad Harding <mailto:brad@doomretro.com>.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
@@ -1048,8 +1048,8 @@ state_t states[NUMSTATES] =
     { SPR_ARM2,    1,                     6, NULL,                   S_ARM2              }, // S_ARM2A
 
     // Barrel (MT_BARREL)
-    { SPR_BAR1,    0,                     6, NULL,                   S_BAR3              }, // S_BAR2
-    { SPR_BAR1,    1,                     6, NULL,                   S_BAR1              }, // S_BAR3
+    { SPR_BAR1,    0,                     6, NULL,                   S_BAR3              }, // S_BAR1
+    { SPR_BAR1,    1,                     6, NULL,                   S_BAR1              }, // S_BAR2
     { SPR_BEXP,    0,                     5, NULL,                   S_BEXP2             }, // S_BEXP
     { SPR_BEXP,    1,                     5, &A_Scream,              S_BEXP3             }, // S_BEXP2
     { SPR_BEXP,   (2 | FF_FULLBRIGHT),    5, NULL,                   S_BEXP4             }, // S_BEXP3
@@ -1501,8 +1501,8 @@ state_t states[NUMSTATES] =
     { SPR_BEXP,    0,                     6, NULL,                   S_BAR2              }, // S_BAR1
 
     // Smoke Trail (MT_TRAIL)
-    { SPR_PUFF,   (0 | FF_FULLBRIGHT),    4, NULL,                   S_TRAIL2            }, // S_TRAIL
-    { SPR_PUFF,    1,                     4, NULL,                   S_TRAIL3            }, // S_TRAIL2
-    { SPR_PUFF,    2,                    10, NULL,                   S_TRAIL4            }, // S_TRAIL3
-    { SPR_PUFF,    3,                    14, NULL,                   S_NULL              }  // S_TRAIL4
+    { SPR_RSMK,    0,                     4, NULL,                   S_TRAIL2            }, // S_TRAIL
+    { SPR_RSMK,    1,                     4, NULL,                   S_TRAIL3            }, // S_TRAIL2
+    { SPR_RSMK,    2,                    10, NULL,                   S_TRAIL4            }, // S_TRAIL3
+    { SPR_RSMK,    3,                    14, NULL,                   S_NULL              }  // S_TRAIL4
 };

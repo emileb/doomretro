@@ -6,7 +6,7 @@
 
 ========================================================================
 
-  Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
+  Copyright © 1993-2021 by id Software LLC, a ZeniMax Media company.
   Copyright © 2013-2021 by Brad Harding <mailto:brad@doomretro.com>.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
@@ -721,6 +721,7 @@ static dboolean P_LookForPlayer(mobj_t *actor, dboolean allaround)
         {
             P_SetTarget(&actor->target, actor->lastenemy);
             P_SetTarget(&actor->lastenemy, NULL);
+
             return true;
         }
 
@@ -740,6 +741,7 @@ static dboolean P_LookForPlayer(mobj_t *actor, dboolean allaround)
                 {
                     P_SetTarget(&actor->target, actor->lastenemy);
                     P_SetTarget(&actor->lastenemy, NULL);
+
                     return true;
                 }
 
@@ -785,9 +787,9 @@ static dboolean P_LookForTargets(mobj_t *actor, int allaround)
 //
 void A_Look(mobj_t *actor, player_t *player, pspdef_t *psp)
 {
-    mobj_t      *target = actor->subsector->sector->soundtarget;
+    mobj_t      *target;
     int         flags = actor->flags;
-    dboolean    friend = flags & MF_FRIEND;
+    dboolean    friend = (flags & MF_FRIEND);
 
     actor->threshold = 0;       // any shot will wake up
 
@@ -799,7 +801,7 @@ void A_Look(mobj_t *actor, player_t *player, pspdef_t *psp)
 
     if (!(friend
         && P_LookForTargets(actor, false))
-        && !(target
+        && !((target = actor->subsector->sector->soundtarget)
             && (target->flags & MF_SHOOTABLE)
             && (P_SetTarget(&actor->target, target), (!(flags & MF_AMBUSH) || P_CheckSight(actor, target))))
         && (friend || !P_LookForTargets(actor, false)))
@@ -822,7 +824,7 @@ void A_Look(mobj_t *actor, player_t *player, pspdef_t *psp)
                 break;
 
             default:
-                S_StartSound(actor, actor->info->seesound);
+                S_StartSound(((actor->flags2 & MF2_BOSS) ? NULL : actor), actor->info->seesound);
                 break;
         }
 
@@ -1084,6 +1086,7 @@ void A_TroopAttack(mobj_t *actor, player_t *player, pspdef_t *psp)
     {
         S_StartSound(actor, sfx_claw);
         P_DamageMobj(target, actor, actor, ((M_Random() & 7) + 1) * 3, true);
+
         return;
     }
 
@@ -1160,6 +1163,7 @@ void A_BruisAttack(mobj_t *actor, player_t *player, pspdef_t *psp)
     {
         S_StartSound(actor, sfx_claw);
         P_DamageMobj(target, actor, actor, ((M_Random() & 7) + 1) * 10, true);
+
         return;
     }
 
@@ -1206,7 +1210,7 @@ void A_Tracer(mobj_t *actor, player_t *player, pspdef_t *psp)
 
     // spawn a puff of smoke behind the homing rocket
     if (!doom4vanilla)
-        P_SpawnSmokeTrail(actor->x, actor->y, actor->z, actor->angle);
+        P_SpawnPuff(actor->x, actor->y, actor->z, actor->angle);
 
     // adjust direction
     if (!(dest = actor->tracer) || dest->health <= 0)
@@ -1217,18 +1221,18 @@ void A_Tracer(mobj_t *actor, player_t *player, pspdef_t *psp)
 
     if (exact != actor->angle)
     {
-        if (exact - actor->angle > 0x80000000)
+        if (exact - actor->angle > ANG180)
         {
             actor->angle -= TRACEANGLE;
 
-            if (exact - actor->angle < 0x80000000)
+            if (exact - actor->angle < ANG180)
                 actor->angle = exact;
         }
         else
         {
             actor->angle += TRACEANGLE;
 
-            if (exact - actor->angle > 0x80000000)
+            if (exact - actor->angle > ANG180)
                 actor->angle = exact;
         }
     }
@@ -1412,7 +1416,7 @@ void A_VileChase(mobj_t *actor, player_t *player, pspdef_t *psp)
                                 ((corpsehit->flags & MF_FRIEND) ? ", friendly " : " "),
                                 (*corpsehit->info->name1 ? corpsehit->info->name1 : "monster"));
 
-                        C_PlayerMessage("%s resurrected %s.", temp, corpsehitname);
+                        C_PlayerObituary("%s resurrected %s.", temp, corpsehitname);
                         free(temp);
                     }
 
@@ -1704,6 +1708,7 @@ static void A_PainShootSkull(mobj_t *actor, angle_t angle)
         massacre = true;    // [BH] set this to avoid obituary
         P_DamageMobj(newmobj, actor, actor, 10000, true);
         massacre = false;
+
         return;
     }
 
@@ -1941,6 +1946,7 @@ void A_BossDeath(mobj_t *actor, player_t *player, pspdef_t *psp)
             case 1:
                 junk.tag = 666;
                 EV_DoFloor(&junk, lowerFloorToLowest);
+
                 return;
 
             case 4:
@@ -1949,11 +1955,13 @@ void A_BossDeath(mobj_t *actor, player_t *player, pspdef_t *psp)
                     case 6:
                         junk.tag = 666;
                         EV_DoDoor(&junk, doorBlazeOpen, VDOORSPEED * 4);
+
                         return;
 
                     case 8:
                         junk.tag = 666;
                         EV_DoFloor(&junk, lowerFloorToLowest);
+
                         return;
                 }
         }

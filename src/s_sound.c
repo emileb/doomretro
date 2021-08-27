@@ -6,7 +6,7 @@
 
 ========================================================================
 
-  Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
+  Copyright © 1993-2021 by id Software LLC, a ZeniMax Media company.
   Copyright © 2013-2021 by Brad Harding <mailto:brad@doomretro.com>.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
@@ -134,9 +134,9 @@ static void InitSfxModule(void)
     {
         const char  *audiodriver = SDL_GetCurrentAudioDriver();
 
-        C_Output("Sound effects are playing at a sample rate of %.1fkHz over %i channels%s.", SAMPLERATE / 1000.0f, s_channels,
-            (M_StringCompare(audiodriver, "wasapi") ? " using <i>WASAPI</i>" :
-            (M_StringCompare(audiodriver, "directsound") ? " using the <i>DirectSound</i> API" : "")));
+        C_Output("Sound effects are playing at a sample rate of %.1fkHz over %i channels%s", SAMPLERATE / 1000.0f, s_channels,
+            (M_StringCompare(audiodriver, "wasapi") ? " using " ITALICS("WASAPI.") :
+            (M_StringCompare(audiodriver, "directsound") ? " using the " ITALICS("DirectSound") " API." : "")));
     }
     else
     {
@@ -163,7 +163,7 @@ void S_Init(void)
 {
     if (M_CheckParm("-nosound"))
     {
-        C_Warning(1, "A <b>-nosound</b> parameter was found on the command-line. Both sound effects and music have been disabled.");
+        C_Warning(1, "A " BOLD("-nosound") " parameter was found on the command-line. Both sound effects and music have been disabled.");
         nomusic = true;
         nosfx = true;
     }
@@ -171,13 +171,13 @@ void S_Init(void)
     {
         if (M_CheckParm("-nomusic"))
         {
-            C_Warning(1, "A <b>-nomusic</b> parameter was found on the command-line. Music has been disabled.");
+            C_Warning(1, "A " BOLD("-nomusic") " parameter was found on the command-line. Music has been disabled.");
             nomusic = true;
         }
 
         if (M_CheckParm("-nosfx"))
         {
-            C_Warning(1, "A <b>-nosfx</b> parameter was found on the command-line. Sound effects have been disabled.");
+            C_Warning(1, "A " BOLD("-nosfx") " parameter was found on the command-line. Sound effects have been disabled.");
             nosfx = true;
         }
     }
@@ -185,16 +185,17 @@ void S_Init(void)
     if (!nosfx)
     {
 #if defined(_WIN32)
-        char    *audiodriver = SDL_getenv("SDL_AUDIODRIVER");
+        char    *audiodriver = getenv("SDL_AUDIODRIVER");
 
         if (audiodriver)
         {
-            C_Warning(1, "The <b>SDL_AUDIODRIVER</b> environment variable has been set to <b>\"%s\"</b>.", audiodriver);
+            C_Warning(1, "The " BOLD("SDL_AUDIODRIVER") " environment variable has been set to " BOLD("\"%s\"") ".", audiodriver);
             free(audiodriver);
         }
 #endif
 
         InitSfxModule();
+        sfxVolume = (s_sfxvolume * 31 + 50) / 100;
         S_SetSfxVolume(sfxVolume * MIX_MAX_VOLUME / 31);
 
         // Allocating the internal channels for mixing (the maximum number of sounds rendered simultaneously) within zone memory.
@@ -221,7 +222,7 @@ void S_Init(void)
                     {
                         char    *temp = uppercase(namebuf);
 
-                        C_Warning(1, "The <b>%s</b> sound lump is in an unknown format.", temp);
+                        C_Warning(1, "The " BOLD("%s") " sound lump is in an unknown format.", temp);
                         free(temp);
                     }
                 }
@@ -230,7 +231,7 @@ void S_Init(void)
                 {
                     char    *temp = uppercase(namebuf);
 
-                    C_Warning(1, "The <b>%s</b> sound lump is in an unknown format and won't be played.", temp);
+                    C_Warning(1, "The " BOLD("%s") " sound lump is in an unknown format and won't be played.", temp);
                     free(temp);
                 }
             }
@@ -240,6 +241,7 @@ void S_Init(void)
     if (!nomusic)
     {
         InitMusicModule();
+        musicVolume = (s_musicvolume * 31 + 50) / 100;
         S_SetMusicVolume(musicVolume * MIX_MAX_VOLUME / 31);
 
         // no sounds are playing, and they are not mus_paused
@@ -365,6 +367,7 @@ void S_UnlinkSound(mobj_t *origin)
             sobj->y = origin->y;
             sobj->z = origin->z;
             channels[cnum].origin = (mobj_t *)sobj;
+
             break;
         }
 }
@@ -418,17 +421,16 @@ static int S_GetChannel(mobj_t *origin, sfxinfo_t *sfxinfo)
 static dboolean S_AdjustSoundParms(mobj_t *origin, int *vol, int *sep)
 {
     fixed_t     dist = 0;
-    fixed_t     adx, ady;
     mobj_t      *listener = viewplayer->mo;
-    dboolean    boss = origin->flags2 & MF2_BOSS;
+    dboolean    boss = (origin->flags2 & MF2_BOSS);
     fixed_t     x = origin->x;
     fixed_t     y = origin->y;
 
     // calculate the distance to sound origin and clip it if necessary
     // killough 11/98: scale coordinates down before calculations start
     // killough 12/98: use exact distance formula instead of approximation
-    adx = ABS((listener->x >> FRACBITS) - (x >> FRACBITS));
-    ady = ABS((listener->y >> FRACBITS) - (y >> FRACBITS));
+    fixed_t     adx = ABS((listener->x >> FRACBITS) - (x >> FRACBITS));
+    fixed_t     ady = ABS((listener->y >> FRACBITS) - (y >> FRACBITS));
 
     if (ady > adx)
         SWAP(adx, ady);
@@ -638,8 +640,9 @@ void S_ChangeMusic(int music_id, dboolean looping, dboolean allowrestart, dboole
     {
         char    *temp = uppercase(namebuf);
 
-        C_Warning(1, "The <b>%s</b> music lump can't be found.", temp);
+        C_Warning(1, "The " BOLD("%s") " music lump can't be found.", temp);
         free(temp);
+
         return;
     }
 
@@ -664,8 +667,9 @@ void S_ChangeMusic(int music_id, dboolean looping, dboolean allowrestart, dboole
             {
                 char    *temp = uppercase(namebuf);
 
-                C_Warning(1, "The <b>%s</b> music lump can't be played.", temp);
+                C_Warning(1, "The " BOLD("%s") " music lump can't be played.", temp);
                 free(temp);
+
                 return;
             }
         }

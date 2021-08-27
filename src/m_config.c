@@ -6,7 +6,7 @@
 
 ========================================================================
 
-  Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
+  Copyright © 1993-2021 by id Software LLC, a ZeniMax Media company.
   Copyright © 2013-2021 by Brad Harding <mailto:brad@doomretro.com>.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
@@ -52,7 +52,7 @@
 
 static dboolean cvarsloaded;
 
-#define NUMCVARS                                                202
+#define NUMCVARS                                                207
 
 #define CONFIG_VARIABLE_INT(name1, name2, cvar, set)            { #name1, #name2, &cvar, DEFAULT_INT32,         set          }
 #define CONFIG_VARIABLE_INT_UNSIGNED(name1, name2, cvar, set)   { #name1, #name2, &cvar, DEFAULT_UINT64,        set          }
@@ -61,8 +61,8 @@ static dboolean cvarsloaded;
 #define CONFIG_VARIABLE_FLOAT_PERCENT(name1, name2, cvar, set)  { #name1, #name2, &cvar, DEFAULT_FLOAT_PERCENT, set          }
 #define CONFIG_VARIABLE_STRING(name1, name2, cvar, set)         { #name1, #name2, &cvar, DEFAULT_STRING,        set          }
 #define CONFIG_VARIABLE_OTHER(name1, name2, cvar, set)          { #name1, #name2, &cvar, DEFAULT_OTHER,         set          }
-#define BLANKLINE                                               { "",     "",      NULL,  DEFAULT_OTHER,        NOVALUEALIAS }
-#define COMMENT(text)                                           { text,   "",      NULL,  DEFAULT_OTHER,        NOVALUEALIAS }
+#define BLANKLINE                                               { "",     "",     NULL,  DEFAULT_OTHER,         NOVALUEALIAS }
+#define COMMENT(text)                                           { text,   "",     NULL,  DEFAULT_OTHER,         NOVALUEALIAS }
 
 static default_t cvars[NUMCVARS] =
 {
@@ -72,6 +72,7 @@ static default_t cvars[NUMCVARS] =
     CONFIG_VARIABLE_INT          (am_allmapfdwallcolor,             am_allmapfdwallcolour,                 am_allmapfdwallcolor,                  NOVALUEALIAS          ),
     CONFIG_VARIABLE_INT          (am_allmapwallcolor,               am_allmapwallcolour,                   am_allmapwallcolor,                    NOVALUEALIAS          ),
     CONFIG_VARIABLE_INT          (am_backcolor,                     am_backcolour,                         am_backcolor,                          NOVALUEALIAS          ),
+    CONFIG_VARIABLE_INT          (am_bluedoorcolor,                 am_bluedoorcolour,                     am_bluedoorcolor,                      NOVALUEALIAS          ),
     CONFIG_VARIABLE_INT          (am_cdwallcolor,                   am_cdwallcolour,                       am_cdwallcolor,                        NOVALUEALIAS          ),
     CONFIG_VARIABLE_INT          (am_crosshaircolor,                am_crosshaircolour,                    am_crosshaircolor,                     NOVALUEALIAS          ),
     CONFIG_VARIABLE_INT          (am_external,                      am_external,                           am_external,                           BOOLVALUEALIAS        ),
@@ -84,11 +85,13 @@ static default_t cvars[NUMCVARS] =
     CONFIG_VARIABLE_INT          (am_path,                          am_path,                               am_path,                               BOOLVALUEALIAS        ),
     CONFIG_VARIABLE_INT          (am_pathcolor,                     am_pathcolour,                         am_pathcolor,                          NOVALUEALIAS          ),
     CONFIG_VARIABLE_INT          (am_playercolor,                   am_playercolour,                       am_playercolor,                        NOVALUEALIAS          ),
+    CONFIG_VARIABLE_INT          (am_reddoorcolor,                  am_reddoorcolour,                      am_reddoorcolor,                       NOVALUEALIAS          ),
     CONFIG_VARIABLE_INT          (am_rotatemode,                    am_rotatemode,                         am_rotatemode,                         BOOLVALUEALIAS        ),
     CONFIG_VARIABLE_INT          (am_teleportercolor,               am_teleportercolour,                   am_teleportercolor,                    NOVALUEALIAS          ),
     CONFIG_VARIABLE_INT          (am_thingcolor,                    am_thingcolour,                        am_thingcolor,                         NOVALUEALIAS          ),
     CONFIG_VARIABLE_INT          (am_tswallcolor,                   am_tswallcolour,                       am_tswallcolor,                        NOVALUEALIAS          ),
     CONFIG_VARIABLE_INT          (am_wallcolor,                     am_wallcolour,                         am_wallcolor,                          NOVALUEALIAS          ),
+    CONFIG_VARIABLE_INT          (am_yellowdoorcolor,               am_yellowdoorcolour,                   am_yellowdoorcolor,                    NOVALUEALIAS          ),
     CONFIG_VARIABLE_INT          (autoaim,                          autoaim,                               autoaim,                               BOOLVALUEALIAS        ),
     CONFIG_VARIABLE_INT          (autoload,                         autoload,                              autoload,                              BOOLVALUEALIAS        ),
     CONFIG_VARIABLE_INT          (autosave,                         autosave,                              autosave,                              BOOLVALUEALIAS        ),
@@ -115,6 +118,7 @@ static default_t cvars[NUMCVARS] =
     CONFIG_VARIABLE_INT_PERCENT  (gp_vibrate_barrels,               gp_vibrate_barrels,                    gp_vibrate_barrels,                    NOVALUEALIAS          ),
     CONFIG_VARIABLE_INT_PERCENT  (gp_vibrate_damage,                gp_vibrate_damage,                     gp_vibrate_damage,                     NOVALUEALIAS          ),
     CONFIG_VARIABLE_INT_PERCENT  (gp_vibrate_weapons,               gp_vibrate_weapons,                    gp_vibrate_weapons,                    NOVALUEALIAS          ),
+    CONFIG_VARIABLE_INT          (groupmessages,                    groupmessages,                         groupmessages,                         BOOLVALUEALIAS        ),
     CONFIG_VARIABLE_INT          (infighting,                       infighting,                            infighting,                            BOOLVALUEALIAS        ),
     CONFIG_VARIABLE_INT          (infiniteheight,                   infiniteheight,                        infiniteheight,                        BOOLVALUEALIAS        ),
     CONFIG_VARIABLE_STRING       (iwadfolder,                       iwadfolder,                            iwadfolder,                            NOVALUEALIAS          ),
@@ -145,7 +149,7 @@ static default_t cvars[NUMCVARS] =
     CONFIG_VARIABLE_INT          (r_corpses_smearblood,             r_corpses_smearblood,                  r_corpses_smearblood,                  BOOLVALUEALIAS        ),
     CONFIG_VARIABLE_INT          (r_detail,                         r_detail,                              r_detail,                              DETAILVALUEALIAS      ),
     CONFIG_VARIABLE_INT          (r_diskicon,                       r_diskicon,                            r_diskicon,                            BOOLVALUEALIAS        ),
-    CONFIG_VARIABLE_INT          (r_dither,                         r_dither,                              r_dither,                              BOOLVALUEALIAS        ),
+    CONFIG_VARIABLE_INT          (r_ditheredlighting,               r_ditheredlighting,                    r_ditheredlighting,                    BOOLVALUEALIAS        ),
     CONFIG_VARIABLE_INT          (r_fixmaperrors,                   r_fixmaperrors,                        r_fixmaperrors,                        BOOLVALUEALIAS        ),
     CONFIG_VARIABLE_INT          (r_fixspriteoffsets,               r_fixspriteoffsets,                    r_fixspriteoffsets,                    BOOLVALUEALIAS        ),
     CONFIG_VARIABLE_INT          (r_floatbob,                       r_floatbob,                            r_floatbob,                            BOOLVALUEALIAS        ),
@@ -211,7 +215,7 @@ static default_t cvars[NUMCVARS] =
     CONFIG_VARIABLE_INT          (weaponbounce,                     weaponbounce,                          weaponbounce,                          BOOLVALUEALIAS        ),
     CONFIG_VARIABLE_INT          (weaponrecoil,                     weaponrecoil,                          weaponrecoil,                          BOOLVALUEALIAS        ),
     BLANKLINE,
-    COMMENT("; player stats\n"   ),
+    COMMENT("; player stats\n"),
     CONFIG_VARIABLE_INT_UNSIGNED (barrelsexploded,                  stat_barrelsexploded,                  stat_barrelsexploded,                  NOVALUEALIAS          ),
     CONFIG_VARIABLE_INT_UNSIGNED (cheated,                          stat_cheated,                          stat_cheated,                          NOVALUEALIAS          ),
     CONFIG_VARIABLE_INT_UNSIGNED (damageinflicted,                  stat_damageinflicted,                  stat_damageinflicted,                  NOVALUEALIAS          ),
@@ -229,18 +233,19 @@ static default_t cvars[NUMCVARS] =
     CONFIG_VARIABLE_INT_UNSIGNED (mapscompleted,                    stat_mapscompleted,                    stat_mapscompleted,                    NOVALUEALIAS          ),
     CONFIG_VARIABLE_INT_UNSIGNED (mapsstarted,                      stat_mapsstarted,                      stat_mapsstarted,                      NOVALUEALIAS          ),
     CONFIG_VARIABLE_INT_UNSIGNED (monsterskilled,                   stat_monsterskilled,                   stat_monsterskilled,                   NOVALUEALIAS          ),
+    CONFIG_VARIABLE_INT_UNSIGNED (monsterskilled_infighting,        stat_monsterskilled_infighting,        stat_monsterskilled_infighting,        NOVALUEALIAS          ),
     CONFIG_VARIABLE_INT_UNSIGNED (monsterskilled_arachnotrons,      stat_monsterskilled_arachnotrons,      stat_monsterskilled_arachnotrons,      NOVALUEALIAS          ),
     CONFIG_VARIABLE_INT_UNSIGNED (monsterskilled_archviles,         stat_monsterskilled_archviles,         stat_monsterskilled_archviles,         NOVALUEALIAS          ),
     CONFIG_VARIABLE_INT_UNSIGNED (monsterskilled_baronsofhell,      stat_monsterskilled_baronsofhell,      stat_monsterskilled_baronsofhell,      NOVALUEALIAS          ),
     CONFIG_VARIABLE_INT_UNSIGNED (monsterskilled_cacodemons,        stat_monsterskilled_cacodemons,        stat_monsterskilled_cacodemons,        NOVALUEALIAS          ),
     CONFIG_VARIABLE_INT_UNSIGNED (monsterskilled_cyberdemons,       stat_monsterskilled_cyberdemons,       stat_monsterskilled_cyberdemons,       NOVALUEALIAS          ),
-    CONFIG_VARIABLE_INT_UNSIGNED (monsterskilled_demons,            stat_monsterskilled_demons,            stat_monsterskilled_demons,            NOVALUEALIAS          ),
     CONFIG_VARIABLE_INT_UNSIGNED (monsterskilled_heavyweapondudes,  stat_monsterskilled_heavyweapondudes,  stat_monsterskilled_heavyweapondudes,  NOVALUEALIAS          ),
     CONFIG_VARIABLE_INT_UNSIGNED (monsterskilled_hellknights,       stat_monsterskilled_hellknights,       stat_monsterskilled_hellknights,       NOVALUEALIAS          ),
     CONFIG_VARIABLE_INT_UNSIGNED (monsterskilled_imps,              stat_monsterskilled_imps,              stat_monsterskilled_imps,              NOVALUEALIAS          ),
     CONFIG_VARIABLE_INT_UNSIGNED (monsterskilled_lostsouls,         stat_monsterskilled_lostsouls,         stat_monsterskilled_lostsouls,         NOVALUEALIAS          ),
     CONFIG_VARIABLE_INT_UNSIGNED (monsterskilled_mancubi,           stat_monsterskilled_mancubi,           stat_monsterskilled_mancubi,           NOVALUEALIAS          ),
     CONFIG_VARIABLE_INT_UNSIGNED (monsterskilled_painelementals,    stat_monsterskilled_painelementals,    stat_monsterskilled_painelementals,    NOVALUEALIAS          ),
+    CONFIG_VARIABLE_INT_UNSIGNED (monsterskilled_pinkydemons,       stat_monsterskilled_demons,            stat_monsterskilled_pinkydemons,       NOVALUEALIAS          ),
     CONFIG_VARIABLE_INT_UNSIGNED (monsterskilled_revenants,         stat_monsterskilled_revenants,         stat_monsterskilled_revenants,         NOVALUEALIAS          ),
     CONFIG_VARIABLE_INT_UNSIGNED (monsterskilled_shotgunguys,       stat_monsterskilled_shotgunguys,       stat_monsterskilled_shotgunguys,       NOVALUEALIAS          ),
     CONFIG_VARIABLE_INT_UNSIGNED (monsterskilled_spectres,          stat_monsterskilled_spectres,          stat_monsterskilled_spectres,          NOVALUEALIAS          ),
@@ -333,7 +338,7 @@ void M_SaveCVARs(void)
         if (!warning)
         {
             warning = true;
-            C_Warning(1, "<b>%s</b> couldn't be saved.", packageconfig);
+            C_Warning(1, BOLD("%s") " couldn't be saved.", packageconfig);
         }
 
         return;
@@ -369,6 +374,7 @@ void M_SaveCVARs(void)
                     {
                         fputs(valuealiases[j].text, file);
                         alias = true;
+
                         break;
                     }
 
@@ -389,6 +395,7 @@ void M_SaveCVARs(void)
 
                 fputs(temp, file);
                 free(temp);
+
                 break;
             }
 
@@ -402,6 +409,7 @@ void M_SaveCVARs(void)
                     {
                         fputs(valuealiases[j].text, file);
                         alias = true;
+
                         break;
                     }
 
@@ -426,6 +434,7 @@ void M_SaveCVARs(void)
                     {
                         fputs(valuealiases[j].text, file);
                         alias = true;
+
                         break;
                     }
 
@@ -456,6 +465,7 @@ void M_SaveCVARs(void)
                     {
                         fputs(valuealiases[j].text, file);
                         alias = true;
+
                         break;
                     }
 
@@ -691,6 +701,9 @@ static void M_CheckCVARs(dboolean ispackageconfig)
 
     gp_vibrate_weapons = BETWEEN(gp_vibrate_weapons_min, gp_vibrate_damage, gp_vibrate_weapons_max);
 
+    if (groupmessages != false && groupmessages != true)
+        groupmessages = groupmessages_default;
+
     if (infighting != false && infighting != true)
         infighting = infighting_default;
 
@@ -787,8 +800,8 @@ static void M_CheckCVARs(dboolean ispackageconfig)
     if (r_diskicon != false && r_diskicon != true)
         r_diskicon = r_diskicon_default;
 
-    if (r_dither != false && r_dither != true)
-        r_dither = r_dither_default;
+    if (r_ditheredlighting != false && r_ditheredlighting != true)
+        r_ditheredlighting = r_ditheredlighting_default;
 
     if (r_fixmaperrors != false && r_fixmaperrors != true)
         r_fixmaperrors = r_fixmaperrors_default;
@@ -974,14 +987,14 @@ void M_LoadCVARs(char *filename)
     int         statcount = 0;
 
     // read the file in, overriding any set defaults
-    FILE    *file = fopen(filename, "rt");
+    FILE        *file = fopen(filename, "rt");
 
     if (!file)
     {
-        M_CheckCVARs(ispackageconfig);
         M_SaveCVARs();
-        C_Output("Created <b>%s</b>.", filename);
+        C_Output("Created " BOLD("%s") ".", filename);
         cvarsloaded = true;
+
         return;
     }
 
@@ -1034,6 +1047,7 @@ void M_LoadCVARs(char *filename)
         {
             bind_cmd_func2("bind", value);
             bindcount++;
+
             continue;
         }
         else if (M_StringCompare(cvar, "alias"))
@@ -1054,6 +1068,7 @@ void M_LoadCVARs(char *filename)
 
             C_ValidateInput(M_StringJoin(cvar, " ", temp, NULL));
             free(temp);
+
             continue;
         }
 
@@ -1073,6 +1088,7 @@ void M_LoadCVARs(char *filename)
                     temp[strlen(temp) - 1] = '\0';
                     *(char **)cvars[i].location = temp;
                     cvarcount++;
+
                     break;
                 }
 
@@ -1080,10 +1096,10 @@ void M_LoadCVARs(char *filename)
                 {
                     char    *temp = uncommify(value);
 
-                    M_StringCopy(value, temp, sizeof(value));
-                    *(int *)cvars[i].location = ParseIntParameter(value, cvars[i].valuealiastype);
+                    *(int *)cvars[i].location = ParseIntParameter(temp, cvars[i].valuealiastype);
                     free(temp);
                     cvarcount++;
+
                     break;
                 }
 
@@ -1091,9 +1107,12 @@ void M_LoadCVARs(char *filename)
                 {
                     char    *temp = uncommify(value);
 
-                    M_StringCopy(value, temp, sizeof(value));
-                    sscanf(value, "%10" PRIu64, (uint64_t *)cvars[i].location);
+                    sscanf(temp, "%24" PRIu64, (uint64_t *)cvars[i].location);
                     free(temp);
+
+                    if (*(int *)cvars[i].location < 0)
+                        *(uint64_t *)cvars[i].location = 0;
+
                     statcount++;
                     break;
                 }
@@ -1102,14 +1121,13 @@ void M_LoadCVARs(char *filename)
                 {
                     char    *temp = uncommify(value);
 
-                    M_StringCopy(value, temp, sizeof(value));
+                    if (temp[strlen(temp) - 1] == '%')
+                        temp[strlen(temp) - 1] = '\0';
 
-                    if (value[strlen(value) - 1] == '%')
-                        value[strlen(value) - 1] = '\0';
-
-                    *(int *)cvars[i].location = ParseIntParameter(value, cvars[i].valuealiastype);
+                    *(int *)cvars[i].location = ParseIntParameter(temp, cvars[i].valuealiastype);
                     free(temp);
                     cvarcount++;
+
                     break;
                 }
 
@@ -1117,10 +1135,10 @@ void M_LoadCVARs(char *filename)
                 {
                     char    *temp = uncommify(value);
 
-                    M_StringCopy(value, temp, sizeof(value));
-                    *(float *)cvars[i].location = ParseFloatParameter(value, cvars[i].valuealiastype);
+                    *(float *)cvars[i].location = ParseFloatParameter(temp, cvars[i].valuealiastype);
                     free(temp);
                     cvarcount++;
+
                     break;
                 }
 
@@ -1128,20 +1146,20 @@ void M_LoadCVARs(char *filename)
                 {
                     char    *temp = uncommify(value);
 
-                    M_StringCopy(value, temp, sizeof(value));
+                    if (temp[strlen(temp) - 1] == '%')
+                        temp[strlen(temp) - 1] = '\0';
 
-                    if (value[strlen(value) - 1] == '%')
-                        value[strlen(value) - 1] = '\0';
-
-                    *(float *)cvars[i].location = ParseFloatParameter(value, cvars[i].valuealiastype);
+                    *(float *)cvars[i].location = ParseFloatParameter(temp, cvars[i].valuealiastype);
                     free(temp);
                     cvarcount++;
+
                     break;
                 }
 
                 case DEFAULT_OTHER:
                     *(char **)cvars[i].location = M_StringDuplicate(value);
                     cvarcount++;
+
                     break;
             }
         }
@@ -1157,7 +1175,7 @@ void M_LoadCVARs(char *filename)
             char    *temp2 = commify(statcount);
             char    *temp3 = commify(bindcount);
 
-            C_Output("Loaded %s CVARs and %s player stats from <b>%s</b>.", temp1, temp2, filename);
+            C_Output("Loaded %s CVARs and %s player stats from " BOLD("%s") ".", temp1, temp2, filename);
             C_Output("Bound %s actions to the keyboard, mouse and gamepad.", temp3);
 
             free(temp1);

@@ -6,7 +6,7 @@
 
 ========================================================================
 
-  Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
+  Copyright © 1993-2021 by id Software LLC, a ZeniMax Media company.
   Copyright © 2013-2021 by Brad Harding <mailto:brad@doomretro.com>.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
@@ -114,20 +114,22 @@ typedef enum
 
 #define ACTUALHEIGHT        (SCREENHEIGHT * 6 / 5)
 
-#define VANILLASBARHEIGHT   32
-
 #define SCREENSCALE         2
 
-#define MAXWIDTH            (VANILLAWIDTH * 8)  // [crispy]
-#define MAXHEIGHT           (VANILLAHEIGHT * 2) // [crispy]
+#define VANILLASBARHEIGHT   32
+#define SBARHEIGHT          (VANILLASBARHEIGHT * SCREENSCALE)
+
+#define MAXWIDTH            (VANILLAWIDTH * 8)
+#define MAXHEIGHT           (VANILLAHEIGHT * 2)
+#define MAXSCREENAREA       (MAXWIDTH * MAXHEIGHT)
 
 #define NONWIDEWIDTH        (VANILLAWIDTH * SCREENSCALE)
-#define NONWIDEASPECTRATIO  (4.0f / 3.0f)
+#define NONWIDEASPECTRATIO  (4.0 / 3.0)
 
 extern int          SCREENWIDTH;
 extern int          SCREENHEIGHT;
 extern int          SCREENAREA;
-extern int          WIDESCREENDELTA;            // [crispy] horizontal widescreen offset
+extern int          WIDESCREENDELTA;
 extern int          WIDEFOVDELTA;
 
 extern dboolean     nowidescreen;
@@ -135,11 +137,7 @@ extern dboolean     nowidescreen;
 extern int          MAPWIDTH;
 extern unsigned int MAPHEIGHT;
 extern unsigned int MAPAREA;
-extern unsigned int MAPBOTTOM;
-
-#define MAXSCREENAREA       (MAXWIDTH * MAXHEIGHT)
-
-#define SBARHEIGHT          (VANILLASBARHEIGHT * SCREENSCALE)
+extern int          MAPBOTTOM;
 
 // State updates, number of tics/second.
 #define TICRATE             35

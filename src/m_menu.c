@@ -6,7 +6,7 @@
 
 ========================================================================
 
-  Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
+  Copyright © 1993-2021 by id Software LLC, a ZeniMax Media company.
   Copyright © 2013-2021 by Brad Harding <mailto:brad@doomretro.com>.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
@@ -94,7 +94,7 @@ dboolean messageNeedsInput; //Make global
 static dboolean messageNeedsInput;
 #endif
 
-static void (*messageRoutine)(int response);
+static void (*messageRoutine)(int);
 
 // we are going to be entering a savegame string
 static dboolean saveStringEnter;
@@ -499,7 +499,6 @@ static int  blurtic = -1;
 void M_DarkBackground(void)
 {
     static byte blurscreen1[MAXSCREENAREA];
-    static byte blurscreen2[MAXSCREENAREA];
 
     if (gametime != blurtic && (!(gametime % 3) || blurtic == -1 || vid_capfps == TICRATE))
     {
@@ -541,41 +540,13 @@ void M_DarkBackground(void)
             *dot = black40[*dot];
         }
 
-        if (mapwindow && gamestate == GS_LEVEL)
-        {
-            for (int i = 0; i < (int)MAPAREA; i += MAPWIDTH)
-            {
-                mapscreen[i] = nearestblack;
-                mapscreen[i + 1] = nearestblack;
-                mapscreen[i + MAPWIDTH - 2] = nearestblack;
-                mapscreen[i + MAPWIDTH - 1] = nearestblack;
-            }
-
-            for (int y = 2 * MAPWIDTH; y < (int)MAPAREA; y += 4 * MAPWIDTH)
-                for (int x = 2; x < MAPWIDTH; x += 4)
-                {
-                    byte    *dot = mapscreen + x + y;
-
-                    *dot = white25[*dot];
-                }
-
-            BlurScreen(mapscreen, blurscreen2, MAPWIDTH, MAPAREA);
-
-            for (int i = 0; i < (int)MAPAREA; i++)
-            {
-                byte    *dot = blurscreen2 + i;
-
-                *dot = black40[*dot];
-            }
-        }
-
         blurtic = gametime;
     }
 
     memcpy(screens[0], blurscreen1, SCREENAREA);
 
     if (mapwindow)
-        memcpy(mapscreen, blurscreen2, (size_t)MAPAREA);
+        memset(mapscreen, nearestblack, MAPAREA);
 
     if (r_detail == r_detail_low)
         V_LowGraphicDetail_Menu();
@@ -607,14 +578,25 @@ static byte blues[] =
 //
 static void M_DarkBlueBackground(void)
 {
-    V_LowGraphicDetail_Menu();
+    for (int y = 0; y < SCREENAREA; y += 2 * SCREENWIDTH)
+        for (int x = 0; x < SCREENWIDTH; x += 2)
+        {
+            byte        *dot1 = *screens + y + x;
+            byte        *dot2 = dot1 + 1;
+            byte        *dot3 = dot2 + SCREENWIDTH;
+            byte        *dot4 = dot3 - 1;
+            const byte  color = blues[tinttab50[(tinttab50[(*dot1 << 8) + *dot2] << 8) + tinttab50[(*dot3 << 8) + *dot4]]];
 
-    for (int i = 0; i < SCREENAREA; i++)
-    {
-        byte    *dot = *screens + i;
+            *dot1 = color;
+            *dot2 = color;
+            *dot3 = color;
+            *dot4 = color;
+        }
 
-        *dot = blues[*dot];
-    }
+    if (automapactive)
+        memset(screens[0], nearestcolors[245], SCREENAREA);
+    else if (mapwindow)
+        memset(mapscreen, nearestcolors[245], MAPAREA);
 }
 
 //
@@ -803,6 +785,9 @@ static void M_SplitString(char *string)
 //
 static void M_DrawPatchWithShadow(int x, int y, patch_t *patch)
 {
+    if (!patch)
+        return;
+
     if (SHORT(patch->height) < VANILLAHEIGHT)
         V_DrawPatchWithShadow(x, y, patch, false);
     else
@@ -815,6 +800,9 @@ static void M_DrawPatchWithShadow(int x, int y, patch_t *patch)
 //
 static void M_DrawCenteredPatchWithShadow(int y, patch_t *patch)
 {
+    if (!patch)
+        return;
+
     if (SHORT(patch->height) < VANILLAHEIGHT)
         V_DrawPatchWithShadow((VANILLAWIDTH - SHORT(patch->width)) / 2 + SHORT(patch->leftoffset), y, patch, false);
     else
@@ -841,6 +829,7 @@ static void M_ReadSaveStrings(void)
         {
             M_StringCopy(&savegamestrings[i][0], s_EMPTYSTRING, sizeof(savegamestrings[i]));
             LoadGameMenu[i].status = 0;
+
             continue;
         }
 
@@ -903,6 +892,7 @@ static dboolean M_CheckSaveGame(int *ep, int *map, int slot)
             expansion = 1;
             gamemission = doom2;
             M_SaveCVARs();
+
             return true;
         }
         else
@@ -920,6 +910,7 @@ static dboolean M_CheckSaveGame(int *ep, int *map, int slot)
             expansion = 2;
             gamemission = pack_nerve;
             M_SaveCVARs();
+
             return true;
         }
         else
@@ -1198,8 +1189,8 @@ void M_UpdateSaveGameName(int i)
                 switch (gamemission)
                 {
                     case doom:
-                        if ((map == 10 && M_StringCompare(savegamestrings[i], s_CAPTION_E1M4B))
-                            || (map == 11 && M_StringCompare(savegamestrings[i], s_CAPTION_E1M8B))
+                        if ((map == 10 && M_StringCompare(savegamestrings[i], s_HUSTR_E1M4B))
+                            || (map == 11 && M_StringCompare(savegamestrings[i], s_HUSTR_E1M8B))
                             || M_StringCompare(savegamestrings[i], RemoveMapNum(*mapnames[(ep - 1) * 9 + map - 1])))
                             match = true;
 
@@ -1428,17 +1419,14 @@ static void M_DrawReadThis(void)
                 memset(screens[0], FindDominantEdgeColor(lump), SCREENAREA);
 
             V_DrawPatch(0, 0, 0, lump);
+
+            if (mapwindow)
+                memset(mapscreen, nearestblack, MAPAREA);
         }
         else if (autosigil)
         {
-            if (automapactive)
-                memset(screens[0], nearestcolors[245], SCREENAREA);
-            else
-            {
-                viewplayer->fixedcolormap = 0;
-                M_DarkBlueBackground();
-            }
-
+            viewplayer->fixedcolormap = 0;
+            M_DarkBlueBackground();
             V_DrawPatchWithShadow(0, 0, W_CacheSecondLumpName(lumpname), false);
         }
         else if (W_CheckMultipleLumps(lumpname) > 2)
@@ -1449,17 +1437,14 @@ static void M_DrawReadThis(void)
                 memset(screens[0], FindDominantEdgeColor(lump), SCREENAREA);
 
             V_DrawPatch(0, 0, 0, lump);
+
+            if (mapwindow)
+                memset(mapscreen, nearestblack, MAPAREA);
         }
         else
         {
-            if (automapactive)
-                memset(screens[0], nearestcolors[245], SCREENAREA);
-            else
-            {
-                viewplayer->fixedcolormap = 0;
-                M_DarkBlueBackground();
-            }
-
+            viewplayer->fixedcolormap = 0;
+            M_DarkBlueBackground();
             V_DrawPatchWithShadow(0, 0, W_CacheLumpName(lumpname), false);
         }
     }
@@ -1756,7 +1741,7 @@ static void M_ChooseSkill(int choice)
             M_StartMessage(buffer, &M_VerifyNightmare, true);
         }
 
-        D_FadeScreen();
+        D_FadeScreen(false);
         return;
     }
 
@@ -1958,7 +1943,7 @@ void M_EndingGame(void)
     if (gamemission == pack_nerve)
         gamemission = doom2;
 
-    C_InputNoRepeat("endgame");
+    C_Input("endgame");
 
     C_AddConsoleDivider();
     M_SetWindowCaption();
@@ -2218,8 +2203,12 @@ static void M_ChangeDetail(int choice)
     else
         C_Output(r_detail == r_detail_low ? s_DETAILLO : s_DETAILHI);
 
-    STLib_Init();
     M_SaveCVARs();
+    STLib_Init();
+    R_InitColumnFunctions();
+
+    if (gamestate == GS_LEVEL)
+        D_FadeScreen(false);
 }
 
 static void M_SizeDisplay(int choice)
@@ -2236,7 +2225,7 @@ static void M_SizeDisplay(int choice)
             else if (r_screensize == r_screensize_max - 1 && vid_widescreen)
             {
                 vid_widescreen = false;
-                C_Output("%s %s", stringize(vid_widescreen), "off");
+                C_StrCVAROutput(stringize(vid_widescreen), "off");
                 I_RestartGraphics(false);
                 S_StartSound(NULL, sfx_stnmov);
             }
@@ -2266,7 +2255,7 @@ static void M_SizeDisplay(int choice)
             else if (r_screensize == r_screensize_max - 1 && !vid_widescreen && !nowidescreen)
             {
                 vid_widescreen = true;
-                C_Output("%s %s", stringize(vid_widescreen), "on");
+                C_StrCVAROutput(stringize(vid_widescreen), "on");
                 I_RestartGraphics(false);
                 S_StartSound(NULL, sfx_stnmov);
             }
@@ -2360,7 +2349,7 @@ int M_StringWidth(char *string)
     int len = (int)strlen(string);
 
     for (int i = 0; i < len; i++)
-        w += M_CharacterWidth(string[i], (i > 0 ? string[i - 1] : 0));
+        w += M_CharacterWidth(string[i], (i > 0 ? string[i - 1] : '\0'));
 
     return w;
 }
@@ -2416,6 +2405,7 @@ static void M_WriteText(int x, int y, char *string, dboolean shadow)
         {
             cx = x;
             cy += 12;
+
             continue;
         }
 
@@ -2426,6 +2416,7 @@ static void M_WriteText(int x, int y, char *string, dboolean shadow)
         {
             cx += (prev == '.' || prev == '!' || prev == '?' ? 5 : 3);
             prev = letter;
+
             continue;
         }
 
@@ -2542,10 +2533,6 @@ static void M_ChangeGamma(dboolean shift)
 }
 
 //
-// CONTROL PANEL
-//
-
-//
 // M_Responder
 //
 int         gamepadwait = 0;
@@ -2646,6 +2633,7 @@ dboolean M_Responder(event_t *ev)
                 gamepadwait = I_GetTime() + 8;
                 usinggamepad = true;
                 C_ShowConsole();
+
                 return false;
             }
         }
@@ -2678,6 +2666,7 @@ dboolean M_Responder(event_t *ev)
             mousewait = I_GetTime() + 5;
             usinggamepad = false;
             G_ScreenShot();
+
             return false;
         }
     }
@@ -2714,15 +2703,12 @@ dboolean M_Responder(event_t *ev)
     {
         keydown = 0;
 
-        if (ev->data1 == keyboardscreenshot && (keyboardscreenshot == KEY_PRINTSCREEN || (gamestate == GS_LEVEL && !consoleactive)))
+        if (ev->data1 == keyboardscreenshot && (keyboardscreenshot == KEY_PRINTSCREEN || (gamestate == GS_LEVEL && !consoleactive))
+            && !splashscreen)
         {
             S_StartSound(NULL, sfx_scrsht);
-
-            if (!splashscreen)
-            {
-                memset(screens[0], nearestwhite, SCREENAREA);
-                D_FadeScreen();
-            }
+            memset(screens[0], nearestwhite, SCREENAREA);
+            D_FadeScreen(true);
         }
 
         return false;
@@ -2747,6 +2733,7 @@ dboolean M_Responder(event_t *ev)
                 savegamestrings[saveSlot][saveCharIndex++] = ch;
                 caretwait = I_GetTimeMS() + CARETBLINKTIME;
                 showcaret = true;
+
                 return true;
             }
 
@@ -2918,7 +2905,7 @@ dboolean M_Responder(event_t *ev)
         else
         {
             S_StartSound(NULL, (currentMenu == &ReadDef ? sfx_pistol : sfx_swtchx));
-            D_FadeScreen();
+            D_FadeScreen(false);
         }
 
         return true;
@@ -2942,6 +2929,7 @@ dboolean M_Responder(event_t *ev)
                 vid_widescreen = false;
                 r_screensize = r_screensize_max - 1;
                 r_hud = false;
+                pagetic = PAGETICS;
                 R_SetViewSize(r_screensize);
                 I_RestartGraphics(false);
                 S_StartSound(NULL, sfx_stnmov);
@@ -2964,6 +2952,7 @@ dboolean M_Responder(event_t *ev)
             {
                 vid_widescreen = true;
                 r_screensize = r_screensize_max - 1;
+                pagetic = PAGETICS;
                 R_SetViewSize(r_screensize);
                 I_RestartGraphics(false);
                 S_StartSound(NULL, sfx_stnmov);
@@ -3103,6 +3092,7 @@ dboolean M_Responder(event_t *ev)
             M_StartControlPanel();
             S_StartSound(NULL, sfx_swtchn);
             M_EndGame(0);
+
             return true;
         }
 
@@ -3114,6 +3104,7 @@ dboolean M_Responder(event_t *ev)
             M_ChangeMessages(0);
             functionkey = 0;
             S_StartSound(NULL, sfx_swtchn);
+
             return false;
         }
 
@@ -3123,6 +3114,7 @@ dboolean M_Responder(event_t *ev)
             keydown = key;
             functionkey = KEY_F9;
             M_QuickLoad();
+
             return true;
         }
 
@@ -3134,6 +3126,7 @@ dboolean M_Responder(event_t *ev)
             M_StartControlPanel();
             S_StartSound(NULL, sfx_swtchn);
             M_QuitDOOM(0);
+
             return true;
         }
     }
@@ -3146,6 +3139,7 @@ dboolean M_Responder(event_t *ev)
         M_ChangeDetail(0);
         functionkey = 0;
         S_StartSound(NULL, sfx_swtchn);
+
         return false;
     }
 
@@ -3157,7 +3151,7 @@ dboolean M_Responder(event_t *ev)
     }
 
     // screenshot
-    if (key == keyboardscreenshot && (keyboardscreenshot == KEY_PRINTSCREEN || gamestate == GS_LEVEL))
+    if (key == keyboardscreenshot && (keyboardscreenshot == KEY_PRINTSCREEN || gamestate == GS_LEVEL) && !splashscreen)
     {
         G_ScreenShot();
         return false;
@@ -3175,6 +3169,8 @@ dboolean M_Responder(event_t *ev)
                 paused = false;
                 S_ResumeMusic();
                 S_StartSound(NULL, sfx_swtchx);
+                I_SetPalette(&PLAYPAL[st_palette * 768]);
+                I_CapFPS(vid_capfps);
             }
             else
             {
@@ -3209,7 +3205,7 @@ dboolean M_Responder(event_t *ev)
                 SaveDef.lastOn = itemOn;
                 savegame = itemOn + 1;
                 M_SaveCVARs();
-                C_IntCVAROutput(stringize(savegame), savegame);
+                C_IntCVAROutputNoRepeat(stringize(savegame), savegame);
             }
             else
             {
@@ -3242,13 +3238,13 @@ dboolean M_Responder(event_t *ev)
             {
                 episode = itemOn + 1;
                 M_SaveCVARs();
-                C_IntCVAROutput(stringize(episode), episode);
+                C_IntCVAROutputNoRepeat(stringize(episode), episode);
             }
             else if (currentMenu == &ExpDef)
             {
                 expansion = itemOn + 1;
                 M_SaveCVARs();
-                C_IntCVAROutput(stringize(expansion), expansion);
+                C_IntCVAROutputNoRepeat(stringize(expansion), expansion);
 
                 if (gamestate != GS_LEVEL)
                     gamemission = (expansion == 2 && nerve ? pack_nerve : doom2);
@@ -3257,18 +3253,19 @@ dboolean M_Responder(event_t *ev)
             {
                 skilllevel = itemOn + 1;
                 M_SaveCVARs();
-                C_IntCVAROutput(stringize(skilllevel), skilllevel);
+                C_IntCVAROutputNoRepeat(stringize(skilllevel), skilllevel);
             }
             else if (currentMenu == &SaveDef)
             {
                 LoadDef.lastOn = itemOn;
                 savegame = itemOn + 1;
                 M_SaveCVARs();
-                C_IntCVAROutput(stringize(savegame), savegame);
+                C_IntCVAROutputNoRepeat(stringize(savegame), savegame);
             }
 
             keywait = I_GetTime() + 2;
             M_SetWindowCaption();
+
             return false;
         }
         else if (key == KEY_UPARROW && keywait < I_GetTime() && !inhelpscreens)
@@ -3292,7 +3289,7 @@ dboolean M_Responder(event_t *ev)
                 SaveDef.lastOn = itemOn;
                 savegame = itemOn + 1;
                 M_SaveCVARs();
-                C_IntCVAROutput(stringize(savegame), savegame);
+                C_IntCVAROutputNoRepeat(stringize(savegame), savegame);
             }
             else
             {
@@ -3325,13 +3322,13 @@ dboolean M_Responder(event_t *ev)
             {
                 episode = itemOn + 1;
                 M_SaveCVARs();
-                C_IntCVAROutput(stringize(episode), episode);
+                C_IntCVAROutputNoRepeat(stringize(episode), episode);
             }
             else if (currentMenu == &ExpDef)
             {
                 expansion = itemOn + 1;
                 M_SaveCVARs();
-                C_IntCVAROutput(stringize(expansion), expansion);
+                C_IntCVAROutputNoRepeat(stringize(expansion), expansion);
 
                 if (gamestate != GS_LEVEL)
                     gamemission = (expansion == 2 && nerve ? pack_nerve : doom2);
@@ -3340,18 +3337,19 @@ dboolean M_Responder(event_t *ev)
             {
                 skilllevel = itemOn + 1;
                 M_SaveCVARs();
-                C_IntCVAROutput(stringize(skilllevel), skilllevel);
+                C_IntCVAROutputNoRepeat(stringize(skilllevel), skilllevel);
             }
             else if (currentMenu == &SaveDef)
             {
                 LoadDef.lastOn = itemOn;
                 savegame = itemOn + 1;
                 M_SaveCVARs();
-                C_IntCVAROutput(stringize(savegame), savegame);
+                C_IntCVAROutputNoRepeat(stringize(savegame), savegame);
             }
 
             keywait = I_GetTime() + 2;
             M_SetWindowCaption();
+
             return false;
         }
 
@@ -3385,7 +3383,7 @@ dboolean M_Responder(event_t *ev)
             return false;
         }
 
-        else if (key == KEY_ENTER && !keydown)
+        else if (key == KEY_ENTER && keywait < I_GetTime() && !keydown && !fadecount)
         {
             // Activate menu item
             keydown = key;
@@ -3396,6 +3394,7 @@ dboolean M_Responder(event_t *ev)
                 M_ClearMenus();
                 S_StartSound(NULL, sfx_swtchx);
                 R_SetViewSize(r_screensize);
+
                 return true;
             }
 
@@ -3416,8 +3415,8 @@ dboolean M_Responder(event_t *ev)
                         if (currentMenu != &NewDef || itemOn == 4)
                             S_StartSound(NULL, sfx_pistol);
 
-                        if (currentMenu != &NewDef && !fadecount)
-                            D_FadeScreen();
+                        if (currentMenu != &NewDef && currentMenu != &SaveDef)
+                            D_FadeScreen(false);
                     }
 
                     currentMenu->menuitems[itemOn].routine(itemOn);
@@ -3425,14 +3424,16 @@ dboolean M_Responder(event_t *ev)
             }
 
             if (currentMenu == &EpiDef && !EpiCustom)
-                C_IntCVAROutput(stringize(episode), episode);
+                C_IntCVAROutputNoRepeat(stringize(episode), episode);
             else if (currentMenu == &ExpDef)
-                C_IntCVAROutput(stringize(expansion), expansion);
+                C_IntCVAROutputNoRepeat(stringize(expansion), expansion);
             else if (currentMenu == &NewDef)
-                C_IntCVAROutput(stringize(skilllevel), skilllevel);
+                C_IntCVAROutputNoRepeat(stringize(skilllevel), skilllevel);
 
             M_SetWindowCaption();
             skipaction = (currentMenu == &LoadDef || currentMenu == &SaveDef || currentMenu == &NewDef);
+            keywait = I_GetTime() + 5;
+
             return skipaction;
         }
 
@@ -3460,7 +3461,7 @@ dboolean M_Responder(event_t *ev)
                 firstevent = true;
             }
 
-            D_FadeScreen();
+            D_FadeScreen(false);
 
             if (inhelpscreens)
                 R_SetViewSize(r_screensize);
@@ -3513,13 +3514,13 @@ dboolean M_Responder(event_t *ev)
                     {
                         episode = itemOn + 1;
                         M_SaveCVARs();
-                        C_IntCVAROutput(stringize(episode), episode);
+                        C_IntCVAROutputNoRepeat(stringize(episode), episode);
                     }
                     else if (currentMenu == &ExpDef)
                     {
                         expansion = itemOn + 1;
                         M_SaveCVARs();
-                        C_IntCVAROutput(stringize(expansion), expansion);
+                        C_IntCVAROutputNoRepeat(stringize(expansion), expansion);
 
                         if (gamestate != GS_LEVEL)
                             gamemission = (expansion == 2 && nerve ? pack_nerve : doom2);
@@ -3528,21 +3529,21 @@ dboolean M_Responder(event_t *ev)
                     {
                         skilllevel = itemOn + 1;
                         M_SaveCVARs();
-                        C_IntCVAROutput(stringize(skilllevel), skilllevel);
+                        C_IntCVAROutputNoRepeat(stringize(skilllevel), skilllevel);
                     }
                     else if (currentMenu == &SaveDef)
                     {
                         LoadDef.lastOn = itemOn;
                         savegame = itemOn + 1;
                         M_SaveCVARs();
-                        C_IntCVAROutput(stringize(savegame), savegame);
+                        C_IntCVAROutputNoRepeat(stringize(savegame), savegame);
                     }
                     else if (currentMenu == &LoadDef)
                     {
                         SaveDef.lastOn = itemOn;
                         savegame = itemOn + 1;
                         M_SaveCVARs();
-                        C_IntCVAROutput(stringize(savegame), savegame);
+                        C_IntCVAROutputNoRepeat(stringize(savegame), savegame);
                     }
 
                     M_SetWindowCaption();
@@ -3575,13 +3576,13 @@ dboolean M_Responder(event_t *ev)
                     {
                         episode = itemOn + 1;
                         M_SaveCVARs();
-                        C_IntCVAROutput(stringize(episode), episode);
+                        C_IntCVAROutputNoRepeat(stringize(episode), episode);
                     }
                     else if (currentMenu == &ExpDef)
                     {
                         expansion = itemOn + 1;
                         M_SaveCVARs();
-                        C_IntCVAROutput(stringize(expansion), expansion);
+                        C_IntCVAROutputNoRepeat(stringize(expansion), expansion);
 
                         if (gamestate != GS_LEVEL)
                             gamemission = (expansion == 2 && nerve ? pack_nerve : doom2);
@@ -3590,21 +3591,21 @@ dboolean M_Responder(event_t *ev)
                     {
                         skilllevel = itemOn + 1;
                         M_SaveCVARs();
-                        C_IntCVAROutput(stringize(skilllevel), skilllevel);
+                        C_IntCVAROutputNoRepeat(stringize(skilllevel), skilllevel);
                     }
                     else if (currentMenu == &SaveDef)
                     {
                         LoadDef.lastOn = itemOn;
                         savegame = itemOn + 1;
                         M_SaveCVARs();
-                        C_IntCVAROutput(stringize(savegame), savegame);
+                        C_IntCVAROutputNoRepeat(stringize(savegame), savegame);
                     }
                     else if (currentMenu == &LoadDef)
                     {
                         SaveDef.lastOn = itemOn;
                         savegame = itemOn + 1;
                         M_SaveCVARs();
-                        C_IntCVAROutput(stringize(savegame), savegame);
+                        C_IntCVAROutputNoRepeat(stringize(savegame), savegame);
                     }
 
                     M_SetWindowCaption();
@@ -3628,8 +3629,9 @@ void M_StartControlPanel(void)
 
     menuactive = true;
     currentMenu = &MainDef;
-
     itemOn = currentMenu->lastOn;
+
+    I_CapFPS(TICRATE);
 
     if (gp_vibrate_barrels || gp_vibrate_damage || gp_vibrate_weapons)
     {
@@ -3664,7 +3666,7 @@ void M_StartControlPanel(void)
         S_LowerMusicVolume();
     }
 
-    D_FadeScreen();
+    D_FadeScreen(false);
 }
 
 //
@@ -3711,6 +3713,7 @@ void M_Drawer(void)
 
                     foundnewline = true;
                     start += i + 1;
+
                     break;
                 }
 
@@ -3765,7 +3768,7 @@ void M_Drawer(void)
                     SaveDef.lastOn = itemOn;
                     savegame = itemOn + 1;
                     M_SaveCVARs();
-                    C_IntCVAROutput(stringize(savegame), savegame);
+                    C_IntCVAROutputNoRepeat(stringize(savegame), savegame);
                 }
             }
 
@@ -3776,13 +3779,14 @@ void M_Drawer(void)
         }
         else
         {
-            int yy = y + itemOn * (LINEHEIGHT - 1) - 5 + OFFSET + chex;
-            int max = currentMenu->numitems;
+            patch_t *titlepatch = W_CacheLumpName("M_DOOM");
+            int     yy = y + itemOn * (LINEHEIGHT - 1) - 5 + OFFSET + chex;
+            int     max = currentMenu->numitems;
 
             if (currentMenu == &OptionsDef && !itemOn && gamestate != GS_LEVEL)
                 itemOn++;
 
-            if (currentMenu == &MainDef && SHORT(((patch_t *)W_CacheLumpName("M_DOOM"))->height) >= VANILLAHEIGHT && !remnant)
+            if (currentMenu == &MainDef && titlepatch && SHORT(titlepatch->height) >= VANILLAHEIGHT)
                 yy -= OFFSET;
 
             if (M_SKULL1)
@@ -3832,6 +3836,8 @@ void M_ClearMenus(void)
 
     menuactive = false;
     blurtic = -1;
+
+    I_CapFPS(vid_capfps);
 
     if (gp_vibrate_barrels || gp_vibrate_damage || gp_vibrate_weapons)
     {

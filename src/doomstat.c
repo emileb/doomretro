@@ -6,7 +6,7 @@
 
 ========================================================================
 
-  Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
+  Copyright © 1993-2021 by id Software LLC, a ZeniMax Media company.
   Copyright © 2013-2021 by Brad Harding <mailto:brad@doomretro.com>.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
@@ -38,7 +38,7 @@
 
 #include "doomstat.h"
 
-// Game Mode - identify IWAD as shareware, retail etc.
+// Game Mode - identify IWAD as shareware, retail, etc.
 GameMode_t      gamemode = indetermined;
 GameMission_t   gamemission = doom;
 char            gamedescription[255];
@@ -68,8 +68,7 @@ dboolean        E1M8B;
 dboolean        sprfix18;
 dboolean        eviternity;
 dboolean        doom4vanilla;
-dboolean        rekkr;
-dboolean        remnant;
+dboolean        REKKR;
 
 // Set if homebrew PWAD stuff has been added.
 dboolean        modifiedgame = false;
@@ -103,5 +102,4 @@ short           SLIME12;
 int             STBAR;
 dboolean        STCFN034;
 dboolean        STYSNUM0;
-dboolean        TITLEPIC;
 dboolean        WISCRT2;

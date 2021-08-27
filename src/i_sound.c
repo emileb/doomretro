@@ -6,7 +6,7 @@
 
 ========================================================================
 
-  Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
+  Copyright © 1993-2021 by id Software LLC, a ZeniMax Media company.
   Copyright © 2013-2021 by Brad Harding <mailto:brad@doomretro.com>.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
@@ -275,12 +275,12 @@ static void ExpandSoundData(sfxinfo_t *sfxinfo, byte *data, int samplerate, int 
 dboolean CacheSFX(sfxinfo_t *sfxinfo)
 {
     // need to load the sound
-    int             lumpnum = sfxinfo->lumpnum;
-    byte            *data = W_CacheLumpNum(lumpnum);
-    unsigned int    lumplen = W_LumpLength(lumpnum);
-    int             samplerate;
-    unsigned int    bits = 8;
-    unsigned int    length;
+    int     lumpnum = sfxinfo->lumpnum;
+    byte    *data = W_CacheLumpNum(lumpnum);
+    int     lumplen = W_LumpLength(lumpnum);
+    int     samplerate;
+    int     bits = 8;
+    int     length;
 
     // Check the header, and ensure this is a valid sound
     if (lumplen > 44 && !memcmp(data, "RIFF", 4) && !memcmp(data + 8, "WAVEfmt ", 8))
@@ -422,7 +422,7 @@ dboolean I_InitSound(void)
             SDL_MIXER_FILENAME, PACKAGE_NAME, SDL_MIXER_MAJOR_VERSION, SDL_MIXER_MINOR_VERSION, SDL_MIXER_PATCHLEVEL);
 
     if (linked->patch != SDL_MIXER_PATCHLEVEL)
-        C_Warning(1, "The wrong version of <b>%s</b> was found. <i>%s</i> requires v%i.%i.%i.",
+        C_Warning(1, "The wrong version of " BOLD("%s") " was found. " ITALICS("%s") " requires v%i.%i.%i.",
             SDL_MIXER_FILENAME, PACKAGE_NAME, SDL_MIXER_MAJOR_VERSION, SDL_MIXER_MINOR_VERSION, SDL_MIXER_PATCHLEVEL);
 
     if (Mix_OpenAudioDevice(SAMPLERATE, MIX_DEFAULT_FORMAT, MIX_DEFAULT_CHANNELS, CHUNKSIZE, DEFAULT_DEVICE,

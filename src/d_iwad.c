@@ -6,7 +6,7 @@
 
 ========================================================================
 
-  Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
+  Copyright © 1993-2021 by id Software LLC, a ZeniMax Media company.
   Copyright © 2013-2021 by Brad Harding <mailto:brad@doomretro.com>.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
@@ -177,14 +177,14 @@ static const char *root_path_subdirs[] =
     "base\\wads"
 };
 
-// Location where Steam is installed
+// Locations where Steam is installed
 static registryvalue_t steam_install_locations[] =
 {
     { HKEY_CURRENT_USER,  "SOFTWARE\\Valve\\Steam",      "SteamPath"   },
     { HKEY_LOCAL_MACHINE, SOFTWARE_KEY "\\Valve\\Steam", "InstallPath" }
 };
 
-// Subdirs of the steam install directory where IWADs are found
+// Subdirs of the Steam install directory where IWADs are found
 static const char *steam_install_subdirs[] =
 {
     "steamapps\\common\\Doom 2\\rerelease\\DOOM II_Data\\StreamingAssets",
@@ -247,8 +247,8 @@ static void CheckUninstallStrings(void)
 
             AddIWADDir(path);
         }
-
-        free(val);
+        else
+            free(val);
     }
 }
 
@@ -467,6 +467,7 @@ static char *CheckDirectoryHasIWAD(char *dir, char *iwadname)
     free(probe);
     probe = M_FileCaseExists(filename);
     free(filename);
+
     return probe;
 }
 
@@ -513,6 +514,7 @@ void D_IdentifyIWADByName(char *name)
         {
             gamemission = iwads[i].mission;
             free(iwad);
+
             break;
         }
 
@@ -528,7 +530,7 @@ void D_IdentifyIWADByName(char *name)
 //
 static void AddDoomWADPath(void)
 {
-    char    *doomwadpath = SDL_getenv("DOOMWADPATH");
+    char    *doomwadpath = getenv("DOOMWADPATH");
     char    *p;
 
     if (!doomwadpath)
@@ -567,7 +569,7 @@ static void BuildIWADDirList(void)
         return;
 
     // Add DOOMWADDIR if it is in the environment
-    if ((doomwaddir = SDL_getenv("DOOMWADDIR")))
+    if ((doomwaddir = getenv("DOOMWADDIR")))
         AddIWADDir(doomwaddir);
 
     // Add dirs from DOOMWADPATH
@@ -643,7 +645,8 @@ void D_InitIWADFolder(void)
         if (M_FolderExists(iwad_dirs[i]))
         {
             iwadfolder = M_StringDuplicate(iwad_dirs[i]);
-            strreplace(iwadfolder, "/", "\\");
+            M_StringReplaceAll(iwadfolder, "/", "\\");
+
             break;
         }
 
@@ -780,11 +783,11 @@ void D_SetSaveGameFolder(dboolean output)
         int numsavegames = M_CountSaveGames();
 
         if (!numsavegames)
-            C_Output("Savegames will be saved in <b>%s</b>.", savegamefolder);
+            C_Output("All savegames will be saved in " BOLD("%s") ".", savegamefolder);
         else if (numsavegames == 1)
-            C_Output("There is 1 savegame in <b>%s</b>.", savegamefolder);
+            C_Output("There is 1 savegame in " BOLD("%s") ".", savegamefolder);
         else
-            C_Output("There are %i savegames in <b>%s</b>.", numsavegames, savegamefolder);
+            C_Output("There are %i savegames in " BOLD("%s") ".", numsavegames, savegamefolder);
     }
 }
 
@@ -800,17 +803,10 @@ void D_IdentifyVersion(void)
     // identify by its contents.
     if (gamemission == none)
     {
-        for (int i = 0; i < numlumps; i++)
-            if (!strncasecmp(lumpinfo[i]->name, "MAP01", 8))
-            {
-                gamemission = doom2;
-                break;
-            }
-            else if (!strncasecmp(lumpinfo[i]->name, "E1M1", 8))
-            {
-                gamemission = doom;
-                break;
-            }
+        if (W_CheckNumForName("MAP01") >= 0)
+            gamemission = doom2;
+        else if (W_CheckNumForName("E1M1") >= 0)
+            gamemission = doom;
 
         if (gamemission == none)
             // Still no idea. I don't think this is going to work.
@@ -837,8 +833,6 @@ void D_IdentifyVersion(void)
 // Set the gamedescription string
 void D_SetGameDescription(void)
 {
-    M_StringCopy(gamedescription, PACKAGE_NAME, sizeof(gamedescription));
-
     if (chex1)
         M_StringCopy(gamedescription, s_CAPTION_CHEX, sizeof(gamedescription));
     else if (chex2)
@@ -890,19 +884,19 @@ void D_SetGameDescription(void)
     if (nerve)
     {
         if (bfgedition)
-            C_Output("Playing <i>%s: %s (%s)</i> and <i>%s: %s (%s).</i>", s_CAPTION_DOOM2, s_CAPTION_HELLONEARTH,
+            C_Output("Playing " ITALICS("%s: %s (%s)") " and " ITALICS("%s: %s (%s)."), s_CAPTION_DOOM2, s_CAPTION_HELLONEARTH,
                 s_CAPTION_BFGEDITION, s_CAPTION_DOOM2, s_CAPTION_NERVE, s_CAPTION_BFGEDITION);
         else
-            C_Output("Playing <i>%s: %s</i> and <i>%s: %s.</i>", s_CAPTION_DOOM2, s_CAPTION_HELLONEARTH,
+            C_Output("Playing " ITALICS("%s: %s") " and " ITALICS("%s: %s."), s_CAPTION_DOOM2, s_CAPTION_HELLONEARTH,
                 s_CAPTION_DOOM2, s_CAPTION_NERVE);
     }
     else if (modifiedgame && !sigil && !chex && !BTSX)
-        C_Output("Playing <b>%s</b>.", gamedescription);
+        C_Output("Playing " BOLD("%s") ".", gamedescription);
     else
     {
         if (bfgedition)
-            C_Output("Playing <i>%s (%s).</i>", gamedescription, s_CAPTION_BFGEDITION);
+            C_Output("Playing " ITALICS("%s (%s)."), gamedescription, s_CAPTION_BFGEDITION);
         else
-            C_Output("Playing <i>%s.</i>", gamedescription);
+            C_Output("Playing " ITALICS("%s."), gamedescription);
     }
 }

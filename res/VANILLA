@@ -4,6 +4,7 @@ am_allmapcdwallcolor 99
 am_allmapfdwallcolor 99
 am_allmapwallcolor 99
 am_backcolor 0
+am_bluedoorcolor 231
 am_cdwallcolor 231
 am_crosshaircolor 96
 am_external off
@@ -15,11 +16,13 @@ am_gridsize 128x128
 am_markcolor 103
 am_path off
 am_playercolor 209
+am_reddoorcolor 231
 am_rotatemode off
 am_teleportercolor 184
 am_thingcolor 112
 am_tswallcolor 96
 am_wallcolor 176
+am_yellowdoorcolor 231
 autoaim on
 autoload off
 autosave off
@@ -38,6 +41,7 @@ gp_thumbsticks 1
 gp_vibrate_barrels 0%
 gp_vibrate_damage 0%
 gp_vibrate_weapons 0%
+groupmessages off
 infighting off
 infiniteheight on
 m_acceleration off
@@ -53,6 +57,7 @@ pistolstart off
 playername "you"
 r_althud off
 r_blood red
+r_bloodsplats_max 0
 r_brightmaps off
 r_color 100%
 r_corpses_color off
@@ -64,7 +69,7 @@ r_corpses_slide off
 r_corpses_smearblood off
 r_detail low
 r_diskicon on
-r_dither off
+r_ditheredlighting off
 r_fixmaperrors off
 r_fixspriteoffsets off
 r_floatbob off

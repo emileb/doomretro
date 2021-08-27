@@ -6,7 +6,7 @@
 
 ========================================================================
 
-  Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
+  Copyright © 1993-2021 by id Software LLC, a ZeniMax Media company.
   Copyright © 2013-2021 by Brad Harding <mailto:brad@doomretro.com>.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
@@ -35,6 +35,8 @@
 
 ========================================================================
 */
+
+#include <ctype.h>
 
 #include "c_console.h"
 #include "d_deh.h"
@@ -283,7 +285,7 @@ void P_InitPicAnims(void)
                     isliquid = true;
                 }
                 else if ((M_StrCaseStr(animdefs[i].startname, "SLI") && (basepic < SLIME09 || basepic > SLIME12))
-                    || M_StrCaseStr(animdefs[i].startname, "SLM"))
+                    || M_StrCaseStr(animdefs[i].startname, "SLM") || M_StrCaseStr(animdefs[i].startname, "POOP"))
                 {
                     SetTerrainType(lastanim, SLIME);
                     isliquid = true;
@@ -988,6 +990,7 @@ dboolean P_CanUnlockGenDoor(line_t *line)
                     (M_StringCompare(playername, playername_default) ? "" : "s"));
                 HU_PlayerMessage(buffer, false, false);
                 S_StartSound(viewplayer->mo, sfx_noway);
+
                 return false;
             }
 
@@ -1007,6 +1010,7 @@ dboolean P_CanUnlockGenDoor(line_t *line)
                     (viewplayer->cards[it_redskull] == CARDNOTFOUNDYET ? "keycard or skull key" : "keycard"));
                 HU_PlayerMessage(buffer, false, false);
                 S_StartSound(viewplayer->mo, sfx_noway);
+
                 return false;
             }
 
@@ -1026,6 +1030,7 @@ dboolean P_CanUnlockGenDoor(line_t *line)
                     (viewplayer->cards[it_blueskull] == CARDNOTFOUNDYET ? "keycard or skull key" : "keycard"));
                 HU_PlayerMessage(buffer, false, false);
                 S_StartSound(viewplayer->mo, sfx_noway);
+
                 return false;
             }
 
@@ -1045,6 +1050,7 @@ dboolean P_CanUnlockGenDoor(line_t *line)
                     (viewplayer->cards[it_yellowskull] == CARDNOTFOUNDYET ? "keycard or skull key" : "keycard"));
                 HU_PlayerMessage(buffer, false, false);
                 S_StartSound(viewplayer->mo, sfx_noway);
+
                 return false;
             }
 
@@ -1064,6 +1070,7 @@ dboolean P_CanUnlockGenDoor(line_t *line)
                     (viewplayer->cards[it_redcard] == CARDNOTFOUNDYET ? "keycard or skull key" : "skull key"));
                 HU_PlayerMessage(buffer, false, false);
                 S_StartSound(viewplayer->mo, sfx_noway);
+
                 return false;
             }
 
@@ -1083,6 +1090,7 @@ dboolean P_CanUnlockGenDoor(line_t *line)
                     (viewplayer->cards[it_bluecard] == CARDNOTFOUNDYET ? "keycard or skull key" : "skull key"));
                 HU_PlayerMessage(buffer, false, false);
                 S_StartSound(viewplayer->mo, sfx_noway);
+
                 return false;
             }
 
@@ -1102,6 +1110,7 @@ dboolean P_CanUnlockGenDoor(line_t *line)
                     (viewplayer->cards[it_yellowcard] == CARDNOTFOUNDYET ? "keycard or skull key" : "skull key"));
                 HU_PlayerMessage(buffer, false, false);
                 S_StartSound(viewplayer->mo, sfx_noway);
+
                 return false;
             }
 
@@ -1122,6 +1131,7 @@ dboolean P_CanUnlockGenDoor(line_t *line)
                     (M_StringCompare(playername, playername_default) ? "" : "s"));
                 HU_PlayerMessage(buffer, false, false);
                 S_StartSound(viewplayer->mo, sfx_noway);
+
                 return false;
             }
 
@@ -1139,6 +1149,7 @@ dboolean P_CanUnlockGenDoor(line_t *line)
                     (M_StringCompare(playername, playername_default) ? "" : "s"));
                 HU_PlayerMessage(buffer, false, false);
                 S_StartSound(viewplayer->mo, sfx_noway);
+
                 return false;
             }
 
@@ -1422,11 +1433,13 @@ void P_CrossSpecialLine(line_t *line, int side, mobj_t *thing)
                         case 1:
                             junk.tag = 666;
                             EV_DoFloor(&junk, lowerFloorToLowest);
+
                             break;
 
                         case 4:
                             junk.tag = 666;
                             EV_DoDoor(&junk, doorBlazeOpen, VDOORSPEED * 4);
+
                             break;
                     }
 
@@ -1937,6 +1950,7 @@ void P_CrossSpecialLine(line_t *line, int side, mobj_t *thing)
         case WR_Ceiling_RaiseToHighestCeiling:
             EV_DoCeiling(line, raiseToHighest);
             EV_DoFloor(line, lowerFloorToLowest);
+
             break;
 
         case WR_Ceiling_LowerToFloor_Fast:
@@ -2161,11 +2175,13 @@ void P_ShootSpecialLine(mobj_t *thing, line_t *line)
         case G1_ExitLevel:
             P_ChangeSwitchTexture(line, false);
             G_ExitLevel();
+
             break;
 
         case G1_ExitLevel_GoesToSecretLevel:
             P_ChangeSwitchTexture(line, false);
             G_SecretExitLevel();
+
             break;
     }
 }
@@ -2177,11 +2193,9 @@ static void P_SecretFound(void)
 
     if (DSSECRET)
     {
-        static char buffer[1024];
-
         S_StartSound(NULL, sfx_secret);
-        M_snprintf(buffer, sizeof(buffer), s_SECRET, playername);
-        HU_PlayerMessage(buffer, false, false);
+        HU_PlayerMessage(s_SECRET, true, false);
+        message_dontfuckwithme = true;
     }
 }
 
@@ -2211,7 +2225,7 @@ void P_PlayerInSpecialSector(sector_t *sector)
 
             case DamageNegative10Or20PercentHealth:
             case DamageNegative10Or20PercentHealthAndLightBlinks_2Hz:
-                if (!(leveltime & 31) && !(viewplayer->cheats & CF_GODMODE) && (!viewplayer->powers[pw_ironfeet] || M_Random() < 5))
+                if (!(leveltime & 31) && (!viewplayer->powers[pw_ironfeet] || M_Random() < 5))
                     P_DamageMobj(viewplayer->mo, NULL, NULL, 20, true);
 
                 break;
@@ -2226,11 +2240,6 @@ void P_PlayerInSpecialSector(sector_t *sector)
                 break;
 
             case DamageNegative10Or20PercentHealthAndEndLevel:
-                // for E1M8 finale
-                viewplayer->cheats &= ~CF_BUDDHA;
-                viewplayer->cheats &= ~CF_GODMODE;
-                viewplayer->powers[pw_invulnerability] = 0;
-
                 if (!(leveltime & 0x1F))
                     P_DamageMobj(viewplayer->mo, NULL, NULL, 20, true);
 
@@ -2441,6 +2450,7 @@ dboolean EV_DoDonut(line_t *line)
             floor->speed = FLOORSPEED / 2;
             floor->floordestheight = s3->floorheight;
             floor->stopsound = (floor->sector->floorheight != floor->floordestheight);
+
             break;
         }
     }
@@ -2477,7 +2487,7 @@ void P_SpawnSpecials(void)
             char    *temp = commify(minutes);
 
             timer = BETWEEN(0, minutes, TIMERMAXMINUTES);
-            C_Output("A <b>-timer</b> parameter was found on the command-line. The time limit for each map is %s minute%s.",
+            C_Output("A " BOLD("-timer") " parameter was found on the command-line. The time limit for each map is %s minute%s.",
                 temp, (minutes == 1 ? "" : "s"));
             P_SetTimer(minutes);
             free(temp);
@@ -2487,7 +2497,7 @@ void P_SpawnSpecials(void)
     if (M_CheckParm("-avg"))
     {
         P_SetTimer(20);
-        C_Output("An <b>-avg</b> parameter was found on the command-line. The time limit for each map is %i minutes.", timer);
+        C_Output("An " BOLD("-avg") " parameter was found on the command-line. The time limit for each map is %i minutes.", timer);
     }
 
     // Init special SECTORs.
@@ -2609,7 +2619,7 @@ void P_SpawnSpecials(void)
             case TransferSkyTextureToTaggedSectors:
             case TransferSkyTextureToTaggedSectors_Flipped:
                 for (int s = -1; (s = P_FindSectorFromLineTag(line, s)) >= 0;)
-                    sectors[s].sky = i | PL_SKYFLAT;
+                    sectors[s].sky = (i | PL_SKYFLAT);
 
                 break;
         }
@@ -2682,6 +2692,7 @@ void T_Scroll(scroll_t *s)
 
             side->textureoffset += dx;
             side->rowoffset += dy;
+
             break;
         }
 
@@ -2689,12 +2700,14 @@ void T_Scroll(scroll_t *s)
             sec = sectors + s->affectee;
             sec->floorxoffset += dx;
             sec->flooryoffset += dy;
+
             break;
 
         case sc_ceiling:                        // killough 03/07/98: Scroll ceiling texture
             sec = sectors + s->affectee;
             sec->ceilingxoffset += dx;
             sec->ceilingyoffset += dy;
+
             break;
 
         case sc_carry:
@@ -3302,6 +3315,7 @@ dboolean P_ProcessNoTagLines(line_t *line, sector_t **sec, int *secnum)
 
         *secnum = (*sec)->id;
         zerotag_manual = true;
+
         return true;
     }
 

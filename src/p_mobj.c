@@ -6,7 +6,7 @@
 
 ========================================================================
 
-  Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
+  Copyright © 1993-2021 by id Software LLC, a ZeniMax Media company.
   Copyright © 2013-2021 by Brad Harding <mailto:brad@doomretro.com>.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
@@ -92,6 +92,7 @@ dboolean P_SetMobjState(mobj_t *mobj, statenum_t state)
         {
             mobj->state = (state_t *)S_NULL;
             P_RemoveMobj(mobj);
+
             return false;
         }
         else
@@ -146,14 +147,12 @@ void P_ExplodeMissile(mobj_t *mo)
 #define STOPSPEED       0x1000
 #define WATERFRICTION   0xD500
 
-static int  puffcount;
-
 static void P_XYMovement(mobj_t *mo)
 {
     player_t    *player;
     fixed_t     xmove, ymove;
-    mobjtype_t  type = mo->type;
-    int         flags2 = mo->flags2;
+    mobjtype_t  type;
+    int         flags2;
     dboolean    corpse;
     int         stepdir = 0;
 
@@ -171,12 +170,13 @@ static void P_XYMovement(mobj_t *mo)
     }
 
     player = mo->player;
+    type = mo->type;
+    flags2 = mo->flags2;
     corpse = ((mo->flags & MF_CORPSE) && type != MT_BARREL);
 
     // [BH] give smoke trails to rockets
-    if (flags2 & MF2_SMOKETRAIL)
-        if (puffcount++)
-            P_SpawnSmokeTrail(mo->x, mo->y, mo->z, mo->angle);
+    if ((flags2 & MF2_SMOKETRAIL) && mo->pursuecount++)
+        P_SpawnSmokeTrail(mo->x, mo->y, mo->z, mo->angle);
 
     mo->momx = BETWEEN(-MAXMOVE, mo->momx, MAXMOVE);
     mo->momy = BETWEEN(-MAXMOVE, mo->momy, MAXMOVE);
@@ -280,20 +280,24 @@ static void P_XYMovement(mobj_t *mo)
         return;         // no friction when airborne
 
     // [BH] spawn random blood splats on floor as corpses slide
-    if (corpse && !(mo->flags & MF_NOBLOOD) && mo->blood && r_corpses_slide && r_corpses_smearblood && (mo->momx || mo->momy)
-        && mo->bloodsplats && r_bloodsplats_max && !mo->nudge)
+    if (corpse && !(mo->flags & MF_NOBLOOD) && r_corpses_slide && r_corpses_smearblood
+        && (mo->momx || mo->momy) && mo->bloodsplats && r_bloodsplats_max && !mo->nudge)
     {
         int max = MIN((ABS(mo->momx) + ABS(mo->momy)) >> (FRACBITS - 2), 8);
 
         if (max)
         {
-            int     blood = mobjinfo[mo->blood].blood;
-            int     radius = (spritewidth[sprites[mo->sprite].spriteframes[mo->frame & FF_FRAMEMASK].lump[0]] >> FRACBITS) >> 1;
-            fixed_t floorz = mo->floorz;
+            int blood = mobjinfo[mo->blood].blood;
 
-            for (int i = 0; i < max; i++)
-                P_SpawnBloodSplat(mo->x + (M_BigRandomInt(-radius, radius) << FRACBITS),
-                    mo->y + (M_BigRandomInt(-radius, radius) << FRACBITS), blood, floorz, mo);
+            if (blood)
+            {
+                int     radius = (spritewidth[sprites[mo->sprite].spriteframes[mo->frame & FF_FRAMEMASK].lump[0]] >> FRACBITS) >> 1;
+                fixed_t floorz = mo->floorz;
+
+                for (int i = 0; i < max; i++)
+                    P_SpawnBloodSplat(mo->x + (M_BigRandomInt(-radius, radius) << FRACBITS),
+                        mo->y + (M_BigRandomInt(-radius, radius) << FRACBITS), blood, floorz, mo);
+            }
         }
     }
 
@@ -490,10 +494,10 @@ floater:
 
                 if (blood != FUZZYBLOOD)
                 {
-                    fixed_t x1 = M_BigRandomInt(-3, 3) << FRACBITS;
-                    fixed_t y1 = M_BigRandomInt(-3, 3) << FRACBITS;
-                    fixed_t x2 = M_BigRandomIntNoRepeat(-3, 3, x1) << FRACBITS;
-                    fixed_t y2 = M_BigRandomIntNoRepeat(-3, 3, y1) << FRACBITS;
+                    fixed_t x1 = M_BigRandomInt(-5, 5) << FRACBITS;
+                    fixed_t y1 = M_BigRandomInt(-5, 5) << FRACBITS;
+                    fixed_t x2 = M_BigRandomIntNoRepeat(-5, 5, x1) << FRACBITS;
+                    fixed_t y2 = M_BigRandomIntNoRepeat(-5, 5, y1) << FRACBITS;
 
                     P_SpawnBloodSplat(x + x1, y + y1, blood, floorz, NULL);
                     P_SpawnBloodSplat(x - x2, y - y2, blood, floorz, NULL);
@@ -525,7 +529,7 @@ floater:
                     // Decrease viewheight for a moment after hitting the ground (hard), and utter appropriate sound.
                     player->deltaviewheight = mo->momz / 8;
 
-                    if (mo->health > 0)
+                    if (mo->health > 0 && !(viewplayer->cheats & CF_NOCLIP) && !freeze)
                         S_StartSound(mo, sfx_oof);
                 }
             }
@@ -727,7 +731,8 @@ void P_MobjThinker(mobj_t *mobj)
 
         // killough 09/12/98: objects fall off ledges if they are hanging off
         // slightly push off of ledge if hanging more than halfway off
-        if (((flags & MF_CORPSE) || (flags & MF_DROPPED) || mobj->type == MT_BARREL) && mobj->z - mobj->dropoffz > 2 * FRACUNIT)
+        if (((flags & MF_CORPSE) || (flags & MF_DROPPED) || mobj->type == MT_BARREL)
+            && mobj->geartime > 0 && mobj->z - mobj->dropoffz > 2 * FRACUNIT)
             P_ApplyTorque(mobj);
         else
         {
@@ -805,8 +810,7 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
     P_SetThingPosition(mobj);
 
     sector = mobj->subsector->sector;
-    mobj->dropoffz =           // killough 11/98: for tracking dropoffs
-    mobj->floorz = sector->floorheight;
+    mobj->dropoffz = mobj->floorz = sector->floorheight;
     mobj->ceilingz = sector->ceilingheight;
 
     if (z == ONFLOORZ)
@@ -847,7 +851,7 @@ void P_RemoveMobj(mobj_t *mobj)
 {
     int flags = mobj->flags;
 
-    if ((flags & MF_SPECIAL) && !(flags & MF_DROPPED) && mobj->type != MT_INV && mobj->type != MT_INS)
+    if ((flags & MF_SPECIAL) && !(flags & MF_DROPPED))
     {
         itemrespawnqueue[iqueuehead] = mobj->spawnpoint;
         itemrespawntime[iqueuehead] = leveltime;
@@ -1163,6 +1167,7 @@ mobj_t *P_SpawnMapThing(mapthing_t *mthing, dboolean spawnmonsters)
 
         C_Warning(2, "Thing %s at (%i,%i) wasn't spawned because its type is unknown.", temp, mthing->x, mthing->y);
         free(temp);
+
         return NULL;
     }
 
@@ -1245,6 +1250,8 @@ mobj_t *P_SpawnMapThing(mapthing_t *mthing, dboolean spawnmonsters)
     if (type == Revenant || type == LostSoul || type == SpiderMastermind || type == Cyberdemon)
         mobj->flags3 |= MF3_MISSILEMORE;
 
+    info = mobj->info;
+
     // [BH] spawn blood splats around corpses
     if (!(flags & (MF_SHOOTABLE | MF_NOBLOOD | MF_SPECIAL)) && mobj->blood && !chex
         && (!hacx || !(mobj->flags2 & MF2_DECORATION)) && r_bloodsplats_max
@@ -1255,8 +1262,6 @@ mobj_t *P_SpawnMapThing(mapthing_t *mthing, dboolean spawnmonsters)
         if (r_corpses_moreblood && mobj->subsector->sector->terraintype == SOLID)
             P_SpawnMoreBlood(mobj);
     }
-
-    info = mobj->info;
 
     // [crispy] randomly colorize space marine corpse objects
     if (info->spawnstate == S_PLAY_DIE7 || info->spawnstate == S_PLAY_XDIE9)
@@ -1358,10 +1363,7 @@ void P_SpawnSmokeTrail(fixed_t x, fixed_t y, fixed_t z, angle_t angle)
     mobj_t  *th = P_SpawnMobj(x, y, z + (M_BigSubRandom() << 10), MT_TRAIL);
 
     th->momz = FRACUNIT / 2;
-    th->tics -= M_BigRandom() & 3;
-
     th->angle = angle;
-
     th->flags2 |= (M_BigRandom() & 1) * MF2_MIRRORED;
 }
 
@@ -1449,7 +1451,7 @@ void P_SpawnBloodSplat(fixed_t x, fixed_t y, int blood, fixed_t maxheight, mobj_
                 int patch = firstbloodsplatlump + (M_BigRandom() & 7);
 
                 splat->patch = patch;
-                splat->flip = M_BigRandom() & 1;
+                splat->flip = (M_BigRandom() & 1);
 
                 if (blood == FUZZYBLOOD)
                 {
@@ -1603,10 +1605,10 @@ void P_SpawnPlayerMissile(mobj_t *source, mobjtype_t type)
     P_NoiseAlert(source);
 
     if (type == MT_ROCKET && r_rockettrails && !(th->flags & MF_BOUNCES) && viewplayer->readyweapon == wp_missile
-        && !hacx && !doom4vanilla)
+        && !chex && !hacx && !doom4vanilla)
     {
         th->flags2 |= MF2_SMOKETRAIL;
-        puffcount = 0;
+        th->pursuecount = 0;
     }
 
     P_CheckMissileSpawn(th);

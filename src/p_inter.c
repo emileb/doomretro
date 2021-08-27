@@ -6,7 +6,7 @@
 
 ========================================================================
 
-  Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
+  Copyright © 1993-2021 by id Software LLC, a ZeniMax Media company.
   Copyright © 2013-2021 by Brad Harding <mailto:brad@doomretro.com>.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
@@ -76,6 +76,8 @@ int             idkfa_armor_class = armortype_blue;
 int             bfgcells = BFGCELLS;
 dboolean        species_infighting = false;
 
+int             prevobituarytics = 0;
+
 // a weapon is found with two clip loads,
 // a big item has five clip loads
 int             maxammo[] =  { 200, 50, 300, 50 };
@@ -97,18 +99,19 @@ uint64_t        stat_itemspickedup_ammo_shells = 0;
 uint64_t        stat_itemspickedup_armor = 0;
 uint64_t        stat_itemspickedup_health = 0;
 uint64_t        stat_monsterskilled = 0;
+uint64_t        stat_monsterskilled_infighting = 0;
 uint64_t        stat_monsterskilled_arachnotrons = 0;
 uint64_t        stat_monsterskilled_archviles = 0;
 uint64_t        stat_monsterskilled_baronsofhell = 0;
 uint64_t        stat_monsterskilled_cacodemons = 0;
 uint64_t        stat_monsterskilled_cyberdemons = 0;
-uint64_t        stat_monsterskilled_demons = 0;
 uint64_t        stat_monsterskilled_heavyweapondudes = 0;
 uint64_t        stat_monsterskilled_hellknights = 0;
 uint64_t        stat_monsterskilled_imps = 0;
 uint64_t        stat_monsterskilled_lostsouls = 0;
 uint64_t        stat_monsterskilled_mancubi = 0;
 uint64_t        stat_monsterskilled_painelementals = 0;
+uint64_t        stat_monsterskilled_pinkydemons = 0;
 uint64_t        stat_monsterskilled_revenants = 0;
 uint64_t        stat_monsterskilled_shotgunguys = 0;
 uint64_t        stat_monsterskilled_spectres = 0;
@@ -125,21 +128,25 @@ void P_UpdateAmmoStat(ammotype_t ammotype, int num)
         case am_clip:
             viewplayer->itemspickedup_ammo_bullets += num;
             stat_itemspickedup_ammo_bullets = SafeAdd(stat_itemspickedup_ammo_bullets, num);
+
             break;
 
         case am_shell:
             viewplayer->itemspickedup_ammo_shells += num;
             stat_itemspickedup_ammo_shells = SafeAdd(stat_itemspickedup_ammo_shells, num);
+
             break;
 
         case am_cell:
             viewplayer->itemspickedup_ammo_cells += num;
             stat_itemspickedup_ammo_cells = SafeAdd(stat_itemspickedup_ammo_cells, num);
+
             break;
 
         case am_misl:
             viewplayer->itemspickedup_ammo_rockets += num;
             stat_itemspickedup_ammo_rockets = SafeAdd(stat_itemspickedup_ammo_rockets, num);
+
             break;
 
         default:
@@ -544,8 +551,8 @@ void P_InitCards(void)
                 char    *temp = commify(i);
 
                 if (viewplayer->cards[it_bluecard] == CARDNOTINMAP && viewplayer->cards[it_blueskull] == CARDNOTINMAP)
-                    C_Warning(2, "Linedef %s has special %i (\"%s\") but there are no <b>BlueKeycard</b> or <b>BlueSkullKey</b> "
-                        "things in map.", temp, line->special, linespecials[line->special]);
+                    C_Warning(2, "Linedef %s has special %i (\"%s\") but there are no " BOLD("bluekeycard") " or " BOLD("blueskullkey")
+                        " things in map.", temp, line->special, linespecials[line->special]);
 
                 free(temp);
                 break;
@@ -559,8 +566,8 @@ void P_InitCards(void)
                 char    *temp = commify(i);
 
                 if (viewplayer->cards[it_redcard] == CARDNOTINMAP && viewplayer->cards[it_redskull] == CARDNOTINMAP)
-                    C_Warning(2, "Linedef %s has special %i (\"%s\") but there are no <b>RedKeycard</b> or <b>RedSkullKey</b> "
-                        "things in map.", temp, line->special, linespecials[line->special]);
+                    C_Warning(2, "Linedef %s has special %i (\"%s\") but there are no " BOLD("redkeycard") " or " BOLD("redskullkey")
+                        " things in map.", temp, line->special, linespecials[line->special]);
 
                 free(temp);
                 break;
@@ -574,8 +581,8 @@ void P_InitCards(void)
                 char    *temp = commify(i);
 
                 if (viewplayer->cards[it_yellowcard] == CARDNOTINMAP && viewplayer->cards[it_yellowskull] == CARDNOTINMAP)
-                    C_Warning(2, "Linedef %s has special %i (\"%s\") but there are no <b>YellowKeycard</b> or <b>YellowSkullKey</b> "
-                        "things in map.", temp, line->special, linespecials[line->special]);
+                    C_Warning(2, "Linedef %s has special %i (\"%s\") but there are no " BOLD("yellowkeycard") " or "
+                        BOLD("yellowskullkey") " things in map.", temp, line->special, linespecials[line->special]);
 
                 free(temp);
                 break;
@@ -726,7 +733,8 @@ dboolean P_GivePower(int power)
     {
         case pw_invulnerability:
             viewplayer->fixedcolormap = INVERSECOLORMAP;
-            D_FadeScreen();
+            D_FadeScreen(false);
+
             break;
 
         case pw_strength:
@@ -739,7 +747,7 @@ dboolean P_GivePower(int power)
 
         case pw_allmap:
             if (automapactive)
-                D_FadeScreen();
+                D_FadeScreen(false);
 
             break;
 
@@ -750,6 +758,7 @@ dboolean P_GivePower(int power)
 
     given = (viewplayer->powers[power] <= 0);
     viewplayer->powers[power] = tics[power];
+
     return given;
 }
 
@@ -976,7 +985,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, dboolean message, dbo
                     if (gamestate == GS_LEVEL && !consoleactive && !message_dontfuckwithme)
                     {
                         if (r_screensize < r_screensize_max || !r_althud)
-                            M_StringCopy(buffer, M_StringReplace(buffer, "<i>really</i>", "really"), sizeof(buffer));
+                            M_StringCopy(buffer, M_StringReplace(buffer, ITALICS("really"), "really"), sizeof(buffer));
 
                         HU_SetPlayerMessage(buffer, true, false);
                     }
@@ -1007,11 +1016,17 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, dboolean message, dbo
             if (message)
                 HU_PlayerMessage(s_GOTBERSERK, true, false);
 
-            if (viewplayer->readyweapon != wp_fist && !strength)
-                P_EquipWeapon(wp_fist);
+            if (!strength)
+            {
+                if (viewplayer->readyweapon != wp_fist)
+                {
+                    P_EquipWeapon(wp_fist);
+                    viewplayer->fistorchainsaw = wp_fist;
+                }
 
-            viewplayer->fistorchainsaw = wp_fist;
-            sound = sfx_getpow;
+                sound = sfx_getpow;
+            }
+
             break;
         }
 
@@ -1622,10 +1637,6 @@ void P_UpdateKillStat(mobjtype_t type, int value)
             stat_monsterskilled_cyberdemons = SafeAdd(stat_monsterskilled_cyberdemons, value);
             break;
 
-        case MT_SERGEANT:
-            stat_monsterskilled_demons = SafeAdd(stat_monsterskilled_demons, value);
-            break;
-
         case MT_CHAINGUY:
             stat_monsterskilled_heavyweapondudes = SafeAdd(stat_monsterskilled_heavyweapondudes, value);
             break;
@@ -1648,6 +1659,10 @@ void P_UpdateKillStat(mobjtype_t type, int value)
 
         case MT_PAIN:
             stat_monsterskilled_painelementals = SafeAdd(stat_monsterskilled_painelementals, value);
+            break;
+
+        case MT_SERGEANT:
+            stat_monsterskilled_pinkydemons = SafeAdd(stat_monsterskilled_pinkydemons, value);
             break;
 
         case MT_UNDEAD:
@@ -1686,12 +1701,12 @@ static void P_WriteObituary(mobj_t *target, mobj_t *inflicter, mobj_t *source, d
                 if (inflicter->inflicter == MT_PLAYER)
                 {
                     if (M_StringCompare(playername, playername_default))
-                        C_PlayerMessage("You were %s by %s %s that you exploded.",
+                        C_PlayerObituary("You were %s by %s %s that you exploded.",
                             (gibbed ? "gibbed" : "killed"),
                             (isvowel(inflicter->info->name1[0]) ? "an" : "a"),
                             (*inflicter->info->name1 ? inflicter->info->name1 : "monster"));
                     else
-                        C_PlayerMessage("%s was %s by %s %s that %s exploded.",
+                        C_PlayerObituary("%s was %s by %s %s that %s exploded.",
                             playername,
                             (gibbed ? "gibbed" : "killed"),
                             (isvowel(inflicter->info->name1[0]) ? "an" : "a"),
@@ -1701,20 +1716,22 @@ static void P_WriteObituary(mobj_t *target, mobj_t *inflicter, mobj_t *source, d
                 else
                 {
                     if (M_StringCompare(playername, playername_default))
-                        C_PlayerMessage("You were %s by %s %s that %s %s exploded.",
+                        C_PlayerObituary("You were %s by %s %s that %s %s exploded.",
                             (gibbed ? "gibbed" : "killed"),
                             (isvowel(inflicter->info->name1[0]) ? "an" : "a"),
                             (*inflicter->info->name1 ? inflicter->info->name1 : "monster"),
-                            (inflicter->type == inflicter->inflicter ? "another" :
+                            (inflicter->type == inflicter->inflicter ||
+                                M_StringCompare(inflicter->info->name1, mobjinfo[inflicter->inflicter].name1) ? "another" :
                                 (isvowel(mobjinfo[inflicter->inflicter].name1[0]) ? "an" : "a")),
                             mobjinfo[inflicter->inflicter].name1);
                     else
-                        C_PlayerMessage("%s was %s by %s %s that %s %s exploded.",
+                        C_PlayerObituary("%s was %s by %s %s that %s %s exploded.",
                             playername,
                             (gibbed ? "gibbed" : "killed"),
                             (isvowel(inflicter->info->name1[0]) ? "an" : "a"),
                             (*inflicter->info->name1 ? inflicter->info->name1 : "monster"),
-                            (inflicter->type == inflicter->inflicter ? "another" :
+                            (inflicter->type == inflicter->inflicter ||
+                                M_StringCompare(inflicter->info->name1, mobjinfo[inflicter->inflicter].name1) ? "another" :
                                 (isvowel(mobjinfo[inflicter->inflicter].name1[0]) ? "an" : "a")),
                             mobjinfo[inflicter->inflicter].name1);
                 }
@@ -1736,25 +1753,26 @@ static void P_WriteObituary(mobj_t *target, mobj_t *inflicter, mobj_t *source, d
                 temp = sentencecase(targetname);
 
                 if (inflicter->inflicter == MT_PLAYER)
-                    C_PlayerMessage("%s was %s by %s %s that %s exploded.",
+                    C_PlayerObituary("%s was %s by %s %s that %s exploded.",
                         temp,
                         (gibbed ? "gibbed" : "killed"),
                         (isvowel(inflicter->info->name1[0]) ? "an" : "a"),
                         (*inflicter->info->name1 ? inflicter->info->name1 : "monster"),
                         playername);
                 else if (inflicter == target)
-                    C_PlayerMessage("%s was %s by %s %s that they exploded.",
+                    C_PlayerObituary("%s was %s by %s %s that they exploded.",
                         temp,
                         (gibbed ? "gibbed" : "killed"),
                         (isvowel(inflicter->info->name1[0]) ? "an" : "a"),
                         (*inflicter->info->name1 ? inflicter->info->name1 : "monster"));
                 else
-                    C_PlayerMessage("%s was %s by %s %s that %s %s exploded.",
+                    C_PlayerObituary("%s was %s by %s %s that %s %s exploded.",
                         temp,
                         (gibbed ? "gibbed" : "killed"),
                         (isvowel(inflicter->info->name1[0]) ? "an" : "a"),
                         (*inflicter->info->name1 ? inflicter->info->name1 : "monster"),
-                        (inflicter->type == inflicter->inflicter ? "another" :
+                        (inflicter->type == inflicter->inflicter ||
+                            M_StringCompare(inflicter->info->name1, mobjinfo[inflicter->inflicter].name1) ? "another" :
                             (isvowel(mobjinfo[inflicter->inflicter].name1[0]) ? "an" : "a")),
                         mobjinfo[inflicter->inflicter].name1);
 
@@ -1770,7 +1788,7 @@ static void P_WriteObituary(mobj_t *target, mobj_t *inflicter, mobj_t *source, d
                 if (M_StringCompare(playername, playername_default))
                 {
                     if (target->player)
-                        C_PlayerMessage("You %s yourself with your own %s.",
+                        C_PlayerObituary("You %s yourself with your own %s.",
                             (gibbed ? "gibbed" : "killed"),
                             weaponinfo[readyweapon].description);
                     else
@@ -1786,7 +1804,7 @@ static void P_WriteObituary(mobj_t *target, mobj_t *inflicter, mobj_t *source, d
                                 ((target->flags & MF_FRIEND) ? "friendly " : ""),
                                 (*target->info->name1 ? target->info->name1 : "monster"));
 
-                        C_PlayerMessage("You %s %s with your %s%s.",
+                        C_PlayerObituary("You %s %s with your %s%s.",
                             (target->type == MT_BARREL ? "exploded" : (gibbed ? "gibbed" : "killed")),
                             targetname,
                             weaponinfo[readyweapon].description,
@@ -1798,11 +1816,11 @@ static void P_WriteObituary(mobj_t *target, mobj_t *inflicter, mobj_t *source, d
                     if (target->player)
                     {
                         if (M_StringCompare(playername, playername_default))
-                            C_PlayerMessage("You %s yourself with your own %s.",
+                            C_PlayerObituary("You %s yourself with your own %s.",
                                 (gibbed ? "gibbed" : "killed"),
                                 weaponinfo[readyweapon].description);
                         else
-                            C_PlayerMessage("%s %s %s with %s own %s.",
+                            C_PlayerObituary("%s %s %s with %s own %s.",
                                 playername,
                                 (gibbed ? "gibbed" : "killed"),
                                 (playergender == playergender_male ? "himself" :
@@ -1825,13 +1843,13 @@ static void P_WriteObituary(mobj_t *target, mobj_t *inflicter, mobj_t *source, d
                                 (*target->info->name1 ? target->info->name1 : "monster"));
 
                         if (M_StringCompare(playername, playername_default))
-                            C_PlayerMessage("You %s %s with your %s%s.",
+                            C_PlayerObituary("You %s %s with your %s%s.",
                                 (target->type == MT_BARREL ? "exploded" : (gibbed ? "gibbed" : "killed")),
                                 targetname,
                                 weaponinfo[readyweapon].description,
                                 (readyweapon == wp_fist && viewplayer->powers[pw_strength] ? " while berserk" : ""));
                         else
-                            C_PlayerMessage("%s %s %s with %s %s%s.",
+                            C_PlayerObituary("%s %s %s with %s %s%s.",
                                 playername,
                                 (target->type == MT_BARREL ? "exploded" : (gibbed ? "gibbed" : "killed")),
                                 targetname,
@@ -1850,9 +1868,9 @@ static void P_WriteObituary(mobj_t *target, mobj_t *inflicter, mobj_t *source, d
                 if (target->player)
                 {
                     if (M_StringCompare(playername, playername_default))
-                        C_PlayerMessage("You were telefragged.");
+                        C_PlayerObituary("You were telefragged.");
                     else
-                        C_PlayerMessage("%s was telefragged.", playername);
+                        C_PlayerObituary("%s was telefragged.", playername);
                 }
                 else
                 {
@@ -1867,7 +1885,7 @@ static void P_WriteObituary(mobj_t *target, mobj_t *inflicter, mobj_t *source, d
                             ((target->flags & MF_FRIEND) ? "friendly " : ""),
                             (*target->info->name1 ? target->info->name1 : "monster"));
 
-                    C_PlayerMessage("%s was telefragged.", targetname);
+                    C_PlayerObituary("%s was telefragged.", targetname);
                 }
             }
             else
@@ -1887,7 +1905,7 @@ static void P_WriteObituary(mobj_t *target, mobj_t *inflicter, mobj_t *source, d
                 temp = sentencecase(sourcename);
 
                 if (target->player)
-                    C_PlayerMessage("%s %s %s.",
+                    C_PlayerObituary("%s %s %s.",
                         temp,
                         (gibbed ? "gibbed" : "killed"),
                         playername);
@@ -1899,13 +1917,13 @@ static void P_WriteObituary(mobj_t *target, mobj_t *inflicter, mobj_t *source, d
                         M_StringCopy(targetname, target->name, sizeof(targetname));
                     else
                         M_snprintf(targetname, sizeof(targetname), "%s %s%s",
-                            (source->type == target->type ? "another" :
+                            (source->type == target->type || M_StringCompare(source->info->name1, target->info->name1) ? "another" :
                                 ((target->flags & MF_FRIEND) && monstercount[target->type] == 1 ? "the" :
                                 (isvowel(target->info->name1[0]) ? "an" : "a"))),
                             ((target->flags & MF_FRIEND) ? "friendly " : ""),
                             (*target->info->name1 ? target->info->name1 : "monster"));
 
-                    C_PlayerMessage("%s %s %s.",
+                    C_PlayerObituary("%s %s %s.",
                         temp,
                         (target->type == MT_BARREL ? "exploded" : (gibbed ? "gibbed" : "killed")),
                         targetname);
@@ -1922,9 +1940,9 @@ static void P_WriteObituary(mobj_t *target, mobj_t *inflicter, mobj_t *source, d
         if (sector->ceilingdata && sector->ceilingheight - sector->floorheight < VIEWHEIGHT)
         {
             if (M_StringCompare(playername, playername_default))
-                C_PlayerMessage("You were crushed to death.");
+                C_PlayerObituary("You were crushed to death.");
             else
-                C_PlayerMessage("%s was crushed to death.", playername);
+                C_PlayerObituary("%s was crushed to death.", playername);
 
         }
         else
@@ -1937,7 +1955,7 @@ static void P_WriteObituary(mobj_t *target, mobj_t *inflicter, mobj_t *source, d
                     "slime", "gray slime", "goop",   "icy water", "tar",  "sludge"
                 };
 
-                C_PlayerMessage("%s died in %s.",
+                C_PlayerObituary("%s died in %s.",
                     (M_StringCompare(playername, playername_default) ? "You" : playername),
                     liquids[sector->terraintype]);
             }
@@ -1946,14 +1964,14 @@ static void P_WriteObituary(mobj_t *target, mobj_t *inflicter, mobj_t *source, d
                 short   floorpic = sector->floorpic;
 
                 if ((floorpic >= RROCK05 && floorpic <= RROCK08) || (floorpic >= SLIME09 && floorpic <= SLIME12))
-                    C_PlayerMessage("%s died on molten rock.",
+                    C_PlayerObituary("%s died on molten rock.",
                         (M_StringCompare(playername, playername_default) ? "You" : playername));
                 else if (healthcvar)
                 {
                     if (M_StringCompare(playername, playername_default))
-                        C_PlayerMessage("You killed yourself.");
+                        C_PlayerObituary("You killed yourself.");
                     else
-                        C_PlayerMessage("%s killed %s.",
+                        C_PlayerObituary("%s killed %s.",
                             playername,
                             (playergender == playergender_male ? "himself" :
                                 (playergender == playergender_female ? "herself" : "themselves")));
@@ -1961,9 +1979,9 @@ static void P_WriteObituary(mobj_t *target, mobj_t *inflicter, mobj_t *source, d
                 else
                 {
                     if (M_StringCompare(playername, playername_default))
-                        C_PlayerMessage("You blew yourself up.");
+                        C_PlayerObituary("You blew yourself up.");
                     else
-                        C_PlayerMessage("%s blew %s up.",
+                        C_PlayerObituary("%s blew %s up.",
                             playername,
                             (playergender == playergender_male ? "himself" :
                                 (playergender == playergender_female ? "herself" : "themselves")));
@@ -1971,6 +1989,8 @@ static void P_WriteObituary(mobj_t *target, mobj_t *inflicter, mobj_t *source, d
             }
         }
     }
+
+    prevobituarytics = gametime;
 }
 
 //
@@ -1997,6 +2017,7 @@ void P_KillMobj(mobj_t *target, mobj_t *inflicter, mobj_t *source)
     target->flags |= (MF_CORPSE | MF_DROPOFF);
     target->flags2 &= ~MF2_PASSMOBJ;
     target->height >>= 2;
+    target->geartime = 3;   // [JN] Limit torque to 3 seconds
 
     // killough 08/29/98: remove from threaded list
     P_UpdateThinker(&target->thinker);
@@ -2006,7 +2027,7 @@ void P_KillMobj(mobj_t *target, mobj_t *inflicter, mobj_t *source)
         if (!(target->flags & MF_FUZZ))
             target->bloodsplats = CORPSEBLOODSPLATS;
 
-        if (r_corpses_mirrored && type != MT_CHAINGUY && type != MT_CYBORG && (type != MT_PAIN || !doom4vanilla) && (M_Random() & 1))
+        if (r_corpses_mirrored && (M_Random() & 1) && type != MT_CHAINGUY && type != MT_CYBORG && (type != MT_PAIN || !doom4vanilla))
             target->flags2 |= MF2_MIRRORED;
     }
 
@@ -2025,6 +2046,12 @@ void P_KillMobj(mobj_t *target, mobj_t *inflicter, mobj_t *source)
                 P_UpdateKillStat(type, 1);
             }
         }
+        else
+        {
+            viewplayer->infightcount++;
+            stat_monsterskilled_infighting = SafeAdd(stat_monsterskilled_infighting, 1);
+        }
+
     }
     else if (type == MT_BARREL && !chex && !hacx)
     {
@@ -2103,6 +2130,7 @@ void P_KillMobj(mobj_t *target, mobj_t *inflicter, mobj_t *source)
 
         mo->angle = target->angle + (M_SubRandom() << 20);
         mo->flags |= MF_DROPPED;    // special versions of items
+        mo->geartime = 3;
 
         if (r_mirroredweapons && (M_Random() & 1))
             mo->flags2 |= MF2_MIRRORED;
@@ -2226,7 +2254,6 @@ void P_DamageMobj(mobj_t *target, mobj_t *inflicter, mobj_t *source, int damage,
         if (tplayer->powers[pw_invulnerability] && damage < 1000)
             return;
 
-        // ignore damage if in god mode or player about to warp
         if (!(cheats & CF_GODMODE) && !idclevtics)
         {
             if (adjust && tplayer->armorpoints)
@@ -2250,22 +2277,22 @@ void P_DamageMobj(mobj_t *target, mobj_t *inflicter, mobj_t *source, int damage,
 
             tplayer->health -= damage;
             target->health -= damage;
-        }
 
-        if ((cheats & CF_BUDDHA) && tplayer->health <= 0)
-        {
-            int stat = tplayer->health + damage - 1;
+            if ((cheats & CF_BUDDHA) && tplayer->health <= 0)
+            {
+                int stat = tplayer->health + damage - 1;
 
-            tplayer->damagereceived += stat;
-            stat_damagereceived = SafeAdd(stat_damagereceived, stat);
+                tplayer->damagereceived += stat;
+                stat_damagereceived = SafeAdd(stat_damagereceived, stat);
 
-            tplayer->health = 1;
-            target->health = 1;
-        }
-        else
-        {
-            tplayer->damagereceived += damage;
-            stat_damagereceived = SafeAdd(stat_damagereceived, damage);
+                tplayer->health = 1;
+                target->health = 1;
+            }
+            else
+            {
+                tplayer->damagereceived += damage;
+                stat_damagereceived = SafeAdd(stat_damagereceived, damage);
+            }
         }
 
         if (tplayer->mo == target)

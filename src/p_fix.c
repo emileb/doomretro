@@ -6,7 +6,7 @@
 
 ========================================================================
 
-  Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
+  Copyright © 1993-2021 by id Software LLC, a ZeniMax Media company.
   Copyright © 2013-2021 by Brad Harding <mailto:brad@doomretro.com>.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
@@ -341,6 +341,8 @@ linefix_t linefix[] =
     { doom,             2,   9,     140,    1, "GSTONE1",  "",            "",            DEFAULT,   DEFAULT, DEFAULT,                   DEFAULT,                                         DEFAULT },
 
     { doom,             3,   2,     146,    1, "",         "MIDVINE1",    "",            DEFAULT,   DEFAULT, DEFAULT,                   DEFAULT,                                         DEFAULT },
+    { doom,             3,   2,     152,    0, "",         "",            "",            DEFAULT,   DEFAULT, ML_DONTDRAW,               DEFAULT,                                         DEFAULT },
+    { doom,             3,   2,     154,    0, "",         "",            "",            DEFAULT,   DEFAULT, ML_DONTDRAW,               DEFAULT,                                         DEFAULT },
     { doom,             3,   2,     452,    0, "",         "",            "",            DEFAULT,        -7, DEFAULT,                   DEFAULT,                                         DEFAULT },
     { doom,             3,   2,     454,    0, "",         "",            "",            DEFAULT,        -7, DEFAULT,                   DEFAULT,                                         DEFAULT },
 
@@ -389,6 +391,15 @@ linefix_t linefix[] =
     { doom,             3,   6,     410,    1, "",         "BRNSMAL2",    "",            DEFAULT,   DEFAULT, DEFAULT,                   DEFAULT,                                         DEFAULT },
     { doom,             3,   6,     412,    1, "",         "BRNSMAL1",    "",            DEFAULT,   DEFAULT, DEFAULT,                   DEFAULT,                                         DEFAULT },
     { doom,             3,   6,     414,    1, "",         "BRNSMAL2",    "",            DEFAULT,   DEFAULT, DEFAULT,                   DEFAULT,                                         DEFAULT },
+    { doom,             3,   6,     550,    0, "",         "",            "",            DEFAULT,   DEFAULT, ML_DONTDRAW,               DEFAULT,                                         DEFAULT },
+    { doom,             3,   6,     569,    0, "",         "",            "",            DEFAULT,   DEFAULT, ML_DONTDRAW,               DEFAULT,                                         DEFAULT },
+    { doom,             3,   6,     580,    0, "",         "",            "",            DEFAULT,   DEFAULT, ML_DONTDRAW,               DEFAULT,                                         DEFAULT },
+    { doom,             3,   6,     666,    0, "",         "",            "",            DEFAULT,   DEFAULT, ML_DONTDRAW,               DEFAULT,                                         DEFAULT },
+    { doom,             3,   6,     668,    0, "",         "",            "",            DEFAULT,   DEFAULT, ML_DONTDRAW,               DEFAULT,                                         DEFAULT },
+    { doom,             3,   6,     669,    0, "",         "",            "",            DEFAULT,   DEFAULT, ML_DONTDRAW,               DEFAULT,                                         DEFAULT },
+    { doom,             3,   6,     670,    0, "",         "",            "",            DEFAULT,   DEFAULT, ML_DONTDRAW,               DEFAULT,                                         DEFAULT },
+    { doom,             3,   6,     671,    0, "",         "",            "",            DEFAULT,   DEFAULT, ML_DONTDRAW,               DEFAULT,                                         DEFAULT },
+    { doom,             3,   6,     672,    0, "",         "",            "",            DEFAULT,   DEFAULT, ML_DONTDRAW,               DEFAULT,                                         DEFAULT },
 
     { doom,             3,   7,      71,    0, "",         "",            "",            DEFAULT,       -24, DEFAULT,                   DEFAULT,                                         DEFAULT },
     { doom,             3,   7,      72,    0, "",         "",            "",            DEFAULT,       -24, DEFAULT,                   DEFAULT,                                         DEFAULT },
@@ -473,6 +484,8 @@ linefix_t linefix[] =
     { doom,             4,   1,     294,    0, "",         "",            "",                 32,   DEFAULT, DEFAULT,                   DEFAULT,                                         DEFAULT },
     { doom,             4,   1,     298,    0, "",         "",            "",                -58,   DEFAULT, DEFAULT,                   DEFAULT,                                         DEFAULT },
     { doom,             4,   1,     299,    0, "",         "",            "",                 32,   DEFAULT, DEFAULT,                   DEFAULT,                                         DEFAULT },
+    { doom,             4,   1,     306,    0, "",         "",            "",            DEFAULT,   DEFAULT, ML_DONTDRAW,               DEFAULT,                                         DEFAULT },
+    { doom,             4,   1,     325,    0, "",         "",            "",            DEFAULT,   DEFAULT, ML_DONTDRAW,               DEFAULT,                                         DEFAULT },
     { doom,             4,   1,     341,    0, "",         "",            "",                  4,   DEFAULT, DEFAULT,                   DEFAULT,                                         DEFAULT },
     { doom,             4,   1,     342,    0, "",         "",            "",                  4,   DEFAULT, DEFAULT,                   DEFAULT,                                         DEFAULT },
     { doom,             4,   1,     381,    0, "",         "",            "",                -58,   DEFAULT, DEFAULT,                   DEFAULT,                                         DEFAULT },
@@ -818,8 +831,12 @@ linefix_t linefix[] =
     { doom2,            1,  12,      45,    0, "",         "",            "",                 -8,        48, DEFAULT,                   DEFAULT,                                         DEFAULT },
     { doom2,            1,  12,     218,    0, "",         "",            "",            DEFAULT,        32, DEFAULT,                   DEFAULT,                                         DEFAULT },
     { doom2,            1,  12,     223,    0, "",         "",            "",            DEFAULT,        32, DEFAULT,                   DEFAULT,                                         DEFAULT },
-    { doom2,            1,  12,     269,    0, "",         "PANEL6",      "",            DEFAULT,   DEFAULT, DEFAULT,                   DEFAULT,                                         DEFAULT },
+    { doom2,            1,  12,     269,    0, "",         "PANEL6",      "",            DEFAULT,   DEFAULT, ML_DONTDRAW,               DEFAULT,                                         DEFAULT },
     { doom2,            1,  12,     311,    0, "",         "",            "",            DEFAULT,   DEFAULT, DEFAULT,                   0,                                                     0 },
+    { doom2,            1,  12,     549,    0, "",         "",            "",            DEFAULT,   DEFAULT, ML_DONTDRAW,               DEFAULT,                                         DEFAULT },
+    { doom2,            1,  12,     556,    0, "",         "",            "",            DEFAULT,   DEFAULT, ML_DONTDRAW,               DEFAULT,                                         DEFAULT },
+    { doom2,            1,  12,     557,    0, "",         "",            "",            DEFAULT,   DEFAULT, ML_DONTDRAW,               DEFAULT,                                         DEFAULT },
+    { doom2,            1,  12,     558,    0, "",         "",            "",            DEFAULT,   DEFAULT, ML_DONTDRAW,               DEFAULT,                                         DEFAULT },
     { doom2,            1,  12,     632,    1, "",         "",            "",            DEFAULT,   DEFAULT, DEFAULT,                   0,                                               DEFAULT },
     { doom2,            1,  12,     648,    1, "",         "",            "PIPES",       DEFAULT,   DEFAULT, DEFAULT,                   DEFAULT,                                         DEFAULT },
     { doom2,            1,  12,     773,    1, "",         "",            "PANCASE2",    DEFAULT,   DEFAULT, DEFAULT,                   DEFAULT,                                         DEFAULT },
@@ -897,6 +914,8 @@ linefix_t linefix[] =
     { doom2,            1,  16,     303,    0, "STUCCO1",  "",            "",            DEFAULT,   DEFAULT, DEFAULT,                   DEFAULT,                                         DEFAULT },
     { doom2,            1,  16,     304,    0, "STUCCO1",  "",            "",            DEFAULT,   DEFAULT, DEFAULT,                   DEFAULT,                                         DEFAULT },
     { doom2,            1,  16,     328,    1, "",         "",            "ROCK3",       DEFAULT,   DEFAULT, DEFAULT,                   DEFAULT,                                         DEFAULT },
+    { doom2,            1,  16,     515,    0, "",         "",            "",            DEFAULT,   DEFAULT, ML_DONTDRAW,               DEFAULT,                                         DEFAULT },
+    { doom2,            1,  16,     525,    0, "",         "",            "",            DEFAULT,   DEFAULT, ML_DONTDRAW,               DEFAULT,                                         DEFAULT },
 
     { doom2,            1,  17,     182,    1, "",         "MIDGRATE",    "",            DEFAULT,   DEFAULT, DEFAULT,                   DEFAULT,                                         DEFAULT },
     { doom2,            1,  17,     316,    1, "",         "MIDGRATE",    "",            DEFAULT,   DEFAULT, DEFAULT,                   DEFAULT,                                         DEFAULT },
@@ -967,6 +986,7 @@ linefix_t linefix[] =
 
     { doom2,            1,  24,     687,    1, "",         "",            "SILVER2",     DEFAULT,   DEFAULT, DEFAULT,                   DEFAULT,                                         DEFAULT },
     { doom2,            1,  24,     688,    1, "",         "",            "SILVER2",     DEFAULT,   DEFAULT, DEFAULT,                   DEFAULT,                                         DEFAULT },
+    { doom2,            1,  24,    1038,    0, "",         "",            "",            DEFAULT,   DEFAULT, ML_DONTDRAW,               DEFAULT,                                         DEFAULT },
 
     { doom2,            1,  25,     348,    1, "",         "MIDSPACE",    "",            DEFAULT,   DEFAULT, DEFAULT,                   DEFAULT,                                         DEFAULT },
     { doom2,            1,  25,     349,    1, "",         "MIDSPACE",    "",            DEFAULT,   DEFAULT, DEFAULT,                   DEFAULT,                                         DEFAULT },

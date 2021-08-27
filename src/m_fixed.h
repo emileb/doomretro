@@ -6,7 +6,7 @@
 
 ========================================================================
 
-  Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
+  Copyright © 1993-2021 by id Software LLC, a ZeniMax Media company.
   Copyright © 2013-2021 by Brad Harding <mailto:brad@doomretro.com>.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
@@ -44,6 +44,8 @@
 #undef ABS
 #undef MIN
 #undef MAX
+#undef BETWEEN
+#undef SIGN
 #undef SWAP
 
 //
@@ -60,31 +62,22 @@ typedef int32_t fixed_t;
 
 static inline int ABS(int a)
 {
-    int b = (int64_t)a >> 31;
-
-    return ((a ^ b) - b);
+    return (a < 0 ? -a : a);
 }
 
 static inline int MAX(int a, int b)
 {
-    b = a - b;
-
-    return (a - (b & ((int64_t)b >> 31)));
+    return (a > b ? a : b);
 }
 
 static inline int MIN(int a, int b)
 {
-    a -= b;
-
-    return (b + (a & ((int64_t)a >> 31)));
+    return (a < b ? a : b);
 }
 
 static inline int BETWEEN(int a, int b, int c)
 {
-    b -= c;
-    c = a - c - (b & ((int64_t)b >> 31));
-
-    return (a - (c & ((int64_t)c >> 31)));
+    return (b < a ? a : (b > c ? c : b));
 }
 
 static inline float BETWEENF(float a, float b, float c)
@@ -94,7 +87,7 @@ static inline float BETWEENF(float a, float b, float c)
 
 static inline int SIGN(int a)
 {
-    return (1 | ((int64_t)a >> 31));
+    return (a < 0 ? -1 : 1);
 }
 
 static inline fixed_t FixedMul(fixed_t a, fixed_t b)

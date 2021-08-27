@@ -6,7 +6,7 @@
 
 ========================================================================
 
-  Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
+  Copyright © 1993-2021 by id Software LLC, a ZeniMax Media company.
   Copyright © 2013-2021 by Brad Harding <mailto:brad@doomretro.com>.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
@@ -72,7 +72,8 @@ char *M_GetExecutableFolder(void);
 dboolean M_StrToInt(const char *str, unsigned int *result);
 const char *M_StrCaseStr(const char *haystack, const char *needle);
 void M_StringCopy(char *dest, const char *src, const size_t dest_size);
-char *M_StringReplace(char *haystack, char *needle, char *replacement);
+char *M_StringReplace(char *haystack, char *needle, const char *replacement);
+void M_StringReplaceAll(char *haystack, char *needle, const char *replacement);
 char *M_TempFile(char *s);
 char *M_StringJoin(char *s, ...);
 dboolean M_StringStartsWith(const char *s, const char *prefix);
@@ -88,6 +89,7 @@ char *lowercase(char *str);
 char *titlecase(const char *str);
 char *sentencecase(const char *str);
 char *commify(int64_t value);
+char *commifystat(uint64_t value);
 char *uncommify(const char *input);
 dboolean wildcard(char *input, char *pattern);
 int gcd(int a, int b);
@@ -102,7 +104,6 @@ dboolean isvowel(const char ch);
 dboolean ispunctuation(const char ch);
 dboolean isbreak(const char ch);
 char *striptrailingzero(float value, int precision);
-void strreplace(char *target, char *needle, const char *replacement);
 int hextodec(char *hex);
 void M_StripQuotes(char *string);
 

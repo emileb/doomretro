@@ -6,7 +6,7 @@
 
 ========================================================================
 
-  Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
+  Copyright © 1993-2021 by id Software LLC, a ZeniMax Media company.
   Copyright © 2013-2021 by Brad Harding <mailto:brad@doomretro.com>.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
@@ -92,7 +92,8 @@
 #import <Cocoa/Cocoa.h>
 #endif
 
-#define FADETICS    40
+#define FADECOUNT    9
+#define FADETICS    20
 
 char **episodes[] =
 {
@@ -129,63 +130,63 @@ static char *iwadsrequired[] =
 };
 
 // Location where savegames are stored
-char                *savegamefolder;
+char            *savegamefolder;
 
-char                *pwadfile = "";
+char            *pwadfile = "";
 
-dboolean            fade = fade_default;
-char                *iwadfolder = iwadfolder_default;
-dboolean            melt = melt_default;
-int                 turbo = turbo_default;
-int                 units = units_default;
+dboolean        fade = fade_default;
+char            *iwadfolder = iwadfolder_default;
+dboolean        melt = melt_default;
+int             turbo = turbo_default;
+int             units = units_default;
 
 #if defined(_WIN32)
-char                *wad = wad_default;
+char            *wad = wad_default;
 #endif
 
-char                *packageconfig;
-char                *packagewad;
+char            *packageconfig;
+char            *packagewad;
 
-static char         dehwarning[256] = "";
+static char     dehwarning[256] = "";
 
 #if defined(_WIN32)
-char                *previouswad;
+char            *previouswad;
 #endif
 
-dboolean            devparm;                // started game with -devparm
-dboolean            fastparm;               // checkparm of -fast
-dboolean            freeze;
-dboolean            nomonsters;             // checkparm of -nomonsters
-dboolean            pistolstart;            // [BH] checkparm of -pistolstart
-dboolean            regenhealth;
-dboolean            respawnitems;
-dboolean            respawnmonsters;        // checkparm of -respawn
+dboolean        devparm;                // started game with -devparm
+dboolean        fastparm;               // checkparm of -fast
+dboolean        freeze;
+dboolean        nomonsters;             // checkparm of -nomonsters
+dboolean        pistolstart;            // [BH] checkparm of -pistolstart
+dboolean        regenhealth;
+dboolean        respawnitems;
+dboolean        respawnmonsters;        // checkparm of -respawn
 
-uint64_t            stat_runs = 0;
+uint64_t        stat_runs = 0;
 
-skill_t             startskill;
-int                 startepisode;
-static int          startmap;
-dboolean            autostart;
+skill_t         startskill;
+int             startepisode;
+static int      startmap;
+dboolean        autostart;
 
-dboolean            advancetitle;
-dboolean            dowipe;
-static dboolean     forcewipe;
+dboolean        advancetitle;
+dboolean        dowipe;
+static dboolean forcewipe;
 
-static byte         fadescreen[MAXSCREENAREA];
-int                 fadecount = 0;
+static byte     fadescreen[MAXSCREENAREA];
+int             fadecount = 0;
 
-dboolean            splashscreen = true;
+dboolean        splashscreen = true;
 
-static int          startuptimer;
+static int      startuptimer;
 
-dboolean            realframe;
-static dboolean     error;
+dboolean        realframe;
+static dboolean error;
 
-struct tm           gamestarttime;
+struct tm       gamestarttime;
 
 #if defined(_WIN32)
-extern HANDLE       CapFPSEvent;
+extern HANDLE   CapFPSEvent;
 #endif
 
 //
@@ -210,13 +211,14 @@ void D_PostEvent(event_t *ev)
 //
 // D_FadeScreen
 //
-void D_FadeScreen(void)
+void D_FadeScreen(dboolean screenshot)
 {
-    if (!fade)
+    if (!screenshot && (!fade || (gamestate == GS_LEVEL && (viewplayer->mo->momx || viewplayer->mo->momy || viewplayer->mo->momz
+        || viewplayer->cmd.angleturn))))
         return;
 
     memcpy(fadescreen, screens[0], SCREENAREA);
-    fadecount = 3;
+    fadecount = FADECOUNT;
 }
 
 //
@@ -230,7 +232,9 @@ static void D_UpdateFade(void)
 
     if (fadewait < tics)
     {
-        byte    *tinttabs[] = { NULL, tinttab75, tinttab50, tinttab25 };
+        byte *tinttabs[FADECOUNT + 1] = {
+            NULL, tinttab90, tinttab80, tinttab70, tinttab60, tinttab50, tinttab40, tinttab30, tinttab20, tinttab10
+        };
 
         fadewait = tics + FADETICS;
         tinttab = tinttabs[fadecount--];
@@ -268,10 +272,7 @@ void D_FadeScreenToBlack(void)
 //
 
 // wipegamestate can be set to -1 to force a wipe on the next draw
-gamestate_t         wipegamestate = GS_TITLESCREEN;
-
-extern dboolean     message_on;
-extern gameaction_t loadaction;
+gamestate_t wipegamestate = GS_TITLESCREEN;
 
 void D_Display(void)
 {
@@ -303,7 +304,7 @@ void D_Display(void)
         if (melt)
             wipe_StartScreen();
         else
-            D_FadeScreen();
+            D_FadeScreen(false);
 
         if (forcewipe)
             forcewipe = false;
@@ -353,7 +354,9 @@ void D_Display(void)
         if (oldgamestate != GS_LEVEL)
         {
             viewactivestate = false;    // view was not active
-            R_FillBackScreen();         // draw the pattern into the back screen
+
+            if (viewwidth != SCREENWIDTH)
+                R_FillBackScreen();     // draw the pattern into the back screen
         }
 
         // see if the border needs to be updated to the screen
@@ -533,7 +536,7 @@ void D_PageTicker(void)
         if (splashscreen)
         {
             memset(screens[0], nearestblack, SCREENAREA);
-            D_FadeScreen();
+            D_FadeScreen(false);
         }
     }
 }
@@ -545,16 +548,11 @@ void D_PageDrawer(void)
 {
     if (splashscreen)
     {
-        static int  prevtic;
+        if (logotic >= 77 && logotic < 94)
+            V_DrawBigPatch((SCREENWIDTH - NONWIDEWIDTH) / 2 + 143, 167, logolump[94 - logotic]);
 
-        if (prevtic != pagetic)
-        {
-            if (logotic >= 77 && logotic < 94)
-                V_DrawBigPatch((SCREENWIDTH - NONWIDEWIDTH) / 2 + 143, 167, logolump[94 - logotic]);
-
-            I_SetSimplePalette(&splashpal[(pagetic < 9 ? 9 - pagetic : (pagetic > 94 ? pagetic - 94 : 0)) * 768]);
-            prevtic = pagetic;
-        }
+        V_DrawBigPatch((SCREENWIDTH - NONWIDEWIDTH) / 2 + 12, 366, fineprintlump);
+        I_SetSimplePalette(&splashpal[(pagetic < 9 ? 9 - pagetic : (pagetic > 94 ? pagetic - 94 : 0)) * 768]);
     }
     else
     {
@@ -591,6 +589,7 @@ void D_DoAdvanceTitle(void)
         titlesequence = 1;
         V_DrawBigPatch((SCREENWIDTH - NONWIDEWIDTH) / 2 + 12, 366, fineprintlump);
         V_DrawBigPatch((SCREENWIDTH - NONWIDEWIDTH) / 2 + 143, 167, logolump[0]);
+
         return;
     }
     else if (titlesequence == 1)
@@ -614,7 +613,7 @@ void D_DoAdvanceTitle(void)
 
         pagelump = titlelump;
         pillarboxcolor = FindDominantEdgeColor(pagelump);
-        pagetic = 20 * TICRATE;
+        pagetic = PAGETICS;
 
         if (splashscreen)
         {
@@ -634,7 +633,7 @@ void D_DoAdvanceTitle(void)
         forcewipe = true;
         pagelump = creditlump;
         pillarboxcolor = FindDominantEdgeColor(pagelump);
-        pagetic = 20 * TICRATE;
+        pagetic = PAGETICS;
     }
 
     if (W_CheckMultipleLumps("TITLEPIC") >= (bfgedition ? 1 : 2))
@@ -757,7 +756,7 @@ static void LoadDehFile(char *path)
         if (!DehFileProcessed(dehpath))
         {
             if (HasDehackedLump(path))
-                M_snprintf(dehwarning, sizeof(dehwarning), "<b>%s</b> was ignored.", GetCorrectCase(dehpath));
+                M_snprintf(dehwarning, sizeof(dehwarning), BOLD("%s") " was ignored.", GetCorrectCase(dehpath));
             else
                 ProcessDehFile(dehpath, 0, true);
 
@@ -775,7 +774,7 @@ static void LoadDehFile(char *path)
         if (dehpath && !DehFileProcessed(dehpath))
         {
             if (HasDehackedLump(path))
-                M_snprintf(dehwarning, sizeof(dehwarning), "<b>%s</b> was ignored.", GetCorrectCase(dehpath));
+                M_snprintf(dehwarning, sizeof(dehwarning), BOLD("%s") " was ignored.", GetCorrectCase(dehpath));
             else
                 ProcessDehFile(dehpath, 0, true);
 
@@ -816,8 +815,7 @@ static dboolean D_IsDOOM2IWAD(char *filename)
         || M_StringCompare(file, "DOOM2F.WAD")
         || M_StringCompare(file, "BFGDOOM2.WAD")
         || M_StringCompare(file, "DOOM2BFG.WAD")
-        || M_StringCompare(file, "DOOM2UNITY.WAD")
-        || (hacx = M_StringCompare(file, "HACX.WAD")));
+        || M_StringCompare(file, "DOOM2UNITY.WAD"));
 }
 
 dboolean D_IsDOOMIWAD(char *filename)
@@ -915,11 +913,9 @@ static void D_CheckSupportedPWAD(char *filename)
         eviternity = true;
     else if (M_StringCompare(leafname(filename), "d4v.wad"))
         doom4vanilla = true;
-    else if (M_StringCompare(leafname(filename), "rekkr.wad")
+    else if (M_StringCompare(leafname(filename), "REKKR.wad")
         || M_StringCompare(leafname(filename), "rekkrsa.wad"))
-        rekkr = true;
-    else if (M_StringCompare(leafname(filename), "remnant.wad"))
-        remnant = true;
+        REKKR = true;
 }
 
 static dboolean D_IsUnsupportedPWAD(char *filename)
@@ -1158,7 +1154,7 @@ static int D_OpenWADLauncher(void)
     ofn.nMaxFileTitle = 0;
     ofn.lpstrInitialDir = iwadfolder;
     ofn.Flags = (OFN_HIDEREADONLY | OFN_ALLOWMULTISELECT | OFN_PATHMUSTEXIST | OFN_EXPLORER);
-    ofn.lpstrTitle = "Where's All the Data?\0";
+    ofn.lpstrTitle = "Where\u2019s All the Data?\0";
 
     fileopenedok = GetOpenFileName(&ofn);
 #elif defined(__APPLE__)
@@ -1226,9 +1222,10 @@ static int D_OpenWADLauncher(void)
                     guess = true;
 
                     if (!M_StringEndsWith(temp, leafname(file)))
-                        C_Warning(1, "<b>%s</b> couldn't be found so <b>%s</b> was loaded instead.", leafname(file), leafname(temp));
+                        C_Warning(1, BOLD("%s") " couldn't be found so " BOLD("%s") " was loaded instead.", leafname(file), leafname(temp));
 
                     file = M_StringDuplicate(temp);
+                    wad = M_StringDuplicate(temp);
                     free(temp);
                 }
             }
@@ -1860,10 +1857,6 @@ static void D_DoomMainSetup(void)
     M_MakeDirectory(appdatafolder);
     packageconfig = (p ? M_StringDuplicate(myargv[p + 1]) : M_StringJoin(appdatafolder, DIR_SEPARATOR_S, PACKAGE_CONFIG, NULL));
 
-#if !defined(__APPLE__)
-    free(appdatafolder);
-#endif
-
     C_Output("");
     C_PrintCompileDate();
 
@@ -1887,31 +1880,34 @@ static void D_DoomMainSetup(void)
     // Load configuration files before initializing other subsystems.
     M_LoadCVARs(packageconfig);
 
+    if (M_StringCompare(iwadfolder, iwadfolder_default) || !M_FolderExists(iwadfolder))
+        D_InitIWADFolder();
+
     D_BuildBEXTables();
 
     if ((respawnmonsters = M_CheckParm("-respawn")))
-        C_Output("A <b>-respawn</b> parameter was found on the command-line. Monsters will respawn.");
+        C_Output("A " BOLD("-respawn") " parameter was found on the command-line. Monsters will respawn.");
     else if ((respawnmonsters = M_CheckParm("-respawnmonsters")))
-        C_Output("A <b>-respawnmonsters</b> parameter was found on the command-line. Monsters will respawn.");
+        C_Output("A " BOLD("-respawnmonsters") " parameter was found on the command-line. Monsters will respawn.");
 
     if ((nomonsters = M_CheckParm("-nomonsters")))
     {
-        C_Output("A <b>-nomonsters</b> parameter was found on the command-line. No monsters will be spawned.");
+        C_Output("A " BOLD("-nomonsters") " parameter was found on the command-line. No monsters will be spawned.");
         stat_cheated = SafeAdd(stat_cheated, 1);
         M_SaveCVARs();
     }
 
     if ((pistolstart = M_CheckParm("-pistolstart")))
-        C_Output("A <b>-pistolstart</b> parameter was found on the command-line. The player will start each map with 100%% health,"
-            " no armor, and only a pistol and 50 bullets.");
+        C_Output("A " BOLD("-pistolstart") " parameter was found on the command-line. The player will start each map with 100%% health, "
+            "no armor, and only a pistol and 50 bullets.");
 
     if ((fastparm = M_CheckParm("-fast")))
-        C_Output("A <b>-fast</b> parameter was found on the command-line. Monsters will be faster.");
+        C_Output("A " BOLD("-fast") " parameter was found on the command-line. Monsters will be faster.");
     else if ((fastparm = M_CheckParm("-fastmonsters")))
-        C_Output("A <b>-fastmonsters</b> parameter was found on the command-line. Monsters will be faster.");
+        C_Output("A " BOLD("-fastmonsters") " parameter was found on the command-line. Monsters will be faster.");
 
     if ((devparm = M_CheckParm("-devparm")))
-        C_Output("A <b>-devparm</b> parameter was found on the command-line. %s", s_D_DEVSTR);
+        C_Output("A " BOLD("-devparm") " parameter was found on the command-line. %s", s_D_DEVSTR);
 
     // turbo option
     if ((p = M_CheckParm("-turbo")))
@@ -1923,12 +1919,12 @@ static void D_DoomMainSetup(void)
             scale = atoi(myargv[p + 1]);
 
             if (scale >= 10 && scale <= 400 && scale != 100)
-                C_Output("A <b>-turbo</b> parameter was found on the command-line. The player will be %i%% their normal speed.", scale);
+                C_Output("A " BOLD("-turbo") " parameter was found on the command-line. The player will be %i%% their normal speed.", scale);
             else
                 scale = 100;
         }
         else
-            C_Output("A <b>-turbo</b> parameter was found on the command-line. The player will be twice as fast.");
+            C_Output("A " BOLD("-turbo") " parameter was found on the command-line. The player will be twice as fast.");
 
         if (scale != 100)
             G_SetMovementSpeed(scale);
@@ -1947,14 +1943,14 @@ static void D_DoomMainSetup(void)
     I_InitTimer();
 
     if (!stat_runs)
-        C_Output("This is the first time <i>" PACKAGE_NAME "</i> has been run.");
+        C_Output("This is the first time " ITALICS(PACKAGE_NAME "") " has been run.");
     else if (stat_runs == 1)
-        C_Output("<i>" PACKAGE_NAME "</i> has now been run twice.");
+        C_Output(ITALICS(PACKAGE_NAME "") " has now been run twice.");
     else
     {
         char    *temp = commify(SafeAdd(stat_runs, 1));
 
-        C_Output("<i>" PACKAGE_NAME "</i> has now been run %s times.", temp);
+        C_Output(ITALICS(PACKAGE_NAME "") " has now been run %s times.", temp);
         free(temp);
     }
 
@@ -1962,9 +1958,9 @@ static void D_DoomMainSetup(void)
         I_Error("%s can't be found.", packagewad);
 
     if (M_CheckParm("-nodeh"))
-        C_Output("A <b>-nodeh</b> parameter was found on the command-line. All <b>DEHACKED</b> lumps will be ignored.");
+        C_Output("A " BOLD("-nodeh") " parameter was found on the command-line. All " BOLD("DEHACKED") " lumps will be ignored.");
     else if (M_CheckParm("-nobex"))
-        C_Output("A <b>-nobex</b> parameter was found on the command-line. All <b>DEHACKED</b> lumps will be ignored.");
+        C_Output("A " BOLD("-nobex") " parameter was found on the command-line. All " BOLD("DEHACKED") " lumps will be ignored.");
 
     p = M_CheckParmsWithArgs("-file", "-pwad", "-merge", 1, 1);
 
@@ -2137,7 +2133,6 @@ static void D_DoomMainSetup(void)
     STBAR = W_CheckMultipleLumps("STBAR");
     STCFN034 = (W_CheckMultipleLumps("STCFN034") > 1);
     STYSNUM0 = (W_CheckMultipleLumps("STYSNUM0") > 1);
-    TITLEPIC = (W_CheckNumForName("TITLEPIC") >= 0);
     WISCRT2 = (W_CheckMultipleLumps("WISCRT2") > 1);
     DSSECRET = (W_CheckNumForName("DSSECRET") >= 0);
 
@@ -2163,7 +2158,14 @@ static void D_DoomMainSetup(void)
 
     D_SetSaveGameFolder(true);
 
-    C_Output("Screenshots will be saved in <b>%s</b>.", screenshotfolder);
+    C_Output("All screenshots taken will be saved in " BOLD("%s") ".", screenshotfolder);
+
+    C_Output("All files created using the " BOLD("condump") " CCMD will be saved in " BOLD("%s" DIR_SEPARATOR_S "console" DIR_SEPARATOR_S "") ".",
+        appdatafolder);
+
+#if !defined(__APPLE__)
+    free(appdatafolder);
+#endif
 
     // Check for -file in shareware
     if (modifiedgame)
@@ -2208,10 +2210,10 @@ static void D_DoomMainSetup(void)
             skilllevel = startskill + 1;
             M_SaveCVARs();
 
-            strreplace(string, ".", "");
-            strreplace(string, "!", "");
+            M_StringReplaceAll(string, ".", "");
+            M_StringReplaceAll(string, "!", "");
 
-            C_Output("A <b>-%s</b> parameter was found on the command-line. The skill level is now <i>%s.</i>",
+            C_Output("A " BOLD("-%s") " parameter was found on the command-line. The skill level is now " ITALICS("%s."),
                 myargv[p], string);
             free(string);
         }
@@ -2227,14 +2229,9 @@ static void D_DoomMainSetup(void)
             startepisode = temp;
             episode = temp;
             M_SaveCVARs();
-
-            if (gamemode == commercial)
-                M_snprintf(lumpname, sizeof(lumpname), "MAP%02i", startmap);
-            else
-                M_snprintf(lumpname, sizeof(lumpname), "E%iM%i", startepisode, startmap);
-
+            M_snprintf(lumpname, sizeof(lumpname), "E%iM%i", startepisode, startmap);
             autostart = true;
-            C_Output("An <b>-episode</b> parameter was found on the command-line. The episode is now <i>%s.</i>",
+            C_Output("An " BOLD("-episode") " parameter was found on the command-line. The episode is now " ITALICS("%s."),
                 *episodes[episode - 1]);
         }
     }
@@ -2250,15 +2247,15 @@ static void D_DoomMainSetup(void)
             M_SaveCVARs();
             M_snprintf(lumpname, sizeof(lumpname), "MAP%02i", startmap);
             autostart = true;
-            C_Output("An <b>-expansion</b> parameter was found on the command-line. The expansion is now <i>%s.</i>",
+            C_Output("An " BOLD("-expansion") " parameter was found on the command-line. The expansion is now " ITALICS("%s."),
                 *expansions[expansion - 1]);
         }
     }
 
     if ((p = M_CheckParmWithArgs("-warp", 1, 1)))
-        C_Output("A <b>-warp</b> parameter was found on the command-line.");
+        C_Output("A " BOLD("-warp") " parameter was found on the command-line.");
     else if ((p = M_CheckParmWithArgs("+map", 1, 1)))
-        C_Output("A <b>+map</b> parameter was found on the command-line.");
+        C_Output("A " BOLD("+map") " parameter was found on the command-line.");
 
     if (p)
     {
@@ -2328,21 +2325,21 @@ static void D_DoomMainSetup(void)
         G_LoadGame(P_SaveGameFile(startloadgame));
     }
 
-    fineprintlump = W_CacheLumpName("FINEPRNT");
-    splashpal = W_CacheLumpName("SPLSHPAL");
+    fineprintlump = W_CacheLastLumpName("FINEPRNT");
+    splashpal = W_CacheLastLumpName("SPLSHPAL");
 
     for (int i = 0; i < 18; i++)
     {
         char    buffer[9];
 
         M_snprintf(buffer, sizeof(buffer), "DRLOGO%02i", i + 1);
-        logolump[i] = W_CacheLumpName(buffer);
+        logolump[i] = W_CacheLastLumpName(buffer);
     }
 
     if (autosigil)
     {
         titlelump = W_CacheLastLumpName("TITLEPI3");
-        creditlump = W_CacheLastLumpName("CREDIT1");
+        creditlump = W_CacheLastLumpName("CREDIT2");
     }
     else
     {
@@ -2383,29 +2380,7 @@ static void D_DoomMainSetup(void)
         if ((credits == 1 && lumpinfo[W_GetNumForName("CREDIT")]->wadfile->type == PWAD) || credits > 1)
             creditlump = W_CacheLumpName("CREDIT");
         else
-            switch (gamemission)
-            {
-                case doom:
-                    creditlump = W_CacheLumpName("CREDIT1");
-                    break;
-
-                case doom2:
-                case pack_nerve:
-                    creditlump = W_CacheLumpName("CREDIT2");
-                    break;
-
-                case pack_plut:
-                    creditlump = W_CacheLumpName("CREDIT2");
-                    break;
-
-                case pack_tnt:
-                    creditlump = W_CacheLumpName("CREDIT2");
-                    break;
-
-                case none:
-                    break;
-            }
-
+            creditlump = W_CacheLumpName(gamemission == doom ? (gamemode == shareware ? "CREDIT1" : "CREDIT2") : "CREDIT3");
     }
 
     if (gameaction != ga_loadgame)
@@ -2426,10 +2401,15 @@ static void D_DoomMainSetup(void)
         {
             menuactive = false;
             splashscreen = false;
+            D_FadeScreen(false);
             D_StartTitle(1);
         }
         else
+#if SCREENSCALE == 1
+            D_StartTitle(1);
+#else
             D_StartTitle(0);
+#endif
     }
 
     seconds = striptrailingzero((I_GetTimeMS() - startuptimer) / 1000.0f, 1);

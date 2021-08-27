@@ -6,7 +6,7 @@
 
 ========================================================================
 
-  Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
+  Copyright © 1993-2021 by id Software LLC, a ZeniMax Media company.
   Copyright © 2013-2021 by Brad Harding <mailto:brad@doomretro.com>.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
@@ -70,7 +70,7 @@ char        screenshotfolder[MAX_PATH];
 char        *r_lowpixelsize = r_lowpixelsize_default;
 dboolean    r_supersampling = r_supersampling_default;
 
-void (*postprocessfunc)(int left, int top, int width, int height, int pixelwidth, int pixelheight);
+void (*postprocessfunc)(int, int, int, int, int, int);
 
 //
 // V_FillRect
@@ -116,48 +116,48 @@ void V_FillSoftTransRect(int scrn, int x, int y, int width, int height, int colo
 
     if (height > 2)
     {
-        const byte  *tint20 = alttinttab20 + color;
-        const byte  *tint40 = alttinttab40 + color;
+        const byte  *tinttab1 = alttinttab20 + color;
+        const byte  *tinttab2 = alttinttab40 + color;
 
         dot = dest - 1 - 2 * (size_t)SCREENWIDTH;
-        *dot = *(tint20 + *dot);
+        *dot = *(tinttab1 + *dot);
         dot += SCREENWIDTH;
 
         for (int yy = 0; yy < height + 2; yy++, dot += SCREENWIDTH)
-            *dot = *(tint40 + *dot);
+            *dot = *(tinttab2 + *dot);
 
-        *dot = *(tint20 + *dot);
+        *dot = *(tinttab1 + *dot);
         dot = dest - 2 - SCREENWIDTH;
 
         for (int yy = 0; yy < height + 2; yy++, dot += SCREENWIDTH)
-            *dot = *(tint20 + *dot);
+            *dot = *(tinttab1 + *dot);
 
         for (int xx = 0; xx < width; xx++)
         {
             dot = dest + xx - 2 * (size_t)SCREENWIDTH;
-            *dot = *(tint20 + *dot);
+            *dot = *(tinttab1 + *dot);
             dot += SCREENWIDTH;
-            *dot = *(tint40 + *dot);
+            *dot = *(tinttab2 + *dot);
             dot += SCREENWIDTH * ((size_t)height + 1);
-            *dot = *(tint40 + *dot);
+            *dot = *(tinttab2 + *dot);
             dot += SCREENWIDTH;
-            *dot = *(tint20 + *dot);
+            *dot = *(tinttab1 + *dot);
         }
 
         if (right)
         {
             dot = dest + width - 2 * (size_t)SCREENWIDTH;
-            *dot = *(tint20 + *dot);
+            *dot = *(tinttab1 + *dot);
             dot += SCREENWIDTH;
 
             for (int yy = 0; yy < height + 2; yy++, dot += SCREENWIDTH)
-                *dot = *(tint40 + *dot);
+                *dot = *(tinttab2 + *dot);
 
-            *dot = *(tint20 + *dot);
+            *dot = *(tinttab1 + *dot);
             dot = dest + width + 1 - SCREENWIDTH;
 
             for (int yy = 0; yy < height + 2; yy++, dot += SCREENWIDTH)
-                *dot = *(tint20 + *dot);
+                *dot = *(tinttab1 + *dot);
         }
     }
 }
@@ -620,10 +620,13 @@ void V_DrawConsoleBrandingPatch(int x, int y, patch_t *patch, int color)
     byte        *desttop = &screens[0][y * SCREENWIDTH + x];
     const int   w = SHORT(patch->width);
 
-    for (int col = 0; col < w; col++, desttop++)
+    for (int col = 0; col < w; col++, desttop++, x++)
     {
         column_t    *column = (column_t *)((byte *)patch + LONG(patch->columnofs[col]));
         byte        topdelta;
+
+        if (x > SCREENWIDTH)
+            return;
 
         // step through the posts in a column
         while ((topdelta = column->topdelta) != 0xFF)
@@ -1544,11 +1547,24 @@ void V_DrawPixel(int x, int y, byte color, dboolean drawshadow)
 {
     x += WIDESCREENDELTA;   // [crispy] horizontal widescreen offset
 
+#if SCREENSCALE == 1
     if (color == PINK)
     {
         if (drawshadow)
         {
-            byte    *dot = *screens + ((size_t)y * SCREENWIDTH + x) * 2;
+            byte    *dot = *screens + ((size_t)y * SCREENWIDTH + x);
+
+            *dot = black40[*dot];
+        }
+    }
+    else if (color && color != 32)
+        screens[0][y * SCREENWIDTH + x] = color;
+#else
+    if (color == PINK)
+    {
+        if (drawshadow)
+        {
+            byte    *dot = *screens + ((size_t)y * SCREENWIDTH + x) * SCREENSCALE;
 
             color = black40[*dot];
             *(dot++) = color;
@@ -1559,13 +1575,14 @@ void V_DrawPixel(int x, int y, byte color, dboolean drawshadow)
     }
     else if (color && color != 32)
     {
-        byte    *dot = *screens + ((size_t)y * SCREENWIDTH + x) * 2;
+        byte    *dot = *screens + ((size_t)y * SCREENWIDTH + x) * SCREENSCALE;
 
         *(dot++) = color;
         *dot = color;
         *(dot += SCREENWIDTH) = color;
         *(--dot) = color;
     }
+#endif
 }
 
 static void V_LowGraphicDetail(int left, int top, int width, int height, int pixelwidth, int pixelheight)
@@ -1736,7 +1753,7 @@ void V_Init(void)
             SDL_IMAGE_FILENAME, PACKAGE_NAME, SDL_IMAGE_MAJOR_VERSION, SDL_IMAGE_MINOR_VERSION, SDL_IMAGE_PATCHLEVEL);
 
     if (linked->patch != SDL_IMAGE_PATCHLEVEL)
-        C_Warning(1, "The wrong version of <b>%s</b> was found. <i>%s</i> requires v%i.%i.%i.",
+        C_Warning(1, "The wrong version of " BOLD("%s") " was found. " ITALICS("%s") " requires v%i.%i.%i.",
             SDL_IMAGE_FILENAME, PACKAGE_NAME, SDL_IMAGE_MAJOR_VERSION, SDL_IMAGE_MINOR_VERSION, SDL_IMAGE_PATCHLEVEL);
 
     for (int i = 0; i < NUMSCREENS; i++)
@@ -1818,6 +1835,7 @@ dboolean V_ScreenShot(void)
 
                 M_StringCopy(mapname, temp2, sizeof(mapname));
                 free(temp2);
+
                 break;
             }
         }

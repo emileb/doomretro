@@ -6,7 +6,7 @@
 
 ========================================================================
 
-  Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
+  Copyright © 1993-2021 by id Software LLC, a ZeniMax Media company.
   Copyright © 2013-2021 by Brad Harding <mailto:brad@doomretro.com>.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
@@ -91,6 +91,7 @@ void I_InitGamepad(void)
             {
                 gamecontroller = SDL_GameControllerOpen(i);
                 deviceindex = i;
+
                 break;
             }
 
@@ -103,9 +104,9 @@ void I_InitGamepad(void)
             if (*name)
             {
                 if (M_StrCaseStr(name, "xinput"))
-                    C_OutputNoRepeat("An <i>XInput</i> gamepad is connected.");
+                    C_OutputNoRepeat("An " ITALICS("XInput") " gamepad is connected.");
                 else
-                    C_OutputNoRepeat("A <i>DirectInput</i> gamepad called \"%s\" is connected.", name);
+                    C_OutputNoRepeat("A " ITALICS("DirectInput") " gamepad called \"%s\" is connected.", name);
             }
             else
                 C_OutputNoRepeat("A gamepad is connected.");
@@ -128,6 +129,11 @@ void I_InitGamepad(void)
             }
 
             SDL_SetHintWithPriority(SDL_HINT_JOYSTICK_ALLOW_BACKGROUND_EVENTS, "1", SDL_HINT_OVERRIDE);
+
+            I_SetGamepadLeftDeadZone();
+            I_SetGamepadRightDeadZone();
+            I_SetGamepadHorizontalSensitivity();
+            I_SetGamepadVerticalSensitivity();
         }
     }
 }
@@ -176,9 +182,9 @@ void I_UpdateGamepadVibration(void)
 
     if (weaponvibrationtics && !--weaponvibrationtics && !damagevibrationtics && !barrelvibrationtics)
         I_GamepadVibration(idlevibrationstrength);
-    else if (damagevibrationtics && !--damagevibrationtics && !weaponvibrationtics && !barrelvibrationtics)
+    else if (damagevibrationtics && !--damagevibrationtics && !barrelvibrationtics)
         I_GamepadVibration(idlevibrationstrength);
-    else if (barrelvibrationtics && !--barrelvibrationtics && !weaponvibrationtics && !damagevibrationtics)
+    else if (barrelvibrationtics && !--barrelvibrationtics)
         I_GamepadVibration(idlevibrationstrength);
 }
 

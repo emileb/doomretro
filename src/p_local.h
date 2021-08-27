@@ -6,7 +6,7 @@
 
 ========================================================================
 
-  Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
+  Copyright © 1993-2021 by id Software LLC, a ZeniMax Media company.
   Copyright © 2013-2021 by Brad Harding <mailto:brad@doomretro.com>.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
@@ -312,6 +312,7 @@ extern int      bfgcells;
 extern dboolean species_infighting;
 extern int      maxammo[];
 extern int      clipammo[];
+extern int      prevobituarytics;
 
 //
 // P_SPEC.C

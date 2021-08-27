@@ -6,7 +6,7 @@
 
 ========================================================================
 
-  Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
+  Copyright © 1993-2021 by id Software LLC, a ZeniMax Media company.
   Copyright © 2013-2021 by Brad Harding <mailto:brad@doomretro.com>.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
@@ -272,9 +272,9 @@ static void saveg_read_mobj_t(mobj_t *str)
 
     str->madesound = saveg_read32();
     str->inflicter = saveg_read32();
+    str->geartime = saveg_read32();
 
     // [BH] For future features without breaking savegame compatibility
-    saveg_read32();
     saveg_read32();
     saveg_read32();
     saveg_read32();
@@ -353,9 +353,9 @@ static void saveg_write_mobj_t(mobj_t *str)
 
     saveg_write32(str->madesound);
     saveg_write32(str->inflicter);
+    saveg_write32(str->geartime);
 
     // [BH] For future features without breaking savegame compatibility
-    saveg_write32(0);
     saveg_write32(0);
     saveg_write32(0);
     saveg_write32(0);
@@ -546,8 +546,9 @@ static void saveg_read_player_t(void)
     if (!(musinfo.current_item = saveg_read32()))
         musinfo.current_item = -1;
 
+    viewplayer->infightcount = saveg_read32();
+
     // [BH] For future features without breaking savegame compatibility
-    saveg_read32();
     saveg_read32();
     saveg_read32();
     saveg_read32();
@@ -655,8 +656,9 @@ static void saveg_write_player_t(void)
 
     saveg_write32(musinfo.current_item);
 
+    saveg_write32(viewplayer->infightcount);
+
     // [BH] For future features without breaking savegame compatibility
-    saveg_write32(0);
     saveg_write32(0);
     saveg_write32(0);
     saveg_write32(0);
@@ -1033,7 +1035,8 @@ dboolean P_ReadSaveGameHeader(char *description)
         menuactive = false;
         quickSaveSlot = -1;
         C_ShowConsole();
-        C_Warning(1, "This savegame is incompatible with <i>" PACKAGE_NAMEANDVERSIONSTRING ".</i>");
+        C_Warning(1, "This savegame is incompatible with " ITALICS(PACKAGE_NAMEANDVERSIONSTRING "."));
+
         return false;   // bad version
     }
 
@@ -1245,7 +1248,7 @@ void P_ArchiveThinkers(void)
 
     // save off the bloodsplats
     for (int i = 0; i < numsectors; i++)
-        for (bloodsplat_t *splat = sectors[i].splatlist; splat; splat = splat->snext)
+        for (bloodsplat_t *splat = sectors[i].splatlist; splat; splat = splat->next)
         {
             saveg_write8(tc_bloodsplat);
             saveg_write_bloodsplat_t(splat);
@@ -1300,7 +1303,7 @@ void P_UnArchiveThinkers(void)
 
         while (splat)
         {
-            bloodsplat_t    *next = splat->snext;
+            bloodsplat_t    *next = splat->next;
 
             P_UnsetBloodSplatPosition(splat);
             splat = next;
@@ -1335,12 +1338,13 @@ void P_UnArchiveThinkers(void)
                 mobj->altcolfunc = mobj->info->altcolfunc;
                 P_SetShadowColumnFunction(mobj);
                 thingindex = MIN(thingindex + 1, TARGETLIMIT - 1);
+
                 break;
             }
 
             case tc_bloodsplat:
             {
-                bloodsplat_t    *splat = Z_Malloc(sizeof(*splat), PU_LEVEL, NULL);
+                bloodsplat_t    *splat = malloc(sizeof(*splat));
 
                 saveg_read_bloodsplat_t(splat);
 
@@ -1403,6 +1407,7 @@ void P_ArchiveSpecials(void)
                 {
                     saveg_write8(tc_ceiling);
                     saveg_write_ceiling_t((ceiling_t *)th);
+
                     break;
                 }
         }
@@ -1429,6 +1434,7 @@ void P_ArchiveSpecials(void)
                 {
                     saveg_write8(tc_plat);
                     saveg_write_plat_t((plat_t *)th);
+
                     break;
                 }
         }
@@ -1514,6 +1520,7 @@ void P_UnArchiveSpecials(void)
                 ceiling->thinker.function = &T_MoveCeiling;
                 P_AddThinker(&ceiling->thinker);
                 P_AddActiveCeiling(ceiling);
+
                 break;
             }
 
@@ -1525,6 +1532,7 @@ void P_UnArchiveSpecials(void)
                 door->sector->ceilingdata = door;
                 door->thinker.function = &T_VerticalDoor;
                 P_AddThinker(&door->thinker);
+
                 break;
             }
 
@@ -1536,6 +1544,7 @@ void P_UnArchiveSpecials(void)
                 floor->sector->floordata = floor;
                 floor->thinker.function = &T_MoveFloor;
                 P_AddThinker(&floor->thinker);
+
                 break;
             }
 
@@ -1547,6 +1556,7 @@ void P_UnArchiveSpecials(void)
                 plat->sector->floordata = plat;
                 P_AddThinker(&plat->thinker);
                 P_AddActivePlat(plat);
+
                 break;
             }
 
@@ -1558,6 +1568,7 @@ void P_UnArchiveSpecials(void)
                 flash->thinker.function = &T_LightFlash;
                 flash->thinker.menu = true;
                 P_AddThinker(&flash->thinker);
+
                 break;
             }
 
@@ -1569,6 +1580,7 @@ void P_UnArchiveSpecials(void)
                 strobe->thinker.function = &T_StrobeFlash;
                 strobe->thinker.menu = true;
                 P_AddThinker(&strobe->thinker);
+
                 break;
             }
 
@@ -1580,6 +1592,7 @@ void P_UnArchiveSpecials(void)
                 glow->thinker.function = &T_Glow;
                 glow->thinker.menu = true;
                 P_AddThinker(&glow->thinker);
+
                 break;
             }
 
@@ -1591,6 +1604,7 @@ void P_UnArchiveSpecials(void)
                 flick->thinker.function = &T_FireFlicker;
                 flick->thinker.menu = true;
                 P_AddThinker(&flick->thinker);
+
                 break;
             }
 
@@ -1603,6 +1617,7 @@ void P_UnArchiveSpecials(void)
                 elevator->thinker.function = &T_MoveElevator;
                 elevator->thinker.menu = false;
                 P_AddThinker(&elevator->thinker);
+
                 break;
             }
 
@@ -1614,6 +1629,7 @@ void P_UnArchiveSpecials(void)
                 scroll->thinker.function = &T_Scroll;
                 scroll->thinker.menu = true;
                 P_AddThinker(&scroll->thinker);
+
                 break;
             }
 
@@ -1625,6 +1641,7 @@ void P_UnArchiveSpecials(void)
                 pusher->thinker.function = &T_Pusher;
                 pusher->source = P_GetPushThing(pusher->affectee);
                 P_AddThinker(&pusher->thinker);
+
                 break;
             }
 
@@ -1634,6 +1651,7 @@ void P_UnArchiveSpecials(void)
 
                 saveg_read_button_t(button);
                 P_StartButton(button->line, button->where, button->btexture, button->btimer);
+
                 break;
             }
 

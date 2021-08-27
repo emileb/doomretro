@@ -6,7 +6,7 @@
 
 ========================================================================
 
-  Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
+  Copyright © 1993-2021 by id Software LLC, a ZeniMax Media company.
   Copyright © 2013-2021 by Brad Harding <mailto:brad@doomretro.com>.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
@@ -87,10 +87,10 @@ dboolean        nowidescreen = false;
 int             MAPWIDTH;
 unsigned int    MAPHEIGHT = VANILLAHEIGHT * SCREENSCALE;
 unsigned int    MAPAREA;
-unsigned int    MAPBOTTOM;
+int             MAPBOTTOM;
 
-#define I_SDLError(func)        I_Error("The call to " stringize(func) "() failed in %s() on line %i of %s with this error:\n" \
-                                    "    \"%s\".", __FUNCTION__, __LINE__ - 1, leafname(__FILE__), SDL_GetError())
+#define I_SDLError(func)        I_Error("The call to " stringize(func) "() failed in %s() on line %i of %s with this error:\"%s\".", \
+                                    __FUNCTION__, __LINE__ - 1, leafname(__FILE__), SDL_GetError())
 
 #define MAXDISPLAYS             8
 
@@ -98,10 +98,6 @@ unsigned int    MAPBOTTOM;
 #define MAXUPSCALEHEIGHT        (1200 / VANILLAHEIGHT)
 
 #define SHAKEANGLE              ((double)M_BigRandomInt(-1000, 1000) * r_shake_damage / 100000.0)
-
-#if !defined(SDL_VIDEO_RENDER_D3D11)
-#define SDL_VIDEO_RENDER_D3D11  0
-#endif
 
 // CVARs
 dboolean            alwaysrun = alwaysrun_default;
@@ -231,7 +227,7 @@ dboolean MouseShouldBeGrabbed(void)
     if (!windowfocused)
         return false;
 
-    // always grab the mouse when full screen (don't want to see the mouse pointer)
+    // always grab the mouse when fullscreen (don't want to see the mouse pointer)
     if (vid_fullscreen)
         return true;
 
@@ -284,7 +280,7 @@ dboolean keystate(int key)
 void I_CapFPS(int cap)
 {
 #if defined(_WIN32)
-    static UINT CapFPSTimer;
+    static unsigned int CapFPSTimer;
 
     if (CapFPSTimer)
     {
@@ -292,7 +288,7 @@ void I_CapFPS(int cap)
         CapFPSTimer = 0;
     }
 
-    if (!cap || cap == TICRATE)
+    if (!cap)
     {
         if (CapFPSEvent)
         {
@@ -307,7 +303,8 @@ void I_CapFPS(int cap)
 
         if (CapFPSEvent)
         {
-            CapFPSTimer = timeSetEvent(1000 / cap, 0, (LPTIMECALLBACK)CapFPSEvent, 0, (TIME_PERIODIC | TIME_CALLBACK_EVENT_SET));
+            CapFPSTimer = timeSetEvent((unsigned int)(1000.0 / cap + 0.5), 0,
+                (LPTIMECALLBACK)CapFPSEvent, 0, (TIME_PERIODIC | TIME_CALLBACK_EVENT_SET));
 
             if (!CapFPSTimer)
             {
@@ -380,7 +377,7 @@ static int AccelerateMouse(int value)
 
 static short inline clamp(short value, short deadzone)
 {
-    return (ABS(value) < deadzone ? 0 : (gp_analog ? MAX(-SHRT_MAX, value) : SIGN(value) * SHRT_MAX));
+    return (ABS(value) < deadzone ? 0 : (gp_analog ? MAX(-SDL_JOYSTICK_AXIS_MAX, value) : SIGN(value) * SDL_JOYSTICK_AXIS_MAX));
 }
 
 dboolean    altdown = false;
@@ -476,6 +473,7 @@ static void I_GetEvent(void)
                     {
                         enterdown = true;
                         I_ToggleFullscreen();
+
                         return;
                     }
 #endif
@@ -528,6 +526,7 @@ static void I_GetEvent(void)
             case SDL_MOUSEBUTTONUP:
                 keydown = 0;
                 mousebuttonstate &= ~buttons[Event->button.button];
+
                 break;
 
             case SDL_MOUSEWHEEL:
@@ -535,6 +534,7 @@ static void I_GetEvent(void)
                 event.type = ev_mousewheel;
                 event.data1 = Event->wheel.y;
                 D_PostEvent(&event);
+
                 break;
 
             case SDL_CONTROLLERAXISMOTION:
@@ -548,6 +548,7 @@ static void I_GetEvent(void)
 
                         event.type = ev_gamepad;
                         D_PostEvent(&event);
+
                         break;
 
                     case SDL_CONTROLLER_AXIS_LEFTY:
@@ -558,6 +559,7 @@ static void I_GetEvent(void)
 
                         event.type = ev_gamepad;
                         D_PostEvent(&event);
+
                         break;
 
                     case SDL_CONTROLLER_AXIS_RIGHTX:
@@ -568,6 +570,7 @@ static void I_GetEvent(void)
 
                         event.type = ev_gamepad;
                         D_PostEvent(&event);
+
                         break;
 
                     case SDL_CONTROLLER_AXIS_RIGHTY:
@@ -578,6 +581,7 @@ static void I_GetEvent(void)
 
                         event.type = ev_gamepad;
                         D_PostEvent(&event);
+
                         break;
 
                     case SDL_CONTROLLER_AXIS_TRIGGERLEFT:
@@ -588,6 +592,7 @@ static void I_GetEvent(void)
 
                         event.type = ev_gamepad;
                         D_PostEvent(&event);
+
                         break;
 
                     case SDL_CONTROLLER_AXIS_TRIGGERRIGHT:
@@ -598,6 +603,7 @@ static void I_GetEvent(void)
 
                         event.type = ev_gamepad;
                         D_PostEvent(&event);
+
                         break;
                 }
 
@@ -607,6 +613,7 @@ static void I_GetEvent(void)
                 gamepadbuttons |= 1 << Event->cbutton.button;
                 event.type = ev_gamepad;
                 D_PostEvent(&event);
+
                 break;
 
             case SDL_CONTROLLERBUTTONUP:
@@ -614,6 +621,7 @@ static void I_GetEvent(void)
                 keydown = 0;
                 event.type = ev_gamepad;
                 D_PostEvent(&event);
+
                 break;
 
             case SDL_QUIT:
@@ -793,8 +801,6 @@ static void GetUpscaledTextureSize(int width, int height)
 void (*blitfunc)(void);
 void (*mapblitfunc)(void);
 
-static void (*clearframefunc)(void);
-
 static void nullfunc(void) {}
 
 static uint64_t performancefrequency;
@@ -842,18 +848,13 @@ void I_WindowResizeBlit(void)
 }
 #endif
 
-static void I_ClearFrame(void)
-{
-    SDL_RenderClear(renderer);
-}
-
 static void I_Blit(void)
 {
     UpdateGrab();
 
     SDL_LowerBlit(surface, &src_rect, buffer, &src_rect);
     SDL_UpdateTexture(texture, &src_rect, pixels, pitch);
-    clearframefunc();
+    SDL_RenderClear(renderer);
     SDL_RenderCopy(renderer, texture, &src_rect, NULL);
     SDL_RenderPresent(renderer);
 }
@@ -864,7 +865,7 @@ static void I_Blit_NearestLinear(void)
 
     SDL_LowerBlit(surface, &src_rect, buffer, &src_rect);
     SDL_UpdateTexture(texture, &src_rect, pixels, pitch);
-    clearframefunc();
+    SDL_RenderClear(renderer);
     SDL_SetRenderTarget(renderer, texture_upscaled);
     SDL_RenderCopy(renderer, texture, &src_rect, NULL);
     SDL_SetRenderTarget(renderer, NULL);
@@ -879,7 +880,7 @@ static void I_Blit_ShowFPS(void)
 
     SDL_LowerBlit(surface, &src_rect, buffer, &src_rect);
     SDL_UpdateTexture(texture, &src_rect, pixels, pitch);
-    clearframefunc();
+    SDL_RenderClear(renderer);
     SDL_RenderCopy(renderer, texture, &src_rect, NULL);
     SDL_RenderPresent(renderer);
 }
@@ -891,7 +892,7 @@ static void I_Blit_NearestLinear_ShowFPS(void)
 
     SDL_LowerBlit(surface, &src_rect, buffer, &src_rect);
     SDL_UpdateTexture(texture, &src_rect, pixels, pitch);
-    clearframefunc();
+    SDL_RenderClear(renderer);
     SDL_SetRenderTarget(renderer, texture_upscaled);
     SDL_RenderCopy(renderer, texture, &src_rect, NULL);
     SDL_SetRenderTarget(renderer, NULL);
@@ -905,7 +906,7 @@ static void I_Blit_Shake(void)
 
     SDL_LowerBlit(surface, &src_rect, buffer, &src_rect);
     SDL_UpdateTexture(texture, &src_rect, pixels, pitch);
-    clearframefunc();
+    SDL_RenderClear(renderer);
     SDL_RenderCopy(renderer, texture, &src_rect, NULL);
     SDL_RenderCopyEx(renderer, texture, &src_rect, NULL, SHAKEANGLE, NULL, SDL_FLIP_NONE);
     SDL_RenderPresent(renderer);
@@ -917,7 +918,7 @@ static void I_Blit_NearestLinear_Shake(void)
 
     SDL_LowerBlit(surface, &src_rect, buffer, &src_rect);
     SDL_UpdateTexture(texture, &src_rect, pixels, pitch);
-    clearframefunc();
+    SDL_RenderClear(renderer);
     SDL_SetRenderTarget(renderer, texture_upscaled);
     SDL_RenderCopy(renderer, texture, &src_rect, NULL);
     SDL_RenderCopyEx(renderer, texture, &src_rect, NULL, SHAKEANGLE, NULL, SDL_FLIP_NONE);
@@ -933,7 +934,7 @@ static void I_Blit_ShowFPS_Shake(void)
 
     SDL_LowerBlit(surface, &src_rect, buffer, &src_rect);
     SDL_UpdateTexture(texture, &src_rect, pixels, pitch);
-    clearframefunc();
+    SDL_RenderClear(renderer);
     SDL_RenderCopy(renderer, texture, &src_rect, NULL);
     SDL_RenderCopyEx(renderer, texture, &src_rect, NULL, SHAKEANGLE, NULL, SDL_FLIP_NONE);
     SDL_RenderPresent(renderer);
@@ -946,7 +947,7 @@ static void I_Blit_NearestLinear_ShowFPS_Shake(void)
 
     SDL_LowerBlit(surface, &src_rect, buffer, &src_rect);
     SDL_UpdateTexture(texture, &src_rect, pixels, pitch);
-    clearframefunc();
+    SDL_RenderClear(renderer);
     SDL_SetRenderTarget(renderer, texture_upscaled);
     SDL_RenderCopy(renderer, texture, &src_rect, NULL);
     SDL_RenderCopyEx(renderer, texture, &src_rect, NULL, SHAKEANGLE, NULL, SDL_FLIP_NONE);
@@ -959,6 +960,7 @@ static void I_Blit_Automap(void)
 {
     SDL_LowerBlit(mapsurface, &map_rect, mapbuffer, &map_rect);
     SDL_UpdateTexture(maptexture, &map_rect, mappixels, mappitch);
+    SDL_RenderClear(renderer);
     SDL_RenderCopy(maprenderer, maptexture, &map_rect, NULL);
     SDL_RenderPresent(maprenderer);
 }
@@ -967,6 +969,7 @@ static void I_Blit_Automap_NearestLinear(void)
 {
     SDL_LowerBlit(mapsurface, &map_rect, mapbuffer, &map_rect);
     SDL_UpdateTexture(maptexture, &map_rect, mappixels, mappitch);
+    SDL_RenderClear(renderer);
     SDL_SetRenderTarget(maprenderer, maptexture_upscaled);
     SDL_RenderCopy(maprenderer, maptexture, &map_rect, NULL);
     SDL_SetRenderTarget(maprenderer, NULL);
@@ -997,9 +1000,11 @@ void I_SetPalette(byte *playpal)
     {
         for (int i = 0; i < 256; i++)
         {
-            colors[i].r = gammatable[gammaindex][*playpal++];
-            colors[i].g = gammatable[gammaindex][*playpal++];
-            colors[i].b = gammatable[gammaindex][*playpal++];
+            byte    *gamma = gammatable[gammaindex];
+
+            colors[i].r = gamma[*playpal++];
+            colors[i].g = gamma[*playpal++];
+            colors[i].b = gamma[*playpal++];
         }
     }
     else
@@ -1008,9 +1013,10 @@ void I_SetPalette(byte *playpal)
 
         for (int i = 0; i < 256; i++)
         {
-            byte    r = gammatable[gammaindex][*playpal++];
-            byte    g = gammatable[gammaindex][*playpal++];
-            byte    b = gammatable[gammaindex][*playpal++];
+            byte    *gamma = gammatable[gammaindex];
+            byte    r = gamma[*playpal++];
+            byte    g = gamma[*playpal++];
+            byte    b = gamma[*playpal++];
             double  p = sqrt((double)r * r * 0.299 + (double)g * g * 0.587 + (double)b * b * 0.114);
 
             colors[i].r = (byte)(p + (r - p) * color);
@@ -1027,7 +1033,7 @@ void I_SetPalette(byte *playpal)
 
 void I_SetExternalAutomapPalette(void)
 {
-    if (mappalette)
+    if (mapwindow)
     {
         SDL_SetPaletteColors(mappalette, colors, 0, 256);
         mapblitfunc();
@@ -1052,9 +1058,11 @@ void I_SetPaletteWithBrightness(byte *playpal, double brightness)
     {
         for (int i = 0; i < 256; i++)
         {
-            colors[i].r = (byte)(gammatable[gammaindex][*playpal++] * brightness);
-            colors[i].g = (byte)(gammatable[gammaindex][*playpal++] * brightness);
-            colors[i].b = (byte)(gammatable[gammaindex][*playpal++] * brightness);
+            byte    *gamma = gammatable[gammaindex];
+
+            colors[i].r = (byte)(gamma[*playpal++] * brightness);
+            colors[i].g = (byte)(gamma[*playpal++] * brightness);
+            colors[i].b = (byte)(gamma[*playpal++] * brightness);
         }
     }
     else
@@ -1063,9 +1071,10 @@ void I_SetPaletteWithBrightness(byte *playpal, double brightness)
 
         for (int i = 0; i < 256; i++)
         {
-            double  r = gammatable[gammaindex][*playpal++] * brightness;
-            double  g = gammatable[gammaindex][*playpal++] * brightness;
-            double  b = gammatable[gammaindex][*playpal++] * brightness;
+            byte    *gamma = gammatable[gammaindex];
+            double  r = gamma[*playpal++] * brightness;
+            double  g = gamma[*playpal++] * brightness;
+            double  b = gamma[*playpal++] * brightness;
             double  p = sqrt(r * r * 0.299 + g * g * 0.587 + b * b * 0.114);
 
             colors[i].r = (byte)(p + (r - p) * color);
@@ -1075,9 +1084,6 @@ void I_SetPaletteWithBrightness(byte *playpal, double brightness)
     }
 
     SDL_SetPaletteColors(palette, colors, 0, 256);
-
-    if (vid_pillarboxes)
-        SDL_SetRenderDrawColor(renderer, colors[0].r, colors[0].g, colors[0].b, SDL_ALPHA_OPAQUE);
 }
 
 static void I_RestoreFocus(void)
@@ -1100,7 +1106,7 @@ static void GetDisplays(void)
         if (SDL_GetDisplayBounds(i, &displays[i]) < 0)
             I_SDLError(SDL_GetDisplayBounds);
 
-    if ((float)displays[displayindex].w / displays[displayindex].h <= NONWIDEASPECTRATIO)
+    if ((double)displays[displayindex].w / displays[displayindex].h <= NONWIDEASPECTRATIO)
     {
         nowidescreen = true;
         vid_widescreen = false;
@@ -1127,7 +1133,7 @@ void I_CreateExternalAutomap(int outputlevel)
 
     if (numdisplays == 1)
     {
-        if (outputlevel >= 1)
+        if (outputlevel >= 1 && !togglingvanilla)
             C_Warning(1, "An external automap couldn't be created. Only one display was found.");
 
         return;
@@ -1581,7 +1587,7 @@ static void SetVideoMode(dboolean createwindow, dboolean output)
             I_SDLError(SDL_CreateRenderer);
         else
         {
-            C_Warning(1, "The <b>vid_scaleapi</b> CVAR was changed from <b>%s</b> to <b>\"software\"</b>.", vid_scaleapi);
+            C_Warning(1, "The " BOLD("vid_scaleapi") " CVAR was changed from " BOLD("%s") " to " BOLD("\"software\"") ".", vid_scaleapi);
             vid_scaleapi = vid_scaleapi_software;
             M_SaveCVARs();
         }
@@ -1597,30 +1603,33 @@ static void SetVideoMode(dboolean createwindow, dboolean output)
 
     if (output)
     {
-        char    *temp1 = commify(height * 4 / 3);
-        char    *temp2 = commify(height);
+        char    *temp1 = commify(SCREENWIDTH);
+        char    *temp2 = commify(SCREENHEIGHT);
+        char    *temp3 = commify(width);
+        char    *temp4 = commify(height);
 
         C_Output("A software renderer is used to render every frame.");
 
         if (nearestlinear)
         {
-            char    *temp3 = commify((int64_t)upscaledwidth * SCREENWIDTH);
-            char    *temp4 = commify((int64_t)upscaledheight * SCREENHEIGHT);
+            char    *temp5 = commify((int64_t)upscaledwidth * SCREENWIDTH);
+            char    *temp6 = commify((int64_t)upscaledheight * SCREENHEIGHT);
 
-            C_Output("Every frame is scaled up from %ix%i to %sx%s using nearest-neighbor interpolation and then down to %sx%s using "
-                "linear filtering.", SCREENWIDTH, SCREENHEIGHT, temp3, temp4, temp1, temp2);
+            C_Output("Every frame is scaled up from %sx%s to %sx%s using nearest-neighbor interpolation and then down to %sx%s using "
+                "linear filtering.", temp1, temp2, temp5, temp6, temp3, temp4);
 
-            free(temp3);
-            free(temp4);
+            free(temp5);
+            free(temp6);
         }
         else if (M_StringCompare(vid_scalefilter, vid_scalefilter_linear) && !software)
-            C_Output("Every frame is scaled up from %ix%i to %sx%s using linear filtering.", SCREENWIDTH, SCREENHEIGHT, temp1, temp2);
+            C_Output("Every frame is scaled up from %sx%s to %sx%s using linear filtering.", temp1, temp2, temp3, temp4);
         else
-            C_Output("Every frame is scaled up from %ix%i to %sx%s using nearest-neighbor interpolation.",
-                SCREENWIDTH, SCREENHEIGHT, temp1, temp2);
+            C_Output("Every frame is scaled up from %sx%s to %sx%s using nearest-neighbor interpolation.", temp1, temp2, temp3, temp4);
 
         free(temp1);
         free(temp2);
+        free(temp3);
+        free(temp4);
     }
 
 
@@ -1636,7 +1645,7 @@ static void SetVideoMode(dboolean createwindow, dboolean output)
 
             if (major * 10 + minor < 21)
             {
-                C_Warning(1, "<i>" PACKAGE_NAME "</i> requires at least <i>OpenGL v2.1.</i>");
+                C_Warning(1, ITALICS(PACKAGE_NAME "") " requires at least " ITALICS("OpenGL v2.1."));
 
 #if defined(_WIN32)
                 vid_scaleapi = vid_scaleapi_direct3d;
@@ -1646,14 +1655,14 @@ static void SetVideoMode(dboolean createwindow, dboolean output)
                     I_SDLError(SDL_SetHintWithPriority);
 
                 if (output)
-                    C_Output("This scaling is now done using hardware acceleration with <i>Direct3D %s.</i>",
+                    C_Output("This scaling is now done using hardware acceleration with " ITALICS("Direct3D %s."),
                         (SDL_VIDEO_RENDER_D3D11 ? "v11.0" : "v9.0"));
 #endif
             }
             else
             {
                 if (output)
-                    C_Output("This scaling is done using hardware acceleration with <i>OpenGL v%i.%i.</i>", major, minor);
+                    C_Output("This scaling is done using hardware acceleration with " ITALICS("OpenGL v%i.%i."), major, minor);
 
                 if (!M_StringCompare(vid_scaleapi, vid_scaleapi_opengl))
                 {
@@ -1666,7 +1675,7 @@ static void SetVideoMode(dboolean createwindow, dboolean output)
         else if (M_StringCompare(rendererinfo.name, vid_scaleapi_direct3d))
         {
             if (output)
-                C_Output("This scaling is done using hardware acceleration with <i>Direct3D %s.</i>",
+                C_Output("This scaling is done using hardware acceleration with " ITALICS("Direct3D %s."),
                     (SDL_VIDEO_RENDER_D3D11 ? "v11.0" : "v9.0"));
 
             if (!M_StringCompare(vid_scaleapi, vid_scaleapi_direct3d))
@@ -1680,18 +1689,18 @@ static void SetVideoMode(dboolean createwindow, dboolean output)
         else if (M_StringCompare(rendererinfo.name, vid_scaleapi_metal))
         {
             if (output)
-                C_Output("This scaling is done using hardware acceleration with <i>Metal.</i>");
+                C_Output("This scaling is done using hardware acceleration with " ITALICS("Metal."));
         }
 #endif
         else if (M_StringCompare(rendererinfo.name, vid_scaleapi_opengles))
         {
             if (output)
-                C_Output("This scaling is done using hardware acceleration with <i>OpenGL ES.</i>");
+                C_Output("This scaling is done using hardware acceleration with " ITALICS("OpenGL ES."));
         }
         else if (M_StringCompare(rendererinfo.name, vid_scaleapi_opengles2))
         {
             if (output)
-                C_Output("This scaling is done using hardware acceleration with <i>OpenGL ES 2.</i>");
+                C_Output("This scaling is done using hardware acceleration with " ITALICS("OpenGL ES 2."));
         }
 #endif
         else if (M_StringCompare(rendererinfo.name, vid_scaleapi_software))
@@ -1727,8 +1736,8 @@ static void SetVideoMode(dboolean createwindow, dboolean output)
                 const char  *vendor = (const char *)pglGetString(GL_VENDOR);
 
                 if (graphicscard && vendor)
-                    C_Output("Using %s <i>%s</i> graphics card from <i>%s.</i>",
-                        (isvowel(graphicscard[0]) ? "an" : "a"), graphicscard, vendor);
+                    C_Output("Using %s " ITALICS("%s") " graphics card from " ITALICS("%s."),
+                        (isvowel(graphicscard[0]) || M_StringStartsWith(graphicscard, "NVIDIA") ? "an" : "a"), graphicscard, vendor);
             }
         }
 
@@ -1754,7 +1763,7 @@ static void SetVideoMode(dboolean createwindow, dboolean output)
                 }
                 else
                 {
-                    I_CapFPS(vid_capfps);
+                    I_CapFPS(consoleactive ? TICRATE : vid_capfps);
 
                     if (output)
                     {
@@ -1768,7 +1777,7 @@ static void SetVideoMode(dboolean createwindow, dboolean output)
         }
         else
         {
-            I_CapFPS(vid_capfps);
+            I_CapFPS(consoleactive ? TICRATE : vid_capfps);
 
             if (output)
             {
@@ -1797,7 +1806,7 @@ static void SetVideoMode(dboolean createwindow, dboolean output)
     {
         wadfile_t   *playpalwad = lumpinfo[W_CheckNumForName("PLAYPAL")]->wadfile;
 
-        C_Output("Using the 256-color palette from the <b>PLAYPAL</b> lump in the %s <b>%s</b>.",
+        C_Output("Using the 256-color palette from the " BOLD("PLAYPAL") " lump in the %s " BOLD("%s") ".",
             (playpalwad->type == IWAD ? "IWAD" : "PWAD"), playpalwad->path);
 
         if (gammaindex == 10)
@@ -1894,15 +1903,12 @@ static void I_GetScreenDimensions(void)
         // r_fov * 0.82 is vertical FOV for 4:3 aspect ratio
         WIDEFOVDELTA = (int)(atan(width / (height / tan(r_fov * 0.82 * M_PI / 360.0))) * 360.0 / M_PI) - r_fov;
         WIDESCREENDELTA = ((SCREENWIDTH - NONWIDEWIDTH) / SCREENSCALE) / 2;
-
-        clearframefunc = (vid_fullscreen ? &nullfunc : &I_ClearFrame);
     }
     else
     {
         SCREENWIDTH = NONWIDEWIDTH;
         WIDEFOVDELTA = 0;
         WIDESCREENDELTA = 0;
-        clearframefunc = &I_ClearFrame;
     }
 
     SCREENAREA = SCREENWIDTH * SCREENHEIGHT;
@@ -1943,6 +1949,7 @@ void I_ToggleFullscreen(void)
         menuactive = false;
         C_ShowConsole();
         C_Warning(0, "Unable to switch to %s.", (vid_fullscreen ? "a window" : "fullscreen"));
+
         return;
     }
 
@@ -1956,10 +1963,10 @@ void I_ToggleFullscreen(void)
     S_StartSound(NULL, sfx_stnmov);
 
     if (vid_fullscreen)
-        C_Output("%s %s", stringize(vid_fullscreen), "on");
+        C_StrCVAROutput(stringize(vid_fullscreen), "on");
     else
     {
-        C_Output("%s %s", stringize(vid_fullscreen), "off");
+        C_StrCVAROutput(stringize(vid_fullscreen), "off");
 
         SDL_SetWindowSize(window, windowwidth, windowheight);
 
@@ -2030,7 +2037,7 @@ void I_InitGraphics(void)
             SDL_FILENAME, PACKAGE_NAME, compiled.major, compiled.minor, compiled.patch);
 
     if (linked.patch != compiled.patch)
-        C_Warning(1, "The wrong version of <b>%s</b> was found. <i>%s</i> requires v%i.%i.%i.",
+        C_Warning(1, "The wrong version of " BOLD("%s") " was found. " ITALICS("%s") " requires v%i.%i.%i.",
             SDL_FILENAME, PACKAGE_NAME, compiled.major, compiled.minor, compiled.patch);
 
     performancefrequency = SDL_GetPerformanceFrequency();
@@ -2050,6 +2057,7 @@ void I_InitGraphics(void)
     FindNearestColors(PLAYPAL);
 
     I_InitGammaTables();
+    I_SetGamma(r_gamma);
 
 #if !defined(_WIN32)
     if (*vid_driver)

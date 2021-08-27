@@ -6,7 +6,7 @@
 
 ========================================================================
 
-  Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
+  Copyright © 1993-2021 by id Software LLC, a ZeniMax Media company.
   Copyright © 2013-2021 by Brad Harding <mailto:brad@doomretro.com>.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
@@ -55,7 +55,7 @@
 #include "z_zone.h"
 
 //
-// Data needed to add patches to full screen intermission pics.
+// Data needed to add patches to fullscreen intermission pics.
 // Patches are statistics messages, and animations.
 // Loads of by-pixel layout and placement, offsets etc.
 //
@@ -691,7 +691,7 @@ static void WI_InitNoState(void)
     acceleratestage = false;
     cnt = (gamemode == commercial ? TICRATE : 10);
 
-    D_FadeScreen();
+    D_FadeScreen(false);
 }
 
 static void WI_UpdateNoState(void)
@@ -716,7 +716,7 @@ static void WI_InitShowNextLoc(void)
     acceleratestage = false;
     cnt = SHOWNEXTLOCDELAY * TICRATE;
 
-    D_FadeScreen();
+    D_FadeScreen(false);
 
     WI_InitAnimatedBack();
 }
@@ -797,22 +797,22 @@ static void WI_InitStats(void)
     cnt_pause = TICRATE;
 
     if (M_StringCompare(playername, playername_default))
-        C_PlayerMessage("You finished <i>%s</i>%s",
+        C_PlayerMessage("You finished " ITALICS("%s%s"),
             mapname, (ispunctuation(mapname[strlen(mapname) - 1]) ? "" : "!"));
     else
-        C_PlayerMessage("%s finished <i>%s</i>%s",
+        C_PlayerMessage("%s finished " ITALICS("%s%s"),
             playername, mapname, (ispunctuation(mapname[strlen(mapname) - 1]) ? "" : "!"));
 
-    C_TabbedOutput(tabs, "Kills\t<b>%i%%</b>", (wbs->skills * 100) / wbs->maxkills);
-    C_TabbedOutput(tabs, "Items\t<b>%i%%</b>", (wbs->sitems * 100) / wbs->maxitems);
+    C_TabbedOutput(tabs, "Kills\t" BOLD("%i%%"), (wbs->skills * 100) / wbs->maxkills);
+    C_TabbedOutput(tabs, "Items\t" BOLD("%i%%"), (wbs->sitems * 100) / wbs->maxitems);
 
     if (totalsecret)
-        C_TabbedOutput(tabs, "Secrets\t<b>%i%%</b>", (wbs->ssecret * 100) / wbs->maxsecret);
+        C_TabbedOutput(tabs, "Secrets\t" BOLD("%i%%"), (wbs->ssecret * 100) / wbs->maxsecret);
 
-    C_TabbedOutput(tabs, "Time\t<b>%02i:%02i</b>", wbs->stime / TICRATE / 60, wbs->stime / TICRATE % 60);
+    C_TabbedOutput(tabs, "Time\t" BOLD("%02i:%02i"), wbs->stime / TICRATE / 60, wbs->stime / TICRATE % 60);
 
     if (wbs->partime)
-        C_TabbedOutput(tabs, "Par time\t<b>%02i:%02i</b>", wbs->partime / TICRATE / 60, wbs->partime / TICRATE % 60);
+        C_TabbedOutput(tabs, "Par time\t" BOLD("%02i:%02i"), wbs->partime / TICRATE / 60, wbs->partime / TICRATE % 60);
 
     WI_InitAnimatedBack();
 }
@@ -1004,18 +1004,20 @@ void WI_CheckForAccelerate(void)
         viewplayer->usedown = false;
 }
 
+static void WI_LoadData(void);
+
 // Updates stuff each tic
 void WI_Ticker(void)
 {
-    if (menuactive || paused || consoleactive)
-        return;
-
     // counter for general background animation
     if (++bcnt == 1)
         // intermission music
         S_ChangeMusic((gamemode == commercial ? mus_dm2int : mus_inter), true, false, false);
 
-    WI_CheckForAccelerate();
+    WI_LoadData();
+
+    if (!menuactive && !consoleactive)
+        WI_CheckForAccelerate();
 
     switch (state)
     {
@@ -1033,7 +1035,7 @@ void WI_Ticker(void)
     }
 }
 
-typedef void (*load_callback_t)(char *lumpname, patch_t **variable);
+typedef void (*load_callback_t)(char *, patch_t **);
 
 // Common load/unload function. Iterates over all the graphics
 // lumps to be loaded/unloaded into memory.
@@ -1239,7 +1241,6 @@ static void WI_InitVariables(wbstartstruct_t *wbstartstruct)
 void WI_Start(wbstartstruct_t *wbstartstruct)
 {
     WI_InitVariables(wbstartstruct);
-    WI_LoadData();
 
     WI_InitStats();
 }

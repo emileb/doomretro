@@ -6,7 +6,7 @@
 
 ========================================================================
 
-  Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
+  Copyright © 1993-2021 by id Software LLC, a ZeniMax Media company.
   Copyright © 2013-2021 by Brad Harding <mailto:brad@doomretro.com>.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
@@ -415,6 +415,7 @@ dboolean mmus2mid(uint8_t *mus, size_t size, MIDI *mididata)
 
                 TWriteByte(mididata, MIDItrack, (unsigned char)(data & 0x7F));
                 TWriteByte(mididata, MIDItrack, 0);
+
                 break;
 
             case PLAY_NOTE:
@@ -439,6 +440,7 @@ dboolean mmus2mid(uint8_t *mus, size_t size, MIDI *mididata)
 
                 TWriteByte(mididata, MIDItrack, (unsigned char)((data & 1) << 6));
                 TWriteByte(mididata, MIDItrack, (unsigned char)(data >> 1));
+
                 break;
 
             case SYS_EVENT:
@@ -452,6 +454,7 @@ dboolean mmus2mid(uint8_t *mus, size_t size, MIDI *mididata)
 
                 TWriteByte(mididata, MIDItrack, MUS2MIDcontrol[data]);
                 TWriteByte(mididata, MIDItrack, (data == 12 ? (unsigned char)(MUSh.channels + 1) : 0));
+
                 break;
 
             case CNTL_CHANGE:

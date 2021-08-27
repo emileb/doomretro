@@ -6,7 +6,7 @@
 
 ========================================================================
 
-  Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
+  Copyright © 1993-2021 by id Software LLC, a ZeniMax Media company.
   Copyright © 2013-2021 by Brad Harding <mailto:brad@doomretro.com>.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
@@ -48,16 +48,16 @@
 
 #define MAXVISPLANES    1024                    // must be a power of 2
 
+// killough -- hash function for visplanes
+// Empirically verified to be fairly uniform:
+#define visplane_hash(picnum, lightlevel, height) \
+    ((unsigned int)((picnum) * 3 + (lightlevel) + (height) * 7) & (MAXVISPLANES - 1))
+
 static visplane_t   *visplanes[MAXVISPLANES];   // killough
 static visplane_t   *freetail;                  // killough
 static visplane_t   **freehead = &freetail;     // killough
 visplane_t          *floorplane;
 visplane_t          *ceilingplane;
-
-// killough -- hash function for visplanes
-// Empirically verified to be fairly uniform:
-#define visplane_hash(picnum, lightlevel, height) \
-    ((unsigned int)((picnum) * 3 + (lightlevel) + (height) * 7) & (MAXVISPLANES - 1))
 
 int                 *openings;                  // dropoff overflow
 int                 *lastopening;               // dropoff overflow
@@ -65,8 +65,8 @@ int                 *lastopening;               // dropoff overflow
 // Clip values are the solid pixel bounding the range.
 //  floorclip starts out SCREENHEIGHT
 //  ceilingclip starts out -1
-int                 floorclip[MAXWIDTH];     // dropoff overflow
-int                 ceilingclip[MAXWIDTH];   // dropoff overflow
+int                 floorclip[MAXWIDTH];        // dropoff overflow
+int                 ceilingclip[MAXWIDTH];      // dropoff overflow
 
 // texture mapping
 static lighttable_t **planezlight;
@@ -126,7 +126,18 @@ static void R_MapPlane(int y, int x1)
     ds_xfrac = viewx + xoffset + viewcosdistance + dx * ds_xstep;
     ds_yfrac = -viewy + yoffset - viewsindistance + dx * ds_ystep;
 
-    ds_colormap = (fixedcolormap ? fixedcolormap : planezlight[MIN(distance >> LIGHTZSHIFT, MAXLIGHTZ - 1)]);
+    if (fixedcolormap)
+    {
+        ds_colormap = fixedcolormap;
+        ds_nextcolormap = fixedcolormap;
+        ds_z = 0;
+    }
+    else
+    {
+        ds_colormap = planezlight[BETWEEN(0, distance >> LIGHTZSHIFT, MAXLIGHTZ - 1)];
+        ds_nextcolormap = planezlight[BETWEEN(0, (distance >> LIGHTZSHIFT) + 1, MAXLIGHTZ - 1)];
+        ds_z = distance;
+    }
 
     ds_y = y;
     ds_x1 = x1;
@@ -301,7 +312,7 @@ static void R_MakeSpans(visplane_t *pl)
     }
 
     planeheight = ABS(pl->height - viewz);
-    planezlight = zlight[MIN((pl->lightlevel >> LIGHTSEGSHIFT) + extralight, LIGHTLEVELS - 1)];
+    planezlight = zlight[BETWEEN(0, (pl->lightlevel >> LIGHTSEGSHIFT) + extralight, LIGHTLEVELS - 1)];
     pl->top[pl->left - 1] = UINT_MAX;
     pl->top[stop] = UINT_MAX;
 
@@ -408,7 +419,7 @@ void R_InitDistortedFlats(void)
 void R_DrawPlanes(void)
 {
     if (r_liquid_swirl)
-        updateswirl = ((!menuactive || !(gametime & 4)) && !consoleactive && !inhelpscreens && !paused && !freeze);
+        updateswirl = (!consoleactive && !inhelpscreens && !paused && !freeze);
 
     dc_colormap[0] = (viewplayer->fixedcolormap == INVERSECOLORMAP && r_textures ? fixedcolormap : fullcolormap);
 
@@ -418,9 +429,9 @@ void R_DrawPlanes(void)
             {
                 int picnum = pl->picnum;
 
-                // sky flat
                 if (picnum == skyflatnum || (picnum & PL_SKYFLAT))
                 {
+                    // sky flat
                     int             texture;
                     angle_t         flip = 0U;
                     const rpatch_t  *tex_patch;
@@ -498,8 +509,8 @@ void R_DrawPlanes(void)
                 else
                 {
                     // regular flat
-                    ds_source = (terraintypes[picnum] != SOLID && r_liquid_swirl ? R_DistortedFlat(picnum) :
-                        lumpinfo[flattranslation[picnum]]->cache);
+                    ds_source = (terraintypes[picnum] != SOLID && r_liquid_swirl ?
+                        R_DistortedFlat(picnum) : lumpinfo[flattranslation[picnum]]->cache);
 
                     R_MakeSpans(pl);
                 }

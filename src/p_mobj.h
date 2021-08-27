@@ -6,7 +6,7 @@
 
 ========================================================================
 
-  Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
+  Copyright © 1993-2021 by id Software LLC, a ZeniMax Media company.
   Copyright © 2013-2021 by Brad Harding <mailto:brad@doomretro.com>.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
@@ -49,6 +49,8 @@
 #define BLUEBLOOD           204
 #define FUZZYBLOOD          -1
 
+#define CORPSEBLOODSPLATS   512
+
 // killough 11/98:
 // For torque simulation:
 #define OVERDRIVE           6
@@ -57,8 +59,6 @@
 // killough 11/98:
 // Whether an object is "sentient" or not. Used for environmental influences.
 #define sentient(mobj)      (mobj->health > 0 && mobj->info->seestate)
-
-#define CORPSEBLOODSPLATS   512
 
 //
 // NOTES: mobj_t
@@ -454,6 +454,7 @@ typedef struct mobj_s
     struct msecnode_s   *touching_sectorlist;   // phares 03/14/98
 
     short               gear;                   // killough 11/98: used in torque simulation
+    int                 geartime;               // [JN] Duration of torque simulation
 
     short               pursuecount;
     short               strafecount;
@@ -486,8 +487,8 @@ typedef struct mobj_s
 typedef struct bloodsplat_s
 {
     fixed_t             x, y;
-    struct bloodsplat_s *snext;
-    struct bloodsplat_s **sprev;
+    struct bloodsplat_s *next;
+    struct bloodsplat_s **prev;
     int                 patch;
     fixed_t             width;
     struct sector_s     *sector;

@@ -6,7 +6,7 @@
 
 ========================================================================
 
-  Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
+  Copyright © 1993-2021 by id Software LLC, a ZeniMax Media company.
   Copyright © 2013-2021 by Brad Harding <mailto:brad@doomretro.com>.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
@@ -51,6 +51,7 @@ fixed_t P_ApproxDistance(fixed_t dx, fixed_t dy)
 {
     dx = ABS(dx);
     dy = ABS(dy);
+
     return (dx + dy - (MIN(dx, dy) >> 1));
 }
 
@@ -236,11 +237,11 @@ void P_UnsetThingPosition(mobj_t *thing)
 //
 void P_UnsetBloodSplatPosition(bloodsplat_t *splat)
 {
-    bloodsplat_t    **sprev = splat->sprev;
-    bloodsplat_t    *snext = splat->snext;
+    bloodsplat_t    **prev = splat->prev;
+    bloodsplat_t    *next = splat->next;
 
-    if ((*sprev = snext))
-        snext->sprev = sprev;
+    if ((*prev = next))
+        next->prev = prev;
 
     free(splat);
 }
@@ -323,12 +324,12 @@ void P_SetThingPosition(mobj_t *thing)
 void P_SetBloodSplatPosition(bloodsplat_t *splat)
 {
     bloodsplat_t    **link = &splat->sector->splatlist;
-    bloodsplat_t    *snext = *link;
+    bloodsplat_t    *next = *link;
 
-    if ((splat->snext = snext))
-        snext->sprev = &splat->snext;
+    if ((splat->next = next))
+        next->prev = &splat->next;
 
-    splat->sprev = link;
+    splat->prev = link;
     *link = splat;
 }
 
@@ -550,6 +551,7 @@ static dboolean PIT_AddThingIntercepts(mobj_t *thing)
                 dl.y = y + radius;
                 dl.dx = -radius * 2;
                 dl.dy = 0;
+
                 break;
 
             case 1:     // Right edge
@@ -557,6 +559,7 @@ static dboolean PIT_AddThingIntercepts(mobj_t *thing)
                 dl.y = y - radius;
                 dl.dx = 0;
                 dl.dy = radius * 2;
+
                 break;
 
             case 2:     // Bottom edge
@@ -564,6 +567,7 @@ static dboolean PIT_AddThingIntercepts(mobj_t *thing)
                 dl.y = y - radius;
                 dl.dx = radius * 2;
                 dl.dy = 0;
+
                 break;
 
             case 3:     // Left edge
@@ -571,6 +575,7 @@ static dboolean PIT_AddThingIntercepts(mobj_t *thing)
                 dl.y = y + radius;
                 dl.dx = 0;
                 dl.dy = radius * -2;
+
                 break;
         }
 
@@ -761,12 +766,14 @@ dboolean P_PathTraverse(fixed_t x1, fixed_t y1, fixed_t x2, fixed_t y2, int flag
                 // xintercept matches
                 xintercept += xstep;
                 mapy += mapystep;
+
                 break;
 
             case 2:
                 // yintercept matches
                 yintercept += ystep;
                 mapx += mapxstep;
+
                 break;
 
             case 3:
@@ -791,6 +798,7 @@ dboolean P_PathTraverse(fixed_t x1, fixed_t y1, fixed_t x2, fixed_t y2, int flag
                 yintercept += ystep;
                 mapx += mapxstep;
                 mapy += mapystep;
+
                 break;
         }
     }

@@ -63,6 +63,7 @@ fixed_t                 pspritescale;
 fixed_t                 pspriteiscale;
 
 static lighttable_t     **spritelights;         // killough 01/25/98 made static
+static lighttable_t     **nextspritelights;
 
 // constant arrays used for psprite clipping and initializing clipping
 int                     negonearray[MAXWIDTH];
@@ -450,7 +451,9 @@ static void R_DrawVisSprite(const vissprite_t *vis)
     int             baseclip;
 
     spryscale = vis->scale;
+    dc_z = spryscale;
     dc_colormap[0] = vis->colormap;
+    dc_nextcolormap[0] = vis->nextcolormap;
     dc_iscale = FixedDiv(FRACUNIT, spryscale);
     dc_texturemid = vis->texturemid;
 
@@ -492,9 +495,11 @@ static void R_DrawVisSpriteWithShadow(const vissprite_t *vis)
     const int       flags = mobj->flags;
 
     spryscale = vis->scale;
+    dc_z = spryscale;
     dc_colormap[0] = vis->colormap;
+    dc_nextcolormap[0] = vis->nextcolormap;
     dc_black = dc_colormap[0][nearestblack];
-    dc_black25 = &tinttab25[dc_black << 8];
+    dc_black33 = &tinttab33[dc_black << 8];
     dc_black40 = &tinttab40[dc_black << 8];
     dc_iscale = FixedDiv(FRACUNIT, spryscale);
     dc_texturemid = vis->texturemid;
@@ -537,8 +542,9 @@ static void R_DrawPlayerVisSprite(const vissprite_t *vis)
     const fixed_t   x2 = vis->x2;
     const rpatch_t  *patch = R_CachePatchNum(vis->patch + firstspritelump);
 
-    dc_colormap[0] = vis->colormap;
     colfunc = vis->colfunc;
+    dc_colormap[0] = vis->colormap;
+    dc_nextcolormap[0] = vis->colormap;
     dc_iscale = pspriteiscale;
     dc_texturemid = vis->texturemid;
     sprtopscreen = (int64_t)centeryfrac - FixedMul(dc_texturemid, pspritescale);
@@ -563,10 +569,10 @@ static void R_DrawBloodSplatVisSprite(const bloodsplatvissprite_t *vis)
     const fixed_t   x2 = vis->x2;
     const rcolumn_t *columns = R_CachePatchNum(vis->patch + firstspritelump)->columns;
 
+    spryscale = vis->scale;
     colfunc = vis->colfunc;
     dc_colormap[0] = vis->colormap;
-    dc_blood = &tinttab75[(dc_solidblood = dc_colormap[0][vis->blood]) << 8];
-    spryscale = vis->scale;
+    dc_blood = &tinttab50[(dc_solidblood = dc_colormap[0][vis->blood]) << 8];
     sprtopscreen = (int64_t)centeryfrac - FixedMul(vis->texturemid, spryscale);
     fuzzpos = 0;
 
@@ -731,7 +737,7 @@ static void R_ProjectSprite(mobj_t *thing)
     vis->gz = floorheight;
     vis->gzt = gzt;
 
-    if (drawshadows && (flags2 & MF2_CASTSHADOW) && xscale >= FRACUNIT / 4)
+    if ((flags2 & MF2_CASTSHADOW) && xscale >= FRACUNIT / 4 && drawshadows)
         vis->shadowpos = floorheight + thing->shadowoffset - viewz;
     else
         vis->shadowpos = 1;
@@ -803,11 +809,23 @@ static void R_ProjectSprite(mobj_t *thing)
 
     // get light level
     if (fixedcolormap)
-        vis->colormap = fixedcolormap;          // fixed map
-    else if ((frame & FF_FULLBRIGHT) && (rot <= 4 || rot >= 12 || thing->info->fullbright))
-        vis->colormap = fullcolormap;           // full bright
-    else                                        // diminished light
+    {
+        // fixed map
+        vis->colormap = fixedcolormap;
+        vis->nextcolormap = fixedcolormap;
+    }
+    else if ((frame & FF_FULLBRIGHT) && (rot <= 5 || rot >= 12 || thing->info->fullbright))
+    {
+        // full bright
+        vis->colormap = fullcolormap;
+        vis->nextcolormap = fullcolormap;
+    }
+    else
+    {
+        // diminished light
         vis->colormap = spritelights[MIN(xscale >> LIGHTSCALESHIFT, MAXLIGHTSCALE - 1)];
+        vis->nextcolormap = nextspritelights[MIN(xscale >> LIGHTSCALESHIFT, MAXLIGHTSCALE - 1)];
+    }
 }
 
 static void R_ProjectBloodSplat(const bloodsplat_t *splat)
@@ -824,7 +842,7 @@ static void R_ProjectBloodSplat(const bloodsplat_t *splat)
     fixed_t                 tr_y = fy - viewy;
     fixed_t                 tz = FixedMul(tr_x, viewcos) + FixedMul(tr_y, viewsin);
 
-    // thing is behind view plane?
+    // splat is behind view plane?
     if (tz < MINZ)
         return;
 
@@ -849,7 +867,7 @@ static void R_ProjectBloodSplat(const bloodsplat_t *splat)
     if ((x2 = ((centerxfrac + FRACUNIT / 2 + FixedMul(tx + width, xscale)) >> FRACBITS) - 1) < 0)
         return;
 
-    // quickly reject sprites with bad x ranges
+    // quickly reject splats with bad x ranges
     if (x1 >= x2)
         return;
 
@@ -860,25 +878,25 @@ static void R_ProjectBloodSplat(const bloodsplat_t *splat)
     vis->gx = fx;
     vis->gy = fy;
 
-    if (r_blood == r_blood_all)
+    if (r_blood == r_blood_nofuzz)
+    {
+        vis->blood = (splat->colfunc == fuzzcolfunc ? REDBLOOD : splat->blood);
+        vis->colfunc = bloodsplatcolfunc;
+    }
+    else if (r_blood == r_blood_all)
     {
         vis->blood = splat->blood;
-        vis->colfunc = (pausesprites && r_textures && splat->colfunc == fuzzcolfunc ? &R_DrawPausedFuzzColumn : splat->colfunc);
+        vis->colfunc = (splat->colfunc == fuzzcolfunc && pausesprites && r_textures ? &R_DrawPausedFuzzColumn : splat->colfunc);
     }
     else if (r_blood == r_blood_red)
     {
         vis->blood = REDBLOOD;
-        vis->colfunc = (r_bloodsplats_translucency ? &R_DrawBloodSplatColumn : &R_DrawSolidBloodSplatColumn);
-    }
-    else if (r_blood == r_blood_nofuzz)
-    {
-        vis->blood = (splat->colfunc == fuzzcolfunc ? REDBLOOD : splat->blood);
-        vis->colfunc = (r_bloodsplats_translucency ? &R_DrawBloodSplatColumn : &R_DrawSolidBloodSplatColumn);
+        vis->colfunc = bloodsplatcolfunc;
     }
     else
     {
         vis->blood = GREENBLOOD;
-        vis->colfunc = (r_bloodsplats_translucency ? &R_DrawBloodSplatColumn : &R_DrawSolidBloodSplatColumn);
+        vis->colfunc = bloodsplatcolfunc;
     }
 
     vis->texturemid = floorheight + FRACUNIT - viewz;
@@ -928,7 +946,8 @@ static void R_ProjectBloodSplat(const bloodsplat_t *splat)
 // killough 09/18/98: add lightlevel as parameter, fixing underwater lighting
 void R_AddSprites(sector_t *sec, int lightlevel)
 {
-    mobj_t  *thing = sec->thinglist;
+    mobj_t      *thing = sec->thinglist;
+    static int  prevlightlevel = -1;
 
     if ((floorheight = sec->interpfloorheight) - FRACUNIT <= viewz)
     {
@@ -936,32 +955,49 @@ void R_AddSprites(sector_t *sec, int lightlevel)
 
         if (splat && drawbloodsplats)
         {
-            spritelights = scalelight[MIN((lightlevel >> LIGHTSEGSHIFT) + extralight, LIGHTLEVELS - 1)];
+            if (lightlevel != prevlightlevel)
+            {
+                spritelights = scalelight[BETWEEN(0, (lightlevel >> LIGHTSEGSHIFT) + extralight, LIGHTLEVELS - 1)];
+                nextspritelights = scalelight[BETWEEN(0, ((lightlevel + 4) >> LIGHTSEGSHIFT) + extralight, LIGHTLEVELS - 1)];
+                prevlightlevel = lightlevel;
+            }
 
             do
             {
                 R_ProjectBloodSplat(splat);
-                splat = splat->snext;
+                splat = splat->next;
             } while (splat);
 
             if (!thing)
                 return;
         }
         else if (thing)
-            spritelights = scalelight[MIN((lightlevel >> LIGHTSEGSHIFT) + extralight, LIGHTLEVELS - 1)];
+        {
+            if (lightlevel != prevlightlevel)
+            {
+                spritelights = scalelight[BETWEEN(0, (lightlevel >> LIGHTSEGSHIFT) + extralight, LIGHTLEVELS - 1)];
+                nextspritelights = scalelight[BETWEEN(0, ((lightlevel + 4) >> LIGHTSEGSHIFT) + extralight, LIGHTLEVELS - 1)];
+                prevlightlevel = lightlevel;
+            }
+        }
         else
             return;
 
-        drawshadows = (r_shadows && !fixedcolormap && sec->terraintype == SOLID && sec->floorpic != skyflatnum);
+        drawshadows = (sec->terraintype == SOLID && !fixedcolormap && r_shadows && sec->floorpic != skyflatnum);
     }
-    else
+    else if (thing)
     {
-        if (!thing)
-            return;
+        if (lightlevel != prevlightlevel)
+        {
+            spritelights = scalelight[BETWEEN(0, (lightlevel >> LIGHTSEGSHIFT) + extralight, LIGHTLEVELS - 1)];
+            nextspritelights = scalelight[BETWEEN(0, ((lightlevel + 4) >> LIGHTSEGSHIFT) + extralight, LIGHTLEVELS - 1)];
+            prevlightlevel = lightlevel;
+        }
 
-        spritelights = scalelight[MIN((lightlevel >> LIGHTSEGSHIFT) + extralight, LIGHTLEVELS - 1)];
         drawshadows = false;
     }
+    else
+        return;
 
     // Handle all things in sector.
     do
@@ -1138,17 +1174,17 @@ static void R_DrawPlayerSprites(void)
     }
     else
     {
-        if (weaponstate)
-        {
-            muzzleflash = (weaponstate->frame & FF_FULLBRIGHT);
-            R_DrawPlayerSprite(weapon, false, (weaponstate->dehacked || altered));
-        }
+        muzzleflash = (weaponstate->frame & FF_FULLBRIGHT);
 
         if (flashstate)
         {
             muzzleflash |= (flashstate->frame & FF_FULLBRIGHT);
+
+            R_DrawPlayerSprite(weapon, false, (weaponstate->dehacked || altered));
             R_DrawPlayerSprite(flash, false, (flashstate->dehacked || altered));
         }
+        else
+            R_DrawPlayerSprite(weapon, false, (weaponstate->dehacked || altered));
     }
 }
 

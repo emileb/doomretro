@@ -6,7 +6,7 @@
 
 ========================================================================
 
-  Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
+  Copyright © 1993-2021 by id Software LLC, a ZeniMax Media company.
   Copyright © 2013-2021 by Brad Harding <mailto:brad@doomretro.com>.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
@@ -67,7 +67,7 @@
 #define HUD_ARMOR_HIGHLIGHT_WAIT    250
 
 #define HUD_KEYS_X                  (SCREENWIDTH - 88)
-#define HUD_KEYS_Y                  (HUD_HEALTH_Y - 1)
+#define HUD_KEYS_Y                  HUD_HEALTH_Y
 
 #define HUD_AMMO_X                  (SCREENWIDTH - 51)
 #define HUD_AMMO_Y                  HUD_HEALTH_Y
@@ -106,5 +106,7 @@ extern int      armorhighlight;
 extern dboolean drawdisk;
 extern dboolean idbehold;
 extern int      message_counter;
+extern dboolean message_dontfuckwithme;
+extern dboolean message_fadeon;
 
 #endif

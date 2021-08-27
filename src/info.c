@@ -6,7 +6,7 @@
 
 ========================================================================
 
-  Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
+  Copyright © 1993-2021 by id Software LLC, a ZeniMax Media company.
   Copyright © 2013-2021 by Brad Harding <mailto:brad@doomretro.com>.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
@@ -83,7 +83,7 @@
     /* plural2              */ "",       \
     /* name3                */ "",       \
     /* plural3              */ ""        \
-},
+}
 
 mobjinfo_t mobjinfo[] =
 {
@@ -348,7 +348,7 @@ mobjinfo_t mobjinfo[] =
         /* frames               */ 0,
         /* fullbright           */ false,
         /* blood                */ MT_BLOOD,
-        /* shadowoffset         */ 2 * FRACUNIT,
+        /* shadowoffset         */ 4 * FRACUNIT,
         /* name1                */ "revenant",
         /* plural1              */ "revenants",
         /* name2                */ "",
@@ -1775,9 +1775,9 @@ mobjinfo_t mobjinfo[] =
         /* maxattackrange       */ 0,
         /* minmissilechance     */ 200,
         /* speed                */ 0,
-        /* radius               */ 20 * FRACUNIT,
-        /* pickupradius         */ 20 * FRACUNIT,
-        /* height               */ 16 * FRACUNIT,
+        /* radius               */ 0,
+        /* pickupradius         */ 0,
+        /* height               */ 0,
         /* projectilepassheight */ 0,
         /* mass                 */ 100,
         /* damage               */ 0,
@@ -1873,7 +1873,7 @@ mobjinfo_t mobjinfo[] =
         /* damage               */ 0,
         /* activesound          */ sfx_none,
         /* flags                */ (MF_NOBLOCKMAP | MF_NOGRAVITY),
-        /* flags2               */ MF2_TRANSLUCENT_33,
+        /* flags2               */ MF2_TRANSLUCENT,
         /* raisestate           */ S_NULL,
         /* frames               */ 0,
         /* fullbright           */ true,
@@ -1918,7 +1918,7 @@ mobjinfo_t mobjinfo[] =
         /* damage               */ 0,
         /* activesound          */ sfx_none,
         /* flags                */ (MF_NOBLOCKMAP | MF_NOGRAVITY),
-        /* flags2               */ MF2_TRANSLUCENT_33,
+        /* flags2               */ MF2_TRANSLUCENT,
         /* raisestate           */ S_NULL,
         /* frames               */ 0,
         /* fullbright           */ true,
@@ -6792,7 +6792,7 @@ mobjinfo_t mobjinfo[] =
         /* plural3              */ ""
     },
 
-    // Rocket Trail (MT_TRAIL)
+    // Smoke Trail (MT_TRAIL)
     {
         /* doomednum            */ -1,
         /* spawnstate           */ S_TRAIL,
@@ -6815,15 +6815,15 @@ mobjinfo_t mobjinfo[] =
         /* maxattackrange       */ 0,
         /* minmissilechance     */ 200,
         /* speed                */ 0,
-        /* radius               */ 20 * FRACUNIT,
-        /* pickupradius         */ 20 * FRACUNIT,
-        /* height               */ 16 * FRACUNIT,
+        /* radius               */ 0,
+        /* pickupradius         */ 0,
+        /* height               */ 0,
         /* projectilepassheight */ 0,
         /* mass                 */ 100,
         /* damage               */ 0,
         /* activesound          */ sfx_none,
         /* flags                */ (MF_NOBLOCKMAP | MF_NOGRAVITY),
-        /* flags2               */ MF2_TRANSLUCENT_33,
+        /* flags2               */ MF2_TRANSLUCENT_50,
         /* raisestate           */ S_NULL,
         /* frames               */ 0,
         /* fullbright           */ false,
@@ -6837,104 +6837,104 @@ mobjinfo_t mobjinfo[] =
         /* plural3              */ ""
     },
 
-    EMPTYMOBJ // MT_EXTRA00
-    EMPTYMOBJ // MT_EXTRA01
-    EMPTYMOBJ // MT_EXTRA02
-    EMPTYMOBJ // MT_EXTRA03
-    EMPTYMOBJ // MT_EXTRA04
-    EMPTYMOBJ // MT_EXTRA05
-    EMPTYMOBJ // MT_EXTRA06
-    EMPTYMOBJ // MT_EXTRA07
-    EMPTYMOBJ // MT_EXTRA08
-    EMPTYMOBJ // MT_EXTRA09
-    EMPTYMOBJ // MT_EXTRA10
-    EMPTYMOBJ // MT_EXTRA11
-    EMPTYMOBJ // MT_EXTRA12
-    EMPTYMOBJ // MT_EXTRA13
-    EMPTYMOBJ // MT_EXTRA14
-    EMPTYMOBJ // MT_EXTRA15
-    EMPTYMOBJ // MT_EXTRA16
-    EMPTYMOBJ // MT_EXTRA17
-    EMPTYMOBJ // MT_EXTRA18
-    EMPTYMOBJ // MT_EXTRA19
-    EMPTYMOBJ // MT_EXTRA20
-    EMPTYMOBJ // MT_EXTRA21
-    EMPTYMOBJ // MT_EXTRA22
-    EMPTYMOBJ // MT_EXTRA23
-    EMPTYMOBJ // MT_EXTRA24
-    EMPTYMOBJ // MT_EXTRA25
-    EMPTYMOBJ // MT_EXTRA26
-    EMPTYMOBJ // MT_EXTRA27
-    EMPTYMOBJ // MT_EXTRA28
-    EMPTYMOBJ // MT_EXTRA29
-    EMPTYMOBJ // MT_EXTRA30
-    EMPTYMOBJ // MT_EXTRA31
-    EMPTYMOBJ // MT_EXTRA32
-    EMPTYMOBJ // MT_EXTRA33
-    EMPTYMOBJ // MT_EXTRA34
-    EMPTYMOBJ // MT_EXTRA35
-    EMPTYMOBJ // MT_EXTRA36
-    EMPTYMOBJ // MT_EXTRA37
-    EMPTYMOBJ // MT_EXTRA38
-    EMPTYMOBJ // MT_EXTRA39
-    EMPTYMOBJ // MT_EXTRA40
-    EMPTYMOBJ // MT_EXTRA41
-    EMPTYMOBJ // MT_EXTRA42
-    EMPTYMOBJ // MT_EXTRA43
-    EMPTYMOBJ // MT_EXTRA44
-    EMPTYMOBJ // MT_EXTRA45
-    EMPTYMOBJ // MT_EXTRA46
-    EMPTYMOBJ // MT_EXTRA47
-    EMPTYMOBJ // MT_EXTRA48
-    EMPTYMOBJ // MT_EXTRA49
-    EMPTYMOBJ // MT_EXTRA50
-    EMPTYMOBJ // MT_EXTRA51
-    EMPTYMOBJ // MT_EXTRA52
-    EMPTYMOBJ // MT_EXTRA53
-    EMPTYMOBJ // MT_EXTRA54
-    EMPTYMOBJ // MT_EXTRA55
-    EMPTYMOBJ // MT_EXTRA56
-    EMPTYMOBJ // MT_EXTRA57
-    EMPTYMOBJ // MT_EXTRA58
-    EMPTYMOBJ // MT_EXTRA59
-    EMPTYMOBJ // MT_EXTRA60
-    EMPTYMOBJ // MT_EXTRA61
-    EMPTYMOBJ // MT_EXTRA62
-    EMPTYMOBJ // MT_EXTRA63
-    EMPTYMOBJ // MT_EXTRA64
-    EMPTYMOBJ // MT_EXTRA65
-    EMPTYMOBJ // MT_EXTRA66
-    EMPTYMOBJ // MT_EXTRA67
-    EMPTYMOBJ // MT_EXTRA68
-    EMPTYMOBJ // MT_EXTRA69
-    EMPTYMOBJ // MT_EXTRA70
-    EMPTYMOBJ // MT_EXTRA71
-    EMPTYMOBJ // MT_EXTRA72
-    EMPTYMOBJ // MT_EXTRA73
-    EMPTYMOBJ // MT_EXTRA74
-    EMPTYMOBJ // MT_EXTRA75
-    EMPTYMOBJ // MT_EXTRA76
-    EMPTYMOBJ // MT_EXTRA77
-    EMPTYMOBJ // MT_EXTRA78
-    EMPTYMOBJ // MT_EXTRA79
-    EMPTYMOBJ // MT_EXTRA80
-    EMPTYMOBJ // MT_EXTRA81
-    EMPTYMOBJ // MT_EXTRA82
-    EMPTYMOBJ // MT_EXTRA83
-    EMPTYMOBJ // MT_EXTRA84
-    EMPTYMOBJ // MT_EXTRA85
-    EMPTYMOBJ // MT_EXTRA86
-    EMPTYMOBJ // MT_EXTRA87
-    EMPTYMOBJ // MT_EXTRA88
-    EMPTYMOBJ // MT_EXTRA89
-    EMPTYMOBJ // MT_EXTRA90
-    EMPTYMOBJ // MT_EXTRA91
-    EMPTYMOBJ // MT_EXTRA92
-    EMPTYMOBJ // MT_EXTRA93
-    EMPTYMOBJ // MT_EXTRA94
-    EMPTYMOBJ // MT_EXTRA95
-    EMPTYMOBJ // MT_EXTRA96
-    EMPTYMOBJ // MT_EXTRA97
-    EMPTYMOBJ // MT_EXTRA98
-    EMPTYMOBJ // MT_EXTRA99
+    EMPTYMOBJ,  // MT_EXTRA00
+    EMPTYMOBJ,  // MT_EXTRA01
+    EMPTYMOBJ,  // MT_EXTRA02
+    EMPTYMOBJ,  // MT_EXTRA03
+    EMPTYMOBJ,  // MT_EXTRA04
+    EMPTYMOBJ,  // MT_EXTRA05
+    EMPTYMOBJ,  // MT_EXTRA06
+    EMPTYMOBJ,  // MT_EXTRA07
+    EMPTYMOBJ,  // MT_EXTRA08
+    EMPTYMOBJ,  // MT_EXTRA09
+    EMPTYMOBJ,  // MT_EXTRA10
+    EMPTYMOBJ,  // MT_EXTRA11
+    EMPTYMOBJ,  // MT_EXTRA12
+    EMPTYMOBJ,  // MT_EXTRA13
+    EMPTYMOBJ,  // MT_EXTRA14
+    EMPTYMOBJ,  // MT_EXTRA15
+    EMPTYMOBJ,  // MT_EXTRA16
+    EMPTYMOBJ,  // MT_EXTRA17
+    EMPTYMOBJ,  // MT_EXTRA18
+    EMPTYMOBJ,  // MT_EXTRA19
+    EMPTYMOBJ,  // MT_EXTRA20
+    EMPTYMOBJ,  // MT_EXTRA21
+    EMPTYMOBJ,  // MT_EXTRA22
+    EMPTYMOBJ,  // MT_EXTRA23
+    EMPTYMOBJ,  // MT_EXTRA24
+    EMPTYMOBJ,  // MT_EXTRA25
+    EMPTYMOBJ,  // MT_EXTRA26
+    EMPTYMOBJ,  // MT_EXTRA27
+    EMPTYMOBJ,  // MT_EXTRA28
+    EMPTYMOBJ,  // MT_EXTRA29
+    EMPTYMOBJ,  // MT_EXTRA30
+    EMPTYMOBJ,  // MT_EXTRA31
+    EMPTYMOBJ,  // MT_EXTRA32
+    EMPTYMOBJ,  // MT_EXTRA33
+    EMPTYMOBJ,  // MT_EXTRA34
+    EMPTYMOBJ,  // MT_EXTRA35
+    EMPTYMOBJ,  // MT_EXTRA36
+    EMPTYMOBJ,  // MT_EXTRA37
+    EMPTYMOBJ,  // MT_EXTRA38
+    EMPTYMOBJ,  // MT_EXTRA39
+    EMPTYMOBJ,  // MT_EXTRA40
+    EMPTYMOBJ,  // MT_EXTRA41
+    EMPTYMOBJ,  // MT_EXTRA42
+    EMPTYMOBJ,  // MT_EXTRA43
+    EMPTYMOBJ,  // MT_EXTRA44
+    EMPTYMOBJ,  // MT_EXTRA45
+    EMPTYMOBJ,  // MT_EXTRA46
+    EMPTYMOBJ,  // MT_EXTRA47
+    EMPTYMOBJ,  // MT_EXTRA48
+    EMPTYMOBJ,  // MT_EXTRA49
+    EMPTYMOBJ,  // MT_EXTRA50
+    EMPTYMOBJ,  // MT_EXTRA51
+    EMPTYMOBJ,  // MT_EXTRA52
+    EMPTYMOBJ,  // MT_EXTRA53
+    EMPTYMOBJ,  // MT_EXTRA54
+    EMPTYMOBJ,  // MT_EXTRA55
+    EMPTYMOBJ,  // MT_EXTRA56
+    EMPTYMOBJ,  // MT_EXTRA57
+    EMPTYMOBJ,  // MT_EXTRA58
+    EMPTYMOBJ,  // MT_EXTRA59
+    EMPTYMOBJ,  // MT_EXTRA60
+    EMPTYMOBJ,  // MT_EXTRA61
+    EMPTYMOBJ,  // MT_EXTRA62
+    EMPTYMOBJ,  // MT_EXTRA63
+    EMPTYMOBJ,  // MT_EXTRA64
+    EMPTYMOBJ,  // MT_EXTRA65
+    EMPTYMOBJ,  // MT_EXTRA66
+    EMPTYMOBJ,  // MT_EXTRA67
+    EMPTYMOBJ,  // MT_EXTRA68
+    EMPTYMOBJ,  // MT_EXTRA69
+    EMPTYMOBJ,  // MT_EXTRA70
+    EMPTYMOBJ,  // MT_EXTRA71
+    EMPTYMOBJ,  // MT_EXTRA72
+    EMPTYMOBJ,  // MT_EXTRA73
+    EMPTYMOBJ,  // MT_EXTRA74
+    EMPTYMOBJ,  // MT_EXTRA75
+    EMPTYMOBJ,  // MT_EXTRA76
+    EMPTYMOBJ,  // MT_EXTRA77
+    EMPTYMOBJ,  // MT_EXTRA78
+    EMPTYMOBJ,  // MT_EXTRA79
+    EMPTYMOBJ,  // MT_EXTRA80
+    EMPTYMOBJ,  // MT_EXTRA81
+    EMPTYMOBJ,  // MT_EXTRA82
+    EMPTYMOBJ,  // MT_EXTRA83
+    EMPTYMOBJ,  // MT_EXTRA84
+    EMPTYMOBJ,  // MT_EXTRA85
+    EMPTYMOBJ,  // MT_EXTRA86
+    EMPTYMOBJ,  // MT_EXTRA87
+    EMPTYMOBJ,  // MT_EXTRA88
+    EMPTYMOBJ,  // MT_EXTRA89
+    EMPTYMOBJ,  // MT_EXTRA90
+    EMPTYMOBJ,  // MT_EXTRA91
+    EMPTYMOBJ,  // MT_EXTRA92
+    EMPTYMOBJ,  // MT_EXTRA93
+    EMPTYMOBJ,  // MT_EXTRA94
+    EMPTYMOBJ,  // MT_EXTRA95
+    EMPTYMOBJ,  // MT_EXTRA96
+    EMPTYMOBJ,  // MT_EXTRA97
+    EMPTYMOBJ,  // MT_EXTRA98
+    EMPTYMOBJ   // MT_EXTRA99
 };

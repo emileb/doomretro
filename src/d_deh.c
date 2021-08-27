@@ -6,7 +6,7 @@
 
 ========================================================================
 
-  Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
+  Copyright © 1993-2021 by id Software LLC, a ZeniMax Media company.
   Copyright © 2013-2021 by Brad Harding <mailto:brad@doomretro.com>.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
@@ -239,10 +239,12 @@ char    *s_HUSTR_E1M1 = HUSTR_E1M1;
 char    *s_HUSTR_E1M2 = HUSTR_E1M2;
 char    *s_HUSTR_E1M3 = HUSTR_E1M3;
 char    *s_HUSTR_E1M4 = HUSTR_E1M4;
+char    *s_HUSTR_E1M4B = "";
 char    *s_HUSTR_E1M5 = HUSTR_E1M5;
 char    *s_HUSTR_E1M6 = HUSTR_E1M6;
 char    *s_HUSTR_E1M7 = HUSTR_E1M7;
 char    *s_HUSTR_E1M8 = HUSTR_E1M8;
+char    *s_HUSTR_E1M8B = "";
 char    *s_HUSTR_E1M9 = HUSTR_E1M9;
 char    *s_HUSTR_E2M1 = HUSTR_E2M1;
 char    *s_HUSTR_E2M2 = HUSTR_E2M2;
@@ -581,8 +583,6 @@ char    *s_CAPTION_FREEDM = "";
 char    *s_CAPTION_BTSXE1 = "";
 char    *s_CAPTION_BTSXE2 = "";
 char    *s_CAPTION_BTSXE3 = "";
-char    *s_CAPTION_E1M4B = "";
-char    *s_CAPTION_E1M8B = "";
 
 char    *s_AUTHOR_ROMERO = "";
 
@@ -815,6 +815,8 @@ deh_strs deh_strlookup[] =
     { &s_HUSTR_E1M2,                 "HUSTR_E1M2"                 },
     { &s_HUSTR_E1M3,                 "HUSTR_E1M3"                 },
     { &s_HUSTR_E1M4,                 "HUSTR_E1M4"                 },
+    { &s_HUSTR_E1M4B,                "HUSTR_E1M4B"                },
+    { &s_HUSTR_E1M8B,                "HUSTR_E1M8B"                },
     { &s_HUSTR_E1M5,                 "HUSTR_E1M5"                 },
     { &s_HUSTR_E1M6,                 "HUSTR_E1M6"                 },
     { &s_HUSTR_E1M7,                 "HUSTR_E1M7"                 },
@@ -1151,8 +1153,6 @@ deh_strs deh_strlookup[] =
     { &s_CAPTION_BTSXE1,             "CAPTION_BTSXE1"             },
     { &s_CAPTION_BTSXE2,             "CAPTION_BTSXE2"             },
     { &s_CAPTION_BTSXE3,             "CAPTION_BTSXE3"             },
-    { &s_CAPTION_E1M4B,              "CAPTION_E1M4B"              },
-    { &s_CAPTION_E1M8B,              "CAPTION_E1M8B"              },
     { &s_AUTHOR_ROMERO,              "AUTHOR_ROMERO"              },
 
     { &bgflatE1,                     "BGFLATE1"                   },
@@ -2033,10 +2033,7 @@ void D_BuildBEXTables(void)
     deh_musicnames[0] = deh_musicnames[NUMMUSIC] = NULL;
 
     for (i = 1; i < NUMSFX; i++)
-        if (S_sfx[i].name1[0] != '\0')
-            deh_soundnames[i] = M_StringDuplicate(S_sfx[i].name1);
-        else
-            deh_soundnames[i] = NULL;
+        deh_soundnames[i] = (S_sfx[i].name1[0] != '\0' ? M_StringDuplicate(S_sfx[i].name1) : NULL);
 
     deh_soundnames[0] = deh_soundnames[NUMSFX] = NULL;
 }
@@ -2122,14 +2119,14 @@ void ProcessDehFile(char *filename, int lumpnum, dboolean automatic)
             }
 
             if (devparm)
-                C_Output("Branching to include file <b>%s</b>...", nextfile);
+                C_Output("Branching to include file " BOLD("%s") "...", nextfile);
 
             ProcessDehFile(nextfile, 0, false);                 // do the included file
 
             includenotext = oldnotext;
 
             if (devparm)
-                C_Output("...continuing with <b>%s</b>", filename);
+                C_Output("...continuing with " BOLD("%s"), filename);
 
             continue;
         }
@@ -2179,7 +2176,7 @@ void ProcessDehFile(char *filename, int lumpnum, dboolean automatic)
         char    *temp1 = commify(linecount);
         char    *temp2 = uppercase(lumpinfo[lumpnum]->name);
 
-        C_Output("Parsed %s line%s from the <b>%s</b> lump in the %s <b>%s</b>.",
+        C_Output("Parsed %s line%s from the " BOLD("%s") " lump in the %s " BOLD("%s") ".",
             temp1, (linecount > 1 ? "s" : ""), temp2, (W_WadType(filename) == IWAD ? "IWAD" : "PWAD"), filename);
 
         free(temp1);
@@ -2189,9 +2186,9 @@ void ProcessDehFile(char *filename, int lumpnum, dboolean automatic)
     {
         char    *temp = commify(linecount);
 
-        C_Output("%s %s line%s from the <i>DeHackEd</i>%s file <b>%s</b>.",
+        C_Output("%s %s line%s from the " ITALICS("DeHackEd") "%s file " BOLD("%s") ".",
             (automatic ? "Automatically parsed" : "Parsed"), temp, (linecount > 1 ? "s" : ""),
-            (M_StringEndsWith(filename, "BEX") ? " with <i>BOOM</i> extensions" : ""), GetCorrectCase(filename));
+            (M_StringEndsWith(filename, "BEX") ? " with " ITALICS("BOOM") " extensions" : ""), GetCorrectCase(filename));
 
         free(temp);
     }
@@ -2378,9 +2375,6 @@ static void deh_procThing(DEHFILE *fpin, char *line)
                                 C_Output("ORed value 0x%08lX %s.", deh_mobjflags[iy].value, strval);
 
                             value |= deh_mobjflags[iy].value;
-
-                            // [BH] no blood splats if thing is dehacked...
-                            mobjinfo[indexnum].blood = 0;
                             break;
                         }
 
@@ -2405,6 +2399,9 @@ static void deh_procThing(DEHFILE *fpin, char *line)
                     else if (mobjinfo[indexnum].blood != MT_GREENBLOOD && mobjinfo[indexnum].blood != MT_BLUEBLOOD)
                         mobjinfo[indexnum].blood = MT_BLOOD;
                 }
+                else if (indexnum != MT_BLOOD)
+                    mobjinfo[indexnum].blood = 0;
+
             }
             else if (M_StringCompare(key, "Retro bits"))
             {
@@ -2467,9 +2464,9 @@ static void deh_procThing(DEHFILE *fpin, char *line)
                 C_Output("Assigned %i to %s (%i) at index %i.", (int)value, key, indexnum, ix);
         }
 
-        if ((string = M_StringCompare(key, "Name1")))
+        if ((string = M_StringCompare(key, "Name1")) || (string = M_StringCompare(key, "Name")))
             M_StringCopy(mobjinfo[indexnum].name1, lowercase(trimwhitespace(strval)), sizeof(mobjinfo[indexnum].name1));
-        else if ((string = M_StringCompare(key, "Plural1")))
+        else if ((string = M_StringCompare(key, "Plural1")) || (string = M_StringCompare(key, "Plural")))
             M_StringCopy(mobjinfo[indexnum].plural1, lowercase(trimwhitespace(strval)), sizeof(mobjinfo[indexnum].plural1));
         else if ((string = M_StringCompare(key, "Name2")))
             M_StringCopy(mobjinfo[indexnum].name2, lowercase(trimwhitespace(strval)), sizeof(mobjinfo[indexnum].name2));
@@ -2493,6 +2490,13 @@ static void deh_procThing(DEHFILE *fpin, char *line)
         mobjinfo[indexnum].flags2 &= ~MF2_FLOATBOB;
         mobjinfo[indexnum].flags2 &= ~MF2_TRANSLUCENT_33;
         mobjinfo[indexnum].flags2 &= ~MF2_TRANSLUCENT_BLUE_25;
+    }
+
+    // [BH] No extra barrel frame
+    if (indexnum == MT_BARREL)
+    {
+        states[S_BAR1].nextstate = S_BAR2;
+        mobjinfo[MT_BARREL].frames = 2;
     }
 }
 
@@ -2595,7 +2599,7 @@ static void deh_procFrame(DEHFILE *fpin, char *line)
             if (devparm)
                 C_Output(" - translucent = %ld", value);
 
-            states[indexnum].translucent = !!value;             // bool
+            states[indexnum].translucent = !!value;             // dboolean
             states[indexnum].dehacked = dehacked = !BTSX;
         }
         else
@@ -3436,6 +3440,7 @@ static void deh_procText(DEHFILE *fpin, char *line)
 
                 strncpy(sprnames[i], &inbuffer[fromlen], tolen);
                 found = true;
+
                 break;                                      // only one matches, quit early
             }
 
@@ -3464,6 +3469,7 @@ static void deh_procText(DEHFILE *fpin, char *line)
 
                 strncpy(S_sfx[i].name1, &inbuffer[fromlen], 9);
                 found = true;
+
                 break;                                      // only one matches, quit early
             }
         }
@@ -3484,6 +3490,7 @@ static void deh_procText(DEHFILE *fpin, char *line)
 
                     strncpy(S_music[i].name1, &inbuffer[fromlen], 9);
                     found = true;
+
                     break;                                  // only one matches, quit early
                 }
             }
@@ -3613,7 +3620,7 @@ static void deh_procStrings(DEHFILE *fpin, char *line)
 // Args:    key       -- place to put the mnemonic for the string if found
 //          lookfor   -- original value string to look for
 //          newstring -- string to put in its place if found
-// Returns: bool: True if string found, false if not
+// Returns: dboolean: True if string found, false if not
 //
 static dboolean deh_procStringSub(char *key, char *lookfor, char *newstring)
 {
@@ -3676,7 +3683,7 @@ static dboolean deh_procStringSub(char *key, char *lookfor, char *newstring)
     }
 
     if (!found && !hacx)
-        C_Warning(1, "The <b>\"%s\"</b> string can't be found.", (key ? key : lookfor));
+        C_Warning(1, "The " BOLD("\"%s\"") " string can't be found.", (key ? key : lookfor));
 
     return found;
 }

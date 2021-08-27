@@ -6,7 +6,7 @@
 
 ========================================================================
 
-  Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
+  Copyright © 1993-2021 by id Software LLC, a ZeniMax Media company.
   Copyright © 2013-2021 by Brad Harding <mailto:brad@doomretro.com>.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
@@ -39,6 +39,8 @@
 #if !defined(__R_DRAW_H__)
 #define __R_DRAW_H__
 
+#include "m_random.h"
+
 #define FUZZ(a, b)      fuzzrange[M_BigRandomInt(a, b) + 1]
 
 // [BH] Compensate for rounding errors in DOOM's renderer by stretching wall
@@ -49,9 +51,11 @@
 #define NOTEXTURECOLOR  80
 
 extern lighttable_t     *dc_colormap[2];
+extern lighttable_t     *dc_nextcolormap[2];
 extern int              dc_x;
 extern int              dc_yl;
 extern int              dc_yh;
+extern int              dc_z;
 extern fixed_t          dc_iscale;
 extern fixed_t          dc_texturemid;
 extern fixed_t          dc_texheight;
@@ -63,7 +67,7 @@ extern int              dc_floorclip;
 extern int              dc_ceilingclip;
 extern int              dc_numposts;
 extern byte             dc_black;
-extern byte             *dc_black25;
+extern byte             *dc_black33;
 extern byte             *dc_black40;
 
 // first pixel in a column
@@ -76,31 +80,53 @@ extern int              fuzztable[MAXSCREENAREA];
 // The span blitting interface.
 // Hook in assembler or system specific BLT here.
 void R_DrawColumn(void);
+void R_DrawDitherColumn(void);
+void R_DrawCorrectedColumn(void);
+void R_DrawCorrectedDitherColumn(void);
 void R_DrawColorColumn(void);
 void R_DrawWallColumn(void);
+void R_DrawDitherWallColumn(void);
 void R_DrawBrightmapWallColumn(void);
-void R_DrawSkyColumn(void);
+void R_DrawBrightmapDitherWallColumn(void);
+void R_DrawColorDitherColumn(void);
 void R_DrawFlippedSkyColumn(void);
 void R_DrawSkyColorColumn(void);
 void R_DrawTranslucentColumn(void);
+void R_DrawDitherTranslucentColumn(void);
 void R_DrawTranslucent50Column(void);
-void R_DrawTranslucentColor50Column(void);
-void R_DrawDitheredColumn(void);
-void R_DrawDitheredColorColumn(void);
+void R_DrawDitherTranslucent50Column(void);
+void R_DrawCorrectedTranslucent50Column(void);
+void R_DrawCorrectedDitherTranslucent50Column(void);
+void R_DrawTranslucent50ColorColumn(void);
+void R_DrawDitherTranslucent50ColorColumn(void);
 void R_DrawTranslucent33Column(void);
+void R_DrawDitherTranslucent33Column(void);
 void R_DrawTranslucentGreenColumn(void);
+void R_DrawDitherTranslucentGreenColumn(void);
 void R_DrawTranslucentRedColumn(void);
+void R_DrawDitherTranslucentRedColumn(void);
 void R_DrawTranslucentRedWhiteColumn1(void);
+void R_DrawDitherTranslucentRedWhiteColumn1(void);
 void R_DrawTranslucentRedWhiteColumn2(void);
+void R_DrawDitherTranslucentRedWhiteColumn2(void);
 void R_DrawTranslucentRedWhite50Column(void);
+void R_DrawDitherTranslucentRedWhite50Column(void);
 void R_DrawTranslucentBlueColumn(void);
+void R_DrawDitherTranslucentBlueColumn(void);
 void R_DrawTranslucentGreen33Column(void);
+void R_DrawDitherTranslucentGreen33Column(void);
 void R_DrawTranslucentRed33Column(void);
+void R_DrawDitherTranslucentRed33Column(void);
 void R_DrawTranslucentBlue25Column(void);
+void R_DrawDitherTranslucentBlue25Column(void);
 void R_DrawRedToBlueColumn(void);
+void R_DrawDitherRedToBlueColumn(void);
 void R_DrawTranslucentRedToBlue33Column(void);
+void R_DrawDitherTranslucentRedToBlue33Column(void);
 void R_DrawRedToGreenColumn(void);
+void R_DrawDitherRedToGreenColumn(void);
 void R_DrawTranslucentRedToGreen33Column(void);
+void R_DrawDitherTranslucentRedToGreen33Column(void);
 void R_DrawPlayerSpriteColumn(void);
 void R_DrawShadowColumn(void);
 void R_DrawFuzzyShadowColumn(void);
@@ -119,14 +145,17 @@ void R_DrawPausedFuzzColumns(void);
 //  for player sprite rendering,
 //  green/red/blue/indigo shirts.
 void R_DrawTranslatedColumn(void);
+void R_DrawDitherTranslatedColumn(void);
 
 void R_VideoErase(unsigned int ofs, int count);
 
-extern int          ds_y;
 extern int          ds_x1;
 extern int          ds_x2;
+extern int          ds_y;
+extern int          ds_z;
 
 extern lighttable_t *ds_colormap;
+extern lighttable_t *ds_nextcolormap;
 
 extern fixed_t      ds_xfrac;
 extern fixed_t      ds_yfrac;
@@ -142,7 +171,9 @@ extern byte         *dc_translation;
 // Span blitting for rows, floor/ceiling.
 // No Spectre effect needed.
 void R_DrawSpan(void);
+void R_DrawDitherSpan(void);
 void R_DrawColorSpan(void);
+void R_DrawDitherColorSpan(void);
 
 void R_InitBuffer(int width, int height);
 
@@ -155,7 +186,7 @@ void R_FillBezel(void);
 // Rendering function.
 void R_FillBackScreen(void);
 
-// If the view size is not full screen, draws a border around it.
+// If the view size is not fullscreen, draws a border around it.
 void R_DrawViewBorder(void);
 
 #endif

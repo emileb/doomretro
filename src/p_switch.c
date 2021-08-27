@@ -6,7 +6,7 @@
 
 ========================================================================
 
-  Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
+  Copyright © 1993-2021 by id Software LLC, a ZeniMax Media company.
   Copyright © 2013-2021 by Brad Harding <mailto:brad@doomretro.com>.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
@@ -103,10 +103,10 @@ void P_InitSwitchList(void)
             // Ignore switches referencing unknown texture names, instead of exiting.
             // Warn if either one is missing, but only add if both are valid.
             if ((texture1 = R_CheckTextureNumForName(alphSwitchList[i].name1)) == -1)
-                C_Warning(1, "Switch %i in the <b>SWITCHES</b> lump has an unknown <b>%s</b> texture.", i, alphSwitchList[i].name1);
+                C_Warning(1, "Switch %i in the " BOLD("SWITCHES") " lump has an unknown " BOLD("%s") " texture.", i, alphSwitchList[i].name1);
 
             if ((texture2 = R_CheckTextureNumForName(alphSwitchList[i].name2)) == -1)
-                C_Warning(1, "Switch %i in the <b>SWITCHES</b> lump has an unknown <b>%s</b> texture.", i, alphSwitchList[i].name2);
+                C_Warning(1, "Switch %i in the " BOLD("SWITCHES") " lump has an unknown " BOLD("%s") " texture.", i, alphSwitchList[i].name2);
 
             if (texture1 != -1 && texture2 != -1)
             {
@@ -153,6 +153,7 @@ void P_StartButton(line_t *line, bwhere_e where, int texture, int time)
             buttonlist[i].btexture = texture;
             buttonlist[i].btimer = time;
             buttonlist[i].soundorg = &line->soundorg;
+
             return;
         }
 
@@ -600,6 +601,7 @@ dboolean P_UseSpecialLine(mobj_t *thing, line_t *line, int side)
         case S1_Lift_Stop:
             EV_StopPlat(line);
             P_ChangeSwitchTexture(line, false);
+
             break;
 
         case S1_Crusher_Start_Fast:
@@ -635,26 +637,31 @@ dboolean P_UseSpecialLine(mobj_t *thing, line_t *line, int side)
         case S1_Light_ChangeToBrightestAdjacent:
             EV_LightTurnOn(line, 0);
             P_ChangeSwitchTexture(line, false);
+
             break;
 
         case S1_Light_ChangeTo35:
             EV_LightTurnOn(line, TICRATE);
             P_ChangeSwitchTexture(line, false);
+
             break;
 
         case S1_Light_ChangeTo255:
             EV_LightTurnOn(line, 255);
             P_ChangeSwitchTexture(line, false);
+
             break;
 
         case S1_Light_StartBlinking:
             EV_StartLightStrobing(line);
             P_ChangeSwitchTexture(line, false);
+
             break;
 
         case S1_Light_ChangeToDarkestAdjacent:
             EV_TurnTagLightsOff(line);
             P_ChangeSwitchTexture(line, false);
+
             break;
 
         case S1_Teleport_AlsoMonsters:
@@ -762,11 +769,13 @@ dboolean P_UseSpecialLine(mobj_t *thing, line_t *line, int side)
         case SR_Lift_PerpetualLowestAndHighestFloors:
             EV_DoPlat(line, perpetualRaise, 0);
             P_ChangeSwitchTexture(line, true);
+
             break;
 
         case SR_Lift_Stop:
             EV_StopPlat(line);
             P_ChangeSwitchTexture(line, true);
+
             break;
 
         case SR_Crusher_Start_Fast:
@@ -820,16 +829,19 @@ dboolean P_UseSpecialLine(mobj_t *thing, line_t *line, int side)
         case SR_Light_ChangeToBrightestAdjacent:
             EV_LightTurnOn(line, 0);
             P_ChangeSwitchTexture(line, true);
+
             break;
 
         case SR_Light_StartBlinking:
             EV_StartLightStrobing(line);
             P_ChangeSwitchTexture(line, true);
+
             break;
 
         case SR_Light_ChangeToDarkestAdjacent:
             EV_TurnTagLightsOff(line);
             P_ChangeSwitchTexture(line, true);
+
             break;
 
         case SR_Teleport_AlsoMonsters:
@@ -1038,6 +1050,7 @@ dboolean P_UseSpecialLine(mobj_t *thing, line_t *line, int side)
         case SR_Light_ChangeTo35:
             EV_LightTurnOn(line, (MAP04 ? 0 : TICRATE));
             P_ChangeSwitchTexture(line, true);
+
             break;
 
         case G1_Floor_RaiseToLowestCeiling:

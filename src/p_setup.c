@@ -6,7 +6,7 @@
 
 ========================================================================
 
-  Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
+  Copyright © 1993-2021 by id Software LLC, a ZeniMax Media company.
   Copyright © 2013-2021 by Brad Harding <mailto:brad@doomretro.com>.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
@@ -308,8 +308,8 @@ mapformat_t     mapformat;
 const char *mapformats[] =
 {
     "Regular",
-    "<i>DeeP</i>",
-    "<i>ZDoom</i> extended (uncompressed)"
+    ITALICS("DeeP"),
+    ITALICS("ZDoom") " extended (uncompressed)"
 };
 
 dboolean        boomcompatible;
@@ -672,7 +672,7 @@ static void P_LoadVertexes(int lump)
             if (canmodify && r_fixmaperrors)
                 for (int j = 0; vertexfix[j].mission != -1; j++)
                     if (gamemission == vertexfix[j].mission && gameepisode == vertexfix[j].episode && gamemap == vertexfix[j].map
-                        && i == vertexfix[j].vertex && vertexes[i].x == vertexfix[j].oldx << FRACBITS
+                        && gamemode != shareware && i == vertexfix[j].vertex && vertexes[i].x == vertexfix[j].oldx << FRACBITS
                         && vertexes[i].y == vertexfix[j].oldy << FRACBITS)
                     {
                         char    *temp = commify(vertexfix[j].vertex);
@@ -683,6 +683,7 @@ static void P_LoadVertexes(int lump)
                         vertexes[i].x = vertexfix[j].newx << FRACBITS;
                         vertexes[i].y = vertexfix[j].newy << FRACBITS;
                         free(temp);
+
                         break;
                     }
         }
@@ -719,9 +720,9 @@ static void P_CheckLinedefs(void)
             {
                 char    *temp = commify(ld->id);
 
-                C_Warning(2, "Linedef %s has the %sline special %i (\"%s\") but no tag.",
-                    temp, (ld->special < BOOMLINESPECIALS ? "" : (ld->special < MBFLINESPECIALS ? "<i>MBF</i>-compatible " :
-                    "<i>BOOM</i>-compatible ")), ld->special, linespecials[ld->special]);
+                C_Warning(2, "Linedef %s has %s line special %i (\"%s\") but no tag.",
+                    temp, (ld->special < BOOMLINESPECIALS ? "the" : (ld->special < MBFLINESPECIALS ? "the " ITALICS("MBF") "-compatible" :
+                    "the " ITALICS("BOOM") "-compatible")), ld->special, linespecials[ld->special]);
                 free(temp);
             }
             else if (ld->tag < 0 || P_FindSectorFromLineTag(ld, -1) == -1)
@@ -729,9 +730,9 @@ static void P_CheckLinedefs(void)
                 char    *temp1 = commify(ld->id);
                 char    *temp2 = commify(ld->tag);
 
-                C_Warning(2, "Linedef %s has the %sline special %i (\"%s\") but an unknown tag of %s.",
-                    temp1, (ld->special < BOOMLINESPECIALS ? "" : (ld->special < MBFLINESPECIALS ? "<i>MBF</i>-compatible " :
-                    "<i>BOOM</i>-compatible ")), ld->special, linespecials[ld->special], temp2);
+                C_Warning(2, "Linedef %s has %s line special %i (\"%s\") but an unknown tag of %s.",
+                    temp1, (ld->special < BOOMLINESPECIALS ? "the" : (ld->special < MBFLINESPECIALS ? "the " ITALICS("MBF") "-compatible" :
+                    "the " ITALICS("BOOM") "-compatible")), ld->special, linespecials[ld->special], temp2);
                 free(temp1);
                 free(temp2);
             }
@@ -876,7 +877,7 @@ static void P_LoadSegs(int lump)
         if (canmodify && r_fixmaperrors)
             for (int j = 0; linefix[j].mission != -1; j++)
                 if (gamemission == linefix[j].mission && gameepisode == linefix[j].episode && gamemap == linefix[j].map
-                    && linedefnum == linefix[j].linedef && side == linefix[j].side)
+                    && gamemode != shareware && linedefnum == linefix[j].linedef && side == linefix[j].side)
                 {
                     if (*linefix[j].toptexture)
                     {
@@ -888,10 +889,10 @@ static void P_LoadSegs(int lump)
                         else
                         {
                             if (!li->sidedef->toptexture)
-                                C_Warning(2, "The missing top texture of linedef %s has been changed to <b>%.8s</b>.",
+                                C_Warning(2, "The missing top texture of linedef %s has been changed to " BOLD("%.8s") ".",
                                     temp, linefix[j].toptexture);
                             else
-                                C_Warning(2, "The top texture of linedef %s has been changed from <b>%.8s</b> to <b>%.8s</b>.",
+                                C_Warning(2, "The top texture of linedef %s has been changed from " BOLD("%.8s") " to " BOLD("%.8s") ".",
                                     temp, textures[li->sidedef->toptexture]->name, linefix[j].toptexture);
                         }
 
@@ -909,10 +910,10 @@ static void P_LoadSegs(int lump)
                         else
                         {
                             if (!li->sidedef->midtexture)
-                                C_Warning(2, "The missing middle texture of linedef %s has been changed to <b>%.8s</b>.",
+                                C_Warning(2, "The missing middle texture of linedef %s has been changed to " BOLD("%.8s") ".",
                                     temp, linefix[j].middletexture);
                             else
-                                C_Warning(2, "The middle texture of linedef %s has been changed from <b>%.8s</b> to <b>%.8s</b>.",
+                                C_Warning(2, "The middle texture of linedef %s has been changed from " BOLD("%.8s") " to " BOLD("%.8s") ".",
                                     temp, textures[li->sidedef->midtexture]->name, linefix[j].middletexture);
                         }
 
@@ -930,10 +931,10 @@ static void P_LoadSegs(int lump)
                         else
                         {
                             if (!li->sidedef->bottomtexture)
-                                C_Warning(2, "The missing bottom texture of linedef %s has been changed to <b>%.8s</b>.",
+                                C_Warning(2, "The missing bottom texture of linedef %s has been changed to " BOLD("%.8s") ".",
                                     temp, linefix[j].bottomtexture);
                             else
-                                C_Warning(2, "The bottom texture of linedef %s has been changed from <b>%.8s</b> to <b>%.8s</b>.",
+                                C_Warning(2, "The bottom texture of linedef %s has been changed from " BOLD("%.8s") " to " BOLD("%.8s") ".",
                                     temp, textures[li->sidedef->bottomtexture]->name, linefix[j].bottomtexture);
                         }
 
@@ -997,18 +998,18 @@ static void P_LoadSegs(int lump)
                             if (li->linedef->special)
                                 C_Warning(2, "The %sline special of linedef %s has been changed from %i (\"%s\") to %i (\"%s\").",
                                     (li->linedef->special < BOOMLINESPECIALS ? "" : (li->linedef->special < MBFLINESPECIALS ?
-                                    "<i>MBF</i>-compatible " : "<i>BOOM</i>-compatible ")), temp, li->linedef->special,
+                                    ITALICS("MBF") "-compatible " : ITALICS("BOOM") "-compatible ")), temp, li->linedef->special,
                                     linespecials[li->linedef->special], linefix[j].special, linespecials[linefix[j].special]);
                             else
                                 C_Warning(2, "The %sline special %i (\"%s\") has been added to linedef %s.",
                                     (li->linedef->special < BOOMLINESPECIALS ? "" : (li->linedef->special < MBFLINESPECIALS ?
-                                    "<i>MBF</i>-compatible " : "<i>BOOM</i>-compatible ")), linefix[j].special,
+                                    ITALICS("MBF") "-compatible " : ITALICS("BOOM") "-compatible ")), linefix[j].special,
                                     linespecials[linefix[j].special], temp);
                         }
                         else
                             C_Warning(2, "The %sline special of linedef %s has been removed.",
                                 (li->linedef->special < BOOMLINESPECIALS ? "" : (li->linedef->special < MBFLINESPECIALS ?
-                                "<i>MBF</i>-compatible " : "<i>BOOM</i>-compatible ")), temp);
+                                ITALICS("MBF") "-compatible " : ITALICS("BOOM") "-compatible ")), temp);
 
                         li->linedef->special = linefix[j].special;
                         free(temp);
@@ -1272,13 +1273,13 @@ static void P_LoadSectors(int lump)
         if (canmodify && r_fixmaperrors)
             for (int j = 0; sectorfix[j].mission != -1; j++)
                 if (gamemission == sectorfix[j].mission && gameepisode == sectorfix[j].episode && gamemap == sectorfix[j].map
-                    && i == sectorfix[j].sector)
+                    && gamemode != shareware && i == sectorfix[j].sector)
                 {
                     if (*sectorfix[j].floorpic)
                     {
                         char    *temp = commify(sectorfix[j].sector);
 
-                        C_Warning(2, "The floor texture of sector %s has been changed from <b>%.8s</b> to <b>%.8s</b>.",
+                        C_Warning(2, "The floor texture of sector %s has been changed from " BOLD("%.8s") " to " BOLD("%.8s") ".",
                             temp, lumpinfo[ss->floorpic + firstflat]->name, sectorfix[j].floorpic);
 
                         ss->floorpic = R_FlatNumForName(sectorfix[j].floorpic);
@@ -1289,7 +1290,7 @@ static void P_LoadSectors(int lump)
                     {
                         char    *temp = commify(sectorfix[j].sector);
 
-                        C_Warning(2, "The ceiling texture of sector %s has been changed from <b>%.8s</b> to <b>%.8s</b>.",
+                        C_Warning(2, "The ceiling texture of sector %s has been changed from " BOLD("%.8s") " to " BOLD("%.8s") ".",
                             temp, lumpinfo[ss->ceilingpic + firstflat]->name, sectorfix[j].ceilingpic);
 
                         ss->ceilingpic = R_FlatNumForName(sectorfix[j].ceilingpic);
@@ -1745,7 +1746,8 @@ static void P_LoadThings(int map, int lump)
                 M_snprintf(buffer, sizeof(buffer), "%ss", mobjinfo[doomednum].name1);
 
             buffer[0] = toupper(buffer[0]);
-            C_Warning(2, "%s can't be spawned in <i>%s.</i>", buffer, gamedescription);
+            C_Warning(2, "%s can't be spawned in " ITALICS("%s."), buffer, gamedescription);
+
             continue;
         }
 
@@ -1760,7 +1762,7 @@ static void P_LoadThings(int map, int lump)
         if (canmodify && r_fixmaperrors)
             for (int j = 0; thingfix[j].mission != -1; j++)
                 if (gamemission == thingfix[j].mission && gameepisode == thingfix[j].episode && gamemap == thingfix[j].map
-                    && thingid == thingfix[j].thing && mt.type == thingfix[j].type
+                    && gamemode != shareware && thingid == thingfix[j].thing && mt.type == thingfix[j].type
                     && mt.x == thingfix[j].oldx && mt.y == thingfix[j].oldy)
                 {
                     char    *temp = commify(thingid);
@@ -2014,6 +2016,7 @@ static void P_LoadSideDefs2(int lump)
                     sec->midmap = 0, R_TextureNumForName(msd->midtexture) : 0);
                 sd->toptexture = ((sec->topmap = R_ColormapNumForName(msd->toptexture)) < 0 ?
                     sec->topmap = 0, R_TextureNumForName(msd->toptexture) : 0);
+
                 break;
 
             case Translucent_MiddleTexture:
@@ -2024,6 +2027,7 @@ static void P_LoadSideDefs2(int lump)
                     R_TextureNumForName(msd->midtexture) : (sd->special++, 0) : (sd->special = 0));
                 sd->toptexture = R_TextureNumForName(msd->toptexture);
                 sd->bottomtexture = R_TextureNumForName(msd->bottomtexture);
+
                 break;
 
             default:
@@ -2034,6 +2038,7 @@ static void P_LoadSideDefs2(int lump)
                 sd->missingtoptexture = (R_CheckTextureNumForName(msd->toptexture) == -1);
                 sd->bottomtexture = R_TextureNumForName(msd->bottomtexture);
                 sd->missingbottomtexture = (R_CheckTextureNumForName(msd->bottomtexture) == -1);
+
                 break;
         }
     }
@@ -2324,12 +2329,12 @@ static void P_LoadBlockMap(int lump)
     if (lump >= numlumps || (lumplen = W_LumpLength(lump)) < 8 || (count = lumplen / 2) >= 0x10000)
     {
         P_CreateBlockMap();
-        C_Warning(2, "The <b>BLOCKMAP</b> lump has been rebuilt.");
+        C_Warning(2, "The " BOLD("BLOCKMAP") " lump has been rebuilt.");
     }
     else if (M_CheckParm("-blockmap"))
     {
         P_CreateBlockMap();
-        C_Warning(1, "A <b>-blockmap</b> parameter was found on the command-line. The <b>BLOCKMAP</b> lump has been rebuilt.");
+        C_Warning(1, "A " BOLD("-blockmap") " parameter was found on the command-line. The " BOLD("BLOCKMAP") " lump has been rebuilt.");
     }
     else
     {
@@ -2363,7 +2368,7 @@ static void P_LoadBlockMap(int lump)
         if (!P_VerifyBlockMap(count))
         {
             P_CreateBlockMap();
-            C_Warning(2, "The <b>BLOCKMAP</b> lump has been rebuilt.");
+            C_Warning(2, "The " BOLD("BLOCKMAP") " lump has been rebuilt.");
         }
     }
 
@@ -2397,6 +2402,8 @@ static void RejectOverrun(int lump, const byte **matrix)
 
         // unlock the original lump, it is no longer needed
         W_ReleaseLumpNum(lump);
+
+        C_Warning(2, "The " BOLD("REJECT") " lump has been increased in size.");
     }
 }
 
@@ -2908,7 +2915,7 @@ void P_SetupLevel(int ep, int map)
 
     temp1 = sentencecase(playername);
     temp2 = titlecase(maptitle);
-    C_PlayerMessage("%s %s <i>%s</i>%s",
+    C_PlayerMessage("%s %s " ITALICS("%s") "%s",
         temp1, (samelevel ? "reentered": "entered"), temp2, (ispunctuation(temp2[strlen(temp2) - 1]) ? "" : "."));
     free(temp1);
     free(temp2);
@@ -2977,11 +2984,11 @@ void P_SetupLevel(int ep, int map)
 
     markpointnum = 0;
     markpointnum_max = 0;
-    markpoints = I_Realloc(markpoints, 0);
+    markpoints = NULL;
 
     pathpointnum = 0;
     pathpointnum_max = 0;
-    pathpoints = I_Realloc(pathpoints, 0);
+    pathpoints = NULL;
 
     massacre = false;
 
@@ -3101,15 +3108,16 @@ static void P_InitMapInfo(void)
             {
                 if (M_StringEndsWith(lumpinfo[MAPINFO]->wadfile->path, "NERVE.WAD"))
                 {
-                    C_Warning(1, "The map markers in PWAD <b>%s</b> are invalid.", lumpinfo[MAPINFO]->wadfile->path);
+                    C_Warning(1, "The map markers in PWAD " BOLD("%s") " are invalid.", lumpinfo[MAPINFO]->wadfile->path);
                     nerve = false;
                     NewDef.prevMenu = &MainDef;
                     MAPINFO = -1;
+
                     break;
                 }
                 else
                 {
-                    C_Warning(1, "The <b>MAPINFO</b> lump contains an invalid map marker.");
+                    C_Warning(1, "The " BOLD("MAPINFO") " lump contains an invalid map marker.");
                     continue;
                 }
             }
@@ -3134,11 +3142,13 @@ static void P_InitMapInfo(void)
                         case MCMD_AUTHOR:
                             SC_MustGetString();
                             M_StringCopy(info->author, sc_String, sizeof(info->author));
+
                             break;
 
                         case MCMD_CLUSTER:
                             SC_MustGetNumber();
                             info->cluster = sc_Number;
+
                             break;
 
                         case MCMD_ENDBUNNY:
@@ -3168,16 +3178,19 @@ static void P_InitMapInfo(void)
                         case MCMD_ENDPIC:
                             SC_MustGetString();
                             info->endpic = W_GetNumForName(sc_String);
+
                             break;
 
                         case MCMD_ENTERPIC:
                             SC_MustGetString();
                             info->enterpic = W_GetNumForName(sc_String);
+
                             break;
 
                         case MCMD_EXITPIC:
                             SC_MustGetString();
                             info->exitpic = W_GetNumForName(sc_String);
+
                             break;
 
                         case MCMD_EPISODE:
@@ -3196,20 +3209,22 @@ static void P_InitMapInfo(void)
                             M_StringCopy(lumpname, sc_String, sizeof(lumpname));
                             SC_MustGetString();
                             M_StringCopy(string, sc_String, sizeof(string));
-                            SC_MustGetString(); // skip key
-
+                            SC_MustGetString();
                             M_AddEpisode(map, ep, lumpname, string);
+
                             break;
                         }
 
                         case MCMD_INTERBACKDROP:
                             SC_MustGetString();
                             M_StringCopy(info->interbackdrop, sc_String, sizeof(info->interbackdrop));
+
                             break;
 
                         case MCMD_INTERMUSIC:
                             SC_MustGetString();
                             info->intermusic = W_CheckNumForName(sc_String);
+
                             break;
 
                         case MCMD_INTERTEXTSECRET:
@@ -3277,21 +3292,25 @@ static void P_InitMapInfo(void)
                         case MCMD_LEVELNAME:
                             SC_MustGetString();
                             M_StringCopy(info->name, sc_String, sizeof(info->name));
+
                             break;
 
                         case MCMD_MUSIC:
                             SC_MustGetString();
                             info->music = W_CheckNumForName(sc_String);
+
                             break;
 
                         case MCMD_MUSICCOMPOSER:
                             SC_MustGetString();
                             M_StringCopy(info->musiccomposer, sc_String, sizeof(info->musiccomposer));
+
                             break;
 
                         case MCMD_MUSICTITLE:
                             SC_MustGetString();
                             M_StringCopy(info->musictitle, sc_String, sizeof(info->musictitle));
+
                             break;
 
                         case MCMD_NEXT:
@@ -3367,6 +3386,7 @@ static void P_InitMapInfo(void)
                         case MCMD_PARTIME:
                             SC_MustGetNumber();
                             info->par = sc_Number;
+
                             break;
 
                         case MCMD_PISTOLSTART:
@@ -3418,12 +3438,14 @@ static void P_InitMapInfo(void)
                         case MCMD_SKYTEXTURE:
                             SC_MustGetString();
                             info->sky1texture = R_TextureNumForName(sc_String);
+
                             break;
 
                         case MCMD_LEVELPIC:
                         case MCMD_TITLEPATCH:
                             SC_MustGetString();
                             info->titlepatch = W_CheckNumForName(sc_String);
+
                             break;
                     }
             }
@@ -3442,16 +3464,16 @@ static void P_InitMapInfo(void)
     SC_Close();
 
     temp = commify(sc_Line);
-    C_Output("Parsed %s line%s in the <b>%sMAPINFO</b> lump in the %s <b>%s</b>.",
+    C_Output("Parsed %s line%s in the " BOLD("%sMAPINFO") " lump in the %s " BOLD("%s") ".",
         temp, (sc_Line > 1 ? "s" : ""), (RMAPINFO >= 0 ? "R" : (UMAPINFO >= 0 ? "U" : "")),
         (lumpinfo[MAPINFO]->wadfile->type == IWAD ? "IWAD" : "PWAD"), lumpinfo[MAPINFO]->wadfile->path);
     free(temp);
 
     if (nojump && (keyboardjump || mousejump != -1 || gamepadjump))
-        C_Warning(1, "This PWAD has disabled use of the <b>+jump</b> action.");
+        C_Warning(1, "This PWAD has disabled use of the " BOLD("+jump") " action.");
 
     if (nomouselook)
-        C_Warning(1, "This PWAD has disabled use of the <b>mouselook</b> CVAR and <b>+mouselook</b> action.");
+        C_Warning(1, "This PWAD has disabled use of the " BOLD("mouselook") " CVAR and " BOLD("+mouselook") " action.");
 }
 
 char *P_GetMapAuthor(int map)
@@ -3528,8 +3550,8 @@ char *P_GetMapMusicTitle(int map)
 
 char *P_GetMapName(int map)
 {
-    return (MAPINFO >= 0 && !sigil ? mapinfo[map].name : ((E1M4B || *speciallumpname) && map == 4 ? s_CAPTION_E1M4B :
-        ((E1M8B || *speciallumpname) && map == 8 ? s_CAPTION_E1M8B : "")));
+    return (MAPINFO >= 0 && !sigil ? mapinfo[map].name : ((E1M4B || *speciallumpname) && map == 4 ? s_HUSTR_E1M4B :
+        ((E1M8B || *speciallumpname) && map == 8 ? s_HUSTR_E1M8B : "")));
 }
 
 int P_GetMapNext(int map)

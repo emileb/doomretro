@@ -6,7 +6,7 @@
 
 ========================================================================
 
-  Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
+  Copyright © 1993-2021 by id Software LLC, a ZeniMax Media company.
   Copyright © 2013-2021 by Brad Harding <mailto:brad@doomretro.com>.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
@@ -172,6 +172,7 @@ typedef struct player_s
     // Hint messages.
     char            *message;
     char            prevmessage[133];
+    int             prevmessagetics;
 
     // For screen flashing (red or bright).
     int             damagecount;
@@ -231,6 +232,7 @@ typedef struct player_s
     int             itemspickedup_ammo_shells;
     int             itemspickedup_armor;
     int             itemspickedup_health;
+    int             infightcount;
 } player_t;
 
 //

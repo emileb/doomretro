@@ -6,7 +6,7 @@
 
 ========================================================================
 
-  Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
+  Copyright © 1993-2021 by id Software LLC, a ZeniMax Media company.
   Copyright © 2013-2021 by Brad Harding <mailto:brad@doomretro.com>.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
@@ -108,7 +108,7 @@ dboolean SC_GetString(void)
 
     while (!foundToken)
     {
-        while (ScriptPtr < ScriptEndPtr && (*ScriptPtr <= 32 || *ScriptPtr == '=' || *ScriptPtr == ','))
+        while (ScriptPtr < ScriptEndPtr && (*ScriptPtr <= 32 || *ScriptPtr == '=' || (*ScriptPtr == ',' && *(ScriptPtr - 1) != '\'')))
             if (*ScriptPtr++ == '\n')
                 sc_Line++;
 
@@ -160,7 +160,7 @@ dboolean SC_GetString(void)
 
             *text++ = *ScriptPtr++;
 
-            if (*ScriptPtr == '=' || *ScriptPtr == ',')
+            if (*ScriptPtr == '=' || (*ScriptPtr == ',' && *(ScriptPtr - 1) != '\''))
             {
                 ScriptPtr++;
                 break;
@@ -220,6 +220,6 @@ static void SC_ScriptError(void)
 {
     char    *temp = commify(sc_Line);
 
-    C_Warning(1, "Line %s in the <b>MAPINFO</b> lump is invalid.", temp);
+    C_Warning(1, "Line %s in the " BOLD("MAPINFO") " lump is invalid.", temp);
     free(temp);
 }

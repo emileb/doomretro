@@ -6,7 +6,7 @@
 
 ========================================================================
 
-  Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
+  Copyright © 1993-2021 by id Software LLC, a ZeniMax Media company.
   Copyright © 2013-2021 by Brad Harding <mailto:brad@doomretro.com>.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
@@ -280,7 +280,7 @@ cheatseq_t cheat_clev = CHEAT("idclev", 0);
 cheatseq_t cheat_clev_xy = CHEAT("idclev", 2);
 cheatseq_t cheat_mypos = CHEAT("idmypos", 0);
 cheatseq_t cheat_amap = CHEAT("iddt", 0);
-cheatseq_t cheat_buddha = CHEAT("yinghao", 0);
+cheatseq_t cheat_buddha = CHEAT("sascha", 0);
 
 static dboolean movekey(char key)
 {
@@ -384,25 +384,51 @@ static const int mus[IDMUS_MAX][6] =
 //
 static void ST_RefreshBackground(void)
 {
-    R_FillBezel();
+    short   sbarwidth;
+
+#if SCREENSCALE == 1
+    if ((sbarwidth = SHORT(sbar->width)) < SCREENWIDTH)
+        R_FillBezel();
 
     if (STBAR >= 3)
     {
-        V_DrawWidePatch((SCREENWIDTH / SCREENSCALE - SHORT(sbar->width)) / 2, VANILLAHEIGHT - VANILLASBARHEIGHT, 0, sbar);
+        V_DrawWidePatch((SCREENWIDTH / SCREENSCALE - sbarwidth) / 2, VANILLAHEIGHT - VANILLASBARHEIGHT, 0, sbar);
+        V_DrawPatch(ST_ARMSBGX + hacx * 4, VANILLAHEIGHT - VANILLASBARHEIGHT, 0, armsbg);
+    }
+    else
+        V_DrawWidePatch((SCREENWIDTH / SCREENSCALE - sbarwidth) / 2, VANILLAHEIGHT - VANILLASBARHEIGHT, 0, sbar);
+#else
+    if (STBAR >= 3)
+    {
+        if ((sbarwidth = SHORT(sbar->width)) < SCREENWIDTH)
+            R_FillBezel();
+
+        V_DrawWidePatch((SCREENWIDTH / SCREENSCALE - sbarwidth) / 2, VANILLAHEIGHT - VANILLASBARHEIGHT, 0, sbar);
         V_DrawPatch(ST_ARMSBGX + hacx * 4, VANILLAHEIGHT - VANILLASBARHEIGHT, 0, armsbg);
     }
     else if (r_detail == r_detail_low)
-        V_DrawWidePatch((SCREENWIDTH / SCREENSCALE - SHORT(sbar->width)) / 2, VANILLAHEIGHT - VANILLASBARHEIGHT, 0, sbar);
-    else if (vid_widescreen)
-        V_DrawBigPatch((SCREENWIDTH - SHORT(sbar2->width)) / 2, ST_Y, sbar2);
+    {
+        if ((sbarwidth = SHORT(sbar->width)) < SCREENWIDTH)
+            R_FillBezel();
+
+        V_DrawWidePatch((SCREENWIDTH / SCREENSCALE - sbarwidth) / 2, VANILLAHEIGHT - VANILLASBARHEIGHT, 0, sbar);
+    }
     else
-        V_DrawBigWidePatch(ST_X, SCREENHEIGHT - SBARHEIGHT, sbar2);
+    {
+        if ((sbarwidth = SHORT(sbar2->width)) < SCREENWIDTH)
+            R_FillBezel();
+
+        if (vid_widescreen)
+            V_DrawBigPatch((SCREENWIDTH - sbarwidth) / 2, ST_Y, sbar2);
+        else
+            V_DrawBigWidePatch(ST_X, SCREENHEIGHT - SBARHEIGHT, sbar2);
+    }
+#endif
 }
 
 static int ST_CalcPainOffset(void);
 
-// Respond to keyboard input events,
-//  intercept cheats.
+// Respond to keyboard input events, intercept cheats.
 dboolean ST_Responder(event_t *ev)
 {
     // if a user keypress...
@@ -915,7 +941,7 @@ dboolean ST_Responder(event_t *ev)
             {
                 S_StartSound(NULL, sfx_getpow);
                 C_Input(cheat_amap.sequence);
-                D_FadeScreen();
+                D_FadeScreen(false);
 
                 if (viewplayer->cheats & CF_ALLMAP)
                 {
@@ -1004,6 +1030,7 @@ dboolean ST_Responder(event_t *ev)
 
                     gamemap = map;
                     idclevtics = MAPCHANGETICS;
+                    quickSaveSlot = -1;
                     drawdisk = true;
                     stat_cheated = SafeAdd(stat_cheated, 1);
                     viewplayer->cheated++;
@@ -1057,6 +1084,7 @@ static void ST_UpdateFaceWidget(void)
         priority = 5;
         st_faceindex = ST_GODFACE;
         st_facecount = 0;
+
         return;
     }
 
@@ -1353,7 +1381,7 @@ void ST_Drawer(dboolean fullscreen, dboolean refresh)
         ST_DiffDraw();
 }
 
-typedef void (*load_callback_t)(char *lumpname, patch_t **variable);
+typedef void (*load_callback_t)(char *, patch_t **);
 
 static void ST_LoadUnloadGraphics(load_callback_t callback)
 {
@@ -1550,8 +1578,8 @@ void ST_Init(void)
 {
     ST_LoadUnloadGraphics(&ST_LoadCallback);
 
-    st_drawbrdr = (lumpinfo[W_GetNumForName("BRDR_B")]->wadfile->type == PWAD ||
-        lumpinfo[W_GetNumForName((gamemode == commercial ? "GRNROCK" : "FLOOR7_2"))]->wadfile->type == IWAD);
+    st_drawbrdr = (lumpinfo[W_GetNumForName("BRDR_B")]->wadfile->type == PWAD
+        || lumpinfo[W_GetNumForName((gamemode == commercial ? "GRNROCK" : "FLOOR7_2"))]->wadfile->type == IWAD);
 
     // [BH] fix evil grin being displayed when picking up first item after
     // loading save game or entering IDFA/IDKFA cheat
@@ -1562,7 +1590,11 @@ void ST_Init(void)
     if (gamemode == shareware)
         maxammo[am_cell] = 0;
 
+#if SCREENSCALE == 1
+    usesmallnums = false;
+#else
     usesmallnums = ((!STYSNUM0 && STBAR == 2) || gamemode == shareware);
+#endif
 
     STLib_Init();
     ST_InitCheats();

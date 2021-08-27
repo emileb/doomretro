@@ -6,7 +6,7 @@
 
 ========================================================================
 
-  Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
+  Copyright © 1993-2021 by id Software LLC, a ZeniMax Media company.
   Copyright © 2013-2021 by Brad Harding <mailto:brad@doomretro.com>.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
@@ -93,6 +93,7 @@ static int64_t      bottomfrac;
 static fixed_t      bottomstep;
 
 lighttable_t        **walllights;
+lighttable_t        **walllightsnext;
 
 static int          *maskedtexturecol;  // dropoff overflow
 
@@ -142,7 +143,7 @@ extern dboolean     usebrightmaps;
 static int  max_rwscale = 64 * FRACUNIT;
 static int  heightbits = 12;
 static int  heightunit = 1 << 12;
-static int  invhgtbits = 4;
+static int  invhgtbits = FRACBITS - 12;
 
 static void R_FixWiggle(sector_t *sector)
 {
@@ -222,7 +223,6 @@ void R_RenderMaskedSegRange(drawseg_t *ds, const int x1, const int x2)
     int             texnum;
     fixed_t         texheight;
     const rpatch_t  *patch;
-    sector_t        tempsec;        // killough 04/13/98
 
     curline = ds->curline;
     colfunc = (curline->linedef->tranlump >= 0 ? tl50segcolfunc : segcolfunc);
@@ -235,9 +235,18 @@ void R_RenderMaskedSegRange(drawseg_t *ds, const int x1, const int x2)
     // Use different light tables for horizontal/vertical.
     // killough 04/13/98: get correct lightlevel for 2s normal textures
     if (fixedcolormap)
+    {
         dc_colormap[0] = fixedcolormap;
+        dc_nextcolormap[0] = fixedcolormap;
+    }
     else
-        walllights = GetLightTable(R_FakeFlat(frontsector, &tempsec, NULL, NULL, false)->lightlevel);
+    {
+        sector_t    tempsec;
+        short       lightlevel = R_FakeFlat(frontsector, &tempsec, NULL, NULL, false)->lightlevel;
+
+        walllights = GetLightTable(lightlevel);
+        walllightsnext = GetLightTable(lightlevel + 4);
+    }
 
     maskedtexturecol = ds->maskedtexturecol;
     rw_scalestep = ds->scalestep;
@@ -283,7 +292,13 @@ void R_RenderMaskedSegRange(drawseg_t *ds, const int x1, const int x2)
 
             // calculate lighting
             if (!fixedcolormap)
-                dc_colormap[0] = walllights[MIN(spryscale >> LIGHTSCALESHIFT, MAXLIGHTSCALE - 1)];
+            {
+                int index = MIN(spryscale >> LIGHTSCALESHIFT, MAXLIGHTSCALE - 1);
+
+                dc_colormap[0] = walllights[index];
+                dc_nextcolormap[0] = walllightsnext[index];
+                dc_z = spryscale;
+            }
 
             dc_iscale = UINT_MAX / (unsigned int)spryscale;
 
@@ -304,7 +319,10 @@ static dboolean didsolidcol;
 static void R_RenderSegLoop(void)
 {
     if (fixedcolormap)
+    {
         dc_colormap[0] = fixedcolormap;
+        dc_nextcolormap[0] = fixedcolormap;
+    }
 
     for (; rw_x < rw_stopx; rw_x++)
     {
@@ -354,7 +372,13 @@ static void R_RenderSegLoop(void)
             texturecolumn = (rw_offset - FixedMul(finetangent[angle], rw_distance)) >> FRACBITS;
 
             if (!fixedcolormap)
-                dc_colormap[0] = walllights[MIN(rw_scale >> LIGHTSCALESHIFT, MAXLIGHTSCALE - 1)];
+            {
+                int index = MIN(rw_scale >> LIGHTSCALESHIFT, MAXLIGHTSCALE - 1);
+
+                dc_colormap[0] = walllights[index];
+                dc_nextcolormap[0] = walllightsnext[index];
+                dc_z = rw_scale;
+            }
 
             dc_x = rw_x;
             dc_iscale = UINT_MAX / rw_scale;
@@ -801,7 +825,12 @@ void R_StoreWallRange(const int start, const int stop)
         // calculate light table
         //  use different light tables for horizontal/vertical
         if (!fixedcolormap)
-            walllights = GetLightTable(frontsector->lightlevel);
+        {
+            short   lightlevel = frontsector->lightlevel;
+
+            walllights = GetLightTable(lightlevel);
+            walllightsnext = GetLightTable(lightlevel + 4);
+        }
     }
 
     // if a floor/ceiling plane is on the wrong side of the view plane, it is definitely invisible
@@ -818,27 +847,21 @@ void R_StoreWallRange(const int start, const int stop)
     }
 
     // calculate incremental stepping values for texture edges
-    worldtop >>= invhgtbits;
-    worldbottom >>= invhgtbits;
-
-    topstep = -FixedMul(rw_scalestep, worldtop);
+    topstep = -FixedMul(rw_scalestep, (worldtop >>= invhgtbits));
     topfrac = ((int64_t)centeryfrac >> invhgtbits) - (((int64_t)worldtop * rw_scale) >> FRACBITS);
 
-    bottomstep = -FixedMul(rw_scalestep, worldbottom);
+    bottomstep = -FixedMul(rw_scalestep, (worldbottom >>= invhgtbits));
     bottomfrac = ((int64_t)centeryfrac >> invhgtbits) - (((int64_t)worldbottom * rw_scale) >> FRACBITS);
 
     if (backsector)
     {
-        worldhigh >>= invhgtbits;
-        worldlow >>= invhgtbits;
-
-        if (worldhigh < worldtop)
+        if ((worldhigh >>= invhgtbits) < worldtop)
         {
             pixhigh = ((int64_t)centeryfrac >> invhgtbits) - (((int64_t)worldhigh * rw_scale) >> FRACBITS);
             pixhighstep = -FixedMul(rw_scalestep, worldhigh);
         }
 
-        if (worldlow > worldbottom)
+        if ((worldlow >>= invhgtbits) > worldbottom)
         {
             pixlow = ((int64_t)centeryfrac >> invhgtbits) - (((int64_t)worldlow * rw_scale) >> FRACBITS);
             pixlowstep = -FixedMul(rw_scalestep, worldlow);

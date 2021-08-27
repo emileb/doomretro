@@ -6,7 +6,7 @@
 
 ========================================================================
 
-  Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
+  Copyright © 1993-2021 by id Software LLC, a ZeniMax Media company.
   Copyright © 2013-2021 by Brad Harding <mailto:brad@doomretro.com>.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
@@ -929,6 +929,7 @@ typedef struct
     // for color translation and shadow draw,
     //  maxbright frames as well
     lighttable_t        *colormap;
+    lighttable_t        *nextcolormap;
 
     mobj_t              *mobj;
 
@@ -954,6 +955,7 @@ typedef struct
     fixed_t             texturemid;
     int                 patch;
     lighttable_t        *colormap;
+    lighttable_t        *nextcolormap;
     void                (*colfunc)(void);
     fixed_t             blood;
 } bloodsplatvissprite_t;

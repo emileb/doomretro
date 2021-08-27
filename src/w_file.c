@@ -6,7 +6,7 @@
 
 ========================================================================
 
-  Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
+  Copyright © 1993-2021 by id Software LLC, a ZeniMax Media company.
   Copyright © 2013-2021 by Brad Harding <mailto:brad@doomretro.com>.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
@@ -36,9 +36,79 @@
 ========================================================================
 */
 
+#if defined(_WIN32)
+#include <windows.h>
+#include <stdlib.h>
+#endif
+
 #include "m_misc.h"
 #include "w_file.h"
 #include "z_zone.h"
+
+#if defined(_WIN32)
+static wchar_t *ConvertToUTF8(const char *str)
+{
+    int     wlen = MultiByteToWideChar(CP_UTF8, 0, str, -1, NULL, 0);
+    wchar_t *wstr = (wchar_t *)malloc(sizeof(wchar_t) * wlen);
+
+    MultiByteToWideChar(CP_UTF8, 0, str, -1, wstr, wlen);
+
+    return wstr;
+}
+
+FILE *D_fopen(const char *filename, const char *mode)
+{
+    wchar_t *wname = ConvertToUTF8(filename);
+    wchar_t *wmode = ConvertToUTF8(mode);
+    FILE    *file = _wfopen(wname, wmode);
+
+    if (wname)
+        free(wname);
+
+    if (wmode)
+        free(wmode);
+
+    return file;
+}
+
+int D_remove(const char *path)
+{
+    wchar_t *wpath = ConvertToUTF8(path);
+    int     result = _wremove(wpath);
+
+    if (wpath)
+        free(wpath);
+
+    return result;
+}
+
+int D_stat(const char *path, struct stat *buffer)
+{
+    wchar_t         *wpath = ConvertToUTF8(path);
+    struct _stat    wbuffer;
+    int             result = _wstat(wpath, &wbuffer);
+
+    buffer->st_mode = wbuffer.st_mode;
+    buffer->st_mtime = wbuffer.st_mtime;
+    buffer->st_size = wbuffer.st_size;
+
+    if (wpath)
+        free(wpath);
+
+    return result;
+}
+
+int D_mkdir(const char *dirname)
+{
+    wchar_t *wpath = ConvertToUTF8(dirname);
+    int     result = _wmkdir(wpath);
+
+    if (wpath)
+        free(wpath);
+
+    return result;
+}
+#endif
 
 wadfile_t *W_OpenFile(char *path)
 {
@@ -85,5 +155,5 @@ dboolean W_WriteFile(char const *name, const void *source, size_t length)
     if (!length)
         remove(name);
 
-    return length;
+    return !!length;
 }

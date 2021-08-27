@@ -6,7 +6,7 @@
 
 ========================================================================
 
-  Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
+  Copyright © 1993-2021 by id Software LLC, a ZeniMax Media company.
   Copyright © 2013-2021 by Brad Harding <mailto:brad@doomretro.com>.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
@@ -85,6 +85,7 @@ dboolean HUlib_AddCharToTextLine(hu_textline_t *t, char ch)
         t->l[t->len++] = ch;
         t->l[t->len] = '\0';
         t->needsupdate = 4;
+
         return true;
     }
 }
@@ -145,7 +146,7 @@ static void HUlib_DrawAltHUDTextLine(hu_textline_t *l)
     int             x = 10;
     int             color = nearestwhite;
     int             len = l->len;
-    byte            *tinttab = (automapactive ? tinttab75 : tinttab60);
+    byte            *tinttab = tinttab80;
 
     if (!automapactive)
     {
@@ -156,12 +157,12 @@ static void HUlib_DrawAltHUDTextLine(hu_textline_t *l)
 
     if (fade)
     {
-        if (message_counter <= 2)
-            tinttab = tinttab20;
-        else if (message_counter <= 4)
-            tinttab = tinttab25;
-        else if (message_counter <= 6)
-            tinttab = tinttab33;
+        byte    *tinttabs[] = { NULL, tinttab10, tinttab20, tinttab30, tinttab40, tinttab50, tinttab60, tinttab70 };
+
+        if (message_counter <= 7)
+            tinttab = tinttabs[message_counter];
+        else if (message_fadeon && message_counter >= HU_MSGTIMEOUT - 6)
+            tinttab = tinttabs[HU_MSGTIMEOUT - message_counter + 1];
     }
 
     if (idbehold)
@@ -276,39 +277,28 @@ void HUlib_DrawAltAutomapTextLine(hu_textline_t *l, dboolean external)
 
 const kern_t kern[] =
 {
-    { ',', '1',  -1 },
-    { ',', '7',  -1 },
-    { ',', 'Y',  -1 },
-    { '.', '"',  -1 },
-    { '.', '1',  -1 },
-    { '.', '7',  -1 },
-    { '3', '"',  -1 },
-    { 'D', '\'', -1 },
-    { 'F', '.',  -1 },
-    { 'L', '"',  -1 },
-    { 'L', 'T',  -1 },
-    { 'P', ',',  -1 },
-    { 'P', '.',  -1 },
-    { 'T', ',',  -1 },
-    { 'T', '.',  -1 },
-    { 'Y', ',',  -1 },
-    { 'Y', '.',  -1 },
-    {  0,   0,    0 }
+    { ',', '1',  -1 }, { ',', '7',  -1 }, { ',', 'Y',  -1 }, { '.', '"',  -1 },
+    { '.', '1',  -1 }, { '.', '7',  -1 }, { '3', '"',  -1 }, { 'D', '\'', -1 },
+    { 'F', '.',  -1 }, { 'L', '"',  -1 }, { 'L', 'T',  -1 }, { 'P', ',',  -1 },
+    { 'P', '.',  -1 }, { 'T', ',',  -1 }, { 'T', '.',  -1 }, { 'Y', ',',  -1 },
+    { 'Y', '.',  -1 }, {  0,   0,    0 }
 };
 
 static void HUlib_DrawTextLine(hu_textline_t *l, dboolean external)
 {
-    int             w = 0;
-    int             tw = 0;
-    int             x, y;
-    int             maxx, maxy;
+    int             textwidth = 0;
+    int             x = l->x;
+    int             y = l->y;
+    int             maxx;
+    int             maxy = (y + 10) * SCREENSCALE;
     unsigned char   prev = '\0';
     byte            *fb1 = screens[0];
     byte            *fb2 = screens[(r_screensize < r_screensize_max - 1 && !automapactive)];
     byte            *tinttab1 = tinttab50;
-    byte            *tinttab2 = tinttab75;
+    byte            *tinttab2 = tinttab80;
     int             len = l->len;
     const dboolean  idmypos = (viewplayer->cheats & CF_MYPOS);
+    const int       screenwidth = (external ? MAPWIDTH : SCREENWIDTH);
 
     if (external)
     {
@@ -316,21 +306,18 @@ static void HUlib_DrawTextLine(hu_textline_t *l, dboolean external)
         fb2 = mapscreen;
     }
 
-    // draw the new stuff
-    x = l->x;
-    y = l->y;
-
     memset(tempscreen, PINK, SCREENAREA);
 
     for (int i = 0; i < len; i++)
     {
         unsigned char   c = toupper(l->l[i]);
+        int             charwidth = 0;
 
         if (c == ' ')
         {
-            w = (vanilla ? 4 : (i > 0 && (prev == '.' || prev == '!' || prev == '?') ? 5 : 3));
-            x += w;
-            tw += w;
+            charwidth = (vanilla ? 4 : (i > 0 && (prev == '.' || prev == '!' || prev == '?') ? 5 : 3));
+            x += charwidth;
+            textwidth += charwidth;
         }
         else if (c != '\n' && ((c >= l->sc && c <= '_') || c == 176))
         {
@@ -356,7 +343,7 @@ static void HUlib_DrawTextLine(hu_textline_t *l, dboolean external)
             if (STCFN034)
             {
                 // [BH] display lump from PWAD with shadow
-                w = SHORT(l->f[c - l->sc]->width);
+                charwidth = SHORT(l->f[c - l->sc]->width);
 
                 if (prev == ' ' && c == '(' && !idmypos)
                     x -= 2;
@@ -385,12 +372,12 @@ static void HUlib_DrawTextLine(hu_textline_t *l, dboolean external)
                 }
 
                 // [BH] draw individual character
-                w = (int)strlen(smallcharset[j]) / 10 - 1;
-                HU_DrawChar(x, y - 1, j, SCREENWIDTH);
+                charwidth = (int)strlen(smallcharset[j]) / 10 - 1;
+                HU_DrawChar(x, y - 1, j, screenwidth);
             }
 
-            x += w;
-            tw += w;
+            x += charwidth;
+            textwidth += charwidth;
         }
 
         prev = c;
@@ -408,7 +395,7 @@ static void HUlib_DrawTextLine(hu_textline_t *l, dboolean external)
                     for (int y2 = 0; y2 < SCREENSCALE; y2++)
                         for (int x2 = 0; x2 < SCREENSCALE; x2++)
                         {
-                            byte    *dest = &tempscreen[((l->y + y1 + 6) * SCREENSCALE + y2) * SCREENWIDTH
+                            byte    *dest = &tempscreen[((l->y + y1 + 6) * SCREENSCALE + y2) * screenwidth
                                         + (l->x + x1 - 3) * SCREENSCALE + x2];
 
                             *dest = (src == PINK ? 0 : src);
@@ -417,65 +404,54 @@ static void HUlib_DrawTextLine(hu_textline_t *l, dboolean external)
     }
 
     // [BH] draw entire message from buffer onto screen
-    maxx = (l->x + tw + 1) * SCREENSCALE;
-    maxy = (y + 10) * SCREENSCALE;
-
     if (fade)
     {
-        if (message_counter <= 2)
+        byte    *tinttabs1[] = { NULL, tinttab10, tinttab20, tinttab20, tinttab30, tinttab30, tinttab40, tinttab40 };
+        byte    *tinttabs2[] = { NULL, tinttab10, tinttab20, tinttab30, tinttab40, tinttab50, tinttab60, tinttab70 };
+
+        if (message_counter <= 7)
         {
-            tinttab1 = tinttab20;
-            tinttab2 = tinttab20;
+            tinttab1 = tinttabs1[message_counter];
+            tinttab2 = tinttabs2[message_counter];
         }
-        else if (message_counter <= 4)
+        else if (message_fadeon && message_counter >= HU_MSGTIMEOUT - 6)
         {
-            tinttab1 = tinttab25;
-            tinttab2 = tinttab40;
-        }
-        else if (message_counter <= 6)
-        {
-            tinttab1 = tinttab33;
-            tinttab2 = tinttab60;
+            tinttab1 = tinttabs1[HU_MSGTIMEOUT - message_counter + 1];
+            tinttab2 = tinttabs2[HU_MSGTIMEOUT - message_counter + 1];
         }
     }
+
+    maxx = (l->x + textwidth + 1) * SCREENSCALE;
 
     for (int yy = MAX(0, l->y - 1); yy < maxy; yy++)
         for (int xx = l->x; xx < maxx; xx++)
         {
-            int     dot = yy * SCREENWIDTH + xx;
+            int     dot = yy * screenwidth + xx;
             byte    *source = &tempscreen[dot];
             byte    *dest1 = &fb1[dot];
 
             if (!*source)
                 *dest1 = tinttab1[(nearestblack << 8) + fb2[dot]];
             else if (*source != PINK)
-            {
-                if (r_hud_translucency)
-                    *dest1 = tinttab2[(*source << 8) + fb2[dot]];
-                else
-                    *dest1 = *source;
-            }
+                *dest1 = (r_hud_translucency ? tinttab2[(*source << 8) + fb2[dot]] : *source);
         }
 }
 
 void HUlib_DrawAutomapTextLine(hu_textline_t *l, dboolean external)
 {
     int             w = (external ? MAPWIDTH : SCREENWIDTH);
-    int             x, y;
+    int             x = l->x;
+    int             y = l->y;
     unsigned char   prev = '\0';
     byte            *fb = (external ? mapscreen : screens[0]);
     int             len = l->len;
-
-    // draw the new stuff
-    x = l->x;
-    y = l->y;
 
     for (int i = 0; i < len; i++)
     {
         unsigned char   c = toupper(l->l[i]);
 
         if (c == ' ')
-            x += (vanilla ? 4 : (i > 0 && (prev == '.' || prev == '!' || prev == '?') ? 5 : 3)) * SCREENSCALE;
+            x += (vanilla ? 8 : (i > 0 && (prev == '.' || prev == '!' || prev == '?') ? 10 : 6));
         else if (c != '\n' && ((c >= l->sc && c <= '_') || c == 176))
         {
             int j = c - '!';
@@ -531,7 +507,7 @@ void HUlib_DrawAutomapTextLine(hu_textline_t *l, dboolean external)
                 HU_DrawTranslucentChar(x / 2, y / 2 - 1, j, fb, w);
             }
 
-            x += SHORT(l->f[c - l->sc]->width) * SCREENSCALE;
+            x += SHORT(l->f[c - l->sc]->width) * 2;
         }
 
         prev = c;

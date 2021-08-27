@@ -6,7 +6,7 @@
 
 ========================================================================
 
-  Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
+  Copyright © 1993-2021 by id Software LLC, a ZeniMax Media company.
   Copyright © 2013-2021 by Brad Harding <mailto:brad@doomretro.com>.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
@@ -221,7 +221,7 @@ dboolean I_MidiRPCInitServer(void)
     // Look for executable file
     if (!M_FileExists(module))
     {
-        C_Warning(1, "<b>%s</b> couldn't be found.", module);
+        C_Warning(1, BOLD("%s") " couldn't be found.", module);
         return false;
     }
 
@@ -230,11 +230,11 @@ dboolean I_MidiRPCInitServer(void)
 
     if (result)
     {
-        C_Output("Using <b>%s</b> to play MUS and MIDI music lumps.", module);
+        C_Output("Using " BOLD("%s") " to play MUS and MIDI music lumps.", module);
         serverInit = true;
     }
     else
-        C_Warning(1, "<b>%s</b> couldn't be initialized.", module);
+        C_Warning(1, BOLD("%s") " couldn't be initialized.", module);
 
     return result;
 }
@@ -265,7 +265,7 @@ dboolean I_MidiRPCInitClient(void)
     result = I_MidiRPCWaitForServer();
 
     if (!result)
-        C_Warning(1, "<b>%s</b> couldn't be initialized.", module);
+        C_Warning(1, BOLD("%s") " couldn't be initialized.", module);
 
     return result;
 }

@@ -6,7 +6,7 @@
 
 ========================================================================
 
-  Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
+  Copyright © 1993-2021 by id Software LLC, a ZeniMax Media company.
   Copyright © 2013-2021 by Brad Harding <mailto:brad@doomretro.com>.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
@@ -1150,7 +1150,7 @@ typedef enum
     S_TRAIL3,
     S_TRAIL4,
 
-    // [BH] extra DeHackEd states 1081 to 3999
+    // [BH] extra DeHackEd states 1,081 to 3,999
     EXTRASTATES = 1081,
 
     NUMSTATES = 4000

@@ -6,7 +6,7 @@
 
 ========================================================================
 
-  Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
+  Copyright © 1993-2021 by id Software LLC, a ZeniMax Media company.
   Copyright © 2013-2021 by Brad Harding <mailto:brad@doomretro.com>.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
@@ -43,6 +43,8 @@
 #include "doomdef.h"
 #include "r_defs.h"
 
+#define PAGETICS    (20 * TICRATE)
+
 extern patch_t  *pagelump;
 extern patch_t  *creditlump;
 extern char     **episodes[];
@@ -53,6 +55,8 @@ extern char     *pwadfile;
 extern dboolean advancetitle;
 extern dboolean splashscreen;
 extern dboolean dowipe;
+extern int      logotic;
+extern int      pagetic;
 extern int      titlesequence;
 extern int      fadecount;
 
@@ -78,7 +82,7 @@ void D_AdvanceTitle(void);
 void D_DoAdvanceTitle(void);
 void D_StartTitle(int page);
 void D_FadeScreenToBlack(void);
-void D_FadeScreen(void);
+void D_FadeScreen(dboolean screenshot);
 dboolean D_IsDOOMIWAD(char *filename);
 
 #endif

@@ -6,7 +6,7 @@
 
 ========================================================================
 
-  Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
+  Copyright © 1993-2021 by id Software LLC, a ZeniMax Media company.
   Copyright © 2013-2021 by Brad Harding <mailto:brad@doomretro.com>.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
@@ -77,6 +77,7 @@ patch_t                 *hu_font[HU_FONTSIZE];
 static hu_textline_t    w_title;
 
 dboolean                message_on;
+dboolean                message_fadeon;
 dboolean                message_dontfuckwithme;
 static dboolean         message_external;
 static dboolean         message_nottobefuckedwith;
@@ -97,6 +98,7 @@ static patch_t          *bluearmorpatch;
 
 int                     crosshair = crosshair_default;
 int                     crosshaircolor = crosshaircolor_default;
+dboolean                groupmessages = groupmessages_default;
 int                     playergender = playergender_default;
 char                    *playername = playername_default;
 dboolean                r_althud = r_althud_default;
@@ -113,13 +115,13 @@ static int              coloroffset;
 void A_Raise(mobj_t *actor, player_t *player, pspdef_t *psp);
 void A_Lower(mobj_t *actor, player_t *player, pspdef_t *psp);
 
-static void (*hudfunc)(int x, int y, patch_t *patch, byte *translucency);
-static void (*hudnumfunc)(int x, int y, patch_t *patch, byte *translucency);
+static void (*hudfunc)(int, int, patch_t *, byte *);
+static void (*hudnumfunc)(int, int, patch_t *, byte *);
 
-static void (*althudfunc)(int x, int y, patch_t *patch, int from, int to);
-void (*althudtextfunc)(int x, int y, byte *screen, patch_t *patch, dboolean italics, int color, int screenwidth, byte *tinttab);
-static void (*fillrectfunc)(int scrn, int x, int y, int width, int height, int color, dboolean right);
-static void (*fillrectfunc2)(int scrn, int x, int y, int width, int height, int color, dboolean right);
+static void (*althudfunc)(int, int, patch_t *, int, int);
+void (*althudtextfunc)(int, int, byte *, patch_t *, dboolean, int, int, byte *);
+static void (*fillrectfunc)(int, int, int, int, int, int, dboolean);
+static void (*fillrectfunc2)(int, int, int, int, int, int, dboolean);
 
 static struct
 {
@@ -296,7 +298,7 @@ void HU_Start(void)
         len--;
     }
 
-    while (*s)
+    while (*s && *s != '\r' && *s != '\n')
         HUlib_AddCharToTextLine(&w_title, *(s++));
 
     headsupactive = true;
@@ -550,7 +552,7 @@ static void HU_DrawHUD(void)
     health_x = HUD_HEALTH_X - (health_x + (health_x & 1) + tallpercentwidth) / 2;
 
     if (patch)
-        hudfunc(HUD_HEALTH_X - SHORT(patch->width) / 2, HUD_HEALTH_Y - SHORT(patch->height) - 2, patch, tinttab75);
+        hudfunc(HUD_HEALTH_X - SHORT(patch->width) / 2 - 1, HUD_HEALTH_Y - SHORT(patch->height) - 2, patch, tinttab75);
 
     if (r_hud_translucency || !healthanim)
     {
@@ -1102,15 +1104,15 @@ void HU_Drawer(void)
             w_message.l->x = 0;
             w_message.l->y = 0;
         }
+        else if ((r_screensize == r_screensize_max && !r_althud) || message_external)
+        {
+            w_message.l->x = HU_MSGX * SCREENSCALE + 8;
+            w_message.l->y = HU_MSGY * SCREENSCALE + 4;
+        }
         else if (vid_widescreen && r_screensize == r_screensize_max - 1)
         {
             w_message.l->x = HU_MSGX + WIDESCREENDELTA;
             w_message.l->y = HU_MSGY;
-        }
-        else if (r_screensize == r_screensize_max && !r_althud)
-        {
-            w_message.l->x = HU_MSGX * SCREENSCALE + 8;
-            w_message.l->y = HU_MSGY * SCREENSCALE + 4;
         }
         else
         {
@@ -1130,9 +1132,14 @@ void HU_Drawer(void)
         else
         {
             if (vid_widescreen)
-                w_title.x = (r_screensize == r_screensize_max - 1 ? HU_TITLEX + WIDESCREENDELTA * SCREENSCALE : 8);
+                w_title.x = (r_screensize == r_screensize_max - 1 ? HU_TITLEX + WIDESCREENDELTA * 2 : 8);
 
-            w_title.y = MAPHEIGHT - hu_font[0]->height * SCREENSCALE - 4;
+#if SCREENSCALE == 1
+            w_title.y = MAPHEIGHT * 2 - hu_font[0]->height * 2 - 4;
+#else
+            w_title.y = MAPHEIGHT - hu_font[0]->height * 2 - 4;
+#endif
+
             HUlib_DrawAutomapTextLine(&w_title, false);
         }
     }
@@ -1191,11 +1198,15 @@ void HU_Ticker(void)
     const dboolean  idmypos = (viewplayer->cheats & CF_MYPOS);
 
     // tic down message counter if message is up
-    if (!idmypos && !(message_counter = MAX(message_counter - 1, 0)) && !menuactive && !consoleactive)
+    if (message_counter && !menuactive && !idmypos)
     {
-        message_on = false;
-        message_nottobefuckedwith = false;
-        message_external = false;
+        forceconsoleblurredraw = true;
+
+        if (!--message_counter)
+        {
+            message_on = false;
+            message_nottobefuckedwith = false;
+        }
     }
 
     if (idmypos)
@@ -1203,10 +1214,7 @@ void HU_Ticker(void)
         // [BH] display and constantly update message for IDMYPOS cheat
         char    buffer[80];
 
-        if (!message_counter)
-            message_counter = HU_MSGTIMEOUT;
-        else if (message_counter > 132)
-            message_counter--;
+        message_counter = HU_MSGTIMEOUT;
 
         if (automapactive && !am_followmode)
         {
@@ -1267,6 +1275,7 @@ void HU_Ticker(void)
             }
 
             HUlib_AddMessageToSText(&w_message, message);
+            message_fadeon = (!message_on || message_counter <= 5);
             message_on = true;
             message_counter = (idbehold ? CHEATTIMEOUT : HU_MSGTIMEOUT);
             message_nottobefuckedwith = message_dontfuckwithme;
@@ -1286,7 +1295,8 @@ void HU_SetPlayerMessage(char *message, dboolean counter, dboolean external)
         static int  messagecount = 1;
         char        buffer[133];
 
-        if (M_StringCompare(message, viewplayer->prevmessage))
+        if (gametime - viewplayer->prevmessagetics < HU_MSGTIMEOUT
+            && M_StringCompare(message, viewplayer->prevmessage) && groupmessages)
         {
             char    *temp = commify(++messagecount);
 
@@ -1301,6 +1311,7 @@ void HU_SetPlayerMessage(char *message, dboolean counter, dboolean external)
         }
 
         viewplayer->message = M_StringDuplicate(buffer);
+        viewplayer->prevmessagetics = gametime;
     }
 
     message_external = (external && mapwindow);
@@ -1328,7 +1339,7 @@ void HU_PlayerMessage(char *message, dboolean counter, dboolean external)
     buffer[0] = toupper(buffer[0]);
     C_PlayerMessage(buffer);
 
-    if (gamestate == GS_LEVEL && !consoleactive && !message_dontfuckwithme)
+    if (gamestate == GS_LEVEL && !message_dontfuckwithme)
         HU_SetPlayerMessage(buffer, counter, external);
 }
 
@@ -1338,9 +1349,8 @@ void HU_ClearMessages(void)
         return;
 
     viewplayer->message = NULL;
-    message_counter = 0;
+    message_counter = 7;
     message_on = false;
     message_nottobefuckedwith = false;
     message_dontfuckwithme = false;
-    message_external = false;
 }

@@ -6,7 +6,7 @@
 
 ========================================================================
 
-  Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
+  Copyright © 1993-2021 by id Software LLC, a ZeniMax Media company.
   Copyright © 2013-2021 by Brad Harding <mailto:brad@doomretro.com>.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
@@ -39,9 +39,9 @@
 #if !defined(__VERSION_H__)
 #define __VERSION_H__
 
-#define PACKAGE_VERSION                 4,0,9,0
-#define PACKAGE_VERSIONSTRING           "4.0.9"
-#define PACKAGE_NAMEANDVERSIONSTRING    "DOOM Retro v4.0.9"
+#define PACKAGE_VERSION                 4,2,0,0
+#define PACKAGE_VERSIONSTRING           "4.2"
+#define PACKAGE_NAMEANDVERSIONSTRING    "DOOM Retro v4.2"
 #define PACKAGE_SAVEGAMEVERSIONSTRING   "DOOM Retro v3.6"
 
 #define PACKAGE                         "doomretro"
@@ -54,6 +54,7 @@
 #define PACKAGE_LICENSE                 "GNU General Public License v3.0"
 #define PACKAGE_MUTEX                   "DOOMRETRO-CC4F1071-8B24-4E91-A207-D792F39636CD"
 #define PACKAGE_NAME                    "DOOM Retro"
+#define PACKAGE_PLACEOFORIGIN           "Western Sydney, Australia"
 #define PACKAGE_SAVE                    "doomretro%i.save"
 #define PACKAGE_TRADEMARKS              "DOOM is a registered trademark of id Software LLC, a " \
                                         "ZeniMax Media company, in the US and/or other countries, " \

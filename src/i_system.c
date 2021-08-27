@@ -6,7 +6,7 @@
 
 ========================================================================
 
-  Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
+  Copyright © 1993-2021 by id Software LLC, a ZeniMax Media company.
   Copyright © 2013-2021 by Brad Harding <mailto:brad@doomretro.com>.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
@@ -158,6 +158,7 @@ void I_PrintWindowsVersion(void)
 
             case PRODUCT_CORE:
                 M_StringCopy(typename, "Home", sizeof(typename));
+                break;
         }
 
         if (info.dwPlatformId == VER_PLATFORM_WIN32_NT)
@@ -186,20 +187,25 @@ void I_PrintWindowsVersion(void)
                     M_StringCopy(infoname, "8.1", sizeof(infoname));
             }
             else if (info.dwMajorVersion == 10)
-                M_StringCopy(infoname, (info.wProductType == VER_NT_WORKSTATION ? "10" : "Server 2016"), sizeof(infoname));
+            {
+                if (info.dwBuildNumber < 22000)
+                    M_StringCopy(infoname, (info.wProductType == VER_NT_WORKSTATION ? "10" : "Server 2016"), sizeof(infoname));
+                else
+                    M_StringCopy(infoname, (info.wProductType == VER_NT_WORKSTATION ? "11" : "Server 2022"), sizeof(infoname));
+            }
 
             if (wcslen(info.szCSDVersion) > 0)
-                C_Output("Running on %i-bit <i>Microsoft Windows %s%s%s (%ws)</i> (Build %s).",
+                C_Output("Running on %i-bit " ITALICS("Microsoft Windows %s%s%s (%ws)") " (Build %s).",
                     bits, infoname, (*typename ? " " : ""), typename, info.szCSDVersion, build);
             else
-                C_Output("Running on %i-bit <i>Microsoft Windows %s%s%s</i> (Build %s).",
+                C_Output("Running on %i-bit " ITALICS("Microsoft Windows %s%s%s") " (Build %s).",
                     bits, infoname, (*typename ? " " : ""), typename, build);
 
             free(build);
         }
 
         if (bits == 64 && sizeof(intptr_t) == 4)
-            C_Warning(1, "The 64-bit version of <i>" PACKAGE_NAME "</i> is recommended on this PC.");
+            C_Warning(1, "The 64-bit version of " ITALICS(PACKAGE_NAME "") " is recommended on this PC.");
     }
 }
 #endif
@@ -209,7 +215,7 @@ void I_PrintSystemInfo(void)
     int     cores = SDL_GetCPUCount();
     char    *RAM = commify(SDL_GetSystemRAM() / 1000);
 
-    C_Output("There %s %i core%s and %sGB of RAM on this " PC ".", (cores > 1 ? "are" : "is"), cores, (cores > 1 ? "s" : ""), RAM);
+    C_Output("There %s %i core%s and %sGB of RAM on this " PC ".", (cores == 1 ? "is" : "are"), cores, (cores == 1 ? "" : "s"), RAM);
     free(RAM);
 }
 

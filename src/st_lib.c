@@ -6,7 +6,7 @@
 
 ========================================================================
 
-  Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
+  Copyright © 1993-2021 by id Software LLC, a ZeniMax Media company.
   Copyright © 2013-2021 by Brad Harding <mailto:brad@doomretro.com>.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
@@ -44,7 +44,7 @@
 
 dboolean    usesmallnums;
 
-static void (*statbarnumfunc)(int number, int color, int shadow, int x, int y, patch_t *patch);
+static void (*statbarnumfunc)(int, int, int, int, int, patch_t *);
 
 void STlib_InitNum(st_number_t *n, int x, int y, patch_t **pl, int *num, int width)
 {

@@ -6,7 +6,7 @@
 
 ========================================================================
 
-  Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
+  Copyright © 1993-2021 by id Software LLC, a ZeniMax Media company.
   Copyright © 2013-2021 by Brad Harding <mailto:brad@doomretro.com>.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
@@ -426,7 +426,6 @@ static void R_InitTextures(void)
 static void R_InitBrightmaps(void)
 {
     brightmap = Z_Calloc(numtextures, 256, PU_STATIC, NULL);
-    nobrightmap = Z_Calloc(numtextures, sizeof(*nobrightmap), PU_STATIC, NULL);
 
     for (int i = 0, game = brightmaps[i].game; brightmaps[i].mask; i++)
         if (*brightmaps[i].texture
@@ -437,6 +436,25 @@ static void R_InitBrightmaps(void)
             if (num != -1)
                 brightmap[num] = brightmaps[i].mask;
         }
+
+    nobrightmap = Z_Calloc(numtextures, sizeof(*nobrightmap), PU_STATIC, NULL);
+
+    SC_Open("DRCOMPAT");
+
+    while (SC_GetString())
+        if (M_StringCompare(sc_String, "NOBRIGHTMAP"))
+        {
+            int texture;
+
+            SC_MustGetString();
+            texture = R_TextureNumForName(sc_String);
+            SC_MustGetString();
+
+            if (texture >= 0 && M_StringCompare(pwadfile, sc_String))
+                nobrightmap[texture] = true;
+        }
+
+    SC_Close();
 }
 
 //
@@ -541,6 +559,7 @@ static void R_InitSpriteLumps(void)
                     {
                         newspriteoffset[i] = SHORT(sproffsets[j].x) << FRACBITS;
                         newspritetopoffset[i] = SHORT(sproffsets[j].y) << FRACBITS;
+
                         break;
                     }
 
@@ -553,8 +572,10 @@ static void R_InitSpriteLumps(void)
     // [BH] compatibility fixes
     if (FREEDOOM)
     {
-        states[S_BAR3].nextstate = S_BAR2;
+        states[S_BAR1].nextstate = S_BAR2;
+
         mobjinfo[MT_BARREL].frames = 2;
+
         mobjinfo[MT_HEAD].blood = MT_BLOOD;
         mobjinfo[MT_BRUISER].blood = MT_BLOOD;
         mobjinfo[MT_KNIGHT].blood = MT_BLOOD;
@@ -613,6 +634,7 @@ static void R_InitSpriteLumps(void)
         mobjinfo[MT_INS].flags2 &= ~(MF2_TRANSLUCENT_33 | MF2_FLOATBOB);
         mobjinfo[MT_MISC14].flags2 &= ~MF2_FLOATBOB;
         mobjinfo[MT_BFG].flags2 &= ~MF2_TRANSLUCENT;
+
         mobjinfo[MT_HEAD].blood = MT_BLOOD;
         mobjinfo[MT_BRUISER].blood = MT_BLOOD;
         mobjinfo[MT_KNIGHT].blood = MT_BLOOD;
@@ -622,9 +644,10 @@ static void R_InitSpriteLumps(void)
     else if (doom4vanilla)
     {
         mobjinfo[MT_HEAD].blood = MT_BLOOD;
+        mobjinfo[MT_KNIGHT].blood = MT_BLOOD;
+
         mobjinfo[MT_INV].flags2 &= ~(MF2_TRANSLUCENT_33 | MF2_FLOATBOB);
         mobjinfo[MT_MEGA].flags2 &= ~MF2_FLOATBOB;
-        mobjinfo[MT_KNIGHT].blood = MT_BLOOD;
 
         M_StringCopy(mobjinfo[MT_POSSESSED].name1, "possessed", sizeof(mobjinfo[MT_POSSESSED].name1));
         M_StringCopy(mobjinfo[MT_POSSESSED].plural1, "possessed", sizeof(mobjinfo[MT_POSSESSED].plural1));
@@ -659,6 +682,64 @@ static void R_InitSpriteLumps(void)
         M_StringCopy(mobjinfo[MT_MEGA].name2, "mega doll", sizeof(mobjinfo[MT_MEGA].name1));
         M_StringCopy(mobjinfo[MT_MEGA].plural2, "mega dolls", sizeof(mobjinfo[MT_MEGA].plural1));
     }
+    else if (REKKR)
+    {
+        mobjinfo[MT_HEAD].blood = MT_BLOOD;
+        mobjinfo[MT_KNIGHT].blood = MT_BLOOD;
+
+        M_StringCopy(weaponinfo[wp_pistol].description, "soul bow", sizeof(weaponinfo[wp_pistol].description));
+        M_StringCopy(weaponinfo[wp_shotgun].description, "steel-shot launcher", sizeof(weaponinfo[wp_shotgun].description));
+        M_StringCopy(weaponinfo[wp_chaingun].description, "soul gun", sizeof(weaponinfo[wp_chaingun].description));
+        M_StringCopy(weaponinfo[wp_missile].description, "runic staff", sizeof(weaponinfo[wp_missile].description));
+        M_StringCopy(weaponinfo[wp_plasma].description, "holy relic", sizeof(weaponinfo[wp_plasma].description));
+        M_StringCopy(weaponinfo[wp_bfg].description, "blessing of the gods", sizeof(weaponinfo[wp_bfg].description));
+        M_StringCopy(weaponinfo[wp_chainsaw].description, "axe", sizeof(weaponinfo[wp_chainsaw].description));
+
+        M_StringCopy(mobjinfo[MT_POSSESSED].name1, "former human", sizeof(mobjinfo[MT_POSSESSED].name1));
+        M_StringCopy(mobjinfo[MT_POSSESSED].plural1, "former humans", sizeof(mobjinfo[MT_POSSESSED].plural1));
+        M_StringCopy(mobjinfo[MT_SHOTGUY].name1, "jackalope", sizeof(mobjinfo[MT_SHOTGUY].name1));
+        M_StringCopy(mobjinfo[MT_SHOTGUY].plural1, "jackalopes", sizeof(mobjinfo[MT_SHOTGUY].plural1));
+        M_StringCopy(mobjinfo[MT_VILE].name1, "skeleturret", sizeof(mobjinfo[MT_VILE].name1));
+        M_StringCopy(mobjinfo[MT_VILE].plural1, "skeleturrets", sizeof(mobjinfo[MT_VILE].plural1));
+        M_StringCopy(mobjinfo[MT_UNDEAD].name1, "mean imp", sizeof(mobjinfo[MT_UNDEAD].name1));
+        M_StringCopy(mobjinfo[MT_UNDEAD].plural1, "mean imps", sizeof(mobjinfo[MT_UNDEAD].plural1));
+        M_StringCopy(mobjinfo[MT_FATSO].name1, "former duke", sizeof(mobjinfo[MT_FATSO].name1));
+        M_StringCopy(mobjinfo[MT_FATSO].plural1, "former dukes", sizeof(mobjinfo[MT_FATSO].plural1));
+        M_StringCopy(mobjinfo[MT_CHAINGUY].name1, "former king", sizeof(mobjinfo[MT_CHAINGUY].name1));
+        M_StringCopy(mobjinfo[MT_CHAINGUY].plural1, "former kings", sizeof(mobjinfo[MT_CHAINGUY].plural1));
+        M_StringCopy(mobjinfo[MT_SERGEANT].name1, "husk", sizeof(mobjinfo[MT_SERGEANT].name1));
+        M_StringCopy(mobjinfo[MT_SERGEANT].plural1, "husks", sizeof(mobjinfo[MT_SERGEANT].plural1));
+        M_StringCopy(mobjinfo[MT_SHADOWS].name1, "mean husk", sizeof(mobjinfo[MT_SHADOWS].name1));
+        M_StringCopy(mobjinfo[MT_SHADOWS].plural1, "mean husks", sizeof(mobjinfo[MT_SHADOWS].plural1));
+        M_StringCopy(mobjinfo[MT_HEAD].name1, "sorrow", sizeof(mobjinfo[MT_HEAD].name1));
+        M_StringCopy(mobjinfo[MT_HEAD].plural1, "sorrows", sizeof(mobjinfo[MT_HEAD].plural1));
+        M_StringCopy(mobjinfo[MT_BRUISER].name1, "tree beast", sizeof(mobjinfo[MT_BRUISER].name1));
+        M_StringCopy(mobjinfo[MT_BRUISER].plural1, "tree beasts", sizeof(mobjinfo[MT_BRUISER].plural1));
+        M_StringCopy(mobjinfo[MT_KNIGHT].name1, "skelly belly", sizeof(mobjinfo[MT_KNIGHT].name1));
+        M_StringCopy(mobjinfo[MT_KNIGHT].plural1, "skelly bellies", sizeof(mobjinfo[MT_KNIGHT].plural1));
+        M_StringCopy(mobjinfo[MT_SKULL].name1, "eyeball", sizeof(mobjinfo[MT_SKULL].name1));
+        M_StringCopy(mobjinfo[MT_SKULL].plural1, "eyeballs", sizeof(mobjinfo[MT_SKULL].plural1));
+        M_StringCopy(mobjinfo[MT_SPIDER].name1, "large technospider", sizeof(mobjinfo[MT_SPIDER].name1));
+        M_StringCopy(mobjinfo[MT_SPIDER].plural1, "large technospiders", sizeof(mobjinfo[MT_SPIDER].plural1));
+        M_StringCopy(mobjinfo[MT_BABY].name1, "mean jackalope", sizeof(mobjinfo[MT_BABY].name1));
+        M_StringCopy(mobjinfo[MT_BABY].plural1, "mean jackalopes", sizeof(mobjinfo[MT_BABY].plural1));
+        M_StringCopy(mobjinfo[MT_CYBORG].name1, "death raven", sizeof(mobjinfo[MT_CYBORG].name1));
+        M_StringCopy(mobjinfo[MT_CYBORG].plural1, "death ravens", sizeof(mobjinfo[MT_CYBORG].plural1));
+        M_StringCopy(mobjinfo[MT_WOLFSS].name1, "former human grotesque", sizeof(mobjinfo[MT_WOLFSS].name1));
+        M_StringCopy(mobjinfo[MT_WOLFSS].plural1, "former human grotesques", sizeof(mobjinfo[MT_WOLFSS].plural1));
+        M_StringCopy(mobjinfo[MT_KEEN].name1, "health mimic", sizeof(mobjinfo[MT_KEEN].name1));
+        M_StringCopy(mobjinfo[MT_KEEN].plural1, "health mimics", sizeof(mobjinfo[MT_KEEN].plural1));
+        M_StringCopy(mobjinfo[MT_PLASMA].name1, "barrel", sizeof(mobjinfo[MT_PLASMA].name1));
+        M_StringCopy(mobjinfo[MT_PLASMA].plural1, "barrels", sizeof(mobjinfo[MT_PLASMA].plural1));
+        M_StringCopy(mobjinfo[MT_CHAINGUN].name1, "skeletower", sizeof(mobjinfo[MT_CHAINGUN].name1));
+        M_StringCopy(mobjinfo[MT_CHAINGUN].plural1, "skeletowers", sizeof(mobjinfo[MT_CHAINGUN].plural1));
+        M_StringCopy(mobjinfo[MT_MISC38].name1, "puppy", sizeof(mobjinfo[MT_MISC38].name1));
+        M_StringCopy(mobjinfo[MT_MISC38].plural1, "puppies", sizeof(mobjinfo[MT_MISC38].plural1));
+        M_StringCopy(mobjinfo[MT_MISC65].name1, "eye spawner", sizeof(mobjinfo[MT_MISC65].name1));
+        M_StringCopy(mobjinfo[MT_MISC65].plural1, "eye spawners", sizeof(mobjinfo[MT_MISC65].plural1));
+        M_StringCopy(mobjinfo[MT_MISC78].name1, "skelespider", sizeof(mobjinfo[MT_PLASMA].name1));
+        M_StringCopy(mobjinfo[MT_MISC78].plural1, "skelespiders", sizeof(mobjinfo[MT_PLASMA].plural1));
+    }
 }
 
 //
@@ -684,21 +765,30 @@ static void R_InitColormaps(void)
         colormaps = Z_Malloc(sizeof(*colormaps) * numcolormaps, PU_STATIC, NULL);
 
         for (int i = 1; i < numcolormaps; i++)
-            colormaps[i] = W_CacheLumpNum(i + firstcolormaplump);
+            colormaps[i] = W_CacheLumpNum(firstcolormaplump + i);
     }
     else
         colormaps = Z_Malloc(sizeof(*colormaps), PU_STATIC, NULL);
 
-    dc_colormap[1] = colormaps[0] = W_CacheLumpName("COLORMAP");
+    dc_colormap[1] = dc_nextcolormap[1] = colormaps[0] = W_CacheLumpName("COLORMAP");
 
     colormapwad = lumpinfo[W_CheckNumForName("COLORMAP")]->wadfile;
 
     if (numcolormaps == 1)
-        C_Output("Using the <b>COLORMAP</b> lump in the %s <b>%s</b>.",
+        C_Output("Using the " BOLD("COLORMAP") " lump in the %s " BOLD("%s") ".",
             (colormapwad->type == IWAD ? "IWAD" : "PWAD"), colormapwad->path);
     else
-        C_Output("Using %i colormaps from the <b>COLORMAP</b> lump in the %s <b>%s</b>.",
-            numcolormaps, (colormapwad->type == IWAD ? "IWAD" : "PWAD"), colormapwad->path);
+    {
+        wadfile_t   *othercolormapwad = lumpinfo[firstcolormaplump]->wadfile;
+
+        if (M_StringCompare(colormapwad->path, othercolormapwad->path))
+            C_Output("Using the " BOLD("COLORMAP") " lump and %i others in the %s " BOLD("%s") ".",
+                numcolormaps - 1, (colormapwad->type == IWAD ? "IWAD" : "PWAD"), colormapwad->path);
+        else
+            C_Output("Using the " BOLD("COLORMAP") " lump in the %s " BOLD("%s") ", and %i others in the %s " BOLD("%s") ".",
+                (colormapwad->type == IWAD ? "IWAD" : "PWAD"), colormapwad->path, numcolormaps - 1,
+                (othercolormapwad->type == IWAD ? "IWAD" : "PWAD"), othercolormapwad->path);
+    }
 
     palsrc = palette = PLAYPAL;
 
@@ -764,7 +854,7 @@ int R_FlatNumForName(char *name)
         {
             char    *temp = uppercase(name);
 
-            C_Warning(1, "The <b>%.8s</b> flat texture can't be found.", temp);
+            C_Warning(1, "The " BOLD("%.8s") " flat texture can't be found.", temp);
             free(temp);
         }
 
@@ -822,7 +912,7 @@ int R_TextureNumForName(char *name)
         {
             char    *temp = uppercase(name);
 
-            C_Warning(1, "The <b>%.8s</b> texture can't be found.", temp);
+            C_Warning(1, "The " BOLD("%.8s") " texture can't be found.", temp);
             free(temp);
         }
 

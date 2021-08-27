@@ -6,7 +6,7 @@
 
 ========================================================================
 
-  Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
+  Copyright © 1993-2021 by id Software LLC, a ZeniMax Media company.
   Copyright © 2013-2021 by Brad Harding <mailto:brad@doomretro.com>.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
@@ -170,7 +170,7 @@ static void createPatch(int id)
     if (!CheckIfPatch(patchNum) && patchNum < numlumps)
     {
         if (lumpinfo[patchNum]->size > 0)
-            C_Warning(1, "The <b>%s</b> patch is in an unknown format.", lumpinfo[patchNum]->name);
+            C_Warning(1, "The " BOLD("%s") " patch is in an unknown format.", lumpinfo[patchNum]->name);
 
         return;
     }
@@ -542,6 +542,7 @@ static void createTextureCompositePatch(int id)
 
                 removePostFromColumn(column, i + 1);
                 i = 0;
+
                 continue;
             }
 

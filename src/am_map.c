@@ -6,7 +6,7 @@
 
 ========================================================================
 
-  Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
+  Copyright © 1993-2021 by id Software LLC, a ZeniMax Media company.
   Copyright © 2013-2021 by Brad Harding <mailto:brad@doomretro.com>.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
@@ -59,6 +59,7 @@ int am_allmapcdwallcolor = am_allmapcdwallcolor_default;
 int am_allmapfdwallcolor = am_allmapfdwallcolor_default;
 int am_allmapwallcolor = am_allmapwallcolor_default;
 int am_backcolor = am_backcolor_default;
+int am_bluedoorcolor = am_bluedoorcolor_default;
 int am_cdwallcolor = am_cdwallcolor_default;
 int am_crosshaircolor = am_crosshaircolor_default;
 int am_fdwallcolor = am_fdwallcolor_default;
@@ -66,22 +67,23 @@ int am_gridcolor = am_gridcolor_default;
 int am_markcolor = am_markcolor_default;
 int am_pathcolor = am_pathcolor_default;
 int am_playercolor = am_playercolor_default;
+int am_reddoorcolor = am_reddoorcolor_default;
 int am_teleportercolor = am_teleportercolor_default;
 int am_thingcolor = am_thingcolor_default;
 int am_tswallcolor = am_tswallcolor_default;
 int am_wallcolor = am_wallcolor_default;
+int am_yellowdoorcolor = am_yellowdoorcolor_default;
 
 // Automap color priorities
-#define PATHPRIORITY           10
-#define WALLPRIORITY            9
-#define ALLMAPWALLPRIORITY      8
-#define CDWALLPRIORITY          7
-#define ALLMAPCDWALLPRIORITY    6
-#define FDWALLPRIORITY          5
-#define ALLMAPFDWALLPRIORITY    4
-#define TELEPORTERPRIORITY      3
-#define TSWALLPRIORITY          2
-#define GRIDPRIORITY            1
+#define PATHPRIORITY        9
+#define WALLPRIORITY        8
+#define DOORPRIORITY        7
+#define CDWALLPRIORITY      6
+#define FDWALLPRIORITY      5
+#define TELEPORTERPRIORITY  4
+#define TSWALLPRIORITY      3
+#define ALLMAPWALLPRIORITY  2
+#define GRIDPRIORITY        1
 
 static byte playercolor;
 static byte thingcolor;
@@ -90,6 +92,9 @@ static byte backcolor;
 static byte pathcolor;
 
 static byte *wallcolor;
+static byte *bluedoorcolor;
+static byte *reddoorcolor;
+static byte *yellowdoorcolor;
 static byte *allmapwallcolor;
 static byte *teleportercolor;
 static byte *fdwallcolor;
@@ -210,7 +215,7 @@ am_frame_t          am_frame;
 static dboolean     isteleportline[NUMLINESPECIALS];
 
 static void AM_Rotate(fixed_t *x, fixed_t *y, angle_t angle);
-static void (*putbigdot)(unsigned int x, unsigned int y, const byte *color);
+static void (*putbigdot)(unsigned int, unsigned int, const byte *);
 static void PUTDOT(unsigned int x, unsigned int y, const byte *color);
 static void PUTBIGDOT(unsigned int x, unsigned int y, const byte *color);
 
@@ -294,7 +299,7 @@ static void AM_ChangeWindowLoc(void)
     const fixed_t   height = m_h / 2;
 
     if (am_rotatemode)
-        AM_Rotate(&incx, &incy, viewangle - ANG90);
+        AM_Rotate(&incx, &incy, viewplayer->mo->angle - ANG90);
 
     m_x = BETWEEN(min_x, m_x + width + incx, max_x) - width;
     m_y = BETWEEN(min_y, m_y + height + incy, max_y) - height;
@@ -307,13 +312,16 @@ void AM_SetColors(void)
 
     priority[nearestcolors[am_pathcolor]] = PATHPRIORITY;
     priority[nearestcolors[am_wallcolor]] = WALLPRIORITY;
-    priority[nearestcolors[am_allmapwallcolor]] = ALLMAPWALLPRIORITY;
+    priority[nearestcolors[am_bluedoorcolor]] = DOORPRIORITY;
+    priority[nearestcolors[am_reddoorcolor]] = DOORPRIORITY;
+    priority[nearestcolors[am_yellowdoorcolor]] = DOORPRIORITY;
     priority[nearestcolors[am_cdwallcolor]] = CDWALLPRIORITY;
-    priority[nearestcolors[am_allmapcdwallcolor]] = ALLMAPCDWALLPRIORITY;
     priority[nearestcolors[am_fdwallcolor]] = FDWALLPRIORITY;
-    priority[nearestcolors[am_allmapfdwallcolor]] = ALLMAPFDWALLPRIORITY;
     priority[nearestcolors[am_teleportercolor]] = TELEPORTERPRIORITY;
     priority[nearestcolors[am_tswallcolor]] = TSWALLPRIORITY;
+    priority[nearestcolors[am_allmapwallcolor]] = ALLMAPWALLPRIORITY;
+    priority[nearestcolors[am_allmapcdwallcolor]] = ALLMAPWALLPRIORITY;
+    priority[nearestcolors[am_allmapfdwallcolor]] = ALLMAPWALLPRIORITY;
     priority[nearestcolors[am_gridcolor]] = GRIDPRIORITY;
 
     playercolor = nearestcolors[am_playercolor];
@@ -329,6 +337,9 @@ void AM_SetColors(void)
             priorities[(x << 8) + y] = (priority[x] > priority[y] ? x : y);
 
     wallcolor = &priorities[nearestcolors[am_wallcolor] << 8];
+    bluedoorcolor = &priorities[nearestcolors[am_bluedoorcolor] << 8];
+    reddoorcolor = &priorities[nearestcolors[am_reddoorcolor] << 8];
+    yellowdoorcolor = &priorities[nearestcolors[am_yellowdoorcolor] << 8];
     allmapwallcolor = &priorities[nearestcolors[am_allmapwallcolor] << 8];
     cdwallcolor = &priorities[nearestcolors[am_cdwallcolor] << 8];
     allmapcdwallcolor = &priorities[nearestcolors[am_allmapcdwallcolor] << 8];
@@ -504,7 +515,8 @@ void AM_ToggleMaxZoom(void)
         AM_MinOutWindowScale();
     }
 
-    D_FadeScreen();
+    if (!mapwindow)
+        D_FadeScreen(false);
 }
 
 void AM_ToggleFollowMode(void)
@@ -524,7 +536,9 @@ void AM_ToggleFollowMode(void)
         HU_SetPlayerMessage(s_AMSTR_FOLLOWOFF, false, true);
     }
 
-    D_FadeScreen();
+    if (!mapwindow)
+        D_FadeScreen(false);
+
     message_dontfuckwithme = true;
 }
 
@@ -543,7 +557,9 @@ void AM_ToggleGrid(void)
         HU_SetPlayerMessage(s_AMSTR_GRIDOFF, false, true);
     }
 
-    D_FadeScreen();
+    if (!mapwindow)
+        D_FadeScreen(false);
+
     message_dontfuckwithme = true;
     M_SaveCVARs();
 }
@@ -573,7 +589,10 @@ void AM_AddMark(void)
     M_snprintf(message, sizeof(message), s_AMSTR_MARKEDSPOT, ++markpointnum);
     C_Output(message);
     HU_SetPlayerMessage(message, false, true);
-    D_FadeScreen();
+
+    if (!mapwindow)
+        D_FadeScreen(false);
+
     message_dontfuckwithme = true;
 }
 
@@ -590,7 +609,7 @@ void AM_ClearMarks(void)
             HU_SetPlayerMessage(s_AMSTR_MARKSCLEARED, false, true);
             markpointnum = 0;
             markpointnum_max = 0;
-            markpoints = I_Realloc(markpoints, 0);
+            markpoints = NULL;
         }
         else if (markpress == 1)
         {
@@ -602,7 +621,9 @@ void AM_ClearMarks(void)
             HU_SetPlayerMessage(message, false, true);
         }
 
-        D_FadeScreen();
+        if (!mapwindow)
+            D_FadeScreen(false);
+
         message_dontfuckwithme = true;
     }
 }
@@ -610,8 +631,8 @@ void AM_ClearMarks(void)
 void AM_AddToPath(void)
 {
     mobj_t      *mo = viewplayer->mo;
-    const int   x = mo->x;
-    const int   y = mo->y;
+    const int   x = mo->x >> FRACTOMAPBITS;
+    const int   y = mo->y >> FRACTOMAPBITS;
     static int  prevx = INT_MAX;
     static int  prevy = INT_MAX;
 
@@ -643,7 +664,9 @@ void AM_ToggleRotateMode(void)
         HU_SetPlayerMessage(s_AMSTR_ROTATEOFF, false, true);
     }
 
-    D_FadeScreen();
+    if (!mapwindow)
+        D_FadeScreen(false);
+
     message_dontfuckwithme = true;
     M_SaveCVARs();
 }
@@ -675,7 +698,7 @@ dboolean AM_Responder(const event_t *ev)
                 AM_Start(true);
                 viewactive = false;
                 rc = true;
-                D_FadeScreen();
+                D_FadeScreen(false);
             }
         }
         else
@@ -756,14 +779,14 @@ dboolean AM_Responder(const event_t *ev)
                 }
 
                 // zoom out
-                else if (key == AM_ZOOMOUTKEY && !movement && !mapwindow)
+                else if (key == AM_ZOOMOUTKEY && !movement)
                 {
                     keydown = key;
                     AM_ToggleZoomOut();
                 }
 
                 // zoom in
-                else if (key == AM_ZOOMINKEY && !movement && !mapwindow)
+                else if (key == AM_ZOOMINKEY && !movement)
                 {
                     keydown = key;
                     AM_ToggleZoomIn();
@@ -775,11 +798,11 @@ dboolean AM_Responder(const event_t *ev)
                     keydown = key;
                     viewactive = true;
                     AM_Stop();
-                    D_FadeScreen();
+                    D_FadeScreen(false);
                 }
 
                 // toggle maximum zoom
-                else if (key == AM_GOBIGKEY && !idclev && !idmus && !mapwindow)
+                else if (key == AM_GOBIGKEY && !idclev && !idmus)
                 {
                     if (keydown != AM_GOBIGKEY)
                     {
@@ -789,7 +812,7 @@ dboolean AM_Responder(const event_t *ev)
                 }
 
                 // toggle follow mode
-                else if (key == AM_FOLLOWKEY && !mapwindow)
+                else if (key == AM_FOLLOWKEY)
                 {
                     if (keydown != AM_FOLLOWKEY)
                     {
@@ -923,7 +946,7 @@ dboolean AM_Responder(const event_t *ev)
                     }
                 }
             }
-            else if (ev->type == ev_mousewheel)
+            else if (ev->type == ev_mousewheel && !mapwindow)
             {
                 // zoom in
                 if (ev->data1 > 0)
@@ -952,7 +975,7 @@ dboolean AM_Responder(const event_t *ev)
                     viewactive = true;
                     backbuttondown = true;
                     AM_Stop();
-                    D_FadeScreen();
+                    D_FadeScreen(false);
                 }
 
                 // zoom out
@@ -1170,13 +1193,7 @@ void Mobile_AM_controls(double *zoom, fixed_t *pan_x, fixed_t *pan_y );
 //
 void AM_Ticker(void)
 {
-    if (mapwindow)
-    {
-        AM_DoFollowPlayer();
-        return;
-    }
-
-    if (!automapactive)
+    if (!automapactive && !mapwindow)
         return;
 
     if (am_followmode || menuactive)
@@ -1322,7 +1339,7 @@ static inline void PUTBIGDOT(unsigned int x, unsigned int y, const byte *color)
     {
         byte            *dot = mapscreen + y + x;
         const dboolean  attop = (y < MAPAREA);
-        const dboolean  atbottom = (y < MAPBOTTOM);
+        const dboolean  atbottom = (y < (unsigned int)MAPBOTTOM);
 
         if (attop)
             *dot = *(*dot + color);
@@ -1349,7 +1366,7 @@ static inline void PUTBIGDOT(unsigned int x, unsigned int y, const byte *color)
         if (y < MAPAREA)
             *dot = *(*dot + color);
 
-        if (y < MAPBOTTOM)
+        if (y < (unsigned int)MAPBOTTOM)
         {
             dot += MAPWIDTH;
             *dot = *(*dot + color);
@@ -1372,7 +1389,7 @@ static inline void PUTTRANSLUCENTDOT(unsigned int x, unsigned int y, const byte 
 // Classic Bresenham w/ whatever optimizations needed for speed
 //
 static void AM_DrawFline(int x0, int y0, int x1, int y1, byte *color,
-    void (*putdot)(unsigned int x, unsigned int y, const byte *color))
+    void (*putdot)(unsigned int, unsigned int, const byte *))
 {
     if (AM_ClipMline(&x0, &y0, &x1, &y1))
     {
@@ -1426,7 +1443,7 @@ static void AM_DrawFline(int x0, int y0, int x1, int y1, byte *color,
 
                 while (x0 != x1)
                 {
-                    const int   mask = ~((int64_t)error >> 31);
+                    const int   mask = ~(error >> 31);
 
                     putdot((x0 += sx), (y0 += (sy & mask)), color);
                     error += dy - (dx & mask);
@@ -1442,7 +1459,7 @@ static void AM_DrawFline(int x0, int y0, int x1, int y1, byte *color,
 
                 while (y0 != y1)
                 {
-                    const int   mask = ~((int64_t)error >> 31);
+                    const int   mask = ~(error >> 31);
 
                     putdot((x0 += (sx & mask)), (y0 += sy), color);
                     error += dx - (dy & mask);
@@ -1456,12 +1473,13 @@ static void AM_DrawFline(int x0, int y0, int x1, int y1, byte *color,
     }
 }
 
-static mline_t (*rotatelinefunc)(mline_t mline);
+static mline_t (*rotatelinefunc)(mline_t);
 
 static mline_t AM_RotateLine(mline_t mline)
 {
     AM_RotatePoint(&mline.a);
     AM_RotatePoint(&mline.b);
+
     return mline;
 }
 
@@ -1501,6 +1519,45 @@ static void AM_DrawGrid(void)
     }
 }
 
+static byte *AM_DoorColor(int special)
+{
+    if (GenLockedBase <= special && special < GenDoorBase)
+    {
+        if (!(special = ((special - GenLockedBase) & LockedKey) >> LockedKeyShift) || special == AllKeys)
+            return cdwallcolor;
+        else if (!(special = (special - 1) % 3))
+            return reddoorcolor;
+        else if (special == 1)
+            return bluedoorcolor;
+        else
+            return yellowdoorcolor;
+    }
+
+    switch (special)
+    {
+        case DR_Door_Red_OpenWaitClose:
+        case D1_Door_Red_OpenStay:
+        case SR_Door_Red_OpenStay_Fast:
+        case S1_Door_Red_OpenStay_Fast:
+            return reddoorcolor;
+
+        case DR_Door_Blue_OpenWaitClose:
+        case D1_Door_Blue_OpenStay:
+        case SR_Door_Blue_OpenStay_Fast:
+        case S1_Door_Blue_OpenStay_Fast:
+            return bluedoorcolor;
+
+        case DR_Door_Yellow_OpenWaitClose:
+        case D1_Door_Yellow_OpenStay:
+        case SR_Door_Yellow_OpenStay_Fast:
+        case S1_Door_Yellow_OpenStay_Fast:
+            return yellowdoorcolor;
+
+        default:
+            return cdwallcolor;
+    }
+}
+
 static void AM_DrawWalls(void)
 {
     for (int i = 0; i < numlines; i++)
@@ -1509,15 +1566,18 @@ static void AM_DrawWalls(void)
         const fixed_t   *lbbox = line.bbox;
         const fixed_t   *ambbox = am_frame.bbox;
 
-        if ((lbbox[BOXLEFT] >> FRACTOMAPBITS) <= ambbox[BOXRIGHT] && (lbbox[BOXRIGHT] >> FRACTOMAPBITS) >= ambbox[BOXLEFT]
-            && (lbbox[BOXBOTTOM] >> FRACTOMAPBITS) <= ambbox[BOXTOP] && (lbbox[BOXTOP] >> FRACTOMAPBITS) >= ambbox[BOXBOTTOM])
+        if ((lbbox[BOXLEFT] >> FRACTOMAPBITS) <= ambbox[BOXRIGHT]
+            && (lbbox[BOXRIGHT] >> FRACTOMAPBITS) >= ambbox[BOXLEFT]
+            && (lbbox[BOXBOTTOM] >> FRACTOMAPBITS) <= ambbox[BOXTOP]
+            && (lbbox[BOXTOP] >> FRACTOMAPBITS) >= ambbox[BOXBOTTOM])
         {
             const unsigned short    flags = line.flags;
 
-            if (!(flags & ML_DONTDRAW) && (flags & ML_MAPPED))
+            if ((flags & ML_MAPPED) && !(flags & ML_DONTDRAW))
             {
-                const sector_t  *back = line.backsector;
                 mline_t         mline;
+                unsigned short  special = line.special;
+                byte            *doorcolor;
 
                 mline.a.x = line.v1->x >> FRACTOMAPBITS;
                 mline.a.y = line.v1->y >> FRACTOMAPBITS;
@@ -1526,19 +1586,26 @@ static void AM_DrawWalls(void)
 
                 mline = rotatelinefunc(mline);
 
-                if (isteleportline[line.special] && back && back->ceilingheight != back->floorheight
-                    && ((flags & ML_TELEPORTTRIGGERED) || isteleport[back->floorpic]) && !(flags & ML_SECRET))
-                    AM_DrawFline(mline.a.x, mline.a.y, mline.b.x, mline.b.y, teleportercolor, &PUTDOT);
-                else if (!back || (flags & ML_SECRET))
-                    AM_DrawFline(mline.a.x, mline.a.y, mline.b.x, mline.b.y, wallcolor, putbigdot);
+                if (special && (doorcolor = AM_DoorColor(special)) != cdwallcolor)
+                    AM_DrawFline(mline.a.x, mline.a.y, mline.b.x, mline.b.y, doorcolor, &PUTDOT);
                 else
                 {
-                    const sector_t  *front = line.frontsector;
+                    const sector_t  *back = line.backsector;
 
-                    if (back->floorheight != front->floorheight)
-                        AM_DrawFline(mline.a.x, mline.a.y, mline.b.x, mline.b.y, fdwallcolor, &PUTDOT);
-                    else if (back->ceilingheight != front->ceilingheight)
-                        AM_DrawFline(mline.a.x, mline.a.y, mline.b.x, mline.b.y, cdwallcolor, &PUTDOT);
+                    if (!back || (flags & ML_SECRET))
+                        AM_DrawFline(mline.a.x, mline.a.y, mline.b.x, mline.b.y, wallcolor, putbigdot);
+                    else if (isteleportline[special] && back && back->ceilingheight != back->floorheight
+                        && ((flags & ML_TELEPORTTRIGGERED) || isteleport[back->floorpic]) && !(flags & ML_SECRET))
+                        AM_DrawFline(mline.a.x, mline.a.y, mline.b.x, mline.b.y, teleportercolor, &PUTDOT);
+                    else
+                    {
+                        const sector_t  *front = line.frontsector;
+
+                        if (back->floorheight != front->floorheight)
+                            AM_DrawFline(mline.a.x, mline.a.y, mline.b.x, mline.b.y, fdwallcolor, &PUTDOT);
+                        else if (back->ceilingheight != front->ceilingheight)
+                            AM_DrawFline(mline.a.x, mline.a.y, mline.b.x, mline.b.y, cdwallcolor, &PUTDOT);
+                    }
                 }
             }
         }
@@ -1562,8 +1629,9 @@ static void AM_DrawWalls_AllMap(void)
 
             if (!(flags & ML_DONTDRAW))
             {
-                const sector_t  *back = line.backsector;
                 mline_t         mline;
+                unsigned short  special = line.special;
+                byte            *doorcolor;
 
                 mline.a.x = line.v1->x >> FRACTOMAPBITS;
                 mline.a.y = line.v1->y >> FRACTOMAPBITS;
@@ -1572,24 +1640,31 @@ static void AM_DrawWalls_AllMap(void)
 
                 mline = rotatelinefunc(mline);
 
-                if (isteleportline[line.special] && ((flags & ML_TELEPORTTRIGGERED) || (back && isteleport[back->floorpic])))
-                    AM_DrawFline(mline.a.x, mline.a.y, mline.b.x, mline.b.y,
-                        ((flags & ML_MAPPED) ? teleportercolor : allmapfdwallcolor), &PUTDOT);
-                else if (!back || (flags & ML_SECRET))
-                    AM_DrawFline(mline.a.x, mline.a.y, mline.b.x, mline.b.y,
-                        ((flags & ML_MAPPED) ? wallcolor : allmapwallcolor), putbigdot);
+                if (special && (doorcolor = AM_DoorColor(special)) != cdwallcolor)
+                    AM_DrawFline(mline.a.x, mline.a.y, mline.b.x, mline.b.y, doorcolor, &PUTDOT);
                 else
                 {
-                    const sector_t  *front = line.frontsector;
+                    const sector_t  *back = line.backsector;
 
-                    if (back->floorheight != front->floorheight)
+                    if (!back || (flags & ML_SECRET))
                         AM_DrawFline(mline.a.x, mline.a.y, mline.b.x, mline.b.y,
-                            ((flags & ML_MAPPED) ? fdwallcolor : allmapfdwallcolor), &PUTDOT);
-                    else if (back->ceilingheight != front->ceilingheight)
+                            ((flags & ML_MAPPED) ? wallcolor : allmapwallcolor), putbigdot);
+                    else if (isteleportline[special] && ((flags & ML_TELEPORTTRIGGERED) || (back && isteleport[back->floorpic])))
                         AM_DrawFline(mline.a.x, mline.a.y, mline.b.x, mline.b.y,
-                            ((flags & ML_MAPPED) ? cdwallcolor : allmapcdwallcolor), &PUTDOT);
+                            ((flags & ML_MAPPED) ? teleportercolor : allmapfdwallcolor), &PUTDOT);
                     else
-                        AM_DrawFline(mline.a.x, mline.a.y, mline.b.x, mline.b.y, tswallcolor, &PUTDOT);
+                    {
+                        const sector_t  *front = line.frontsector;
+
+                        if (back->floorheight != front->floorheight)
+                            AM_DrawFline(mline.a.x, mline.a.y, mline.b.x, mline.b.y,
+                                ((flags & ML_MAPPED) ? fdwallcolor : allmapfdwallcolor), &PUTDOT);
+                        else if (back->ceilingheight != front->ceilingheight)
+                            AM_DrawFline(mline.a.x, mline.a.y, mline.b.x, mline.b.y,
+                                ((flags & ML_MAPPED) ? cdwallcolor : allmapcdwallcolor), &PUTDOT);
+                        else
+                            AM_DrawFline(mline.a.x, mline.a.y, mline.b.x, mline.b.y, tswallcolor, &PUTDOT);
+                    }
                 }
             }
         }
@@ -1609,7 +1684,9 @@ static void AM_DrawWalls_Cheating(void)
             && (lbbox[BOXBOTTOM] >> FRACTOMAPBITS) <= ambbox[BOXTOP]
             && (lbbox[BOXTOP] >> FRACTOMAPBITS) >= ambbox[BOXBOTTOM])
         {
-            mline_t mline;
+            mline_t         mline;
+            unsigned short  special = line.special;
+            byte            *doorcolor;
 
             mline.a.x = line.v1->x >> FRACTOMAPBITS;
             mline.a.y = line.v1->y >> FRACTOMAPBITS;
@@ -1618,17 +1695,19 @@ static void AM_DrawWalls_Cheating(void)
 
             mline = rotatelinefunc(mline);
 
-            if (isteleportline[line.special])
-                AM_DrawFline(mline.a.x, mline.a.y, mline.b.x, mline.b.y, teleportercolor, &PUTDOT);
+            if (special && (doorcolor = AM_DoorColor(special)) != cdwallcolor)
+                AM_DrawFline(mline.a.x, mline.a.y, mline.b.x, mline.b.y, doorcolor, &PUTDOT);
             else
             {
                 const sector_t  *back = line.backsector;
 
                 if (!back)
                     AM_DrawFline(mline.a.x, mline.a.y, mline.b.x, mline.b.y, wallcolor, putbigdot);
+                else if (isteleportline[special])
+                    AM_DrawFline(mline.a.x, mline.a.y, mline.b.x, mline.b.y, teleportercolor, &PUTDOT);
                 else
                 {
-                    const sector_t *front = line.frontsector;
+                    const sector_t  *front = line.frontsector;
 
                     if (back->floorheight != front->floorheight)
                         AM_DrawFline(mline.a.x, mline.a.y, mline.b.x, mline.b.y, fdwallcolor, &PUTDOT);
@@ -1749,32 +1828,21 @@ static void AM_DrawPlayer(void)
     };
 
     const int       invisibility = viewplayer->powers[pw_invisibility];
-    mpoint_t        point;
-    angle_t         angle;
     const mobj_t    *mo = viewplayer->mo;
-
-    point.x = mo->x >> FRACTOMAPBITS;
-    point.y = mo->y >> FRACTOMAPBITS;
-
-    if (am_rotatemode)
-    {
-        AM_RotatePoint(&point);
-        angle = ANG90;
-    }
-    else
-        angle = viewangle;
+    angle_t         angle = (am_rotatemode ? ANG90 : mo->angle);
 
     if (viewplayer->cheats & (CF_ALLMAP | CF_ALLMAP_THINGS))
     {
         if (invisibility > STARTFLASHING || (invisibility & 8))
-            AM_DrawTranslucentPlayerArrow(cheatplayerarrow, CHEATPLAYERARROWLINES, angle, point.x, point.y);
+            AM_DrawTranslucentPlayerArrow(cheatplayerarrow, CHEATPLAYERARROWLINES,
+                angle, mo->x >> FRACTOMAPBITS, mo->y >> FRACTOMAPBITS);
         else
-            AM_DrawPlayerArrow(cheatplayerarrow, CHEATPLAYERARROWLINES, angle, point.x, point.y);
+            AM_DrawPlayerArrow(cheatplayerarrow, CHEATPLAYERARROWLINES, angle, mo->x >> FRACTOMAPBITS, mo->y >> FRACTOMAPBITS);
     }
     else if (invisibility > STARTFLASHING || (invisibility & 8))
-        AM_DrawTranslucentPlayerArrow(playerarrow, PLAYERARROWLINES, angle, point.x, point.y);
+        AM_DrawTranslucentPlayerArrow(playerarrow, PLAYERARROWLINES, angle, mo->x >> FRACTOMAPBITS, mo->y >> FRACTOMAPBITS);
     else
-        AM_DrawPlayerArrow(playerarrow, PLAYERARROWLINES, angle, point.x, point.y);
+        AM_DrawPlayerArrow(playerarrow, PLAYERARROWLINES, angle, mo->x >> FRACTOMAPBITS, mo->y >> FRACTOMAPBITS);
 }
 
 #define THINGTRIANGLELINES  3
@@ -1788,7 +1856,7 @@ static void AM_DrawThings(void)
         { { -32768,  45875 }, { -32768, -45875 } }
     };
 
-    const angle_t   angleoffset = viewangle - ANG90;
+    angle_t angleoffset = (am_rotatemode ? viewplayer->mo->angle - ANG90 : 0);
 
     for (int i = 0; i < numsectors; i++)
     {
@@ -1819,7 +1887,7 @@ static void AM_DrawThings(void)
                     angle_t     angle = thing->angle;
                     int         fx, fy;
                     const short lump = sprites[thing->sprite].spriteframes[0].lump[0];
-                    const int   width = (BETWEEN(24 << FRACBITS, MIN(spritewidth[lump], spriteheight[lump]),
+                    const int   width = (BETWEEN(12 << FRACBITS, MIN(spritewidth[lump], spriteheight[lump]),
                                     96 << FRACBITS) >> FRACTOMAPBITS) / 2;
 
                     if (consoleactive)
@@ -1834,16 +1902,13 @@ static void AM_DrawThings(void)
                     }
 
                     if (am_rotatemode)
-                    {
                         AM_RotatePoint(&point);
-                        angle -= angleoffset;
-                    }
 
                     fx = CXMTOF(point.x);
                     fy = CYMTOF(point.y);
 
                     if (fx >= -width && fx <= MAPWIDTH + width && fy >= -width && fy <= (int)MAPHEIGHT + width)
-                        AM_DrawThingTriangle(thingtriangle, THINGTRIANGLELINES, width, angle, point.x, point.y);
+                        AM_DrawThingTriangle(thingtriangle, THINGTRIANGLELINES, width, angle - angleoffset, point.x, point.y);
                 }
 
                 thing = thing->snext;
@@ -1942,16 +2007,17 @@ static void AM_DrawPath(void)
 {
     if (pathpointnum >= 1)
     {
-        mpoint_t    end;
+        mpoint_t        end;
+        const mobj_t    *mo = viewplayer->mo;
 
         if (am_rotatemode)
         {
             for (int i = 1; i < pathpointnum; i++)
             {
-                mpoint_t    start = { pathpoints[i - 1].x >> FRACTOMAPBITS, pathpoints[i - 1].y >> FRACTOMAPBITS };
+                mpoint_t    start = { pathpoints[i - 1].x, pathpoints[i - 1].y };
 
-                end.x = pathpoints[i].x >> FRACTOMAPBITS;
-                end.y = pathpoints[i].y >> FRACTOMAPBITS;
+                end.x = pathpoints[i].x;
+                end.y = pathpoints[i].y;
 
                 if (ABS(start.x - end.x) > 4 * FRACUNIT || ABS(start.y - end.y) > 4 * FRACUNIT)
                     continue;
@@ -1962,22 +2028,16 @@ static void AM_DrawPath(void)
             }
 
             if (pathpointnum > 1 && !freeze && !(viewplayer->cheats & CF_NOCLIP))
-            {
-                const mobj_t    *mo = viewplayer->mo;
-                mpoint_t        player = { mo->x >> FRACTOMAPBITS, mo->y >> FRACTOMAPBITS };
-
-                AM_RotatePoint(&player);
-                AM_DrawFline(end.x, end.y, player.x, player.y, &pathcolor, &PUTDOT2);
-            }
+                AM_DrawFline(end.x, end.y, mo->x >> FRACTOMAPBITS, mo->y >> FRACTOMAPBITS, &pathcolor, &PUTDOT2);
         }
         else
         {
             for (int i = 1; i < pathpointnum; i++)
             {
-                mpoint_t    start = { pathpoints[i - 1].x >> FRACTOMAPBITS, pathpoints[i - 1].y >> FRACTOMAPBITS };
+                mpoint_t    start = { pathpoints[i - 1].x, pathpoints[i - 1].y };
 
-                end.x = pathpoints[i].x >> FRACTOMAPBITS;
-                end.y = pathpoints[i].y >> FRACTOMAPBITS;
+                end.x = pathpoints[i].x;
+                end.y = pathpoints[i].y;
 
                 if (ABS(start.x - end.x) > 4 * FRACUNIT || ABS(start.y - end.y) > 4 * FRACUNIT)
                     continue;
@@ -1986,11 +2046,7 @@ static void AM_DrawPath(void)
             }
 
             if (pathpointnum > 1 && !freeze && !(viewplayer->cheats & CF_NOCLIP))
-            {
-                const mobj_t    *mo = viewplayer->mo;
-
                 AM_DrawFline(end.x, end.y, mo->x >> FRACTOMAPBITS, mo->y >> FRACTOMAPBITS, &pathcolor, &PUTDOT2);
-            }
         }
     }
 }
@@ -2047,9 +2103,9 @@ static void AM_SetFrameVariables(void)
     am_frame.center.x = x;
     am_frame.center.y = y;
 
-    if (am_rotatemode || menuactive)
+    if (am_rotatemode || (menuactive && !inhelpscreens))
     {
-        const int       angle = (ANG90 - viewangle) >> ANGLETOFINESHIFT;
+        const int       angle = (ANG90 - viewplayer->mo->angle) >> ANGLETOFINESHIFT;
         const fixed_t   r = (fixed_t)sqrt((double)dx * dx + (double)dy * dy);
 
         am_frame.sin = finesine[angle];

@@ -6,7 +6,7 @@
 
 ========================================================================
 
-  Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
+  Copyright © 1993-2021 by id Software LLC, a ZeniMax Media company.
   Copyright © 2013-2021 by Brad Harding <mailto:brad@doomretro.com>.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
@@ -72,7 +72,7 @@ extern int      validcount;
 #define MAXLIGHTSCALE       384
 #define LIGHTSCALESHIFT     12
 #define MAXLIGHTZ           1024
-#define LIGHTZSHIFT         17
+#define LIGHTZSHIFT         20
 
 #define OLDLIGHTLEVELS      32
 #define OLDLIGHTSEGSHIFT    3

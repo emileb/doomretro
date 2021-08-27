@@ -6,7 +6,7 @@
 
 ========================================================================
 
-  Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
+  Copyright © 1993-2021 by id Software LLC, a ZeniMax Media company.
   Copyright © 2013-2021 by Brad Harding <mailto:brad@doomretro.com>.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
@@ -99,7 +99,7 @@ static void F_ConsoleFinaleText(void)
 
     while (p)
     {
-        C_Output("<i>%s%s</i>", (p[0] == '\"' ? "" : "   "), p);
+        C_Output(ITALICS("%s%s"), (p[0] == '\"' ? "" : "   "), p);
         p = strtok(NULL, "\n");
     }
 
@@ -161,6 +161,7 @@ void F_StartFinale(void)
         gameaction = ga_nothing;
         gamestate = GS_FINALE;
         F_StartCast();
+
         return;
     }
     else
@@ -180,26 +181,31 @@ void F_StartFinale(void)
                     case 1:
                         finaleflat = bgflatE1;
                         finaletext = s_E1TEXT;
+
                         break;
 
                     case 2:
                         finaleflat = bgflatE2;
                         finaletext = s_E2TEXT;
+
                         break;
 
                     case 3:
                         finaleflat = bgflatE3;
                         finaletext = s_E3TEXT;
+
                         break;
 
                     case 4:
                         finaleflat = bgflatE4;
                         finaletext = s_E4TEXT;
+
                         break;
 
                     case 5:
                         finaleflat = bgflatE5;
                         finaletext = s_E5TEXT;
+
                         break;
                 }
 
@@ -214,6 +220,7 @@ void F_StartFinale(void)
                     case 6:
                         finaleflat = bgflat06;
                         finaletext = (gamemission == pack_tnt ? s_T1TEXT : (gamemission == pack_plut ? s_P1TEXT : s_C1TEXT));
+
                         break;
 
                     case 8:
@@ -228,26 +235,31 @@ void F_StartFinale(void)
                     case 11:
                         finaleflat = bgflat11;
                         finaletext = (gamemission == pack_tnt ? s_T2TEXT : (gamemission == pack_plut ? s_P2TEXT : s_C2TEXT));
+
                         break;
 
                     case 20:
                         finaleflat = bgflat20;
                         finaletext = (gamemission == pack_tnt ? s_T3TEXT : (gamemission == pack_plut ? s_P3TEXT : s_C3TEXT));
+
                         break;
 
                     case 30:
                         finaleflat = bgflat30;
                         finaletext = (gamemission == pack_tnt ? s_T4TEXT : (gamemission == pack_plut ? s_P4TEXT : s_C4TEXT));
+
                         break;
 
                     case 15:
                         finaleflat = bgflat15;
                         finaletext = (gamemission == pack_tnt ? s_T5TEXT : (gamemission == pack_plut ? s_P5TEXT : s_C5TEXT));
+
                         break;
 
                     case 31:
                         finaleflat = bgflat31;
                         finaletext = (gamemission == pack_tnt ? s_T6TEXT : (gamemission == pack_plut ? s_P6TEXT : s_C6TEXT));
+
                         break;
                 }
 
@@ -258,6 +270,7 @@ void F_StartFinale(void)
                 S_ChangeMusic(mus_read_m, true, false, false);
                 finaleflat = "F_SKY1";
                 finaletext = s_C1TEXT;
+
                 break;
         }
 
@@ -329,7 +342,7 @@ void F_Ticker(void)
             {
                 finalecount = 0;
                 finalestage = F_STAGE_ARTSCREEN;
-                wipegamestate = GS_NONE;        // force a wipe
+                wipegamestate = GS_NONE;
 
                 if (gameepisode == 3)
                     S_StartMusic(mus_bunny);
@@ -391,6 +404,7 @@ static void F_TextWrite(void)
             cx = 12;
             cy += (prev == '\n' ? 8 : 11);
             prev = letter;
+
             continue;
         }
 
@@ -400,6 +414,7 @@ static void F_TextWrite(void)
         {
             cx += (prev == '.' || prev == '!' || prev == '?' || prev == '"' ? 5 : 3);
             prev = letter;
+
             continue;
         }
 
@@ -547,7 +562,7 @@ static void F_CastTicker(void)
         if (++castnum == CASTNUMMAX)
             castnum = 0;
         else
-            D_FadeScreen();
+            D_FadeScreen(false);
 
         if (mobjinfo[castorder[castnum].type].seesound)
             S_StartSound(NULL, F_RandomizeSound(mobjinfo[castorder[castnum].type].seesound));
@@ -555,7 +570,7 @@ static void F_CastTicker(void)
         caststate = &states[mobjinfo[castorder[castnum].type].seestate];
         castframes = 0;
 
-        D_FadeScreen();
+        D_FadeScreen(false);
     }
     else
     {
@@ -663,14 +678,13 @@ static void F_CastTicker(void)
             S_StartSound(viewplayer->mo, sfx_dshtgn);
     }
 
-    if (castattacking)
-        if (castframes == 24 || caststate == &states[mobjinfo[castorder[castnum].type].seestate])
-        {
+    if (castattacking && (castframes == 24 || caststate == &states[mobjinfo[castorder[castnum].type].seestate]))
+    {
 stopattack:
-            castattacking = false;
-            castframes = 0;
-            caststate = &states[mobjinfo[castorder[castnum].type].seestate];
-        }
+        castattacking = false;
+        castframes = 0;
+        caststate = &states[mobjinfo[castorder[castnum].type].seestate];
+    }
 
     casttics = caststate->tics;
 
@@ -723,7 +737,7 @@ static dboolean F_CastResponder(event_t *ev)
         return false;
 
     if (castdeath)
-        return true;                    // already in dying frames
+        return true;    // already in dying frames
     else
     {
         // rotate (taken from Eternity Engine)
@@ -981,7 +995,7 @@ static void F_BunnyScroll(void)
         if (finalecount < 1180)
         {
             if (finalecount == 1130)
-                D_FadeScreen();
+                D_FadeScreen(false);
 
             V_DrawPatchWithShadow((VANILLAWIDTH - 104) / 2 + 1, (VANILLAHEIGHT - 64) / 2 + 1,
                 (FREEDOOM || hacx ? W_CacheLastLumpName("END0") : W_CacheLumpName("END0")), false);

@@ -6,7 +6,7 @@
 
 ========================================================================
 
-  Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
+  Copyright © 1993-2021 by id Software LLC, a ZeniMax Media company.
   Copyright © 2013-2021 by Brad Harding <mailto:brad@doomretro.com>.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
@@ -78,9 +78,6 @@ player_t            *viewplayer = NULL;
 //      range of [0.0, 1.0). Used for interpolation.
 fixed_t             fractionaltic;
 
-//
-// precalculated math tables
-//
 angle_t             clipangle;
 
 // The viewangletox[viewangle + FINEANGLES/4] lookup
@@ -117,7 +114,7 @@ int                 extralight;
 dboolean            drawbloodsplats;
 
 dboolean            r_bloodsplats_translucency = r_bloodsplats_translucency_default;
-dboolean            r_dither = r_dither_default;
+dboolean            r_ditheredlighting = r_ditheredlighting_default;
 int                 r_fov = r_fov_default;
 dboolean            r_homindicator = r_homindicator_default;
 dboolean            r_shadows_translucency = r_shadows_translucency_default;
@@ -355,22 +352,22 @@ static void R_InitTextureMapping(void)
 //
 void R_InitLightTables(void)
 {
-    int width = FixedMul(SCREENWIDTH,
-                    FixedDiv(FRACUNIT, finetangent[FINEANGLES / 4 + ((r_fov + WIDEFOVDELTA) * FINEANGLES / 360) / 2])) + 1;
+    int width = (FixedMul(SCREENWIDTH, FixedDiv(FRACUNIT,
+                    finetangent[FINEANGLES / 4 + ((r_fov + WIDEFOVDELTA) * FINEANGLES / 360) / 2])) + 1) / 2 * FRACUNIT;
 
     c_zlight = malloc(sizeof(*c_zlight) * numcolormaps);
     c_scalelight = malloc(sizeof(*c_scalelight) * numcolormaps);
     c_psprscalelight = malloc(sizeof(*c_psprscalelight) * numcolormaps);
 
     // Calculate the light levels to use
-    //  for each level / distance combination.
+    //  for each level/distance combination.
     for (int i = 0; i < LIGHTLEVELS; i++)
     {
         const int   start = ((LIGHTLEVELS - LIGHTBRIGHT - i) * 2) * NUMCOLORMAPS / LIGHTLEVELS;
 
         for (int j = 0; j < MAXLIGHTZ; j++)
         {
-            const int   scale = FixedDiv(width / 2 * FRACUNIT, (j + 1) << LIGHTZSHIFT) >> LIGHTSCALESHIFT;
+            const int   scale = FixedDiv(width, (j + 1) << LIGHTZSHIFT) >> LIGHTSCALESHIFT;
             const int   level = BETWEEN(0, start - scale / 2, NUMCOLORMAPS - 1) * 256;
 
             // killough 03/20/98: Initialize multiple colormaps
@@ -413,7 +410,7 @@ void R_ExecuteSetViewSize(void)
     else
     {
         viewwidth = setblocks * SCREENWIDTH / 10;
-        viewheight = (setblocks * (SCREENHEIGHT - SBARHEIGHT) / 10) & ~7;
+        viewheight = ((setblocks * (SCREENHEIGHT - SBARHEIGHT) / 10) & ~7);
         pspritescale = FixedDiv(setblocks * NONWIDEWIDTH / 10, VANILLAWIDTH);
     }
 
@@ -507,98 +504,192 @@ void R_InitColumnFunctions(void)
 {
     if (r_textures)
     {
-        basecolfunc = &R_DrawColumn;
         fuzzcolfunc = &R_DrawFuzzColumn;
-        translatedcolfunc = &R_DrawTranslatedColumn;
-        wallcolfunc = &R_DrawWallColumn;
-        bmapwallcolfunc = &R_DrawBrightmapWallColumn;
-        segcolfunc = &R_DrawColumn;
 
-        if (r_skycolor != r_skycolor_default)
-            skycolfunc = &R_DrawSkyColorColumn;
+        if (r_skycolor == r_skycolor_default)
+            skycolfunc = (canmodify && !transferredsky && (gamemode != commercial || gamemap < 21) && !canmouselook ?
+                &R_DrawFlippedSkyColumn : &R_DrawWallColumn);
         else
-            skycolfunc = (canmodify && !transferredsky && (gamemode != commercial || gamemap < 21)
-                && !canmouselook ? &R_DrawFlippedSkyColumn : &R_DrawSkyColumn);
+            skycolfunc = &R_DrawSkyColorColumn;
 
-        spanfunc = &R_DrawSpan;
-
-        if (r_translucency)
+        if (r_ditheredlighting)
         {
-            tlcolfunc = &R_DrawTranslucentColumn;
-            tl50colfunc = &R_DrawTranslucent50Column;
-            tl50segcolfunc = (r_dither ? &R_DrawDitheredColumn : &R_DrawTranslucent50Column);
-            tl33colfunc = &R_DrawTranslucent33Column;
-            tlgreencolfunc = &R_DrawTranslucentGreenColumn;
-            tlredcolfunc = &R_DrawTranslucentRedColumn;
-            tlredwhitecolfunc1 = &R_DrawTranslucentRedWhiteColumn1;
-            tlredwhitecolfunc2 = &R_DrawTranslucentRedWhiteColumn2;
-            tlredwhite50colfunc = &R_DrawTranslucentRedWhite50Column;
-            tlbluecolfunc = &R_DrawTranslucentBlueColumn;
-            tlgreen33colfunc = &R_DrawTranslucentGreen33Column;
-            tlred33colfunc = &R_DrawTranslucentRed33Column;
-            tlblue25colfunc = &R_DrawTranslucentBlue25Column;
-            tlredtoblue33colfunc = &R_DrawTranslucentRedToBlue33Column;
-            tlredtogreen33colfunc = &R_DrawTranslucentRedToGreen33Column;
+            basecolfunc = &R_DrawDitherColumn;
+            translatedcolfunc = &R_DrawDitherTranslatedColumn;
+            wallcolfunc = &R_DrawDitherWallColumn;
+            bmapwallcolfunc = &R_DrawBrightmapDitherWallColumn;
+            segcolfunc = &R_DrawDitherColumn;
+            spanfunc = &R_DrawDitherSpan;
+            redtobluecolfunc = &R_DrawDitherRedToBlueColumn;
+            redtogreencolfunc = &R_DrawDitherRedToGreenColumn;
+
+            if (r_translucency)
+            {
+                tl50segcolfunc = &R_DrawDitherTranslucent50Column;
+                tlcolfunc = &R_DrawDitherTranslucentColumn;
+                tl50colfunc = &R_DrawDitherTranslucent50Column;
+                tl33colfunc = &R_DrawDitherTranslucent33Column;
+                tlgreencolfunc = &R_DrawDitherTranslucentGreenColumn;
+                tlredcolfunc = &R_DrawDitherTranslucentRedColumn;
+                tlredwhitecolfunc1 = &R_DrawDitherTranslucentRedWhiteColumn1;
+                tlredwhitecolfunc2 = &R_DrawDitherTranslucentRedWhiteColumn2;
+                tlredwhite50colfunc = &R_DrawDitherTranslucentRedWhite50Column;
+                tlbluecolfunc = &R_DrawDitherTranslucentBlueColumn;
+                tlgreen33colfunc = &R_DrawDitherTranslucentGreen33Column;
+                tlred33colfunc = &R_DrawDitherTranslucentRed33Column;
+                tlblue25colfunc = &R_DrawDitherTranslucentBlue25Column;
+                tlredtoblue33colfunc = &R_DrawDitherTranslucentRedToBlue33Column;
+                tlredtogreen33colfunc = &R_DrawDitherTranslucentRedToGreen33Column;
+
+                mobjinfo[MT_TRAIL].colfunc = &R_DrawCorrectedDitherTranslucent50Column;
+                mobjinfo[MT_TRAIL].altcolfunc = &R_DrawCorrectedDitherTranslucent50Column;
+            }
+            else
+            {
+                tl50segcolfunc = &R_DrawDitherColumn;
+                tlcolfunc = &R_DrawDitherColumn;
+                tl50colfunc = &R_DrawDitherColumn;
+                tl33colfunc = &R_DrawDitherColumn;
+                tlgreencolfunc = &R_DrawDitherColumn;
+                tlredcolfunc = &R_DrawDitherColumn;
+                tlredwhitecolfunc1 = &R_DrawDitherColumn;
+                tlredwhitecolfunc2 = &R_DrawDitherColumn;
+                tlredwhite50colfunc = &R_DrawDitherColumn;
+                tlbluecolfunc = &R_DrawDitherColumn;
+                tlgreen33colfunc = &R_DrawDitherColumn;
+                tlred33colfunc = &R_DrawDitherColumn;
+                tlblue25colfunc = &R_DrawDitherColumn;
+                tlredtoblue33colfunc = &R_DrawRedToBlueColumn;
+                tlredtogreen33colfunc = &R_DrawRedToGreenColumn;
+
+                mobjinfo[MT_TRAIL].colfunc = &R_DrawCorrectedDitherColumn;
+                mobjinfo[MT_TRAIL].altcolfunc = &R_DrawCorrectedDitherColumn;
+            }
         }
         else
         {
-            tlcolfunc = &R_DrawColumn;
-            tl50colfunc = &R_DrawColumn;
-            tl50segcolfunc = &R_DrawColumn;
-            tl33colfunc = &R_DrawColumn;
-            tlgreencolfunc = &R_DrawColumn;
-            tlredcolfunc = &R_DrawColumn;
-            tlredwhitecolfunc1 = &R_DrawColumn;
-            tlredwhitecolfunc2 = &R_DrawColumn;
-            tlredwhite50colfunc = &R_DrawColumn;
-            tlbluecolfunc = &R_DrawColumn;
-            tlgreen33colfunc = &R_DrawColumn;
-            tlred33colfunc = &R_DrawColumn;
-            tlblue25colfunc = &R_DrawColumn;
-            tlredtoblue33colfunc = &R_DrawRedToBlueColumn;
-            tlredtogreen33colfunc = &R_DrawRedToGreenColumn;
+            basecolfunc = &R_DrawColumn;
+            translatedcolfunc = &R_DrawTranslatedColumn;
+            wallcolfunc = &R_DrawWallColumn;
+            bmapwallcolfunc = &R_DrawBrightmapWallColumn;
+            segcolfunc = &R_DrawColumn;
+            spanfunc = &R_DrawSpan;
+            redtobluecolfunc = &R_DrawRedToBlueColumn;
+            redtogreencolfunc = &R_DrawRedToGreenColumn;
+
+            if (r_translucency)
+            {
+                tl50segcolfunc = &R_DrawTranslucent50Column;
+                tlcolfunc = &R_DrawTranslucentColumn;
+                tl50colfunc = &R_DrawTranslucent50Column;
+                tl33colfunc = &R_DrawTranslucent33Column;
+                tlgreencolfunc = &R_DrawTranslucentGreenColumn;
+                tlredcolfunc = &R_DrawTranslucentRedColumn;
+                tlredwhitecolfunc1 = &R_DrawTranslucentRedWhiteColumn1;
+                tlredwhitecolfunc2 = &R_DrawTranslucentRedWhiteColumn2;
+                tlredwhite50colfunc = &R_DrawTranslucentRedWhite50Column;
+                tlbluecolfunc = &R_DrawTranslucentBlueColumn;
+                tlgreen33colfunc = &R_DrawTranslucentGreen33Column;
+                tlred33colfunc = &R_DrawTranslucentRed33Column;
+                tlblue25colfunc = &R_DrawTranslucentBlue25Column;
+                tlredtoblue33colfunc = &R_DrawTranslucentRedToBlue33Column;
+                tlredtogreen33colfunc = &R_DrawTranslucentRedToGreen33Column;
+
+                mobjinfo[MT_TRAIL].colfunc = &R_DrawCorrectedTranslucent50Column;
+                mobjinfo[MT_TRAIL].altcolfunc = &R_DrawCorrectedTranslucent50Column;
+            }
+            else
+            {
+                tl50segcolfunc = &R_DrawColumn;
+                tlcolfunc = &R_DrawColumn;
+                tl50colfunc = &R_DrawColumn;
+                tl33colfunc = &R_DrawColumn;
+                tlgreencolfunc = &R_DrawColumn;
+                tlredcolfunc = &R_DrawColumn;
+                tlredwhitecolfunc1 = &R_DrawColumn;
+                tlredwhitecolfunc2 = &R_DrawColumn;
+                tlredwhite50colfunc = &R_DrawColumn;
+                tlbluecolfunc = &R_DrawColumn;
+                tlgreen33colfunc = &R_DrawColumn;
+                tlred33colfunc = &R_DrawColumn;
+                tlblue25colfunc = &R_DrawColumn;
+                tlredtoblue33colfunc = &R_DrawRedToBlueColumn;
+                tlredtogreen33colfunc = &R_DrawRedToGreenColumn;
+
+                mobjinfo[MT_TRAIL].colfunc = &R_DrawCorrectedColumn;
+                mobjinfo[MT_TRAIL].altcolfunc = &R_DrawCorrectedColumn;
+            }
         }
 
         bloodsplatcolfunc = (r_bloodsplats_translucency ? &R_DrawBloodSplatColumn : &R_DrawSolidBloodSplatColumn);
-        redtobluecolfunc = &R_DrawRedToBlueColumn;
-        redtogreencolfunc = &R_DrawRedToGreenColumn;
         psprcolfunc = &R_DrawPlayerSpriteColumn;
     }
     else
     {
-        basecolfunc = &R_DrawColorColumn;
-        fuzzcolfunc = &R_DrawTranslucentColor50Column;
-        translatedcolfunc = &R_DrawColorColumn;
-        wallcolfunc = &R_DrawColorColumn;
-        bmapwallcolfunc = &R_DrawColorColumn;
-        segcolfunc = &R_DrawColorColumn;
+        fuzzcolfunc = &R_DrawTranslucent50ColorColumn;
         skycolfunc = (r_skycolor == r_skycolor_default ? &R_DrawColorColumn : &R_DrawSkyColorColumn);
-        spanfunc = &R_DrawColorSpan;
-        tlcolfunc = &R_DrawColorColumn;
-        tl50colfunc = &R_DrawColorColumn;
-        tl50segcolfunc = (r_translucency ? (r_dither ? &R_DrawDitheredColorColumn : &R_DrawTranslucentColor50Column) :
-            &R_DrawColorColumn);
-        tl33colfunc = &R_DrawColorColumn;
-        tlgreencolfunc = &R_DrawColorColumn;
-        tlredcolfunc = &R_DrawColorColumn;
-        tlredwhitecolfunc1 = &R_DrawColorColumn;
-        tlredwhitecolfunc2 = &R_DrawColorColumn;
-        tlredwhite50colfunc = &R_DrawColorColumn;
-        tlbluecolfunc = &R_DrawColorColumn;
-        tlgreen33colfunc = &R_DrawColorColumn;
-        tlred33colfunc = &R_DrawColorColumn;
-        tlblue25colfunc = &R_DrawColorColumn;
-        tlredtoblue33colfunc = &R_DrawColorColumn;
-        tlredtogreen33colfunc = &R_DrawColorColumn;
+
+        if (r_ditheredlighting)
+        {
+            basecolfunc = &R_DrawColorDitherColumn;
+            translatedcolfunc = &R_DrawColorDitherColumn;
+            wallcolfunc = &R_DrawColorDitherColumn;
+            bmapwallcolfunc = &R_DrawColorDitherColumn;
+            segcolfunc = &R_DrawColorDitherColumn;
+            tl50segcolfunc = (r_translucency ? &R_DrawDitherTranslucent50ColorColumn : &R_DrawColorDitherColumn);
+            spanfunc = &R_DrawDitherColorSpan;
+            redtobluecolfunc = &R_DrawColorDitherColumn;
+            redtogreencolfunc = &R_DrawColorDitherColumn;
+            tlcolfunc = &R_DrawColorDitherColumn;
+            tl50colfunc = &R_DrawColorDitherColumn;
+            tl33colfunc = &R_DrawColorDitherColumn;
+            tlgreencolfunc = &R_DrawColorDitherColumn;
+            tlredcolfunc = &R_DrawColorDitherColumn;
+            tlredwhitecolfunc1 = &R_DrawColorDitherColumn;
+            tlredwhitecolfunc2 = &R_DrawColorDitherColumn;
+            tlredwhite50colfunc = &R_DrawColorDitherColumn;
+            tlbluecolfunc = &R_DrawColorDitherColumn;
+            tlgreen33colfunc = &R_DrawColorDitherColumn;
+            tlred33colfunc = &R_DrawColorDitherColumn;
+            tlblue25colfunc = &R_DrawColorDitherColumn;
+            tlredtoblue33colfunc = &R_DrawColorDitherColumn;
+            tlredtogreen33colfunc = &R_DrawColorDitherColumn;
+        }
+        else
+        {
+            basecolfunc = &R_DrawColorColumn;
+            translatedcolfunc = &R_DrawColorColumn;
+            wallcolfunc = &R_DrawColorColumn;
+            bmapwallcolfunc = &R_DrawColorColumn;
+            segcolfunc = &R_DrawColorColumn;
+            tl50segcolfunc = (r_translucency ? &R_DrawTranslucent50ColorColumn : &R_DrawColorColumn);
+            spanfunc = &R_DrawColorSpan;
+            redtobluecolfunc = &R_DrawColorColumn;
+            redtogreencolfunc = &R_DrawColorColumn;
+            tlcolfunc = &R_DrawColorColumn;
+            tl50colfunc = &R_DrawColorColumn;
+            tl33colfunc = &R_DrawColorColumn;
+            tlgreencolfunc = &R_DrawColorColumn;
+            tlredcolfunc = &R_DrawColorColumn;
+            tlredwhitecolfunc1 = &R_DrawColorColumn;
+            tlredwhitecolfunc2 = &R_DrawColorColumn;
+            tlredwhite50colfunc = &R_DrawColorColumn;
+            tlbluecolfunc = &R_DrawColorColumn;
+            tlgreen33colfunc = &R_DrawColorColumn;
+            tlred33colfunc = &R_DrawColorColumn;
+            tlblue25colfunc = &R_DrawColorColumn;
+            tlredtoblue33colfunc = &R_DrawColorColumn;
+            tlredtogreen33colfunc = &R_DrawColorColumn;
+        }
+
         bloodsplatcolfunc = &R_DrawColorColumn;
-        redtobluecolfunc = &R_DrawColorColumn;
-        redtogreencolfunc = &R_DrawColorColumn;
         psprcolfunc = &R_DrawColorColumn;
     }
 
     for (int i = 0; i < NUMMOBJTYPES; i++)
     {
         mobjinfo_t  *info = &mobjinfo[i];
+        const int   flags = info->flags;
         const int   flags2 = info->flags2;
 
         if (flags2 & MF2_TRANSLUCENT)
@@ -606,7 +697,7 @@ void R_InitColumnFunctions(void)
             info->colfunc = tlcolfunc;
             info->altcolfunc = tl50colfunc;
         }
-        else if (info->flags & MF_FUZZ)
+        else if (flags & MF_FUZZ)
         {
             info->colfunc = fuzzcolfunc;
             info->altcolfunc = fuzzcolfunc;
@@ -631,7 +722,7 @@ void R_InitColumnFunctions(void)
             info->colfunc = tl33colfunc;
             info->altcolfunc = tl33colfunc;
         }
-        else if ((info->flags & MF_TRANSLUCENT) || (flags2 & MF2_TRANSLUCENT_50))
+        else if ((flags & MF_TRANSLUCENT) || (flags2 & MF2_TRANSLUCENT_50))
         {
             info->colfunc = tl50colfunc;
             info->altcolfunc = tl50colfunc;
@@ -655,16 +746,6 @@ void R_InitColumnFunctions(void)
         {
             info->colfunc = tlblue25colfunc;
             info->altcolfunc = tlblue25colfunc;
-        }
-        else if (flags2 & MF2_REDTOGREEN)
-        {
-            info->colfunc = redtogreencolfunc;
-            info->altcolfunc = redtogreencolfunc;
-        }
-        else if (flags2 & MF2_REDTOBLUE)
-        {
-            info->colfunc = redtobluecolfunc;
-            info->altcolfunc = redtobluecolfunc;
         }
         else
         {
@@ -736,8 +817,7 @@ static void R_SetupFrame(void)
 
     // [AM] Interpolate the player camera if the feature is enabled.
     if (vid_capfps != TICRATE
-        // Don't interpolate if the player did something
-        // that would necessitate turning it off for a tic.
+        // Don't interpolate if the player did something that would necessitate turning it off for a tic.
         && mo->interpolate
         // Don't interpolate during a paused state
         && !paused && !menuactive && !consoleactive)
@@ -813,7 +893,7 @@ static void R_SetupFrame(void)
     zlight = c_zlight[cm];
     scalelight = c_scalelight[cm];
     psprscalelight = c_psprscalelight[cm];
-    drawbloodsplats = (r_blood != r_blood_none && r_bloodsplats_max && !vanilla);
+    drawbloodsplats = (r_blood != r_blood_none && r_bloodsplats_max);
 
     if (viewplayer->fixedcolormap && r_textures)
     {

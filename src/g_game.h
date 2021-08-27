@@ -6,7 +6,7 @@
 
 ========================================================================
 
-  Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
+  Copyright © 1993-2021 by id Software LLC, a ZeniMax Media company.
   Copyright © 2013-2021 by Brad Harding <mailto:brad@doomretro.com>.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
@@ -100,23 +100,24 @@ void G_RemoveChoppers(void);
 
 void G_LoadedGameMessage(void);
 
-extern fixed_t  forwardmove[2];
-extern fixed_t  sidemove[2];
-extern fixed_t  angleturn[3];
-extern dboolean gamekeydown[NUMKEYS];
-extern dboolean *mousebuttons;
-extern dboolean gamepadpress;
-extern char     lbmname1[MAX_PATH];
-extern char     lbmpath1[MAX_PATH];
-extern char     lbmpath2[MAX_PATH];
-extern char     keyactionlist[NUMKEYS][255];
-extern char     mouseactionlist[MAX_MOUSE_BUTTONS + 2][255];
-extern int      mousewait;
-extern int      quickSaveSlot;
-extern int      st_facecount;
-extern dboolean skipaction;
-extern char     savename[MAX_PATH];
-extern dboolean usemouselook;
-extern dboolean secretexit;
+extern fixed_t      forwardmove[2];
+extern fixed_t      sidemove[2];
+extern fixed_t      angleturn[3];
+extern dboolean     gamekeydown[NUMKEYS];
+extern dboolean     *mousebuttons;
+extern dboolean     gamepadpress;
+extern char         lbmname1[MAX_PATH];
+extern char         lbmpath1[MAX_PATH];
+extern char         lbmpath2[MAX_PATH];
+extern char         keyactionlist[NUMKEYS][255];
+extern char         mouseactionlist[MAX_MOUSE_BUTTONS + 2][255];
+extern int          mousewait;
+extern int          quickSaveSlot;
+extern int          st_facecount;
+extern dboolean     skipaction;
+extern char         savename[MAX_PATH];
+extern dboolean     usemouselook;
+extern dboolean     secretexit;
+extern gameaction_t loadaction;
 
 #endif

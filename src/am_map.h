@@ -6,7 +6,7 @@
 
 ========================================================================
 
-  Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
+  Copyright © 1993-2021 by id Software LLC, a ZeniMax Media company.
   Copyright © 2013-2021 by Brad Harding <mailto:brad@doomretro.com>.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
@@ -85,8 +85,6 @@ typedef struct
     fixed_t     cos;
     fixed_t     bbox[4];
 } am_frame_t;
-
-extern dboolean     message_dontfuckwithme;
 
 extern mpoint_t     *markpoints;
 extern int          markpointnum;

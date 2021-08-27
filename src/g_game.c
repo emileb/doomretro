@@ -6,7 +6,7 @@
 
 ========================================================================
 
-  Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
+  Copyright © 1993-2021 by id Software LLC, a ZeniMax Media company.
   Copyright © 2013-2021 by Brad Harding <mailto:brad@doomretro.com>.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
@@ -120,6 +120,17 @@ static int *keyboardweapons[NUMWEAPONKEYS] =
     &keyboardweapon7
 };
 
+static int *mouseweapons[NUMWEAPONKEYS] =
+{
+    &mouseweapon1,
+    &mouseweapon2,
+    &mouseweapon3,
+    &mouseweapon4,
+    &mouseweapon5,
+    &mouseweapon6,
+    &mouseweapon7
+};
+
 static int *gamepadweapons[NUMWEAPONKEYS] =
 {
     &gamepadweapon1,
@@ -174,9 +185,6 @@ uint64_t        stat_skilllevel_heynottoorough = 0;
 uint64_t        stat_skilllevel_hurtmeplenty = 0;
 uint64_t        stat_skilllevel_ultraviolence = 0;
 uint64_t        stat_skilllevel_nightmare = 0;
-
-extern int      logotic;
-extern int      pagetic;
 
 void G_RemoveChoppers(void)
 {
@@ -369,7 +377,17 @@ void G_BuildTiccmd(ticcmd_t *cmd)
             {
                 keydown = key;
                 cmd->buttons |= (BT_CHANGE | (i << BT_WEAPONSHIFT));
+
                 break;
+            }
+            else if (mousebuttons[*mouseweapons[i]])
+            {
+                if (viewplayer->readyweapon != i || (i == wp_fist && viewplayer->weaponowned[wp_chainsaw])
+                    || (i == wp_shotgun && viewplayer->weaponowned[wp_supershotgun]))
+                {
+                    cmd->buttons |= (BT_CHANGE | (i << BT_WEAPONSHIFT));
+                    break;
+                }
             }
             else if (gamepadbuttons & *gamepadweapons[i])
             {
@@ -548,6 +566,7 @@ void G_DoLoadLevel(void)
     viewplayer->itemspickedup_health = 0;
     memset(viewplayer->mobjcount, 0, sizeof(viewplayer->mobjcount));
     viewplayer->prevmessage[0] = '\0';
+    viewplayer->prevmessagetics = 0;
 
     freeze = false;
 
@@ -660,7 +679,6 @@ dboolean G_Responder(event_t *ev)
                 && ev->data1 != KEY_SHIFT
                 && ev->data1 != KEY_ALT
                 && ev->data1 != KEY_CTRL
-                && ev->data1 != KEY_CAPSLOCK
                 && ev->data1 != KEY_NUMLOCK
                 && (ev->data1 < KEY_F1 || ev->data1 > KEY_F11)
                 && !((ev->data1 == KEY_ENTER || ev->data1 == KEY_TAB) && altdown)
@@ -689,6 +707,7 @@ dboolean G_Responder(event_t *ev)
                     pagetic = MIN(pagetic, 10);
                 else
                 {
+                    pagetic = PAGETICS;
                     M_StartControlPanel();
                     S_StartSound(NULL, sfx_swtchn);
                 }
@@ -696,11 +715,12 @@ dboolean G_Responder(event_t *ev)
 
             return true;
         }
-        else if (!menuactive && !consoleactive && ev->type == ev_keyup && ev->data1 == keyboardscreenshot)
+        else if (!menuactive && !consoleactive && !splashscreen && ev->type == ev_keyup && ev->data1 == keyboardscreenshot)
         {
             S_StartSound(NULL, sfx_scrsht);
             memset(screens[0], nearestwhite, SCREENAREA);
-            D_FadeScreen();
+            D_FadeScreen(true);
+
             return true;
         }
 
@@ -736,7 +756,7 @@ dboolean G_Responder(event_t *ev)
                 if (vid_motionblur)
                     I_SetMotionBlur(0);
 
-                D_FadeScreen();
+                D_FadeScreen(false);
             }
             else if (key == keyboardalwaysrun && !keydown)
             {
@@ -884,6 +904,7 @@ void G_Ticker(void)
             case ga_autoloadgame:
                 M_StringCopy(savename, P_SaveGameFile(quickSaveSlot), sizeof(savename));
                 G_DoLoadGame();
+
                 break;
 
             case ga_newgame:
@@ -933,12 +954,14 @@ void G_Ticker(void)
                     I_SetPalette(PLAYPAL);
                     I_UpdateBlitFunc(false);
                     I_StopGamepadVibration();
+                    I_CapFPS(TICRATE);
                 }
                 else
                 {
                     S_ResumeMusic();
                     S_StartSound(NULL, sfx_swtchx);
                     I_SetPalette(&PLAYPAL[st_palette * 768]);
+                    I_CapFPS(vid_capfps);
                 }
 
                 break;
@@ -946,6 +969,7 @@ void G_Ticker(void)
             case BTS_SAVEGAME:
                 savegameslot = (viewplayer->cmd.buttons & BTS_SAVEMASK) >> BTS_SAVESHIFT;
                 gameaction = ga_savegame;
+
                 break;
         }
 
@@ -966,6 +990,7 @@ void G_Ticker(void)
             ST_Ticker();
             AM_Ticker();
             HU_Ticker();
+
             break;
 
         case GS_INTERMISSION:
@@ -1060,7 +1085,7 @@ static void G_DoReborn(void)
     else
     {
         gameaction = ga_loadlevel;
-        C_InputNoRepeat("restartmap");
+        C_Input("restartmap");
 
         if (M_StringCompare(mapnum, "E1M4B") || M_StringCompare(mapnum, "E1M8B"))
             M_StringCopy(speciallumpname, mapnum, sizeof(speciallumpname));
@@ -1077,10 +1102,10 @@ void G_ScreenShot(void)
         HU_SetPlayerMessage(buffer, false, false);
         message_dontfuckwithme = true;
 
-        C_Output("<b>%s</b> was saved.", lbmpath1);
+        C_Output(BOLD("%s") " was saved.", lbmpath1);
 
         if (*lbmpath2)
-            C_Output("<b>%s</b> was also saved.", lbmpath2);
+            C_Output(BOLD("%s") " was also saved.", lbmpath2);
     }
     else
         C_Warning(0, "A screenshot couldn't be taken.");
@@ -1317,7 +1342,7 @@ static void G_DoCompleted(void)
     stat_mapscompleted = SafeAdd(stat_mapscompleted, 1);
     M_SaveCVARs();
 
-    C_InputNoRepeat("exitmap");
+    C_Input("exitmap");
 
     WI_Start(&wminfo);
 }
@@ -1409,8 +1434,9 @@ void G_DoLoadGame(void)
     {
         menuactive = false;
         C_ShowConsole();
-        C_Warning(1, "<b>%s</b> couldn't be loaded.", savename);
+        C_Warning(1, BOLD("%s") " couldn't be loaded.", savename);
         loadaction = ga_nothing;
+
         return;
     }
 
@@ -1418,6 +1444,7 @@ void G_DoLoadGame(void)
     {
         fclose(save_stream);
         loadaction = ga_nothing;
+
         return;
     }
 
@@ -1443,7 +1470,7 @@ void G_DoLoadGame(void)
         S_ChangeMusInfoMusic(musinfo.current_item, true);
 
     if (!P_ReadSaveGameEOF())
-        I_Error("Bad savegame");
+        I_Error("%s is invalid.", savename);
 
     fclose(save_stream);
 
@@ -1451,13 +1478,14 @@ void G_DoLoadGame(void)
         R_ExecuteSetViewSize();
 
     // draw the pattern into the back screen
-    R_FillBackScreen();
+    if (viewwidth != SCREENWIDTH)
+        R_FillBackScreen();
 
     st_facecount = 0;
 
     if (consoleactive)
     {
-        C_Output("<b>%s</b> loaded.", savename);
+        C_Output(BOLD("%s") " loaded.", savename);
         C_HideConsoleFast();
     }
 }
@@ -1506,7 +1534,7 @@ static void G_DoSaveGame(void)
     {
         menuactive = false;
         C_ShowConsole();
-        C_Warning(1, "<b>%s</b> couldn't be saved.", savegame_file);
+        C_Warning(1, BOLD("%s") " couldn't be saved.", savegame_file);
     }
     else
     {
@@ -1545,7 +1573,7 @@ static void G_DoSaveGame(void)
             C_Input("save %s", savegame_file);
 
         if (consoleactive)
-            C_Output("<b>%s</b> was saved.", savename);
+            C_Output(BOLD("%s") " was saved.", savename);
         else
         {
             static char buffer[1024];
@@ -1566,7 +1594,8 @@ static void G_DoSaveGame(void)
         M_SaveCVARs();
 
         // draw the pattern into the back screen
-        R_FillBackScreen();
+        if (viewwidth != SCREENWIDTH)
+            R_FillBackScreen();
     }
 
     gameaction = ga_nothing;
@@ -1722,7 +1751,7 @@ void G_InitNew(skill_t skill, int ep, int map)
         || (!M_StringStartsWith(console[consolestrings - 2].string, "map ")
             && !M_StringStartsWith(console[consolestrings - 1].string, "load ")
             && !M_StringStartsWith(console[consolestrings - 1].string, "Warping ")))
-        C_InputNoRepeat("newgame");
+        C_Input("newgame");
 
     G_DoLoadLevel();
 }

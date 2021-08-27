@@ -6,7 +6,7 @@
 
 ========================================================================
 
-  Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
+  Copyright © 1993-2021 by id Software LLC, a ZeniMax Media company.
   Copyright © 2013-2021 by Brad Harding <mailto:brad@doomretro.com>.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
@@ -91,6 +91,13 @@ extern int  mouserun;
 extern int  mousescreenshot;
 extern int  mousestrafe;
 extern int  mouseuse;
+extern int  mouseweapon1;
+extern int  mouseweapon2;
+extern int  mouseweapon3;
+extern int  mouseweapon4;
+extern int  mouseweapon5;
+extern int  mouseweapon6;
+extern int  mouseweapon7;
 
 extern int  gamepadalwaysrun;
 extern int  gamepadautomap;

@@ -6,7 +6,7 @@
 
 ========================================================================
 
-  Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
+  Copyright © 1993-2021 by id Software LLC, a ZeniMax Media company.
   Copyright © 2013-2021 by Brad Harding <mailto:brad@doomretro.com>.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
@@ -226,8 +226,6 @@ char *M_GetAppDataFolder(void)
 
     if (resourcedir)
     {
-        closedir(resourcedir);
-
 #if defined(__APPLE__)
         // On macOS, store generated application files in ~/Library/Application Support/DOOM Retro.
         NSFileManager   *manager = [NSFileManager defaultManager];
@@ -235,14 +233,17 @@ char *M_GetAppDataFolder(void)
                             inDomains : NSUserDomainMask].firstObject;
         NSURL           *appSupportURL = [baseAppSupportURL URLByAppendingPathComponent : @PACKAGE_NAME];
 
+        closedir(resourcedir);
+
         return (char *)appSupportURL.fileSystemRepresentation;
 #else
         // On Linux, store generated application files in /home/<username>/.config/doomretro
-        char            *buffer;
+        char    *buffer = getenv("HOME");
 
-        if (!(buffer = SDL_getenv("HOME")))
+        if (!buffer)
             buffer = getpwuid(getuid())->pw_dir;
 
+        closedir(resourcedir);
         free(executablefolder);
 
         return M_StringJoin(buffer, DIR_SEPARATOR_S ".config" DIR_SEPARATOR_S PACKAGE, NULL);
@@ -268,6 +269,7 @@ char *M_GetResourceFolder(void)
     {
         closedir(resourcedir);
         free(executablefolder);
+
         return resourcefolder;
     }
 
@@ -301,13 +303,10 @@ char *M_GetExecutableFolder(void)
     char    *folder = malloc(MAX_PATH);
     TCHAR   buffer[MAX_PATH];
 
-    if (!folder)
-        return NULL;
-
     GetModuleFileName(NULL, buffer, MAX_PATH);
     M_StringCopy(folder, buffer, MAX_PATH);
 
-    if ((pos = strrchr(folder, '\\')))
+    if (folder && (pos = strrchr(folder, DIR_SEPARATOR)))
         *pos = '\0';
 
     return folder;
@@ -501,7 +500,7 @@ static char *stristr(char *ch1, char *ch2)
 //
 // String replace function.
 //
-char *M_StringReplace(char *haystack, char *needle, char *replacement)
+char *M_StringReplace(char *haystack, char *needle, const char *replacement)
 {
     static char buffer[4096];
     char        *p;
@@ -512,7 +511,38 @@ char *M_StringReplace(char *haystack, char *needle, char *replacement)
     strncpy(buffer, haystack, p - haystack);
     buffer[p - haystack] = '\0';
     sprintf(buffer + (p - haystack), "%s%s", replacement, p + strlen(needle));
+
     return buffer;
+}
+
+void M_StringReplaceAll(char *haystack, char *needle, const char *replacement)
+{
+    char    buffer[1024] = "";
+    char    *insert_point = &buffer[0];
+    char    *tmp = haystack;
+    int     needle_len = (int)strlen(needle);
+    int     repl_len = (int)strlen(replacement);
+
+    while (true)
+    {
+        char    *p = stristr(tmp, needle);
+
+        if (!p)
+        {
+            strcpy(insert_point, tmp);
+            break;
+        }
+
+        memcpy(insert_point, tmp, p - tmp);
+        insert_point += p - tmp;
+
+        memcpy(insert_point, replacement, repl_len);
+        insert_point += repl_len;
+
+        tmp = p + needle_len;
+    }
+
+    strcpy(haystack, buffer);
 }
 
 // Safe version of strdup() that checks the string was successfully allocated.
@@ -662,7 +692,7 @@ char *commify(int64_t value)
 {
     char    result[64];
 
-    M_snprintf(result, sizeof(result), "%lli", value);
+    M_snprintf(result, sizeof(result), "%" PRIi64, value);
 
     if (value <= -1000 || value >= 1000)
     {
@@ -678,6 +708,37 @@ char *commify(int64_t value)
             pt -= 3;
 
             if (pt > result)
+            {
+                memmove(pt + 1, pt, n);
+                *pt = ',';
+                n += 4;
+            }
+            else
+                break;
+        } while (true);
+    }
+
+    return M_StringDuplicate(result);
+}
+
+char *commifystat(uint64_t value)
+{
+    char    result[64];
+
+    M_snprintf(result, sizeof(result), "%" PRIu64, value);
+
+    if (value >= 1000)
+    {
+        char    *pt;
+        size_t  n;
+
+        for (pt = result; *pt && *pt != '.'; pt++);
+
+        n = result + sizeof(result) - pt;
+
+        do
+        {
+            if ((pt -= 3) > result)
             {
                 memmove(pt + 1, pt, n);
                 *pt = ',';
@@ -881,7 +942,7 @@ char *striptrailingzero(float value, int precision)
     {
         int len;
 
-        M_snprintf(result, 100, "%.*f", (precision == 2 ? 2 : (value != floor(value))), value);
+        M_snprintf(result, sizeof(result), "%.*f", (precision == 2 ? 2 : (value != floor(value))), value);
         len = (int)strlen(result);
 
         if (len >= 4 && result[len - 3] == '.' && result[len - 1] == '0')
@@ -889,36 +950,6 @@ char *striptrailingzero(float value, int precision)
     }
 
     return result;
-}
-
-void strreplace(char *target, char *needle, const char *replacement)
-{
-    char    buffer[1024] = "";
-    char    *insert_point = &buffer[0];
-    char    *tmp = target;
-    int     needle_len = (int)strlen(needle);
-    int     repl_len = (int)strlen(replacement);
-
-    while (true)
-    {
-        char    *p = stristr(tmp, needle);
-
-        if (!p)
-        {
-            strcpy(insert_point, tmp);
-            break;
-        }
-
-        memcpy(insert_point, tmp, p - tmp);
-        insert_point += p - tmp;
-
-        memcpy(insert_point, replacement, repl_len);
-        insert_point += repl_len;
-
-        tmp = p + needle_len;
-    }
-
-    strcpy(target, buffer);
 }
 
 static const long hextable[] =

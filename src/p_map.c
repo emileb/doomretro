@@ -6,7 +6,7 @@
 
 ========================================================================
 
-  Copyright © 1993-2012 by id Software LLC, a ZeniMax Media company.
+  Copyright © 1993-2021 by id Software LLC, a ZeniMax Media company.
   Copyright © 2013-2021 by Brad Harding <mailto:brad@doomretro.com>.
 
   DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
@@ -796,6 +796,8 @@ dboolean P_CheckPosition(mobj_t *thing, fixed_t x, fixed_t y)
     yl = P_GetSafeBlockY(tmbbox[BOXBOTTOM] - bmaporgy - MAXRADIUS);
     yh = P_GetSafeBlockY(tmbbox[BOXTOP] - bmaporgy + MAXRADIUS);
 
+    validcount++;
+
     for (int bx = xl; bx <= xh; bx++)
         for (int by = yl; by <= yh; by++)
             if (!P_BlockThingsIterator(bx, by, &PIT_CheckThing))
@@ -1072,21 +1074,26 @@ dboolean P_TryMove(mobj_t *thing, fixed_t x, fixed_t y, int dropoff)
 //
 static dboolean PIT_ApplyTorque(line_t *ld)
 {
-    if (ld->backsector          // If thing touches two-sided pivot linedef
-        && tmbbox[BOXRIGHT] > ld->bbox[BOXLEFT] && tmbbox[BOXLEFT] < ld->bbox[BOXRIGHT]
-        && tmbbox[BOXTOP] > ld->bbox[BOXBOTTOM] && tmbbox[BOXBOTTOM] < ld->bbox[BOXTOP]
+    // If thing touches two-sided pivot linedef
+    if (ld->backsector
+        && tmbbox[BOXRIGHT] > ld->bbox[BOXLEFT]
+        && tmbbox[BOXLEFT] < ld->bbox[BOXRIGHT]
+        && tmbbox[BOXTOP] > ld->bbox[BOXBOTTOM]
+        && tmbbox[BOXBOTTOM] < ld->bbox[BOXTOP]
         && P_BoxOnLineSide(tmbbox, ld) == -1)
     {
         mobj_t  *mo = tmthing;
-        fixed_t dist =                               // lever arm
-              (ld->dx >> FRACBITS) * (mo->y >> FRACBITS)
+
+        // lever arm
+        fixed_t dist = (ld->dx >> FRACBITS) * (mo->y >> FRACBITS)
             - (ld->dy >> FRACBITS) * (mo->x >> FRACBITS)
             - (ld->dx >> FRACBITS) * (ld->v1->y >> FRACBITS)
             + (ld->dy >> FRACBITS) * (ld->v1->x >> FRACBITS);
 
-        if (dist < 0 ?                               // dropoff direction
-            ld->frontsector->floorheight < mo->z && ld->backsector->floorheight >= mo->z :
-            ld->backsector->floorheight < mo->z && ld->frontsector->floorheight >= mo->z)
+        // dropoff direction
+        if (dist < 0 ?
+            (ld->frontsector->floorheight < mo->z && ld->backsector->floorheight >= mo->z) :
+            (ld->backsector->floorheight < mo->z && ld->frontsector->floorheight >= mo->z))
         {
             // At this point, we know that the object straddles a two-sided
             // linedef, and that the object's center of mass is above-ground.
@@ -1100,7 +1107,7 @@ static dboolean PIT_ApplyTorque(line_t *ld)
 
             // Momentum is proportional to distance between the
             // object's center of mass and the pivot linedef.
-            //
+
             // It is scaled by 2 ^ (OVERDRIVE - gear). When gear is
             // increased, the momentum gradually decreases to 0 for
             // the same amount of pseudotorque, so that oscillations
@@ -1161,7 +1168,7 @@ void P_ApplyTorque(mobj_t *mo)
 
     // If the object has been moving, step up the gear.
     // This helps reach equilibrium and avoid oscillations.
-    //
+
     // DOOM has no concept of potential energy, much less
     // of rotation, so we have to creatively simulate these
     // systems somehow :)
@@ -1169,6 +1176,10 @@ void P_ApplyTorque(mobj_t *mo)
         mo->gear = 0;                           // Reset it to full strength
     else if (mo->gear < MAXGEAR)                // Else if not at max gear,
         mo->gear++;                             // move up a gear
+
+    // [JN] Reduce torque tics, don't go negative.
+    if (mo->geartime > 0)
+        mo->geartime--;
 }
 
 //
