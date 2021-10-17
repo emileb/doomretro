@@ -90,7 +90,7 @@ dboolean        viewactive;
 int             gametime = 0;
 int             totalkills;                         // for intermission
 int             totalitems;
-int             totalsecret;
+int             totalsecrets;
 int             totalpickups;
 int             monstercount[NUMMOBJTYPES];
 int             barrelcount;
@@ -292,12 +292,20 @@ void G_BuildTiccmd(ticcmd_t *cmd)
         if (gamekeydown[keyboardright] || (gamepadbuttons & gamepadright))
             cmd->angleturn -= angleturn[(turnheld < SLOWTURNTICS ? 2 : run)];
         else if (gamepadthumbRX > 0)
-            cmd->angleturn -= (int)(gamepadangleturn[run] * ((float)gamepadthumbRX / SHRT_MAX) * gamepadhorizontalsensitivity);
+        {
+            fixed_t x = gamepadthumbRX * 2;
+
+            cmd->angleturn -= FixedMul(gamepadangleturn[run], (fixed_t)(gamepadhorizontalsensitivity * FixedMul(FixedMul(x, x), x)));
+        }
 
         if (gamekeydown[keyboardleft] || (gamepadbuttons & gamepadleft))
             cmd->angleturn += angleturn[(turnheld < SLOWTURNTICS ? 2 : run)];
         else if (gamepadthumbRX < 0)
-            cmd->angleturn -= (int)(gamepadangleturn[run] * ((float)gamepadthumbRX / SHRT_MAX) * gamepadhorizontalsensitivity);
+        {
+            fixed_t x = gamepadthumbRX * 2;
+
+            cmd->angleturn -= FixedMul(gamepadangleturn[run], (fixed_t)(gamepadhorizontalsensitivity * FixedMul(FixedMul(x, x), x)));
+        }
     }
 
     if (gamepadthumbRY)
@@ -336,7 +344,11 @@ void G_BuildTiccmd(ticcmd_t *cmd)
         if (gp_thumbsticks == 2)
             side += (int)(sidemove[run] * (float)gamepadthumbLX / SHRT_MAX);
         else
-            cmd->angleturn -= (int)(gamepadangleturn[run] * ((float)gamepadthumbLX / SHRT_MAX) * gamepadhorizontalsensitivity);
+        {
+            fixed_t x = gamepadthumbLX * 2;
+
+            cmd->angleturn -= FixedMul(gamepadangleturn[run], (fixed_t)(gamepadhorizontalsensitivity * FixedMul(FixedMul(x, x), x)));
+        }
     }
 
     if (gamekeydown[keyboardstrafeleft] || gamekeydown[keyboardstrafeleft2] || (gamepadbuttons & gamepadstrafeleft))
@@ -346,7 +358,11 @@ void G_BuildTiccmd(ticcmd_t *cmd)
         if (gp_thumbsticks == 2)
             side += (int)(sidemove[run] * (float)gamepadthumbLX / SHRT_MAX);
         else
-            cmd->angleturn -= (int)(gamepadangleturn[run] * ((float)gamepadthumbLX / SHRT_MAX) * gamepadhorizontalsensitivity);
+        {
+            fixed_t x = gamepadthumbLX * 2;
+
+            cmd->angleturn -= FixedMul(gamepadangleturn[run], (fixed_t)(gamepadhorizontalsensitivity * FixedMul(FixedMul(x, x), x)));
+        }
     }
 
     if ((gamekeydown[keyboardjump] || mousebuttons[mousejump] || (gamepadbuttons & gamepadjump)) && !nojump)
@@ -541,7 +557,7 @@ void G_DoLoadLevel(void)
     HU_DrawDisk();
 
     if (timer)
-        countdown = timer * 60 * TICRATE;
+        timeremaining = timer * 60 * TICRATE;
 
     if (wipegamestate == GS_LEVEL)
         wipegamestate = GS_NONE;                // force a wipe
@@ -567,6 +583,8 @@ void G_DoLoadLevel(void)
     memset(viewplayer->mobjcount, 0, sizeof(viewplayer->mobjcount));
     viewplayer->prevmessage[0] = '\0';
     viewplayer->prevmessagetics = 0;
+    viewplayer->infightcount = 0;
+    viewplayer->resurrectioncount = 0;
 
     freeze = false;
 
@@ -954,14 +972,12 @@ void G_Ticker(void)
                     I_SetPalette(PLAYPAL);
                     I_UpdateBlitFunc(false);
                     I_StopGamepadVibration();
-                    I_CapFPS(TICRATE);
                 }
                 else
                 {
                     S_ResumeMusic();
                     S_StartSound(NULL, sfx_swtchx);
                     I_SetPalette(&PLAYPAL[st_palette * 768]);
-                    I_CapFPS(vid_capfps);
                 }
 
                 break;
@@ -1111,6 +1127,8 @@ void G_ScreenShot(void)
         C_Warning(0, "A screenshot couldn't be taken.");
 }
 
+dboolean    newpars = false;
+
 // DOOM Par Times
 int pars[6][10] =
 {
@@ -1164,8 +1182,8 @@ int G_GetParTime(void)
 
     if (par)
         return par;
-    else if (BTSX || (!canmodify && (!nerve || gamemap > 9) && !FREEDOOM))
-        return 0;   // [BH] have no par time if this level is from a PWAD
+    else if (!newpars && !canmodify && (!nerve || gamemap > 9))
+        return 0;
     else if (gamemode == commercial)
     {
         // [BH] get correct par time for No Rest For The Living
@@ -1328,7 +1346,7 @@ static void G_DoCompleted(void)
 
     wminfo.maxkills = totalkills;
     wminfo.maxitems = totalitems;
-    wminfo.maxsecret = totalsecret;
+    wminfo.maxsecret = totalsecrets;
     wminfo.partime = G_GetParTime() * TICRATE;
     wminfo.skills = (totalkills ? viewplayer->killcount : 1);
     wminfo.sitems = (totalitems ? viewplayer->itemcount : 1);

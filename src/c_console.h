@@ -74,6 +74,11 @@
 
 #define CONSOLETOP              0
 
+#define OVERLAYTEXTX            (vid_widescreen ? 25 : 8)
+#define OVERLAYTEXTY            (vid_widescreen ? 12 : 10)
+#define OVERLAYLINEHEIGHT       14
+#define OVERLAYSPACING          5
+
 #define WARNINGWIDTH            13
 
 #define EMPTYVALUE              "\"\""
@@ -159,8 +164,6 @@ extern char         consolecheat[255];
 extern char         consolecheatparm[3];
 extern char         consolecmdparm[255];
 
-extern dboolean     forceconsoleblurredraw;
-
 extern dboolean     scrollbardrawn;
 
 typedef struct
@@ -212,8 +215,10 @@ dboolean C_ValidateInput(char *input);
 dboolean C_Responder(event_t *ev);
 void C_PrintCompileDate(void);
 void C_PrintSDLVersions(void);
-void C_UpdateFPS(void);
-void C_UpdateTimer(void);
+void C_UpdateFPSOverlay(void);
+void C_UpdateTimerOverlay(void);
+void C_UpdatePathOverlay(void);
+void C_UpdatePlayerStatsOverlay(void);
 char *C_CreateTimeStamp(int index);
 void C_ResetWrappedLines(void);
 

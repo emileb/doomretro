@@ -48,6 +48,9 @@
 
 #if !defined(__HAIKU__)
 #define DEFAULT_DEVICE              NULL
+#if defined(__sun)
+#define Mix_OpenAudioDevice(freq, format, channels, chunk, dev, chgs) Mix_OpenAudio(freq, format, channels, chunk)
+#endif
 #else
 // Triggers a segfault if no name is provided even though the default device is empty
 #define DEFAULT_DEVICE              ""
@@ -83,6 +86,8 @@ void S_Init(void);
 
 // Shut down sound
 void S_Shutdown(void);
+
+void S_StopSounds(void);
 
 //
 // Per level startup code.

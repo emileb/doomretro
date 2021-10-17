@@ -68,7 +68,7 @@
 // Stereo separation
 #define S_STEREO_SWING  96
 
-#define NORM_SEP        128
+#define NORM_SEP        127
 
 #define TIDNUM(x)       (int)(x->musicid & 0xFFFF)  // thing identifier
 
@@ -163,7 +163,7 @@ void S_Init(void)
 {
     if (M_CheckParm("-nosound"))
     {
-        C_Warning(1, "A " BOLD("-nosound") " parameter was found on the command-line. Both sound effects and music have been disabled.");
+        C_Warning(1, "A " BOLD("-nosound") " parameter was found on the command-line. Both sound effects and music are now muted.");
         nomusic = true;
         nosfx = true;
     }
@@ -171,13 +171,13 @@ void S_Init(void)
     {
         if (M_CheckParm("-nomusic"))
         {
-            C_Warning(1, "A " BOLD("-nomusic") " parameter was found on the command-line. Music has been disabled.");
+            C_Warning(1, "A " BOLD("-nomusic") " parameter was found on the command-line. Music is now muted.");
             nomusic = true;
         }
 
         if (M_CheckParm("-nosfx"))
         {
-            C_Warning(1, "A " BOLD("-nosfx") " parameter was found on the command-line. Sound effects have been disabled.");
+            C_Warning(1, "A " BOLD("-nosfx") " parameter was found on the command-line. Sound effects are now muted.");
             nosfx = true;
         }
     }
@@ -275,6 +275,16 @@ static void S_StopChannel(int cnum)
         c->sfxinfo = NULL;
         c->origin = NULL;
     }
+}
+
+void S_StopSounds(void)
+{
+    if (nosfx)
+        return;
+
+    for (int cnum = 0; cnum < s_channels; cnum++)
+        if (channels[cnum].sfxinfo)
+            S_StopChannel(cnum);
 }
 
 static int S_GetMusicNum(void)
@@ -646,7 +656,7 @@ void S_ChangeMusic(int music_id, dboolean looping, dboolean allowrestart, dboole
         return;
     }
 
-    // Load & register it
+    // load & register it
     music->data = W_CacheLumpNum(music->lumpnum);
 
     if (!(handle = I_RegisterSong(music->data, W_LumpLength(music->lumpnum))))

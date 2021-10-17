@@ -245,7 +245,7 @@ void R_RenderMaskedSegRange(drawseg_t *ds, const int x1, const int x2)
         short       lightlevel = R_FakeFlat(frontsector, &tempsec, NULL, NULL, false)->lightlevel;
 
         walllights = GetLightTable(lightlevel);
-        walllightsnext = GetLightTable(lightlevel + 4);
+        walllightsnext = (r_ditheredlighting ? GetLightTable(lightlevel + 4) : walllights);
     }
 
     maskedtexturecol = ds->maskedtexturecol;
@@ -402,7 +402,23 @@ static void R_RenderSegLoop(void)
                 if (midbrightmap)
                 {
                     dc_brightmap = midbrightmap;
-                    bmapwallcolfunc();
+
+                    if (r_ditheredlighting)
+                    {
+                        if (dc_colormap == dc_nextcolormap)
+                            altbmapwallcolfunc();
+                        else
+                            bmapwallcolfunc();
+                    }
+                    else
+                        bmapwallcolfunc();
+                }
+                else if (r_ditheredlighting)
+                {
+                    if (dc_colormap == dc_nextcolormap)
+                        altwallcolfunc();
+                    else
+                        wallcolfunc();
                 }
                 else
                     wallcolfunc();
@@ -438,7 +454,23 @@ static void R_RenderSegLoop(void)
                         if (topbrightmap)
                         {
                             dc_brightmap = topbrightmap;
-                            bmapwallcolfunc();
+
+                            if (r_ditheredlighting)
+                            {
+                                if (dc_colormap == dc_nextcolormap)
+                                    altbmapwallcolfunc();
+                                else
+                                    bmapwallcolfunc();
+                            }
+                            else
+                                bmapwallcolfunc();
+                        }
+                        else if (r_ditheredlighting)
+                        {
+                            if (dc_colormap == dc_nextcolormap)
+                                altwallcolfunc();
+                            else
+                                wallcolfunc();
                         }
                         else
                             wallcolfunc();
@@ -477,7 +509,23 @@ static void R_RenderSegLoop(void)
                         if (bottombrightmap)
                         {
                             dc_brightmap = bottombrightmap;
-                            bmapwallcolfunc();
+
+                            if (r_ditheredlighting)
+                            {
+                                if (dc_colormap == dc_nextcolormap)
+                                    altbmapwallcolfunc();
+                                else
+                                    bmapwallcolfunc();
+                            }
+                            else
+                                bmapwallcolfunc();
+                        }
+                        else if (r_ditheredlighting)
+                        {
+                            if (dc_colormap == dc_nextcolormap)
+                                altwallcolfunc();
+                            else
+                                wallcolfunc();
                         }
                         else
                             wallcolfunc();
@@ -829,7 +877,7 @@ void R_StoreWallRange(const int start, const int stop)
             short   lightlevel = frontsector->lightlevel;
 
             walllights = GetLightTable(lightlevel);
-            walllightsnext = GetLightTable(lightlevel + 4);
+            walllightsnext = (r_ditheredlighting ? GetLightTable(lightlevel + 4) : walllights);
         }
     }
 

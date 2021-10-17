@@ -61,6 +61,7 @@ extern int          am_markcolor;
 extern dboolean     am_path;
 extern int          am_pathcolor;
 extern int          am_playercolor;
+extern dboolean     am_playerstats;
 extern int          am_reddoorcolor;
 extern dboolean     am_rotatemode;
 extern int          am_teleportercolor;
@@ -197,6 +198,7 @@ extern uint64_t     stat_monsterskilled_shotgunguys;
 extern uint64_t     stat_monsterskilled_spectres;
 extern uint64_t     stat_monsterskilled_spidermasterminds;
 extern uint64_t     stat_monsterskilled_zombiemen;
+extern uint64_t     stat_monstersresurrected;
 extern uint64_t     stat_runs;
 extern uint64_t     stat_secretsfound;
 extern uint64_t     stat_shotsfired_fists;
@@ -291,7 +293,9 @@ enum
 
 enum
 {
+#if !defined(__APPLE__)
     vid_vsync_adaptive = -1,
+#endif
     vid_vsync_off,
     vid_vsync_on
 };
@@ -355,6 +359,8 @@ enum
 #define am_playercolor_min                      0
 #define am_playercolor_default                  4
 #define am_playercolor_max                      255
+
+#define am_playerstats_default                  false
 
 #define am_reddoorcolor_min                     0
 #define am_reddoorcolor_default                 160
@@ -478,7 +484,7 @@ enum
 
 #define groupmessages_default                   true
 
-#define health_min                             -100
+#define health_min                             -99
 #define health_default                          100
 #define health_max                              INT_MAX
 
@@ -669,7 +675,7 @@ enum
 
 #define units_default                           units_imperial
 
-#define version_default                         PACKAGE_VERSIONSTRING
+#define version_default                         DOOMRETRO_VERSIONSTRING
 
 #define vid_borderlesswindow_default            true
 
@@ -704,7 +710,13 @@ enum
 #define vid_scaleapi_opengles2                  "opengles2"
 #endif
 #define vid_scaleapi_software                   "software"
+#if defined(_WIN32)
+#define vid_scaleapi_default                    vid_scaleapi_direct3d
+#elif defined(__APPLE__)
+#define vid_scaleapi_default                    vid_scaleapi_metal
+#else
 #define vid_scaleapi_default                    vid_scaleapi_opengl
+#endif
 
 #define vid_scalefilter_linear                  "linear"
 #define vid_scalefilter_nearest                 "nearest"
@@ -716,7 +728,11 @@ enum
 
 #define vid_showfps_default                     false
 
+#if defined(__APPLE__)
+#define vid_vsync_min                           vid_vsync_off
+#else
 #define vid_vsync_min                           vid_vsync_adaptive
+#endif
 #define vid_vsync_default                       vid_vsync_on
 #define vid_vsync_max                           vid_vsync_on
 
@@ -859,7 +875,7 @@ typedef enum
     BLOODVALUEALIAS,
     UNITSVALUEALIAS,
     CAPVALUEALIAS,
-    SKYVALUEALIAS,
+    SKYCOLORVALUEALIAS,
     SCALEVALUEALIAS,
     ARMORTYPEVALUEALIAS,
     CROSSHAIRVALUEALIAS,

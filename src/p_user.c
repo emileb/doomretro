@@ -96,6 +96,25 @@ static void P_Bob(angle_t angle, fixed_t move)
 }
 
 //
+// P_IsSelfReferencingSector
+//
+static dboolean P_IsSelfReferencingSector(sector_t *sec)
+{
+    const int   linecount = sec->linecount;
+    int         count = 0;
+
+    for (int i = 0; i < linecount; i++)
+    {
+        line_t  *line = sec->lines[i];
+
+        if (line->backsector && line->frontsector == line->backsector && !line->frontsector->tag)
+            count++;
+    }
+
+    return (count >= 2);
+}
+
+//
 // P_CalcHeight
 // Calculate the walking/running height adjustment
 //
@@ -390,6 +409,8 @@ static void P_DeathThink(void)
         skipaction = true;
         gamekeydown[' '] = false;
         gamekeydown[KEY_ENTER] = false;
+
+        S_StopSounds();
     }
     else
         deathcount++;

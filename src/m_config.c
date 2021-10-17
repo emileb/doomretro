@@ -52,7 +52,7 @@
 
 static dboolean cvarsloaded;
 
-#define NUMCVARS                                                207
+#define NUMCVARS                                                209
 
 #define CONFIG_VARIABLE_INT(name1, name2, cvar, set)            { #name1, #name2, &cvar, DEFAULT_INT32,         set          }
 #define CONFIG_VARIABLE_INT_UNSIGNED(name1, name2, cvar, set)   { #name1, #name2, &cvar, DEFAULT_UINT64,        set          }
@@ -85,6 +85,7 @@ static default_t cvars[NUMCVARS] =
     CONFIG_VARIABLE_INT          (am_path,                          am_path,                               am_path,                               BOOLVALUEALIAS        ),
     CONFIG_VARIABLE_INT          (am_pathcolor,                     am_pathcolour,                         am_pathcolor,                          NOVALUEALIAS          ),
     CONFIG_VARIABLE_INT          (am_playercolor,                   am_playercolour,                       am_playercolor,                        NOVALUEALIAS          ),
+    CONFIG_VARIABLE_INT          (am_playerstats,                   am_playerstats,                        am_playerstats,                        BOOLVALUEALIAS        ),
     CONFIG_VARIABLE_INT          (am_reddoorcolor,                  am_reddoorcolour,                      am_reddoorcolor,                       NOVALUEALIAS          ),
     CONFIG_VARIABLE_INT          (am_rotatemode,                    am_rotatemode,                         am_rotatemode,                         BOOLVALUEALIAS        ),
     CONFIG_VARIABLE_INT          (am_teleportercolor,               am_teleportercolour,                   am_teleportercolor,                    NOVALUEALIAS          ),
@@ -173,7 +174,7 @@ static default_t cvars[NUMCVARS] =
     CONFIG_VARIABLE_INT          (r_shadows_translucency,           r_shadows_translucency,                r_shadows_translucency,                BOOLVALUEALIAS        ),
     CONFIG_VARIABLE_INT          (r_shake_barrels,                  r_shake_barrels,                       r_shake_barrels,                       BOOLVALUEALIAS        ),
     CONFIG_VARIABLE_INT_PERCENT  (r_shake_damage,                   r_shake_damage,                        r_shake_damage,                        NOVALUEALIAS          ),
-    CONFIG_VARIABLE_INT          (r_skycolor,                       r_skycolour,                           r_skycolor,                            SKYVALUEALIAS         ),
+    CONFIG_VARIABLE_INT          (r_skycolor,                       r_skycolour,                           r_skycolor,                            SKYCOLORVALUEALIAS    ),
     CONFIG_VARIABLE_INT          (r_supersampling,                  r_supersampling,                       r_supersampling,                       BOOLVALUEALIAS        ),
     CONFIG_VARIABLE_INT          (r_textures,                       r_textures,                            r_textures,                            BOOLVALUEALIAS        ),
     CONFIG_VARIABLE_INT          (r_translucency,                   r_translucency,                        r_translucency,                        BOOLVALUEALIAS        ),
@@ -251,6 +252,7 @@ static default_t cvars[NUMCVARS] =
     CONFIG_VARIABLE_INT_UNSIGNED (monsterskilled_spectres,          stat_monsterskilled_spectres,          stat_monsterskilled_spectres,          NOVALUEALIAS          ),
     CONFIG_VARIABLE_INT_UNSIGNED (monsterskilled_spidermasterminds, stat_monsterskilled_spidermasterminds, stat_monsterskilled_spidermasterminds, NOVALUEALIAS          ),
     CONFIG_VARIABLE_INT_UNSIGNED (monsterskilled_zombiemen,         stat_monsterskilled_zombiemen,         stat_monsterskilled_zombiemen,         NOVALUEALIAS          ),
+    CONFIG_VARIABLE_INT_UNSIGNED (monstersresurrected,              stat_monstersresurrected,              stat_monstersresurrected,              NOVALUEALIAS          ),
     CONFIG_VARIABLE_INT_UNSIGNED (runs,                             stat_runs,                             stat_runs,                             NOVALUEALIAS          ),
     CONFIG_VARIABLE_INT_UNSIGNED (secretsfound,                     stat_secretsrevealed,                  stat_secretsfound,                     NOVALUEALIAS          ),
     CONFIG_VARIABLE_INT_UNSIGNED (shotsfired_fists,                 stat_shotsfired_fists,                 stat_shotsfired_fists,                 NOVALUEALIAS          ),
@@ -288,18 +290,19 @@ valuealias_t valuealiases[] =
     { "false",     0, BOOLVALUEALIAS         }, { "true",      1, BOOLVALUEALIAS         },
     { "low",       0, DETAILVALUEALIAS       }, { "high",      1, DETAILVALUEALIAS       },
     { "off",       1, GAMMAVALUEALIAS        }, { "none",      0, BLOODVALUEALIAS        },
-    { "red",       1, BLOODVALUEALIAS        }, { "all",       2, BLOODVALUEALIAS        },
-    { "green",     3, BLOODVALUEALIAS        }, { "nofuzz",    4, BLOODVALUEALIAS        },
+    { "off",       0, BLOODVALUEALIAS        }, { "red",       1, BLOODVALUEALIAS        },
+    { "all",       2, BLOODVALUEALIAS        }, { "green",     3, BLOODVALUEALIAS        },
+    { "nofuzz",    4, BLOODVALUEALIAS        }, { "on",        4, BLOODVALUEALIAS        },
     { "imperial",  0, UNITSVALUEALIAS        }, { "metric",    1, UNITSVALUEALIAS        },
-    { "off",       0, CAPVALUEALIAS          }, { "none",     -1, SKYVALUEALIAS          },
-    { "off",      -1, SKYVALUEALIAS          }, { "none",      0, ARMORTYPEVALUEALIAS    },
+    { "off",       0, CAPVALUEALIAS          }, { "none",     -1, SKYCOLORVALUEALIAS     },
+    { "off",      -1, SKYCOLORVALUEALIAS     }, { "none",      0, ARMORTYPEVALUEALIAS    },
     { "green",     1, ARMORTYPEVALUEALIAS    }, { "blue",      2, ARMORTYPEVALUEALIAS    },
     { "none",      0, CROSSHAIRVALUEALIAS    }, { "off",       0, CROSSHAIRVALUEALIAS    },
-    { "cross",     1, CROSSHAIRVALUEALIAS    }, { "dot",       2, CROSSHAIRVALUEALIAS    },
-    { "adaptive", -1, VSYNCVALUEALIAS        }, { "off",       0, VSYNCVALUEALIAS        },
-    { "on",        1, VSYNCVALUEALIAS        }, { "other",     0, PLAYERGENDERVALUEALIAS },
-    { "male",      1, PLAYERGENDERVALUEALIAS }, { "female",    2, PLAYERGENDERVALUEALIAS },
-    { "",          0, NOVALUEALIAS           }
+    { "cross",     1, CROSSHAIRVALUEALIAS    }, { "on",        1, CROSSHAIRVALUEALIAS    },
+    { "dot",       2, CROSSHAIRVALUEALIAS    }, { "adaptive", -1, VSYNCVALUEALIAS        },
+    { "off",       0, VSYNCVALUEALIAS        }, { "on",        1, VSYNCVALUEALIAS        },
+    { "other",     0, PLAYERGENDERVALUEALIAS }, { "male",      1, PLAYERGENDERVALUEALIAS },
+    { "female",    2, PLAYERGENDERVALUEALIAS }, { "",          0, NOVALUEALIAS           }
 };
 
 static void SaveBind(FILE *file, char *control, char *action)
@@ -580,6 +583,9 @@ static void M_CheckCVARs(dboolean ispackageconfig)
     if (am_backcolor < am_backcolor_min || am_backcolor > am_backcolor_max)
         am_backcolor = am_backcolor_default;
 
+    if (am_bluedoorcolor < am_bluedoorcolor_min || am_bluedoorcolor > am_bluedoorcolor_max)
+        am_bluedoorcolor = am_bluedoorcolor_default;
+
     if (am_cdwallcolor < am_cdwallcolor_min || am_cdwallcolor > am_cdwallcolor_max)
         am_cdwallcolor = am_cdwallcolor_default;
 
@@ -613,6 +619,12 @@ static void M_CheckCVARs(dboolean ispackageconfig)
     if (am_playercolor < am_playercolor_min || am_playercolor > am_playercolor_max)
         am_playercolor = am_playercolor_default;
 
+    if (am_playerstats != false && am_playerstats != true)
+        am_playerstats = am_playerstats_default;
+
+    if (am_reddoorcolor < am_reddoorcolor_min || am_reddoorcolor > am_reddoorcolor_max)
+        am_reddoorcolor = am_reddoorcolor_default;
+
     if (am_rotatemode != false && am_rotatemode != true)
         am_rotatemode = am_rotatemode_default;
 
@@ -627,6 +639,9 @@ static void M_CheckCVARs(dboolean ispackageconfig)
 
     if (am_wallcolor < am_wallcolor_min || am_wallcolor > am_wallcolor_max)
         am_wallcolor = am_wallcolor_default;
+
+    if (am_yellowdoorcolor < am_yellowdoorcolor_min || am_yellowdoorcolor > am_yellowdoorcolor_max)
+        am_yellowdoorcolor = am_yellowdoorcolor_default;
 
     if (autoaim != false && autoaim != true)
         autoaim = autoaim_default;
@@ -981,7 +996,7 @@ static void M_CheckCVARs(dboolean ispackageconfig)
 //
 void M_LoadCVARs(char *filename)
 {
-    dboolean    ispackageconfig = M_StringEndsWith(filename, PACKAGE_CONFIG);
+    dboolean    ispackageconfig = M_StringEndsWith(filename, DOOMRETRO_CONFIG);
     int         bindcount = 0;
     int         cvarcount = 0;
     int         statcount = 0;

@@ -80,53 +80,48 @@ extern int              fuzztable[MAXSCREENAREA];
 // The span blitting interface.
 // Hook in assembler or system specific BLT here.
 void R_DrawColumn(void);
+void R_DrawDitherLowColumn(void);
 void R_DrawDitherColumn(void);
 void R_DrawCorrectedColumn(void);
+void R_DrawCorrectedDitherLowColumn(void);
 void R_DrawCorrectedDitherColumn(void);
 void R_DrawColorColumn(void);
 void R_DrawWallColumn(void);
+void R_DrawDitherLowWallColumn(void);
 void R_DrawDitherWallColumn(void);
 void R_DrawBrightmapWallColumn(void);
+void R_DrawBrightmapDitherLowWallColumn(void);
 void R_DrawBrightmapDitherWallColumn(void);
+void R_DrawColorDitherLowColumn(void);
 void R_DrawColorDitherColumn(void);
 void R_DrawFlippedSkyColumn(void);
 void R_DrawSkyColorColumn(void);
 void R_DrawTranslucentColumn(void);
-void R_DrawDitherTranslucentColumn(void);
 void R_DrawTranslucent50Column(void);
+void R_DrawDitherLowTranslucent50Column(void);
 void R_DrawDitherTranslucent50Column(void);
 void R_DrawCorrectedTranslucent50Column(void);
-void R_DrawCorrectedDitherTranslucent50Column(void);
 void R_DrawTranslucent50ColorColumn(void);
-void R_DrawDitherTranslucent50ColorColumn(void);
+void R_DrawTranslucent50ColorDitherLowColumn(void);
+void R_DrawTranslucent50ColorDitherColumn(void);
 void R_DrawTranslucent33Column(void);
-void R_DrawDitherTranslucent33Column(void);
 void R_DrawTranslucentGreenColumn(void);
-void R_DrawDitherTranslucentGreenColumn(void);
 void R_DrawTranslucentRedColumn(void);
-void R_DrawDitherTranslucentRedColumn(void);
 void R_DrawTranslucentRedWhiteColumn1(void);
-void R_DrawDitherTranslucentRedWhiteColumn1(void);
 void R_DrawTranslucentRedWhiteColumn2(void);
-void R_DrawDitherTranslucentRedWhiteColumn2(void);
 void R_DrawTranslucentRedWhite50Column(void);
-void R_DrawDitherTranslucentRedWhite50Column(void);
 void R_DrawTranslucentBlueColumn(void);
-void R_DrawDitherTranslucentBlueColumn(void);
 void R_DrawTranslucentGreen33Column(void);
-void R_DrawDitherTranslucentGreen33Column(void);
 void R_DrawTranslucentRed33Column(void);
-void R_DrawDitherTranslucentRed33Column(void);
 void R_DrawTranslucentBlue25Column(void);
-void R_DrawDitherTranslucentBlue25Column(void);
 void R_DrawRedToBlueColumn(void);
+void R_DrawDitherLowRedToBlueColumn(void);
 void R_DrawDitherRedToBlueColumn(void);
 void R_DrawTranslucentRedToBlue33Column(void);
-void R_DrawDitherTranslucentRedToBlue33Column(void);
 void R_DrawRedToGreenColumn(void);
+void R_DrawDitherLowRedToGreenColumn(void);
 void R_DrawDitherRedToGreenColumn(void);
 void R_DrawTranslucentRedToGreen33Column(void);
-void R_DrawDitherTranslucentRedToGreen33Column(void);
 void R_DrawPlayerSpriteColumn(void);
 void R_DrawShadowColumn(void);
 void R_DrawFuzzyShadowColumn(void);
@@ -145,6 +140,7 @@ void R_DrawPausedFuzzColumns(void);
 //  for player sprite rendering,
 //  green/red/blue/indigo shirts.
 void R_DrawTranslatedColumn(void);
+void R_DrawDitherLowTranslatedColumn(void);
 void R_DrawDitherTranslatedColumn(void);
 
 void R_VideoErase(unsigned int ofs, int count);
@@ -171,8 +167,10 @@ extern byte         *dc_translation;
 // Span blitting for rows, floor/ceiling.
 // No Spectre effect needed.
 void R_DrawSpan(void);
+void R_DrawDitherLowSpan(void);
 void R_DrawDitherSpan(void);
 void R_DrawColorSpan(void);
+void R_DrawDitherLowColorSpan(void);
 void R_DrawDitherColorSpan(void);
 
 void R_InitBuffer(int width, int height);

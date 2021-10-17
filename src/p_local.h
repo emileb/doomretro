@@ -67,6 +67,7 @@
 #define GRAVITY             FRACUNIT
 #define MAXMOVE             (30 * FRACUNIT)
 #define MAXMOVE_STEP        (8 * FRACUNIT)
+#define MINBOUNCEMAX        (-20 * FRACUNIT)
 
 #define USERANGE            (64 * FRACUNIT)
 #define MELEERANGE          (64 * FRACUNIT)
@@ -83,7 +84,7 @@
 #define MOUSE_WHEELUP       MAX_MOUSE_BUTTONS
 #define MOUSE_WHEELDOWN     (MAX_MOUSE_BUTTONS + 1)
 
-#define NEEDEDCARDFLASH     8
+#define NEEDEDCARDFLASH     10
 
 #define WEAPONBOTTOM        (128 * FRACUNIT)
 #define WEAPONTOP           (32 * FRACUNIT)

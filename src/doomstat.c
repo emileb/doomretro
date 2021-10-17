@@ -69,6 +69,8 @@ dboolean        sprfix18;
 dboolean        eviternity;
 dboolean        doom4vanilla;
 dboolean        REKKR;
+dboolean        REKKRSA;
+dboolean        REKKRSL;
 
 // Set if homebrew PWAD stuff has been added.
 dboolean        modifiedgame = false;
@@ -81,6 +83,7 @@ dboolean        M_DOOM;
 dboolean        M_EPISOD;
 dboolean        M_GDHIGH;
 dboolean        M_GDLOW;
+dboolean        M_LGTTL;
 dboolean        M_LOADG;
 dboolean        M_LSCNTR;
 dboolean        M_MSENS;
@@ -92,6 +95,7 @@ dboolean        M_NMARE;
 dboolean        M_OPTTTL;
 dboolean        M_PAUSE;
 dboolean        M_SAVEG;
+dboolean        M_SGTTL;
 dboolean        M_SKILL;
 dboolean        M_SKULL1;
 dboolean        M_SVOL;

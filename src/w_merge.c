@@ -197,7 +197,7 @@ static sprite_frame_t *FindSpriteFrame(char *name, char frame)
     return result;
 }
 
-// Check if sprite lump is needed in the new wad
+// Check if sprite lump is needed in the new WAD
 static dboolean SpriteLumpNeeded(lumpinfo_t *lump)
 {
     sprite_frame_t  *sprite;
@@ -267,7 +267,7 @@ static void AddSpriteLump(lumpinfo_t *lump)
     static int      MISFB0;
     static int      SHT2A0;
     static int      SHT2E0;
-    dboolean        ispackagewad = M_StringCompare(leafname(lump->wadfile->path), PACKAGE_WAD);
+    dboolean        ispackagewad = M_StringCompare(leafname(lump->wadfile->path), DOOMRETRO_WAD);
 
     if (!ValidSpriteLumpName(lump->name))
         return;

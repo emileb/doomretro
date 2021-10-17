@@ -76,33 +76,32 @@
 #define MCMD_ENDCAST            4
 #define MCMD_ENDGAME            5
 #define MCMD_ENDPIC             6
-#define MCMD_EPISODE            7
-#define MCMD_ENTERPIC           8
-#define MCMD_EXITPIC            9
-#define MCMD_INTERBACKDROP      10
-#define MCMD_INTERMUSIC         11
-#define MCMD_INTERTEXT          12
-#define MCMD_INTERTEXTSECRET    13
-#define MCMD_LEVELNAME          14
-#define MCMD_LEVELPIC           15
-#define MCMD_LIQUID             16
-#define MCMD_MUSIC              17
-#define MCMD_MUSICCOMPOSER      18
-#define MCMD_MUSICTITLE         19
-#define MCMD_NEXT               20
-#define MCMD_NEXTSECRET         21
-#define MCMD_NOBRIGHTMAP        22
-#define MCMD_NOFREELOOK         23
-#define MCMD_NOJUMP             24
-#define MCMD_NOLIQUID           25
-#define MCMD_NOMOUSELOOK        26
-#define MCMD_PAR                27
-#define MCMD_PARTIME            28
-#define MCMD_PISTOLSTART        29
-#define MCMD_SECRETNEXT         30
-#define MCMD_SKY1               31
-#define MCMD_SKYTEXTURE         32
-#define MCMD_TITLEPATCH         33
+#define MCMD_ENTERPIC           7
+#define MCMD_EPISODE            8
+#define MCMD_INTERBACKDROP      9
+#define MCMD_INTERMUSIC         10
+#define MCMD_INTERTEXT          11
+#define MCMD_INTERTEXTSECRET    12
+#define MCMD_LEVELNAME          13
+#define MCMD_LEVELPIC           14
+#define MCMD_LIQUID             15
+#define MCMD_MUSIC              16
+#define MCMD_MUSICCOMPOSER      17
+#define MCMD_MUSICTITLE         18
+#define MCMD_NEXT               19
+#define MCMD_NEXTSECRET         20
+#define MCMD_NOBRIGHTMAP        21
+#define MCMD_NOFREELOOK         22
+#define MCMD_NOJUMP             23
+#define MCMD_NOLIQUID           24
+#define MCMD_NOMOUSELOOK        25
+#define MCMD_PAR                26
+#define MCMD_PARTIME            27
+#define MCMD_PISTOLSTART        28
+#define MCMD_SECRETNEXT         29
+#define MCMD_SKY1               30
+#define MCMD_SKYTEXTURE         31
+#define MCMD_TITLEPATCH         32
 
 typedef struct mapinfo_s mapinfo_t;
 
@@ -115,7 +114,6 @@ struct mapinfo_s
     dboolean    endgame;
     int         endpic;
     int         enterpic;
-    int         exitpic;
     char        interbackdrop[9];
     int         intermusic;
     char        intertext[1024];
@@ -180,7 +178,7 @@ int                 numdecorations;
 int                 bmapwidth;
 int                 bmapheight;
 
-// for large maps, wad is 16bit
+// for large maps, WAD is 16-bit
 int                 *blockmap;
 
 // offsets in blockmap are from here
@@ -228,7 +226,6 @@ static char *mapcmdnames[] =
     "ENDGAME",
     "ENDPIC",
     "ENTERPIC",
-    "EXITPIC",
     "EPISODE",
     "INTERBACKDROP",
     "INTERMUSIC",
@@ -265,7 +262,6 @@ static int mapcmdids[] =
     MCMD_ENDGAME,
     MCMD_ENDPIC,
     MCMD_ENTERPIC,
-    MCMD_EXITPIC,
     MCMD_EPISODE,
     MCMD_INTERBACKDROP,
     MCMD_INTERMUSIC,
@@ -721,8 +717,8 @@ static void P_CheckLinedefs(void)
                 char    *temp = commify(ld->id);
 
                 C_Warning(2, "Linedef %s has %s line special %i (\"%s\") but no tag.",
-                    temp, (ld->special < BOOMLINESPECIALS ? "the" : (ld->special < MBFLINESPECIALS ? "the " ITALICS("MBF") "-compatible" :
-                    "the " ITALICS("BOOM") "-compatible")), ld->special, linespecials[ld->special]);
+                    temp, (ld->special < BOOMLINESPECIALS ? "the" : (ld->special < MBFLINESPECIALS ? "the " ITALICS("MBF")
+                    "-compatible" : "the " ITALICS("BOOM-") "compatible")), ld->special, linespecials[ld->special]);
                 free(temp);
             }
             else if (ld->tag < 0 || P_FindSectorFromLineTag(ld, -1) == -1)
@@ -731,8 +727,8 @@ static void P_CheckLinedefs(void)
                 char    *temp2 = commify(ld->tag);
 
                 C_Warning(2, "Linedef %s has %s line special %i (\"%s\") but an unknown tag of %s.",
-                    temp1, (ld->special < BOOMLINESPECIALS ? "the" : (ld->special < MBFLINESPECIALS ? "the " ITALICS("MBF") "-compatible" :
-                    "the " ITALICS("BOOM") "-compatible")), ld->special, linespecials[ld->special], temp2);
+                    temp1, (ld->special < BOOMLINESPECIALS ? "the" : (ld->special < MBFLINESPECIALS ? "the " ITALICS("MBF")
+                    "-compatible" : "the " ITALICS("BOOM-") "compatible")), ld->special, linespecials[ld->special], temp2);
                 free(temp1);
                 free(temp2);
             }
@@ -913,8 +909,8 @@ static void P_LoadSegs(int lump)
                                 C_Warning(2, "The missing middle texture of linedef %s has been changed to " BOLD("%.8s") ".",
                                     temp, linefix[j].middletexture);
                             else
-                                C_Warning(2, "The middle texture of linedef %s has been changed from " BOLD("%.8s") " to " BOLD("%.8s") ".",
-                                    temp, textures[li->sidedef->midtexture]->name, linefix[j].middletexture);
+                                C_Warning(2, "The middle texture of linedef %s has been changed from " BOLD("%.8s") " to "
+                                    BOLD("%.8s") ".", temp, textures[li->sidedef->midtexture]->name, linefix[j].middletexture);
                         }
 
                         li->sidedef->midtexture = texture;
@@ -934,8 +930,8 @@ static void P_LoadSegs(int lump)
                                 C_Warning(2, "The missing bottom texture of linedef %s has been changed to " BOLD("%.8s") ".",
                                     temp, linefix[j].bottomtexture);
                             else
-                                C_Warning(2, "The bottom texture of linedef %s has been changed from " BOLD("%.8s") " to " BOLD("%.8s") ".",
-                                    temp, textures[li->sidedef->bottomtexture]->name, linefix[j].bottomtexture);
+                                C_Warning(2, "The bottom texture of linedef %s has been changed from " BOLD("%.8s") " to "
+                                    BOLD("%.8s") ".", temp, textures[li->sidedef->bottomtexture]->name, linefix[j].bottomtexture);
                         }
 
                         li->sidedef->bottomtexture = texture;
@@ -998,22 +994,21 @@ static void P_LoadSegs(int lump)
                             if (li->linedef->special)
                                 C_Warning(2, "The %sline special of linedef %s has been changed from %i (\"%s\") to %i (\"%s\").",
                                     (li->linedef->special < BOOMLINESPECIALS ? "" : (li->linedef->special < MBFLINESPECIALS ?
-                                    ITALICS("MBF") "-compatible " : ITALICS("BOOM") "-compatible ")), temp, li->linedef->special,
+                                    ITALICS("MBF-") "compatible " : ITALICS("BOOM-") "compatible ")), temp, li->linedef->special,
                                     linespecials[li->linedef->special], linefix[j].special, linespecials[linefix[j].special]);
                             else
                                 C_Warning(2, "The %sline special %i (\"%s\") has been added to linedef %s.",
                                     (li->linedef->special < BOOMLINESPECIALS ? "" : (li->linedef->special < MBFLINESPECIALS ?
-                                    ITALICS("MBF") "-compatible " : ITALICS("BOOM") "-compatible ")), linefix[j].special,
+                                    ITALICS("MBF-") "compatible " : ITALICS("BOOM-") "compatible ")), linefix[j].special,
                                     linespecials[linefix[j].special], temp);
                         }
                         else
                             C_Warning(2, "The %sline special of linedef %s has been removed.",
                                 (li->linedef->special < BOOMLINESPECIALS ? "" : (li->linedef->special < MBFLINESPECIALS ?
-                                ITALICS("MBF") "-compatible " : ITALICS("BOOM") "-compatible ")), temp);
+                                ITALICS("MBF-") "compatible " : ITALICS("BOOM-") "compatible ")), temp);
 
                         li->linedef->special = linefix[j].special;
                         free(temp);
-
                     }
 
                     if (linefix[j].tag != DEFAULT)
@@ -1919,7 +1914,7 @@ static void P_LoadLineDefs2(void)
                 free(temp2);
             }
 
-        // killough 11/98: fix common wad errors (missing sidedefs):
+        // killough 11/98: fix common WAD errors (missing sidedefs):
         if (ld->sidenum[0] == NO_INDEX)
         {
             char    *temp = commify(ld->id);
@@ -2314,7 +2309,7 @@ static void P_CreateBlockMap(void)
 // P_LoadBlockMap
 //
 // killough 03/01/98: substantially modified to work
-// towards removing blockmap limit (a wad limitation)
+// towards removing blockmap limit (a WAD limitation)
 //
 // killough 03/30/98: Rewritten to remove blockmap limit,
 // though current algorithm is brute-force and non-optimal.
@@ -2342,7 +2337,7 @@ static void P_LoadBlockMap(int lump)
 
         blockmaplump = malloc_IfSameLevel(blockmaplump, sizeof(*blockmaplump) * count);
 
-        // killough 03/01/98: Expand wad blockmap into larger internal one,
+        // killough 03/01/98: Expand WAD blockmap into larger internal one,
         // by treating all offsets except -1 as unsigned and zero-extending
         // them. This potentially doubles the size of blockmaps allowed,
         // because DOOM originally considered the offsets as always signed.
@@ -2539,7 +2534,7 @@ static void P_GroupLines(void)
 // fractional coordinates if we are to be able to split segs with node lines,
 // as a node builder must do when creating a BSP tree.
 //
-// A wad file does not allow fractional coordinates, so node builders are out
+// A WAD file does not allow fractional coordinates, so node builders are out
 // of luck except that they can try to limit the number of splits (they might
 // also be able to detect the degree of roundoff error and try to avoid splits
 // with a high degree of roundoff error). But we can use fractional coordinates
@@ -2835,14 +2830,13 @@ void P_SetupLevel(int ep, int map)
     int         lumpnum;
     static int  prevlumpnum = -1;
     char        *temp1;
-    char        *temp2;
 
     boomcompatible = false;
     mbfcompatible = false;
 
     totalkills = 0;
     totalitems = 0;
-    totalsecret = 0;
+    totalsecrets = 0;
     totalpickups = 0;
     memset(monstercount, 0, sizeof(int) * NUMMOBJTYPES);
     barrelcount = 0;
@@ -2914,11 +2908,20 @@ void P_SetupLevel(int ep, int map)
     C_AddConsoleDivider();
 
     temp1 = sentencecase(playername);
-    temp2 = titlecase(maptitle);
-    C_PlayerMessage("%s %s " ITALICS("%s") "%s",
-        temp1, (samelevel ? "reentered": "entered"), temp2, (ispunctuation(temp2[strlen(temp2) - 1]) ? "" : "."));
+
+    if (M_StringCompare(maptitle, mapnumandtitle))
+        C_PlayerMessage("%s %sentered %s.", temp1, (samelevel ? "re" : ""), maptitle);
+    else
+    {
+        char    *temp2 = titlecase(maptitle);
+
+        C_PlayerMessage("%s %sentered " ITALICS("%s") "%s",
+            temp1, (samelevel ? "re" : ""), temp2, (ispunctuation(temp2[strlen(temp2) - 1]) ? "" : "."));
+
+        free(temp2);
+    }
+
     free(temp1);
-    free(temp2);
 
     leveltime = 0;
     animatedliquiddiff = 2 * FRACUNIT;
@@ -3041,7 +3044,6 @@ static void P_InitMapInfo(void)
         mapinfo[i].endgame = false;
         mapinfo[i].endpic = 0;
         mapinfo[i].enterpic = 0;
-        mapinfo[i].exitpic = 0;
         mapinfo[i].cluster = 0;
         mapinfo[i].interbackdrop[0] = '\0';
         mapinfo[i].intermusic = 0;
@@ -3177,19 +3179,13 @@ static void P_InitMapInfo(void)
 
                         case MCMD_ENDPIC:
                             SC_MustGetString();
-                            info->endpic = W_GetNumForName(sc_String);
+                            info->endpic = W_CheckNumForName(sc_String);
 
                             break;
 
                         case MCMD_ENTERPIC:
                             SC_MustGetString();
-                            info->enterpic = W_GetNumForName(sc_String);
-
-                            break;
-
-                        case MCMD_EXITPIC:
-                            SC_MustGetString();
-                            info->exitpic = W_GetNumForName(sc_String);
+                            info->enterpic = W_CheckNumForName(sc_String);
 
                             break;
 
@@ -3450,6 +3446,9 @@ static void P_InitMapInfo(void)
                     }
             }
 
+            if (REKKR && ep <= 2)
+                info->sky1scrolldelta = 15 << 8;
+
             mapmax = MAX(map, mapmax);
         }
         else if (SC_Compare("NOJUMP"))
@@ -3464,16 +3463,18 @@ static void P_InitMapInfo(void)
     SC_Close();
 
     temp = commify(sc_Line);
-    C_Output("Parsed %s line%s in the " BOLD("%sMAPINFO") " lump in the %s " BOLD("%s") ".",
-        temp, (sc_Line > 1 ? "s" : ""), (RMAPINFO >= 0 ? "R" : (UMAPINFO >= 0 ? "U" : "")),
+    C_Output("Parsed %s line%s from the " BOLD("%s") " lump in the %s " BOLD("%s") ".",
+        temp, (sc_Line == 1 ? "" : "s"), (RMAPINFO >= 0 ? "RMAPINFO" : (UMAPINFO >= 0 ? "UMAPINFO" : "MAPINFO")),
         (lumpinfo[MAPINFO]->wadfile->type == IWAD ? "IWAD" : "PWAD"), lumpinfo[MAPINFO]->wadfile->path);
     free(temp);
 
     if (nojump && (keyboardjump || mousejump != -1 || gamepadjump))
-        C_Warning(1, "This PWAD has disabled use of the " BOLD("+jump") " action.");
+        C_Warning(1, "This %s has disabled use of the " BOLD("+jump") " action.",
+            (lumpinfo[MAPINFO]->wadfile->type == IWAD ? "IWAD" : "PWAD"));
 
     if (nomouselook)
-        C_Warning(1, "This PWAD has disabled use of the " BOLD("mouselook") " CVAR and " BOLD("+mouselook") " action.");
+        C_Warning(1, "This %s has disabled use of the " BOLD("mouselook") " CVAR and " BOLD("+mouselook") " action.",
+            (lumpinfo[MAPINFO]->wadfile->type == IWAD ? "IWAD" : "PWAD"));
 }
 
 char *P_GetMapAuthor(int map)

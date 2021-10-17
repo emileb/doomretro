@@ -90,8 +90,8 @@ int                     message_counter;
 
 static dboolean         headsupactive;
 
-static patch_t          *minuspatch;
-static short            minuspatchwidth;
+patch_t                 *minuspatch = NULL;
+short                   minuspatchwidth;
 static int              minuspatchy;
 static patch_t          *greenarmorpatch;
 static patch_t          *bluearmorpatch;
@@ -410,15 +410,11 @@ static void HU_DrawCrosshair(void)
     {
         if (crosshair == crosshair_cross)
         {
-            HU_DrawScaledPixel(CENTERX - 2, CENTERY, color);
             HU_DrawScaledPixel(CENTERX - 1, CENTERY, color);
             HU_DrawScaledPixel(CENTERX, CENTERY, color);
             HU_DrawScaledPixel(CENTERX + 1, CENTERY, color);
-            HU_DrawScaledPixel(CENTERX + 2, CENTERY, color);
-            HU_DrawScaledPixel(CENTERX, CENTERY - 2, color);
             HU_DrawScaledPixel(CENTERX, CENTERY - 1, color);
             HU_DrawScaledPixel(CENTERX, CENTERY + 1, color);
-            HU_DrawScaledPixel(CENTERX, CENTERY + 2, color);
         }
         else
         {
@@ -1125,14 +1121,14 @@ void HU_Drawer(void)
 
     if (automapactive)
     {
-        w_title.x = HU_TITLEX;
+        w_title.x = 0;
 
         if (r_althud && r_screensize == r_screensize_max)
             HUlib_DrawAltAutomapTextLine(&w_title, false);
         else
         {
             if (vid_widescreen)
-                w_title.x = (r_screensize == r_screensize_max - 1 ? HU_TITLEX + WIDESCREENDELTA * 2 : 8);
+                w_title.x = (r_screensize == r_screensize_max - 1 ? WIDESCREENDELTA * 2 : 8);
 
 #if SCREENSCALE == 1
             w_title.y = MAPHEIGHT * 2 - hu_font[0]->height * 2 - 4;
@@ -1170,7 +1166,7 @@ void HU_Drawer(void)
 
         if (mapwindow)
         {
-            w_title.x = HU_TITLEX;
+            w_title.x = 8;
 
             if (r_althud && r_screensize == r_screensize_max)
                 HUlib_DrawAltAutomapTextLine(&w_title, true);
@@ -1180,7 +1176,6 @@ void HU_Drawer(void)
                 HUlib_DrawAutomapTextLine(&w_title, true);
             }
         }
-
     }
 }
 
@@ -1198,15 +1193,10 @@ void HU_Ticker(void)
     const dboolean  idmypos = (viewplayer->cheats & CF_MYPOS);
 
     // tic down message counter if message is up
-    if (message_counter && !menuactive && !idmypos)
+    if (message_counter && !menuactive && !idmypos && !--message_counter)
     {
-        forceconsoleblurredraw = true;
-
-        if (!--message_counter)
-        {
-            message_on = false;
-            message_nottobefuckedwith = false;
-        }
+        message_on = false;
+        message_nottobefuckedwith = false;
     }
 
     if (idmypos)
@@ -1214,7 +1204,7 @@ void HU_Ticker(void)
         // [BH] display and constantly update message for IDMYPOS cheat
         char    buffer[80];
 
-        message_counter = HU_MSGTIMEOUT;
+        message_counter = HU_MSGTIMEOUT - 6;
 
         if (automapactive && !am_followmode)
         {
@@ -1286,9 +1276,11 @@ void HU_Ticker(void)
     }
 }
 
-void HU_SetPlayerMessage(char *message, dboolean counter, dboolean external)
+void HU_SetPlayerMessage(char *message, dboolean group, dboolean external)
 {
-    if (!counter)
+    M_StringReplaceAll(message, "%%", "%");
+
+    if (!group)
         viewplayer->message = M_StringDuplicate(message);
     else
     {
@@ -1317,7 +1309,7 @@ void HU_SetPlayerMessage(char *message, dboolean counter, dboolean external)
     message_external = (external && mapwindow);
 }
 
-void HU_PlayerMessage(char *message, dboolean counter, dboolean external)
+void HU_PlayerMessage(char *message, dboolean group, dboolean external)
 {
     char    buffer[133] = "";
     int     len = (int)strlen(message);
@@ -1340,7 +1332,9 @@ void HU_PlayerMessage(char *message, dboolean counter, dboolean external)
     C_PlayerMessage(buffer);
 
     if (gamestate == GS_LEVEL && !message_dontfuckwithme)
-        HU_SetPlayerMessage(buffer, counter, external);
+        HU_SetPlayerMessage(buffer, group, external);
+
+    viewplayer->prevmessagetics = gametime;
 }
 
 void HU_ClearMessages(void)

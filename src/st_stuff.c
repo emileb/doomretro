@@ -36,6 +36,8 @@
 ========================================================================
 */
 
+#include <ctype.h>
+
 #include "am_map.h"
 #include "c_console.h"
 #include "d_deh.h"
@@ -80,10 +82,10 @@
 #define ST_FACESX           (143 + chex)
 #define ST_FACESY           168
 
-#define ST_FACEBACKX        (143 * SCREENSCALE)
-#define ST_FACEBACKY        (168 * SCREENSCALE)
-#define ST_FACEBACKWIDTH    (34 * SCREENSCALE)
-#define ST_FACEBACKHEIGHT   (32 * SCREENSCALE)
+#define ST_FACEBACKX        (144 * SCREENSCALE + WIDESCREENDELTA * 2)
+#define ST_FACEBACKY        (170 * SCREENSCALE)
+#define ST_FACEBACKWIDTH    (32 * SCREENSCALE)
+#define ST_FACEBACKHEIGHT   (29 * SCREENSCALE)
 
 #define ST_EVILGRINCOUNT    (2 * TICRATE)
 #define ST_TURNCOUNT        (1 * TICRATE)
@@ -165,6 +167,8 @@ static dboolean             st_statusbaron;
 // main bar left
 static patch_t              *sbar;
 static patch_t              *sbar2;
+static short                sbar2width;
+static short                sbarwidth;
 
 // 0-9, tall numbers
 patch_t                     *tallnum[10];
@@ -384,10 +388,8 @@ static const int mus[IDMUS_MAX][6] =
 //
 static void ST_RefreshBackground(void)
 {
-    short   sbarwidth;
-
 #if SCREENSCALE == 1
-    if ((sbarwidth = SHORT(sbar->width)) < SCREENWIDTH)
+    if (sbarwidth < SCREENWIDTH)
         R_FillBezel();
 
     if (STBAR >= 3)
@@ -400,7 +402,7 @@ static void ST_RefreshBackground(void)
 #else
     if (STBAR >= 3)
     {
-        if ((sbarwidth = SHORT(sbar->width)) < SCREENWIDTH)
+        if (sbarwidth < SCREENWIDTH)
             R_FillBezel();
 
         V_DrawWidePatch((SCREENWIDTH / SCREENSCALE - sbarwidth) / 2, VANILLAHEIGHT - VANILLASBARHEIGHT, 0, sbar);
@@ -408,20 +410,20 @@ static void ST_RefreshBackground(void)
     }
     else if (r_detail == r_detail_low)
     {
-        if ((sbarwidth = SHORT(sbar->width)) < SCREENWIDTH)
+        if (sbarwidth < SCREENWIDTH)
             R_FillBezel();
 
         V_DrawWidePatch((SCREENWIDTH / SCREENSCALE - sbarwidth) / 2, VANILLAHEIGHT - VANILLASBARHEIGHT, 0, sbar);
     }
     else
     {
-        if ((sbarwidth = SHORT(sbar2->width)) < SCREENWIDTH)
+        if (sbar2width < SCREENWIDTH)
             R_FillBezel();
 
         if (vid_widescreen)
-            V_DrawBigPatch((SCREENWIDTH - sbarwidth) / 2, ST_Y, sbar2);
+            V_DrawBigPatch((SCREENWIDTH - sbar2width) / 2, ST_Y, sbar2);
         else
-            V_DrawBigWidePatch(ST_X, SCREENHEIGHT - SBARHEIGHT, sbar2);
+            V_DrawBigWidePatch(ST_X, ST_Y, sbar2);
     }
 #endif
 }
@@ -482,6 +484,7 @@ dboolean ST_Responder(event_t *ev)
                     viewplayer->mo->health = oldhealth;
                 }
 
+                D_FadeScreen(false);
                 message_dontfuckwithme = true;
             }
 
@@ -536,6 +539,8 @@ dboolean ST_Responder(event_t *ev)
                     stat_cheated = SafeAdd(stat_cheated, 1);
                     viewplayer->cheated++;
                 }
+
+                D_FadeScreen(false);
             }
 
             // 'kfa' cheat for key full ammo
@@ -595,6 +600,8 @@ dboolean ST_Responder(event_t *ev)
                     stat_cheated = SafeAdd(stat_cheated, 1);
                     viewplayer->cheated++;
                 }
+
+                D_FadeScreen(false);
             }
 
             // 'mus' cheat for changing music
@@ -737,6 +744,7 @@ dboolean ST_Responder(event_t *ev)
                             static char message[128];
 
                             M_snprintf(message, sizeof(message), s_STSTR_BEHOLDON, powerupnames[i]);
+                            message[0] = toupper(message[0]);
                             C_Output(message);
                             HU_SetPlayerMessage(message, false, false);
                         }
@@ -785,6 +793,7 @@ dboolean ST_Responder(event_t *ev)
                             static char message[128];
 
                             M_snprintf(message, sizeof(message), s_STSTR_BEHOLDOFF, powerupnames[i]);
+                            message[0] = toupper(message[0]);
                             C_Output(message);
                             HU_SetPlayerMessage(message, false, false);
                         }
@@ -812,6 +821,7 @@ dboolean ST_Responder(event_t *ev)
                     cheat_buddha.chars_read = 0;
                     cheatkey = '\0';
 
+                    D_FadeScreen(false);
                     message_dontfuckwithme = true;
                     idbehold = false;
 
@@ -867,6 +877,7 @@ dboolean ST_Responder(event_t *ev)
 
                     C_Output(s_STSTR_CHOPPERS);
                     HU_SetPlayerMessage(s_STSTR_CHOPPERS, false, false);
+                    D_FadeScreen(false);
                     message_dontfuckwithme = true;
 
                     viewplayer->cheats |= CF_CHOPPERS;
@@ -1226,9 +1237,9 @@ static void ST_UpdateWidgets(void)
     w_ready.data = readyweapon;
 
     // update keycard multiple widgets
-    keyboxes[0] = (viewplayer->cards[it_blueskull] > 0 ? it_blueskull : (viewplayer->cards[it_bluecard] > 0 ? it_bluecard : -1));
-    keyboxes[1] = (viewplayer->cards[it_yellowskull] > 0 ? it_yellowskull : (viewplayer->cards[it_yellowcard] > 0 ? it_yellowcard : -1));
-    keyboxes[2] = (viewplayer->cards[it_redskull] > 0 ? it_redskull : (viewplayer->cards[it_redcard] > 0 ? it_redcard : -1));
+    keyboxes[0] = (viewplayer->cards[it_bluecard] > 0 ? it_bluecard : (viewplayer->cards[it_blueskull] > 0 ? it_blueskull : -1));
+    keyboxes[1] = (viewplayer->cards[it_yellowcard] > 0 ? it_yellowcard : (viewplayer->cards[it_yellowskull] > 0 ? it_yellowskull : -1));
+    keyboxes[2] = (viewplayer->cards[it_redcard] > 0 ? it_redcard : (viewplayer->cards[it_redskull] > 0 ? it_redskull : -1));
 
     // refresh everything if this is him coming back to life
     ST_UpdateFaceWidget();
@@ -1433,6 +1444,9 @@ static void ST_LoadUnloadGraphics(load_callback_t callback)
     callback("STBAR", &sbar);
     callback("STBAR2", &sbar2); // [BH] double resolution
 
+    sbarwidth = SHORT(sbar->width);
+    sbar2width = SHORT(sbar2->width);
+
     sbar->leftoffset = 0;
     sbar->topoffset = 0;
     sbar2->leftoffset = 0;
@@ -1499,7 +1513,8 @@ static void ST_LoadUnloadGraphics(load_callback_t callback)
 static void ST_LoadCallback(char *lumpname, patch_t **variable)
 {
     if (M_StringCompare(lumpname, "STARMS") || M_StringCompare(lumpname, "STBAR") || M_StringCompare(lumpname, "STFGOD0"))
-        *variable = ((FREEDOOM && !modifiedgame) || hacx ? W_CacheLastLumpName(lumpname) : W_CacheLumpName(lumpname));
+        *variable = ((FREEDOOM && !modifiedgame) || chex || hacx || REKKRSA ?
+            W_CacheLastLumpName(lumpname) : W_CacheLumpName(lumpname));
     else
         *variable = W_CacheLumpName(lumpname);
 }
@@ -1514,8 +1529,9 @@ static void ST_InitData(void)
     for (int i = 0; i < NUMWEAPONS; i++)
         oldweaponsowned[i] = viewplayer->weaponowned[i];
 
-    for (int i = 0; i < 3; i++)
-        keyboxes[i] = -1;
+    keyboxes[0] = -1;
+    keyboxes[1] = -1;
+    keyboxes[2] = -1;
 }
 
 static void ST_CreateWidgets(void)

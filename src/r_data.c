@@ -37,6 +37,7 @@
 */
 
 #include "c_console.h"
+#include "d_deh.h"
 #include "doomstat.h"
 #include "i_colors.h"
 #include "i_swap.h"
@@ -426,6 +427,10 @@ static void R_InitTextures(void)
 static void R_InitBrightmaps(void)
 {
     brightmap = Z_Calloc(numtextures, 256, PU_STATIC, NULL);
+    nobrightmap = Z_Calloc(numtextures, sizeof(*nobrightmap), PU_STATIC, NULL);
+
+    if (BTSX || chex || FREEDOOM || hacx || REKKR)
+        return;
 
     for (int i = 0, game = brightmaps[i].game; brightmaps[i].mask; i++)
         if (*brightmaps[i].texture
@@ -436,8 +441,6 @@ static void R_InitBrightmaps(void)
             if (num != -1)
                 brightmap[num] = brightmaps[i].mask;
         }
-
-    nobrightmap = Z_Calloc(numtextures, sizeof(*nobrightmap), PU_STATIC, NULL);
 
     SC_Open("DRCOMPAT");
 
@@ -477,7 +480,7 @@ static void R_InitFlats(void)
 
 //
 // R_InitSpriteLumps
-// Finds the width and hoffset of all sprites in the wad,
+// Finds the width and hoffset of all sprites in the WAD,
 //  so the sprite does not need to be cached completely
 //  just for having the header info ready during rendering.
 //
@@ -572,6 +575,17 @@ static void R_InitSpriteLumps(void)
     // [BH] compatibility fixes
     if (FREEDOOM)
     {
+        s_M_EPISODE1 = M_StringDuplicate("Outpost Outbreak");
+        s_M_EPISODE2 = M_StringDuplicate("Military Labs");
+        s_M_EPISODE3 = M_StringDuplicate("Event Horizon");
+        s_M_EPISODE4 = M_StringDuplicate("Double Impact");
+
+        s_M_SKILLLEVEL1 = M_StringDuplicate("Please don't kill me!");
+        s_M_SKILLLEVEL2 = M_StringDuplicate("Will this hurt?");
+        s_M_SKILLLEVEL3 = M_StringDuplicate("Bring on the pain.");
+        s_M_SKILLLEVEL4 = M_StringDuplicate("Extreme carnage");
+        s_M_SKILLLEVEL5 = M_StringDuplicate("Insanity!");
+
         states[S_BAR1].nextstate = S_BAR2;
 
         mobjinfo[MT_BARREL].frames = 2;
@@ -580,15 +594,15 @@ static void R_InitSpriteLumps(void)
         mobjinfo[MT_BRUISER].blood = MT_BLOOD;
         mobjinfo[MT_KNIGHT].blood = MT_BLOOD;
 
-        M_StringCopy(weaponinfo[wp_pistol].description, "handgun", sizeof(weaponinfo[wp_pistol].description));
-        M_StringCopy(weaponinfo[wp_shotgun].description, "pump-action shotgun", sizeof(weaponinfo[wp_shotgun].description));
-        M_StringCopy(weaponinfo[wp_chaingun].description, "minigun", sizeof(weaponinfo[wp_chaingun].description));
-        M_StringCopy(weaponinfo[wp_missile].description, "missile launcher", sizeof(weaponinfo[wp_missile].description));
-        M_StringCopy(weaponinfo[wp_plasma].description, "polaric energy cannon", sizeof(weaponinfo[wp_plasma].description));
-        M_StringCopy(weaponinfo[wp_bfg].description, "SKAG 1337", sizeof(weaponinfo[wp_bfg].description));
-        M_StringCopy(weaponinfo[wp_chainsaw].description, "angle grinder", sizeof(weaponinfo[wp_chainsaw].description));
-        M_StringCopy(weaponinfo[wp_supershotgun].description, "double-barreled shotgun",
-            sizeof(weaponinfo[wp_supershotgun].description));
+        M_StringCopy(weaponinfo[wp_pistol].name, "handgun", sizeof(weaponinfo[wp_pistol].name));
+        M_StringCopy(weaponinfo[wp_shotgun].name, "pump-action shotgun", sizeof(weaponinfo[wp_shotgun].name));
+        M_StringCopy(weaponinfo[wp_chaingun].name, "minigun", sizeof(weaponinfo[wp_chaingun].name));
+        M_StringCopy(weaponinfo[wp_missile].name, "missile launcher", sizeof(weaponinfo[wp_missile].name));
+        M_StringCopy(weaponinfo[wp_plasma].name, "polaric energy cannon", sizeof(weaponinfo[wp_plasma].name));
+        M_StringCopy(weaponinfo[wp_bfg].name, "SKAG 1337", sizeof(weaponinfo[wp_bfg].name));
+        M_StringCopy(weaponinfo[wp_chainsaw].name, "angle grinder", sizeof(weaponinfo[wp_chainsaw].name));
+        M_StringCopy(weaponinfo[wp_supershotgun].name, "double-barreled shotgun",
+            sizeof(weaponinfo[wp_supershotgun].name));
 
         M_StringCopy(mobjinfo[MT_POSSESSED].name1, "zombie", sizeof(mobjinfo[MT_POSSESSED].name1));
         M_StringCopy(mobjinfo[MT_POSSESSED].plural1, "zombies", sizeof(mobjinfo[MT_POSSESSED].plural1));
@@ -626,9 +640,23 @@ static void R_InitSpriteLumps(void)
         M_StringCopy(mobjinfo[MT_PAIN].plural1, "summoners", sizeof(mobjinfo[MT_PAIN].plural1));
     }
     else if (chex)
+    {
+        s_M_SKILLLEVEL1 = M_StringDuplicate("Easy does it");
+        s_M_SKILLLEVEL2 = M_StringDuplicate("Not so sticky");
+        s_M_SKILLLEVEL3 = M_StringDuplicate("Gobs of goo");
+        s_M_SKILLLEVEL4 = M_StringDuplicate("Extreme ooze");
+        s_M_SKILLLEVEL5 = M_StringDuplicate("Super slimey!");
+
         mobjinfo[MT_BLOOD].blood = GREENBLOOD;
+    }
     else if (hacx)
     {
+        s_M_SKILLLEVEL1 = M_StringDuplicate("Please don't shoot!");
+        s_M_SKILLLEVEL2 = M_StringDuplicate("Arrgh, I need health!");
+        s_M_SKILLLEVEL3 = M_StringDuplicate("Let's rip them apart!");
+        s_M_SKILLLEVEL4 = M_StringDuplicate("I am immortal");
+        s_M_SKILLLEVEL5 = M_StringDuplicate("Insanity!");
+
         mobjinfo[MT_HEAD].flags2 |= MF2_DONTMAP;
         mobjinfo[MT_INV].flags2 &= ~MF2_TRANSLUCENT_33;
         mobjinfo[MT_INS].flags2 &= ~(MF2_TRANSLUCENT_33 | MF2_FLOATBOB);
@@ -640,7 +668,10 @@ static void R_InitSpriteLumps(void)
         mobjinfo[MT_KNIGHT].blood = MT_BLOOD;
     }
     else if (eviternity)
+    {
+        mobjinfo[MT_BRUISER].blood = MT_BLOOD;
         mobjinfo[MT_DOGS].blood = MT_GREENBLOOD;
+    }
     else if (doom4vanilla)
     {
         mobjinfo[MT_HEAD].blood = MT_BLOOD;
@@ -684,16 +715,38 @@ static void R_InitSpriteLumps(void)
     }
     else if (REKKR)
     {
+        s_M_EPISODE1 = M_StringDuplicate("Homecoming");
+        s_M_EPISODE2 = M_StringDuplicate("Downfall");
+        s_M_EPISODE3 = M_StringDuplicate("Otherworld");
+        s_M_EPISODE4 = M_StringDuplicate("Bonus");
+
+        s_M_SKILLLEVEL1 = M_StringDuplicate("Scrapper");
+        s_M_SKILLLEVEL2 = M_StringDuplicate("Brawler");
+        s_M_SKILLLEVEL3 = M_StringDuplicate("Fighter");
+        s_M_SKILLLEVEL4 = M_StringDuplicate("Wrecker");
+        s_M_SKILLLEVEL5 = M_StringDuplicate("Berserker");
+
+        powerupnames[pw_strength] = M_StringDuplicate("wode");
+
         mobjinfo[MT_HEAD].blood = MT_BLOOD;
         mobjinfo[MT_KNIGHT].blood = MT_BLOOD;
 
-        M_StringCopy(weaponinfo[wp_pistol].description, "soul bow", sizeof(weaponinfo[wp_pistol].description));
-        M_StringCopy(weaponinfo[wp_shotgun].description, "steel-shot launcher", sizeof(weaponinfo[wp_shotgun].description));
-        M_StringCopy(weaponinfo[wp_chaingun].description, "soul gun", sizeof(weaponinfo[wp_chaingun].description));
-        M_StringCopy(weaponinfo[wp_missile].description, "runic staff", sizeof(weaponinfo[wp_missile].description));
-        M_StringCopy(weaponinfo[wp_plasma].description, "holy relic", sizeof(weaponinfo[wp_plasma].description));
-        M_StringCopy(weaponinfo[wp_bfg].description, "blessing of the gods", sizeof(weaponinfo[wp_bfg].description));
-        M_StringCopy(weaponinfo[wp_chainsaw].description, "axe", sizeof(weaponinfo[wp_chainsaw].description));
+        M_StringCopy(weaponinfo[wp_pistol].name, "soul bow", sizeof(weaponinfo[wp_pistol].name));
+        M_StringCopy(weaponinfo[wp_shotgun].name, "steel-shot launcher", sizeof(weaponinfo[wp_shotgun].name));
+        M_StringCopy(weaponinfo[wp_chaingun].name, "soul gun", sizeof(weaponinfo[wp_chaingun].name));
+        M_StringCopy(weaponinfo[wp_missile].name, "runic staff", sizeof(weaponinfo[wp_missile].name));
+        M_StringCopy(weaponinfo[wp_plasma].name, "holy relic", sizeof(weaponinfo[wp_plasma].name));
+        M_StringCopy(weaponinfo[wp_bfg].name, "blessing of the gods", sizeof(weaponinfo[wp_bfg].name));
+        M_StringCopy(weaponinfo[wp_chainsaw].name, "axe", sizeof(weaponinfo[wp_chainsaw].name));
+
+        M_StringCopy(weaponinfo[wp_pistol].ammoname, "soul", sizeof(weaponinfo[wp_pistol].ammoname));
+        M_StringCopy(weaponinfo[wp_pistol].ammoplural, "souls", sizeof(weaponinfo[wp_pistol].ammoplural));
+        M_StringCopy(weaponinfo[wp_shotgun].ammoname, "steelshot", sizeof(weaponinfo[wp_shotgun].ammoname));
+        M_StringCopy(weaponinfo[wp_shotgun].ammoplural, "steelshots", sizeof(weaponinfo[wp_shotgun].ammoplural));
+        M_StringCopy(weaponinfo[wp_missile].ammoname, "rune", sizeof(weaponinfo[wp_missile].ammoname));
+        M_StringCopy(weaponinfo[wp_missile].ammoplural, "runes", sizeof(weaponinfo[wp_missile].ammoplural));
+        M_StringCopy(weaponinfo[wp_plasma].ammoname, "mana", sizeof(weaponinfo[wp_plasma].ammoname));
+        M_StringCopy(weaponinfo[wp_plasma].ammoplural, "mana", sizeof(weaponinfo[wp_plasma].ammoplural));
 
         M_StringCopy(mobjinfo[MT_POSSESSED].name1, "former human", sizeof(mobjinfo[MT_POSSESSED].name1));
         M_StringCopy(mobjinfo[MT_POSSESSED].plural1, "former humans", sizeof(mobjinfo[MT_POSSESSED].plural1));

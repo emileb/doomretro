@@ -806,7 +806,7 @@ static void WI_InitStats(void)
     C_TabbedOutput(tabs, "Kills\t" BOLD("%i%%"), (wbs->skills * 100) / wbs->maxkills);
     C_TabbedOutput(tabs, "Items\t" BOLD("%i%%"), (wbs->sitems * 100) / wbs->maxitems);
 
-    if (totalsecret)
+    if (totalsecrets)
         C_TabbedOutput(tabs, "Secrets\t" BOLD("%i%%"), (wbs->ssecret * 100) / wbs->maxsecret);
 
     C_TabbedOutput(tabs, "Time\t" BOLD("%02i:%02i"), wbs->stime / TICRATE / 60, wbs->stime / TICRATE % 60);
@@ -874,7 +874,10 @@ static void WI_UpdateStats(void)
         if (cnt_secret >= (wbs->ssecret * 100) / wbs->maxsecret)
         {
             cnt_secret = (wbs->ssecret * 100) / wbs->maxsecret;
-            S_StartSound(NULL, sfx_barexp);
+
+            if (totalsecrets)
+                S_StartSound(NULL, sfx_barexp);
+
             sp_state++;
         }
     }
@@ -959,7 +962,7 @@ static void WI_DrawStats(void)
     V_DrawPatchWithShadow(SP_STATSX + 1, SP_STATSY + lh + 1, items, false);
     WI_DrawPercent(VANILLAWIDTH - SP_STATSX - 14, SP_STATSY + lh, cnt_items);
 
-    if (totalsecret)
+    if (totalsecrets)
     {
         if (!WISCRT2)
             M_DrawString(SP_STATSX, SP_STATSY + 2 * lh - 3, "secrets");
@@ -1163,15 +1166,15 @@ static void WI_LoadData(void)
             lump = W_CacheLumpName("INTERPIC");
     }
     else if (gamemode == retail && wbs->epsd == 3)
-        lump = W_CacheLumpName("INTERPI1");
+        lump = W_CacheLumpName(REKKRSL ? "INTERPIW" : "INTERPI1");
     else if (sigil && wbs->epsd == 4)
         lump = W_CacheLumpName("SIGILINT");
     else
     {
         char    temp[9];
 
-        M_snprintf(temp, sizeof(temp), "WIMAP%i", wbs->epsd);
-        lump = W_CacheLumpName(temp);
+        M_snprintf(temp, sizeof(temp), "WIMAP%i%s", wbs->epsd, (REKKRSL ? "W" : ""));
+        lump = (chex || REKKRSA ? W_CacheLastLumpName(temp) : W_CacheLumpName(temp));
     }
 
     if (SCREENWIDTH != NONWIDEWIDTH)

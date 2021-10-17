@@ -89,7 +89,7 @@ unsigned int    MAPHEIGHT = VANILLAHEIGHT * SCREENSCALE;
 unsigned int    MAPAREA;
 int             MAPBOTTOM;
 
-#define I_SDLError(func)        I_Error("The call to " stringize(func) "() failed in %s() on line %i of %s with this error:\"%s\".", \
+#define I_SDLError(func)        I_Error(stringize(func) "() failed in %s() on line %i of %s with this error:\"%s\".", \
                                     __FUNCTION__, __LINE__ - 1, leafname(__FILE__), SDL_GetError())
 
 #define MAXDISPLAYS             8
@@ -207,7 +207,7 @@ int                 gammaindex;
 static SDL_Rect     src_rect;
 static SDL_Rect     map_rect;
 
-int                 framespersecond;
+int                 framespersecond = 0;
 int                 refreshrate;
 
 #if defined(_WIN32)
@@ -372,7 +372,7 @@ void I_ShutdownKeyboard(void)
 
 static int AccelerateMouse(int value)
 {
-    return (value > 10 ? value * 2 - 10 : (value < -10 ? value * 2 + 10 : value));
+    return (value < -10 ? value * 2 + 10 : (value < 10 ? value : value * 2 - 10));
 }
 
 static short inline clamp(short value, short deadzone)
@@ -610,7 +610,7 @@ static void I_GetEvent(void)
                 break;
 
             case SDL_CONTROLLERBUTTONDOWN:
-                gamepadbuttons |= 1 << Event->cbutton.button;
+                gamepadbuttons |= (1 << Event->cbutton.button);
                 event.type = ev_gamepad;
                 D_PostEvent(&event);
 
@@ -819,9 +819,6 @@ static void CalculateFPS(void)
         frames = 0;
         starttime = currenttime;
     }
-
-    if (framespersecond)
-        C_UpdateFPS();
 }
 
 #if defined(_WIN32)
@@ -1143,8 +1140,7 @@ void I_CreateExternalAutomap(int outputlevel)
         I_SDLError(SDL_SetHintWithPriority);
 
     if (!mapwindow && !(mapwindow = SDL_CreateWindow("Automap", SDL_WINDOWPOS_UNDEFINED_DISPLAY(am_displayindex),
-        SDL_WINDOWPOS_UNDEFINED_DISPLAY(am_displayindex), 0, 0,
-        (vid_borderlesswindow ? SDL_WINDOW_FULLSCREEN_DESKTOP : SDL_WINDOW_FULLSCREEN))))
+        SDL_WINDOWPOS_UNDEFINED_DISPLAY(am_displayindex), 0, 0, (SDL_WINDOW_FULLSCREEN_DESKTOP | SDL_WINDOW_SKIP_TASKBAR))))
         I_SDLError(SDL_CreateWindow);
 
     MAPHEIGHT = VANILLAHEIGHT * SCREENSCALE;
@@ -1478,11 +1474,12 @@ static void SetVideoMode(dboolean createwindow, dboolean output)
             if (!width || !height)
                 I_Error("Graphics couldn't be initialized.");
 
+
 #ifdef __ANDROID__
             SDL_GL_SetAttribute( SDL_GL_DEPTH_SIZE, 16 ); // Defaults to 24 which is not needed and fails on old Tegras
 #endif
 
-            if (createwindow && !(window = SDL_CreateWindow(PACKAGE_NAME, SDL_WINDOWPOS_UNDEFINED_DISPLAY(displayindex),
+            if (createwindow && !(window = SDL_CreateWindow(DOOMRETRO_NAME, SDL_WINDOWPOS_UNDEFINED_DISPLAY(displayindex),
                 SDL_WINDOWPOS_UNDEFINED_DISPLAY(displayindex), width, height,
                 (windowflags | (vid_borderlesswindow ? SDL_WINDOW_FULLSCREEN_DESKTOP : SDL_WINDOW_FULLSCREEN)))))
                 I_SDLError(SDL_CreateWindow);
@@ -1505,7 +1502,7 @@ static void SetVideoMode(dboolean createwindow, dboolean output)
             width = screenwidth;
             height = screenheight;
 
-            if (createwindow && !(window = SDL_CreateWindow(PACKAGE_NAME, SDL_WINDOWPOS_UNDEFINED_DISPLAY(displayindex),
+            if (createwindow && !(window = SDL_CreateWindow(DOOMRETRO_NAME, SDL_WINDOWPOS_UNDEFINED_DISPLAY(displayindex),
                 SDL_WINDOWPOS_UNDEFINED_DISPLAY(displayindex), width, height,
                 (windowflags | (vid_borderlesswindow ? SDL_WINDOW_FULLSCREEN_DESKTOP : SDL_WINDOW_FULLSCREEN)))))
                 I_SDLError(SDL_CreateWindow);
@@ -1536,7 +1533,7 @@ static void SetVideoMode(dboolean createwindow, dboolean output)
 
         if (!windowx && !windowy)
         {
-            if (createwindow && !(window = SDL_CreateWindow(PACKAGE_NAME, SDL_WINDOWPOS_CENTERED_DISPLAY(displayindex),
+            if (createwindow && !(window = SDL_CreateWindow(DOOMRETRO_NAME, SDL_WINDOWPOS_CENTERED_DISPLAY(displayindex),
                 SDL_WINDOWPOS_CENTERED_DISPLAY(displayindex), width, height, windowflags)))
                 I_SDLError(SDL_CreateWindow);
 
@@ -1553,7 +1550,7 @@ static void SetVideoMode(dboolean createwindow, dboolean output)
         }
         else
         {
-            if (createwindow && !(window = SDL_CreateWindow(PACKAGE_NAME, windowx, windowy, width, height, windowflags)))
+            if (createwindow && !(window = SDL_CreateWindow(DOOMRETRO_NAME, windowx, windowy, width, height, windowflags)))
                 I_SDLError(SDL_CreateWindow);
 
             if (output)
@@ -1645,7 +1642,7 @@ static void SetVideoMode(dboolean createwindow, dboolean output)
 
             if (major * 10 + minor < 21)
             {
-                C_Warning(1, ITALICS(PACKAGE_NAME "") " requires at least " ITALICS("OpenGL v2.1."));
+                C_Warning(1, ITALICS(DOOMRETRO_NAME) " requires at least " ITALICS("OpenGL v2.1."));
 
 #if defined(_WIN32)
                 vid_scaleapi = vid_scaleapi_direct3d;
@@ -1684,14 +1681,12 @@ static void SetVideoMode(dboolean createwindow, dboolean output)
                 M_SaveCVARs();
             }
         }
-#else
-#if defined(__APPLE__)
+#elif defined(__APPLE__)
         else if (M_StringCompare(rendererinfo.name, vid_scaleapi_metal))
         {
             if (output)
                 C_Output("This scaling is done using hardware acceleration with " ITALICS("Metal."));
         }
-#endif
         else if (M_StringCompare(rendererinfo.name, vid_scaleapi_opengles))
         {
             if (output)
@@ -1752,7 +1747,8 @@ static void SetVideoMode(dboolean createwindow, dboolean output)
                 refreshrate = displaymode.refresh_rate;
 
                 if (vid_vsync == vid_vsync_adaptive && M_StringStartsWith(vid_scaleapi, "opengl"))
-                    SDL_GL_SetSwapInterval(-1);
+                    if (SDL_GL_SetSwapInterval(-1) < 0)
+                        C_Warning(1, "Adaptive vsync is not supported.");
 
                 if (refreshrate < vid_capfps || !vid_capfps)
                 {
@@ -1763,7 +1759,7 @@ static void SetVideoMode(dboolean createwindow, dboolean output)
                 }
                 else
                 {
-                    I_CapFPS(consoleactive ? TICRATE : vid_capfps);
+                    I_CapFPS(vid_capfps);
 
                     if (output)
                     {
@@ -1777,7 +1773,7 @@ static void SetVideoMode(dboolean createwindow, dboolean output)
         }
         else
         {
-            I_CapFPS(consoleactive ? TICRATE : vid_capfps);
+            I_CapFPS(vid_capfps);
 
             if (output)
             {
@@ -1935,7 +1931,6 @@ void I_RestartGraphics(dboolean recreatewindow)
     C_ResetWrappedLines();
 
     setsizeneeded = true;
-    forceconsoleblurredraw = true;
 
     if (r_playersprites)
         skippsprinterp = true;
@@ -1954,7 +1949,7 @@ void I_ToggleFullscreen(void)
     }
 
     vid_fullscreen = !vid_fullscreen;
-    I_RestartGraphics(false);
+    I_RestartGraphics(vid_fullscreen && !vid_borderlesswindow);
     M_SaveCVARs();
 
     if (nearestlinear)
@@ -2034,11 +2029,11 @@ void I_InitGraphics(void)
 
     if (linked.major != compiled.major || linked.minor != compiled.minor)
         I_Error("The wrong version of %s was found. %s requires v%i.%i.%i.",
-            SDL_FILENAME, PACKAGE_NAME, compiled.major, compiled.minor, compiled.patch);
+            SDL_FILENAME, DOOMRETRO_NAME, compiled.major, compiled.minor, compiled.patch);
 
     if (linked.patch != compiled.patch)
         C_Warning(1, "The wrong version of " BOLD("%s") " was found. " ITALICS("%s") " requires v%i.%i.%i.",
-            SDL_FILENAME, PACKAGE_NAME, compiled.major, compiled.minor, compiled.patch);
+            SDL_FILENAME, DOOMRETRO_NAME, compiled.major, compiled.minor, compiled.patch);
 
     performancefrequency = SDL_GetPerformanceFrequency();
 
@@ -2089,7 +2084,7 @@ void I_InitGraphics(void)
     I_InitWindows32();
 #endif
 
-    SDL_SetWindowTitle(window, PACKAGE_NAME);
+    SDL_SetWindowTitle(window, DOOMRETRO_NAME);
 
     I_UpdateBlitFunc(false);
     memset(screens[0], nearestblack, SCREENAREA);

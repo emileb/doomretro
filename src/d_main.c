@@ -93,7 +93,7 @@
 #endif
 
 #define FADECOUNT    9
-#define FADETICS    20
+#define FADETICS    25
 
 char **episodes[] =
 {
@@ -213,8 +213,7 @@ void D_PostEvent(event_t *ev)
 //
 void D_FadeScreen(dboolean screenshot)
 {
-    if (!screenshot && (!fade || (gamestate == GS_LEVEL && (viewplayer->mo->momx || viewplayer->mo->momy || viewplayer->mo->momz
-        || viewplayer->cmd.angleturn))))
+    if (togglingvanilla || (!screenshot && !fade))
         return;
 
     memcpy(fadescreen, screens[0], SCREENAREA);
@@ -241,12 +240,34 @@ static void D_UpdateFade(void)
     }
 
     if (tinttab)
+    {
         for (int i = 0; i < SCREENAREA; i++)
         {
             byte    *dot = *screens + i;
 
             *dot = tinttab[(*dot << 8) + fadescreen[i]];
         }
+
+        if (r_ditheredlighting)
+            for (int y = 0; y < SCREENAREA; y += SCREENWIDTH * 2)
+            {
+                for (int x = y; x < y + SCREENWIDTH; x += 2)
+                {
+                    byte    *dot = *screens + x;
+
+                    *dot = tinttab90[(*dot << 8) + fadescreen[x]];
+                }
+
+                y += SCREENWIDTH * 2;
+
+                for (int x = y + 1; x < y + SCREENWIDTH; x += 2)
+                {
+                    byte    *dot = *screens + x;
+
+                    *dot = tinttab90[(*dot << 8) + fadescreen[x]];
+                }
+            }
+    }
 }
 
 //
@@ -342,8 +363,7 @@ void D_Display(void)
         // draw the view directly
         R_RenderPlayerView();
 
-        if (!(viewplayer->cheats & CF_NOCLIP) && !freeze)
-            AM_AddToPath();
+        AM_AddToPath();
 
         if (mapwindow || automapactive)
             AM_Drawer();
@@ -398,6 +418,21 @@ void D_Display(void)
 
     if (!dowipe || !melt)
     {
+        if (!paused && !menuactive)
+        {
+            if (vid_showfps)
+                C_UpdateFPSOverlay();
+
+            if (timeremaining && gamestate == GS_LEVEL)
+                C_UpdateTimerOverlay();
+
+            if (am_path && (automapactive || mapwindow))
+                C_UpdatePathOverlay();
+
+            if (am_playerstats && (automapactive || mapwindow))
+                C_UpdatePlayerStatsOverlay();
+        }
+
         C_Drawer();
 
         // menus go directly to the screen
@@ -405,9 +440,6 @@ void D_Display(void)
 
         if (drawdisk)
             HU_DrawDisk();
-
-        if (countdown && gamestate == GS_LEVEL)
-            C_UpdateTimer();
 
         if (fadecount)
             D_UpdateFade();
@@ -548,19 +580,20 @@ void D_PageDrawer(void)
 {
     if (splashscreen)
     {
-        if (logotic >= 77 && logotic < 94)
-            V_DrawBigPatch((SCREENWIDTH - NONWIDEWIDTH) / 2 + 143, 167, logolump[94 - logotic]);
+        int x = (SCREENWIDTH - NONWIDEWIDTH) / 2;
 
-        V_DrawBigPatch((SCREENWIDTH - NONWIDEWIDTH) / 2 + 12, 366, fineprintlump);
-        I_SetSimplePalette(&splashpal[(pagetic < 9 ? 9 - pagetic : (pagetic > 94 ? pagetic - 94 : 0)) * 768]);
-    }
-    else
-    {
-        if (SCREENWIDTH != NONWIDEWIDTH)
-            memset(screens[0], pillarboxcolor, SCREENAREA);
+        memset(screens[0], nearestblack, SCREENAREA);
+        V_DrawBigPatch(x + 143, 167, logolump[BETWEEN(0, 94 - logotic, 17)]);
+        V_DrawBigPatch(x + 12, 366, fineprintlump);
+        I_SetSimplePalette(&splashpal[pagetic < 9 ? (9 - pagetic) * 768 : (pagetic <= 94 ? 0 : (pagetic - 94) * 768)]);
 
-        V_DrawWidePatch((SCREENWIDTH / SCREENSCALE - SHORT(pagelump->width)) / 2, 0, 0, pagelump);
+        return;
     }
+
+    if (SCREENWIDTH != NONWIDEWIDTH)
+        memset(screens[0], pillarboxcolor, SCREENAREA);
+
+    V_DrawWidePatch((SCREENWIDTH / SCREENSCALE - SHORT(pagelump->width)) / 2, 0, 0, pagelump);
 }
 
 //
@@ -570,7 +603,6 @@ void D_PageDrawer(void)
 void D_AdvanceTitle(void)
 {
     advancetitle = true;
-    forceconsoleblurredraw = true;
 }
 
 //
@@ -584,15 +616,7 @@ void D_DoAdvanceTitle(void)
     gameaction = ga_nothing;
     gamestate = GS_TITLESCREEN;
 
-    if (!titlesequence)
-    {
-        titlesequence = 1;
-        V_DrawBigPatch((SCREENWIDTH - NONWIDEWIDTH) / 2 + 12, 366, fineprintlump);
-        V_DrawBigPatch((SCREENWIDTH - NONWIDEWIDTH) / 2 + 143, 167, logolump[0]);
-
-        return;
-    }
-    else if (titlesequence == 1)
+    if (titlesequence == 1)
     {
         static dboolean flag = true;
 
@@ -684,7 +708,14 @@ static char *FindDehPath(char *path, char *ext, char *pattern)
     // Or NULL if no matching .deh file can be found.
     // The pattern (not used in Windows) is the fnmatch pattern to search for.
 #if defined(_WIN32)
-    char    *dehpath = M_StringReplace(path, ".wad", ext);
+    char    dehpath[MAX_PATH] = "";
+
+    if (M_StringEndsWith(path, ".wad"))
+        M_StringCopy(dehpath, M_StringReplace(path, ".wad", ext), sizeof(dehpath));
+    else if (M_StringEndsWith(path, ".iwad"))
+        M_StringCopy(dehpath, M_StringReplace(path, ".iwad", ext), sizeof(dehpath));
+    else if (M_StringEndsWith(path, ".pwad"))
+        M_StringCopy(dehpath, M_StringReplace(path, ".pwad", ext), sizeof(dehpath));
 
     return (M_FileExists(dehpath) ? dehpath : NULL);
 #else
@@ -789,7 +820,14 @@ static void LoadDehFile(char *path)
 
 static void LoadCfgFile(char *path)
 {
-    char    *cfgpath = M_StringReplace(path, ".wad", ".cfg");
+    char    cfgpath[MAX_PATH] = "";
+
+    if (M_StringEndsWith(path, ".wad"))
+        M_StringCopy(cfgpath, M_StringReplace(path, ".wad", ".cfg"), sizeof(cfgpath));
+    else if (M_StringEndsWith(path, ".iwad"))
+        M_StringCopy(cfgpath, M_StringReplace(path, ".iwad", ".cfg"), sizeof(cfgpath));
+    else if (M_StringEndsWith(path, ".pwad"))
+        M_StringCopy(cfgpath, M_StringReplace(path, ".pwad", ".cfg"), sizeof(cfgpath));
 
     if (M_FileExists(cfgpath))
         M_LoadCVARs(cfgpath);
@@ -820,7 +858,12 @@ static dboolean D_IsDOOM2IWAD(char *filename)
 
 dboolean D_IsDOOMIWAD(char *filename)
 {
-    return (D_IsDOOM1IWAD(filename) || D_IsDOOM2IWAD(filename));
+    char    *file = leafname(filename);
+
+    return (D_IsDOOM1IWAD(filename)
+        || D_IsDOOM2IWAD(filename)
+        || M_StringCompare(file, "chex.wad")
+        || M_StringCompare(file, "rekkrsa.wad"));
 }
 
 static dboolean D_IsUnsupportedIWAD(char *filename)
@@ -844,8 +887,8 @@ static dboolean D_IsUnsupportedIWAD(char *filename)
         {
             char    buffer[1024];
 
-            M_snprintf(buffer, sizeof(buffer), PACKAGE_NAME " doesn't support %s.", unsupported[i].title);
-            SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_WARNING, PACKAGE_NAME, buffer, NULL);
+            M_snprintf(buffer, sizeof(buffer), DOOMRETRO_NAME " doesn't support %s.", unsupported[i].title);
+            SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_WARNING, DOOMRETRO_NAME, buffer, NULL);
 
 #if defined(_WIN32)
             if (previouswad)
@@ -913,21 +956,26 @@ static void D_CheckSupportedPWAD(char *filename)
         eviternity = true;
     else if (M_StringCompare(leafname(filename), "d4v.wad"))
         doom4vanilla = true;
-    else if (M_StringCompare(leafname(filename), "REKKR.wad")
-        || M_StringCompare(leafname(filename), "rekkrsa.wad"))
+    else if (M_StringCompare(leafname(filename), "REKKR.wad"))
         REKKR = true;
+    else if (M_StringCompare(leafname(filename), "rekkrsa.wad"))
+        REKKR = REKKRSA = true;
+    else if (M_StringCompare(leafname(filename), "REKKRSL.wad")
+        || M_StringCompare(leafname(filename), "REKKRSL.iwad"))
+        REKKR = REKKRSL = true;
 }
 
 static dboolean D_IsUnsupportedPWAD(char *filename)
 {
-    return (error = (M_StringCompare(leafname(filename), PACKAGE_WAD)));
+    return (error = (M_StringCompare(leafname(filename), DOOMRETRO_WAD)));
 }
 
 static dboolean D_CheckParms(void)
 {
     dboolean    result = false;
 
-    if (myargc == 2 && M_StringEndsWith(myargv[1], ".wad"))
+    if (myargc == 2
+        && (M_StringEndsWith(myargv[1], ".wad") || M_StringEndsWith(myargv[1], ".iwad") || M_StringEndsWith(myargv[1], ".pwad")))
     {
         char    *folder = M_ExtractFolder(myargv[1]);
 
@@ -1148,7 +1196,7 @@ static int D_OpenWADLauncher(void)
     M_StringCopy(szFile, wad, sizeof(szFile));
     ofn.lpstrFile = szFile;
     ofn.nMaxFile = sizeof(szFile);
-    ofn.lpstrFilter = "IWAD and/or PWAD(s) (*.wad)\0*.WAD;*.DEH;*.BEX;*.CFG\0";
+    ofn.lpstrFilter = "IWAD and/or PWAD(s) (*.wad)\0*.WAD;*.IWAD;*.PWAD;*.DEH;*.BEX;*.CFG\0";
     ofn.nFilterIndex = 1;
     ofn.lpstrFileTitle = NULL;
     ofn.nMaxFileTitle = 0;
@@ -1204,9 +1252,10 @@ static int D_OpenWADLauncher(void)
 #endif
             char    *folder = M_ExtractFolder(file);
 
-            if (!M_StringEndsWith(file, ".wad") && !M_StringEndsWith(file, ".deh")
+            if (!M_StringEndsWith(file, ".wad") && !M_StringEndsWith(file, ".iwad")
+                && !M_StringEndsWith(file, ".pwad") && !M_StringEndsWith(file, ".deh")
                 && !M_StringEndsWith(file, ".bex") && !M_StringEndsWith(file, ".cfg")
-                && (strlen(file) < 4 || file[strlen(file) - 4] != '.'))
+                && !strchr(file, '.'))
                 file = M_StringJoin(file, ".wad", NULL);
 
 #if defined(_WIN32)
@@ -1222,7 +1271,8 @@ static int D_OpenWADLauncher(void)
                     guess = true;
 
                     if (!M_StringEndsWith(temp, leafname(file)))
-                        C_Warning(1, BOLD("%s") " couldn't be found so " BOLD("%s") " was loaded instead.", leafname(file), leafname(temp));
+                        C_Warning(1, BOLD("%s") " couldn't be found. " BOLD("%s") " was loaded instead.",
+                            leafname(file), leafname(temp));
 
                     file = M_StringDuplicate(temp);
                     wad = M_StringDuplicate(temp);
@@ -1782,7 +1832,7 @@ static void D_ProcessDehInWad(void)
         for (int i = 0; i < numlumps; i++)
             if (M_StringCompare(lumpinfo[i]->name, "DEHACKED")
                 && process
-                && !M_StringEndsWith(lumpinfo[i]->wadfile->path, PACKAGE_WAD)
+                && !M_StringEndsWith(lumpinfo[i]->wadfile->path, DOOMRETRO_WAD)
                 && !M_StringEndsWith(lumpinfo[i]->wadfile->path, "D4V.WAD"))
                 ProcessDehFile(NULL, i, false);
 
@@ -1793,14 +1843,14 @@ static void D_ProcessDehInWad(void)
 
         for (int i = 0; i < numlumps; i++)
             if (M_StringCompare(lumpinfo[i]->name, "DEHACKED")
-                && M_StringEndsWith(lumpinfo[i]->wadfile->path, PACKAGE_WAD))
+                && M_StringEndsWith(lumpinfo[i]->wadfile->path, DOOMRETRO_WAD))
                 ProcessDehFile(NULL, i, false);
     }
-    else if (hacx || FREEDOOM)
+    else if (hacx || FREEDOOM || REKKRSA)
     {
         for (int i = 0; i < numlumps; i++)
             if (M_StringCompare(lumpinfo[i]->name, "DEHACKED")
-                && (process || M_StringEndsWith(lumpinfo[i]->wadfile->path, PACKAGE_WAD)))
+                && (process || M_StringEndsWith(lumpinfo[i]->wadfile->path, DOOMRETRO_WAD)))
                 ProcessDehFile(NULL, i, false);
     }
     else
@@ -1811,7 +1861,7 @@ static void D_ProcessDehInWad(void)
         for (int i = numlumps - 1; i >= 0; i--)
             if (M_StringCompare(lumpinfo[i]->name, "DEHACKED")
                 && !M_StringEndsWith(lumpinfo[i]->wadfile->path, "SIGIL_v1_2.wad")
-                && (process || M_StringEndsWith(lumpinfo[i]->wadfile->path, PACKAGE_WAD)))
+                && (process || M_StringEndsWith(lumpinfo[i]->wadfile->path, DOOMRETRO_WAD)))
                 ProcessDehFile(NULL, i, false);
     }
 
@@ -1851,11 +1901,11 @@ static void D_DoomMainSetup(void)
     char    *resourcefolder = M_GetResourceFolder();
     char    *seconds;
 
-    packagewad = M_StringJoin(resourcefolder, DIR_SEPARATOR_S, PACKAGE_WAD, NULL);
+    packagewad = M_StringJoin(resourcefolder, DIR_SEPARATOR_S, DOOMRETRO_WAD, NULL);
     free(resourcefolder);
 
     M_MakeDirectory(appdatafolder);
-    packageconfig = (p ? M_StringDuplicate(myargv[p + 1]) : M_StringJoin(appdatafolder, DIR_SEPARATOR_S, PACKAGE_CONFIG, NULL));
+    packageconfig = (p ? M_StringDuplicate(myargv[p + 1]) : M_StringJoin(appdatafolder, DIR_SEPARATOR_S, DOOMRETRO_CONFIG, NULL));
 
     C_Output("");
     C_PrintCompileDate();
@@ -1919,7 +1969,8 @@ static void D_DoomMainSetup(void)
             scale = atoi(myargv[p + 1]);
 
             if (scale >= 10 && scale <= 400 && scale != 100)
-                C_Output("A " BOLD("-turbo") " parameter was found on the command-line. The player will be %i%% their normal speed.", scale);
+                C_Output("A " BOLD("-turbo") " parameter was found on the command-line. The player will be %i%% their normal speed.",
+                    scale);
             else
                 scale = 100;
         }
@@ -1943,14 +1994,14 @@ static void D_DoomMainSetup(void)
     I_InitTimer();
 
     if (!stat_runs)
-        C_Output("This is the first time " ITALICS(PACKAGE_NAME "") " has been run.");
+        C_Output("This is the first time " ITALICS(DOOMRETRO_NAME) " has been run.");
     else if (stat_runs == 1)
-        C_Output(ITALICS(PACKAGE_NAME "") " has now been run twice.");
+        C_Output(ITALICS(DOOMRETRO_NAME) " has now been run twice.");
     else
     {
         char    *temp = commify(SafeAdd(stat_runs, 1));
 
-        C_Output(ITALICS(PACKAGE_NAME "") " has now been run %s times.", temp);
+        C_Output(ITALICS(DOOMRETRO_NAME) " has now been run %s times.", temp);
         free(temp);
     }
 
@@ -1981,7 +2032,8 @@ static void D_DoomMainSetup(void)
                 if ((choseniwad = D_OpenWADLauncher()) == -1)
                     I_Quit(false);
 #if defined(_WIN32)
-                else if (!choseniwad && !error && (!*wad || M_StringEndsWith(wad, ".wad")))
+                else if (!choseniwad && !error
+                    && (!*wad || M_StringEndsWith(wad, ".wad") || M_StringEndsWith(wad, ".iwad") || M_StringEndsWith(wad, ".pwad")))
 #else
                 else if (!choseniwad && !error)
 #endif
@@ -1989,15 +2041,15 @@ static void D_DoomMainSetup(void)
                     char    buffer[256];
 
 #if defined(_WIN32)
-                    M_snprintf(buffer, sizeof(buffer), PACKAGE_NAME " couldn't find %s.", (*wad ? wad : "any IWADs"));
+                    M_snprintf(buffer, sizeof(buffer), DOOMRETRO_NAME " couldn't find %s.", (*wad ? wad : "any IWADs"));
 
                     if (previouswad)
                         wad = M_StringDuplicate(previouswad);
 #else
-                    M_snprintf(buffer, sizeof(buffer), PACKAGE_NAME " couldn't find any IWADs.");
+                    M_snprintf(buffer, sizeof(buffer), DOOMRETRO_NAME " couldn't find any IWADs.");
 #endif
 
-                    SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_WARNING, PACKAGE_NAME, buffer, NULL);
+                    SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_WARNING, DOOMRETRO_NAME, buffer, NULL);
                 }
             } while (!choseniwad);
 #endif
@@ -2106,7 +2158,7 @@ static void D_DoomMainSetup(void)
         } while ((p = M_CheckParmsWithArgs("-file", "-pwad", "-merge", 1, p)));
 
     if (!iwadfile && !modifiedgame && !choseniwad)
-        I_Error(PACKAGE_NAME " couldn't find any IWADs.");
+        I_Error(DOOMRETRO_NAME " couldn't find any IWADs.");
 
     W_Init();
 
@@ -2117,6 +2169,7 @@ static void D_DoomMainSetup(void)
     M_GDHIGH = (W_CheckMultipleLumps("M_GDHIGH") > 1);
     M_GDLOW = (W_CheckMultipleLumps("M_GDLOW") > 1);
     M_LOADG = (W_CheckMultipleLumps("M_LOADG") > 1);
+    M_LGTTL = (W_CheckMultipleLumps("M_LGTTL") > 1);
     M_LSCNTR = (W_CheckMultipleLumps("M_LSCNTR") > 1);
     M_MSENS = (W_CheckMultipleLumps("M_MSENS") > 1);
     M_MSGOFF = (W_CheckMultipleLumps("M_MSGOFF") > 1);
@@ -2127,6 +2180,7 @@ static void D_DoomMainSetup(void)
     M_OPTTTL = (W_CheckMultipleLumps("M_OPTTTL") > 1);
     M_PAUSE = (W_CheckMultipleLumps("M_PAUSE") > 1);
     M_SAVEG = (W_CheckMultipleLumps("M_SAVEG") > 1);
+    M_SGTTL = (W_CheckMultipleLumps("M_SGTTL") > 1);
     M_SKILL = (W_CheckMultipleLumps("M_SKILL") > 1);
     M_SKULL1 = (W_CheckMultipleLumps("M_SKULL1") > 1);
     M_SVOL = (W_CheckMultipleLumps("M_SVOL") > 1);
@@ -2143,7 +2197,7 @@ static void D_DoomMainSetup(void)
     D_IdentifyVersion();
     D_ProcessDehInWad();
 
-    if (!M_StringCompare(s_VERSION, PACKAGE_NAMEANDVERSIONSTRING))
+    if (!M_StringCompare(s_VERSION, DOOMRETRO_NAMEANDVERSIONSTRING))
         I_Error("The wrong version of %s was found.", packagewad);
 
     D_SetGameDescription();
@@ -2160,8 +2214,8 @@ static void D_DoomMainSetup(void)
 
     C_Output("All screenshots taken will be saved in " BOLD("%s") ".", screenshotfolder);
 
-    C_Output("All files created using the " BOLD("condump") " CCMD will be saved in " BOLD("%s" DIR_SEPARATOR_S "console" DIR_SEPARATOR_S "") ".",
-        appdatafolder);
+    C_Output("All files created using the " BOLD("condump") " CCMD will be saved in "
+        BOLD("%s" DIR_SEPARATOR_S "console" DIR_SEPARATOR_S) ".", appdatafolder);
 
 #if !defined(__APPLE__)
     free(appdatafolder);
@@ -2340,6 +2394,11 @@ static void D_DoomMainSetup(void)
     {
         titlelump = W_CacheLastLumpName("TITLEPI3");
         creditlump = W_CacheLastLumpName("CREDIT2");
+    }
+    else if (REKKRSL)
+    {
+        titlelump = W_CacheLastLumpName("TITLEPIW");
+        creditlump = W_CacheLastLumpName("CREDITW");
     }
     else
     {

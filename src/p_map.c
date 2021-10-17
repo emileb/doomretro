@@ -36,10 +36,14 @@
 ========================================================================
 */
 
+#include <ctype.h>
+
+#include "c_console.h"
 #include "doomstat.h"
 #include "i_system.h"
 #include "m_bbox.h"
 #include "m_config.h"
+#include "m_misc.h"
 #include "m_random.h"
 #include "p_local.h"
 #include "s_sound.h"
@@ -380,7 +384,7 @@ static dboolean PIT_CheckLine(line_t *ld)
     // killough 08/10/98: allow bouncing objects to pass through as missiles
     if (!(tmthing->flags & (MF_MISSILE | MF_BOUNCES)))
     {
-        if (ld->flags & ML_BLOCKING)                    // explicitly blocking everything
+        if (ld->flags & ML_BLOCKING) // explicitly blocking everything
             return (tmunstuck && !untouched(ld));       // killough 08/01/98: allow escape
 
         // killough 08/09/98: monster-blockers don't affect friends
@@ -431,11 +435,12 @@ static dboolean PIT_CheckThing(mobj_t *thing)
     dboolean    unblocking = false;
     int         flags = thing->flags;
     int         tmflags = tmthing->flags;
-    dboolean    corpse = flags & MF_CORPSE;
+    dboolean    corpse = (flags & MF_CORPSE);
     int         type = thing->type;
 
     // [BH] apply small amount of momentum to a corpse when a monster walks over it
-    if (corpse && (tmflags & MF_SHOOTABLE) && type != MT_BARREL && !thing->nudge && thing->z == tmthing->z && r_corpses_nudge)
+    if (((corpse && type != MT_BARREL) || (flags & MF_DROPPED)) && !thing->nudge
+        && thing->z == tmthing->z && (tmflags & MF_SHOOTABLE) && r_corpses_nudge)
         if (P_ApproxDistance(thing->x - tmthing->x, thing->y - tmthing->y) < 16 * FRACUNIT)
         {
             const int   r = M_RandomInt(-1, 1);
@@ -1029,7 +1034,7 @@ dboolean P_TryMove(mobj_t *thing, fixed_t x, fixed_t y, int dropoff)
 
     if (thing->player && thing->player->mo == thing && (x != oldx || y != oldy))
     {
-        fixed_t dist = (fixed_t)hypot((x - oldx) >> FRACBITS, (y - oldy) >> FRACBITS);
+        fixed_t dist = (fixed_t)(hypot((double)x - oldx, (double)y - oldy)) >> FRACBITS;
 
         stat_distancetraveled = SafeAdd(stat_distancetraveled, dist);
         viewplayer->distancetraveled += dist;
@@ -2041,6 +2046,7 @@ static void PIT_ChangeSector(mobj_t *thing)
             int y = thing->y;
             int blood = mobjinfo[thing->blood].blood;
             int floorz = thing->floorz;
+            int type = thing->type;
 
             for (int i = 0; i < max; i++)
             {
@@ -2050,27 +2056,46 @@ static void PIT_ChangeSector(mobj_t *thing)
                     y + FixedMul(M_RandomInt(0, radius) << FRACBITS, finesine[angle]), blood, floorz, NULL);
             }
 
-            if (thing->blood == MT_BLOOD || ((flags & MF_FUZZ) && r_blood != r_blood_nofuzz))
+            P_SetMobjState(thing, S_GIBS);
+
+            if (r_blood == r_blood_nofuzz)
             {
-                int type = thing->type;
-
-                P_SetMobjState(thing, S_GIBS);
-
-                thing->flags &= ~MF_SOLID;
-
-                if (r_corpses_mirrored && type != MT_CHAINGUY && type != MT_CYBORG
-                    && (type != MT_PAIN || !doom4vanilla) && (M_Random() & 1))
-                    thing->flags2 |= MF2_MIRRORED;
-
-                thing->height = 0;
-                thing->radius = 0;
-                thing->shadowoffset = 0;
+                if (thing->blood == MT_BLUEBLOOD)
+                    thing->colfunc = redtobluecolfunc;
+                else if (thing->blood == MT_GREENBLOOD)
+                    thing->colfunc = redtogreencolfunc;
+                else if (thing->blood == MT_FUZZYBLOOD)
+                    thing->colfunc = basecolfunc;
             }
-            else
-                P_RemoveMobj(thing);
+            else if (r_blood == r_blood_all)
+            {
+                if (thing->blood == MT_BLUEBLOOD)
+                    thing->colfunc = redtobluecolfunc;
+                else if (thing->blood == MT_GREENBLOOD)
+                    thing->colfunc = redtogreencolfunc;
+            }
+            else if (r_blood == r_blood_red || r_blood == r_blood_none)
+            {
+                if (thing->blood == MT_FUZZYBLOOD)
+                    thing->colfunc = basecolfunc;
+            }
+            else if (r_blood == r_blood_green)
+                thing->colfunc = redtogreencolfunc;
+
+            thing->flags &= ~MF_SOLID;
+
+            if (r_corpses_mirrored && type != MT_CHAINGUY && type != MT_CYBORG
+                && (type != MT_PAIN || !doom4vanilla) && (M_Random() & 1))
+                thing->flags2 |= MF2_MIRRORED;
+
+            thing->height = 0;
+            thing->radius = 0;
+            thing->shadowoffset = 0;
 
             S_StartSound(thing, sfx_slop);
         }
+        else
+            P_RemoveMobj(thing);
 
         // keep checking
         return;
@@ -2116,6 +2141,23 @@ static void PIT_ChangeSector(mobj_t *thing)
         }
 
         P_DamageMobj(thing, NULL, NULL, 10, true);
+
+        if (thing->health <= 0 && !thing->player && con_obituaries)
+        {
+            char    name[33];
+
+            if (*thing->name)
+                M_StringCopy(name, thing->name, sizeof(name));
+            else
+                M_snprintf(name, sizeof(name), "%s %s%s",
+                    ((thing->flags & MF_FRIEND) && monstercount[thing->type] == 1 ? "the" :
+                        (isvowel(thing->info->name1[0]) ? "an" : "a")),
+                    ((thing->flags & MF_FRIEND) ? "friendly " : ""),
+                    (*thing->info->name1 ? thing->info->name1 : "monster"));
+
+            name[0] = toupper(name[0]);
+            C_PlayerObituary("%s was crushed to death.", name);
+        }
     }
 }
 

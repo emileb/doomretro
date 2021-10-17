@@ -500,7 +500,7 @@ void M_DarkBackground(void)
 {
     static byte blurscreen1[MAXSCREENAREA];
 
-    if (gametime != blurtic && (!(gametime % 3) || blurtic == -1 || vid_capfps == TICRATE))
+    if (gametime != blurtic)
     {
         if (vid_widescreen)
         {
@@ -947,7 +947,9 @@ static void M_DrawLoad(void)
 {
     M_DarkBackground();
 
-    if (M_LOADG)
+    if (M_LGTTL)
+        M_DrawCenteredPatchWithShadow(23 + OFFSET, W_CacheLumpName("M_LGTTL"));
+    else if (M_LOADG)
         M_DrawCenteredPatchWithShadow(23 + OFFSET, W_CacheLumpName("M_LOADG"));
     else
     {
@@ -1061,7 +1063,9 @@ static void M_DrawSave(void)
     M_DarkBackground();
 
     // draw menu subtitle
-    if (M_SAVEG)
+    if (M_SGTTL)
+        M_DrawCenteredPatchWithShadow(23 + OFFSET, W_CacheLumpName("M_SGTTL"));
+    else if (M_SAVEG)
         M_DrawCenteredPatchWithShadow(23 + OFFSET, W_CacheLumpName("M_SAVEG"));
     else
     {
@@ -1411,7 +1415,7 @@ static void M_DrawReadThis(void)
 
     if (W_CheckNumForName(lumpname) >= 0)
     {
-        if (hacx || FREEDOOM)
+        if (chex || FREEDOOM || hacx || REKKRSA)
         {
             patch_t *lump = W_CacheLastLumpName(gamemode == commercial ? "HELP" : "HELP1");
 
@@ -2086,7 +2090,7 @@ void M_QuitDOOM(int choice)
         M_snprintf(line1, sizeof(line1), *endmsg[NUM_QUITMESSAGES + (r = M_RandomIntNoRepeat(0, NUM_QUITMESSAGES - 1, r))],
             OPERATINGSYSTEM);
 
-    M_snprintf(line2, sizeof(line2), (usinggamepad ? s_DOSA : s_DOSY), OPERATINGSYSTEM);
+    M_snprintf(line2, sizeof(line2), (usinggamepad ? s_DOSA : s_DOSY), DESKTOPNAME);
     M_snprintf(endstring, sizeof(endstring), "%s\n\n%s", line1, line2);
 
 #ifndef __ANDROID__
@@ -2345,11 +2349,11 @@ static int M_CharacterWidth(char ch, char prev)
 //
 int M_StringWidth(char *string)
 {
-    int w = 0;
+    int w = M_CharacterWidth(string[0], '\0');
     int len = (int)strlen(string);
 
-    for (int i = 0; i < len; i++)
-        w += M_CharacterWidth(string[i], (i > 0 ? string[i - 1] : '\0'));
+    for (int i = 1; i < len; i++)
+        w += M_CharacterWidth(string[i], string[i - 1]);
 
     return w;
 }
@@ -2359,12 +2363,12 @@ int M_StringWidth(char *string)
 //
 static int M_StringHeight(char *string)
 {
-    int h = 0;
+    int h = (STCFN034 ? SHORT(hu_font[0]->height) + 1 : 8);
     int len = (int)strlen(string);
 
-    for (int i = 0; i < len; i++)
+    for (int i = 1; i < len; i++)
         if (string[i] == '\n')
-            h += (i > 0 && string[i - 1] == '\n' ? 4 : (STCFN034 ? SHORT(hu_font[0]->height) + 1 : 8));
+            h += (string[i - 1] == '\n' ? 4 : (STCFN034 ? SHORT(hu_font[0]->height) + 1 : 8));
 
     return h;
 }
@@ -2666,6 +2670,9 @@ dboolean M_Responder(event_t *ev)
             mousewait = I_GetTime() + 5;
             usinggamepad = false;
             G_ScreenShot();
+            S_StartSound(NULL, sfx_scrsht);
+            memset(screens[0], nearestwhite, SCREENAREA);
+            D_FadeScreen(true);
 
             return false;
         }
@@ -2820,6 +2827,7 @@ dboolean M_Responder(event_t *ev)
                         caretwait = I_GetTimeMS() + CARETBLINKTIME;
                         showcaret = true;
                         M_DoSave(saveSlot);
+                        D_FadeScreen(false);
                     }
                 }
 
@@ -2988,6 +2996,7 @@ dboolean M_Responder(event_t *ev)
                 functionkey = 0;
                 M_ClearMenus();
                 S_StartSound(NULL, sfx_swtchx);
+                D_FadeScreen(false);
 
                 if (inhelpscreens)
                     R_SetViewSize(r_screensize);
@@ -3170,7 +3179,6 @@ dboolean M_Responder(event_t *ev)
                 S_ResumeMusic();
                 S_StartSound(NULL, sfx_swtchx);
                 I_SetPalette(&PLAYPAL[st_palette * 768]);
-                I_CapFPS(vid_capfps);
             }
             else
             {
@@ -3393,6 +3401,7 @@ dboolean M_Responder(event_t *ev)
                 functionkey = 0;
                 M_ClearMenus();
                 S_StartSound(NULL, sfx_swtchx);
+                D_FadeScreen(false);
                 R_SetViewSize(r_screensize);
 
                 return true;
@@ -3631,8 +3640,6 @@ void M_StartControlPanel(void)
     currentMenu = &MainDef;
     itemOn = currentMenu->lastOn;
 
-    I_CapFPS(TICRATE);
-
     if (gp_vibrate_barrels || gp_vibrate_damage || gp_vibrate_weapons)
     {
         restorevibrationstrength = idlevibrationstrength;
@@ -3652,9 +3659,6 @@ void M_StartControlPanel(void)
         playerangle = viewplayer->mo->angle;
         spinspeed = 0;
 
-        if (!inhelpscreens)
-            R_SetViewSize(r_screensize_max);
-
         if (automapactive)
         {
             AM_SetAutomapSize(r_screensize_max);
@@ -3662,6 +3666,8 @@ void M_StartControlPanel(void)
             if (!am_rotatemode)
                 viewplayer->mo->angle = ANG90;
         }
+        else
+            R_SetViewSize(r_screensize_max);
 
         S_LowerMusicVolume();
     }
@@ -3837,8 +3843,6 @@ void M_ClearMenus(void)
     menuactive = false;
     blurtic = -1;
 
-    I_CapFPS(vid_capfps);
-
     if (gp_vibrate_barrels || gp_vibrate_damage || gp_vibrate_weapons)
     {
         idlevibrationstrength = restorevibrationstrength;
@@ -3854,8 +3858,7 @@ void M_ClearMenus(void)
         if (!inhelpscreens)
             R_SetViewSize(r_screensize);
 
-        if (automapactive)
-            AM_SetAutomapSize(r_screensize);
+        AM_SetAutomapSize(r_screensize);
 
         S_SetMusicVolume(musicVolume * MIX_MAX_VOLUME / 31);
     }

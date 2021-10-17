@@ -292,7 +292,6 @@ void V_DrawPagePatch(patch_t *patch)
         memset(screens[0], FindDominantEdgeColor(patch), SCREENAREA);
 
     V_DrawWidePatch((SCREENWIDTH / SCREENSCALE - SHORT(patch->width)) / 2, 0, 0, patch);
-
 }
 
 void V_DrawShadowPatch(int x, int y, patch_t *patch)
@@ -496,10 +495,10 @@ void V_DrawBigPatch(int x, int y, patch_t *patch)
     }
 }
 
-void V_DrawConsoleInputTextPatch(int x, int y, patch_t *patch, int width, int color,
+void V_DrawConsoleInputTextPatch(byte *screen, int screenwidth, int x, int y, patch_t *patch, int width, int color,
     int backgroundcolor, dboolean italics, byte *translucency)
 {
-    byte    *desttop = &screens[0][y * SCREENWIDTH + x];
+    byte    *desttop = &screens[0][y * screenwidth + x];
 
     for (int col = 0; col < width; col++, desttop++)
     {
@@ -510,7 +509,7 @@ void V_DrawConsoleInputTextPatch(int x, int y, patch_t *patch, int width, int co
         while ((topdelta = column->topdelta) != 0xFF)
         {
             byte    *source = (byte *)column + 3;
-            byte    *dest = &desttop[topdelta * SCREENWIDTH];
+            byte    *dest = &desttop[topdelta * screenwidth];
 
             for (int i = 0; i < CONSOLELINEHEIGHT; i++)
             {
@@ -523,7 +522,7 @@ void V_DrawConsoleInputTextPatch(int x, int y, patch_t *patch, int width, int co
                 }
 
                 source++;
-                dest += SCREENWIDTH;
+                dest += screenwidth;
             }
 
             column = (column_t *)((byte *)column + CONSOLELINEHEIGHT + 4);
@@ -531,10 +530,10 @@ void V_DrawConsoleInputTextPatch(int x, int y, patch_t *patch, int width, int co
     }
 }
 
-void V_DrawConsoleOutputTextPatch(int x, int y, patch_t *patch, int width, int color,
+void V_DrawConsoleOutputTextPatch(byte *screen, int screenwidth, int x, int y, patch_t *patch, int width, int color,
     int backgroundcolor, dboolean italics, byte *translucency)
 {
-    byte        *desttop = &screens[0][y * SCREENWIDTH + x];
+    byte        *desttop = &screen[y * screenwidth + x];
     const int   italicize[] = { 2, 2, 2, 1, 1, 1, 1, 0, 0, 0, 0, -1, -1, -1 };
 
     for (int col = 0; col < width; col++, desttop++)
@@ -546,7 +545,7 @@ void V_DrawConsoleOutputTextPatch(int x, int y, patch_t *patch, int width, int c
         while ((topdelta = column->topdelta) != 0xFF)
         {
             byte    *source = (byte *)column + 3;
-            byte    *dest = &desttop[topdelta * SCREENWIDTH];
+            byte    *dest = &desttop[topdelta * screenwidth];
 
             for (int i = 0; i < CONSOLELINEHEIGHT; i++)
             {
@@ -566,7 +565,36 @@ void V_DrawConsoleOutputTextPatch(int x, int y, patch_t *patch, int width, int c
                 }
 
                 source++;
-                dest += SCREENWIDTH;
+                dest += screenwidth;
+            }
+
+            column = (column_t *)((byte *)column + CONSOLELINEHEIGHT + 4);
+        }
+    }
+}
+
+void V_DrawOverlayTextPatch(byte *screen, int screenwidth, int x, int y, patch_t *patch, int width, int color, byte *translucency)
+{
+    byte    *desttop = &screen[y * screenwidth + x];
+
+    for (int col = 0; col < width; col++, desttop++)
+    {
+        column_t    *column = (column_t *)((byte *)patch + LONG(patch->columnofs[col]));
+        byte        topdelta;
+
+        // step through the posts in a column
+        while ((topdelta = column->topdelta) != 0xFF)
+        {
+            byte    *source = (byte *)column + 3;
+            byte    *dest = &desttop[topdelta * screenwidth];
+
+            for (int i = 0; i < CONSOLELINEHEIGHT; i++)
+            {
+                if (*source)
+                    *dest = (!translucency ? color : translucency[(color << 8) + *dest]);
+
+                source++;
+                dest += screenwidth;
             }
 
             column = (column_t *)((byte *)column + CONSOLELINEHEIGHT + 4);
@@ -1750,11 +1778,11 @@ void V_Init(void)
 
     if (linked->major != SDL_IMAGE_MAJOR_VERSION || linked->minor != SDL_IMAGE_MINOR_VERSION)
         I_Error("The wrong version of %s was found. %s requires v%i.%i.%i.",
-            SDL_IMAGE_FILENAME, PACKAGE_NAME, SDL_IMAGE_MAJOR_VERSION, SDL_IMAGE_MINOR_VERSION, SDL_IMAGE_PATCHLEVEL);
+            SDL_IMAGE_FILENAME, DOOMRETRO_NAME, SDL_IMAGE_MAJOR_VERSION, SDL_IMAGE_MINOR_VERSION, SDL_IMAGE_PATCHLEVEL);
 
     if (linked->patch != SDL_IMAGE_PATCHLEVEL)
         C_Warning(1, "The wrong version of " BOLD("%s") " was found. " ITALICS("%s") " requires v%i.%i.%i.",
-            SDL_IMAGE_FILENAME, PACKAGE_NAME, SDL_IMAGE_MAJOR_VERSION, SDL_IMAGE_MINOR_VERSION, SDL_IMAGE_PATCHLEVEL);
+            SDL_IMAGE_FILENAME, DOOMRETRO_NAME, SDL_IMAGE_MAJOR_VERSION, SDL_IMAGE_MINOR_VERSION, SDL_IMAGE_PATCHLEVEL);
 
     for (int i = 0; i < NUMSCREENS; i++)
         screens[i] = &base[i * MAXSCREENAREA];

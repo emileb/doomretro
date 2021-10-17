@@ -78,7 +78,7 @@
 #include <errno.h>
 #include <libgen.h>
 #include <unistd.h>
-#elif defined(__linux__) || defined(__HAIKU__)
+#elif defined(__linux__) || defined(__HAIKU__) || defined(__sun)
 #include <dirent.h>
 #include <errno.h>
 #include <libgen.h>
@@ -219,7 +219,7 @@ char *M_GetAppDataFolder(void)
     // On Linux and macOS, if ../share/doomretro doesn't exist then we're dealing with
     // a portable installation, and we write doomretro.cfg to the executable directory.
     char    *resourcefolder = M_StringJoin(executablefolder,
-                DIR_SEPARATOR_S ".." DIR_SEPARATOR_S "share" DIR_SEPARATOR_S PACKAGE, NULL);
+                DIR_SEPARATOR_S ".." DIR_SEPARATOR_S "share" DIR_SEPARATOR_S DOOMRETRO, NULL);
     DIR     *resourcedir = opendir(resourcefolder);
 
     free(resourcefolder);
@@ -231,7 +231,7 @@ char *M_GetAppDataFolder(void)
         NSFileManager   *manager = [NSFileManager defaultManager];
         NSURL           *baseAppSupportURL = [manager URLsForDirectory : NSApplicationSupportDirectory
                             inDomains : NSUserDomainMask].firstObject;
-        NSURL           *appSupportURL = [baseAppSupportURL URLByAppendingPathComponent : @PACKAGE_NAME];
+        NSURL           *appSupportURL = [baseAppSupportURL URLByAppendingPathComponent : @DOOMRETRO_NAME];
 
         closedir(resourcedir);
 
@@ -246,7 +246,7 @@ char *M_GetAppDataFolder(void)
         closedir(resourcedir);
         free(executablefolder);
 
-        return M_StringJoin(buffer, DIR_SEPARATOR_S ".config" DIR_SEPARATOR_S PACKAGE, NULL);
+        return M_StringJoin(buffer, DIR_SEPARATOR_S ".config" DIR_SEPARATOR_S DOOMRETRO, NULL);
 #endif
     }
     else
@@ -262,7 +262,7 @@ char *M_GetResourceFolder(void)
     // On Linux and macOS, first assume that the executable is in ../bin and
     // try to load resources from ../share/doomretro.
     char    *resourcefolder = M_StringJoin(executablefolder,
-                DIR_SEPARATOR_S ".." DIR_SEPARATOR_S "share" DIR_SEPARATOR_S PACKAGE, NULL);
+                DIR_SEPARATOR_S ".." DIR_SEPARATOR_S "share" DIR_SEPARATOR_S DOOMRETRO, NULL);
     DIR     *resourcedir = opendir(resourcefolder);
 
     if (resourcedir)
@@ -314,13 +314,16 @@ char *M_GetExecutableFolder(void)
     char    *exe = malloc(MAX_PATH);
     strcpy(exe,"."); // CWD
     return exe;
-#elif defined(__linux__) || defined(__NetBSD__)
+#elif defined(__linux__) || defined(__NetBSD__) || defined(__sun)
+
     char    exe[MAX_PATH];
 
 #if defined(__linux__)
     ssize_t len = readlink("/proc/self/exe", exe, MAX_PATH - 1);
-#else
+#elif defined(__NetBSD__)
     ssize_t len = readlink("/proc/curproc/exe", exe, MAX_PATH - 1);
+#elif defined(__sun)
+    ssize_t len = readlink("/proc/self/path/a.out", exe, MAX_PATH - 1);
 #endif
 
     if (len == -1)
@@ -952,7 +955,7 @@ char *striptrailingzero(float value, int precision)
     return result;
 }
 
-static const long hextable[] =
+static const int hextable[] =
 {
     -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,

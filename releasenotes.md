@@ -1,5 +1,113 @@
 ![](https://github.com/bradharding/www.doomretro.com/raw/master/releasenotes.png)
 
+#### DOOM Retro v4.3
+
+* *DOOM Retro* is now compiled using v16.11.5 of [*Microsoft Visual Studio Community 2019*](https://www.visualstudio.com/vs/).
+* Optimizations have been made to further improve the overall performance and stability of *DOOM Retro*.
+* When *DOOM Retro* is run for the first time, the WAD launcher will now look for installations of *The Ultimate DOOM* and *DOOM II: Hell On Earth* purchased and downloaded using the [*Bethesda.net Launcher*](https://bethesda.net/en/game/bethesda-launcher).
+* The WAD launcher will now display and launch files with an `.IWAD` or `.PWAD` extension.
+* Minor changes have been made to the splash screen.
+* Minor changes have been made to text that is output to the console.
+* Minor improvements have been made to the console’s autocomplete feature.
+* Further improvements have been made to the support for [*REKKR*](http://manbitesshark.com/).
+* Support has also been added for the commercial release, [*REKKR: Sunken Land*](https://store.steampowered.com/app/1715690/REKKR_Sunken_Land/).
+* A new `am_playerstats` CVAR has been implemented that toggles player stats in the automap. When this CVAR is `on`, the number of monsters the player has killed, the items they have picked up and the secrets they have found will be displayed while the automap is open. This CVAR is both `off` by default and when vanilla mode is enabled.
+* The distance the player has traveled in the current map is now displayed in the top right corner of the external automap when the `am_path` CVAR is `on`.
+* Rotating the automap is now smoother when the `am_rotate` CVAR is `on`.
+* All lines in the automap will now be displayed correctly when the player has used the `IDDT` cheat.
+* A bug has been fixed whereby some sound effect lumps in the [WAV format](https://en.wikipedia.org/wiki/WAV) wouldn’t play at all.
+* The following changes have been made when a monster is crushed to death by a lowering ceiling:
+  * Cacodemons, barons of hell and hell knights will now leave gibs.
+  * All gibs will now be green if the `r_blood` CVAR is `green`.
+  * The gibs of spectres will now be red if the `r_blood` CVAR is `red` or `nofuzz`.
+  * An obituary is now displayed in the console when the `con_obituaries` CVAR is `on`.
+* The title in the automap has been moved slightly in some instances.
+* A dead player’s negative health will now be displayed in the status bar as it is in the widescreen HUD.
+* The items that monsters drop when they are killed will now also move slightly if walked over when the `r_corpses_nudge` CVAR is `on`.
+* The number of monsters resurrected is now displayed by the `playerstats` CCMD.
+* The “monsters killed by infighting” stat is now reset at the start of each map as intended.
+* A bug has been fixed whereby the `facebackcolor` CVAR wouldn’t be reset to its default of `5` if vanilla mode was enabled.
+* The background of the player’s face will now be a better size when the `facebackcolor` CVAR is a value other than its default of `5`.
+* When vanilla mode is enabled, any timer set using the `timer` CCMD will now be reset to `0`, rather than being disabled altogether.
+* The external automap will now be displayed correctly when the `vid_borderlesswindow` CVAR is `off`.
+* The `vid_scaleapi` CVAR is now `“direct3d”` by default.
+* Minor improvements have been made to the support of `MAPINFO` lumps.
+* Blood splats are now translucent when the `r_translucency` CVAR is `on` and the `r_textures` CVAR is `off`.
+* Turning left and right using a gamepad is now smoother.
+* A bug has been fixed whereby switching from a window to fullscreen by pressing <kbd><b>ALT</b></kbd> + <kbd><b>ENTER</b></kbd> would affect the aspect ratio if the `vid_borderlesswindow` CVAR was `off`.
+* Translucent things now cast more translucent shadows.
+* Dithered lighting is now cast on *BOOM*-compatible translucent wall textures.
+* Things on scrolling floors will no longer continue to move while the menu is open.
+* When the player drops down from a great height, their weapon will no longer move too far downwards when the `weaponbounce` CVAR is `on`.
+
+![](https://github.com/bradharding/www.doomretro.com/raw/master/wiki/bigdivider.png)
+
+###### Sunday, September 19, 2021
+
+#### DOOM Retro v4.2.3
+
+* *DOOM Retro* is now compiled using v16.11.3 of [*Microsoft Visual Studio Community 2019*](https://www.visualstudio.com/vs/).
+* Optimizations have been made to further improve the overall performance and stability of *DOOM Retro*.
+* The splash screen’s animation is now smoother.
+* Minor changes have been made to the font used in the console, and the player messages in the alternate widescreen HUD.
+* Minor changes have been made to text that is output to the console.
+* Further improvements have been made to the support for [*Chex Quest*](https://doomwiki.org/wiki/Chex_Quest), [*Freedoom*](https://freedoom.github.io/) and [*REKKR*](http://manbitesshark.com/).
+* The bounce of the player’s weapon when dropping down from a greater height is now slightly slower when the `weaponbounce` CVAR is `on`.
+* When clicking a mouse button that is bound to the `+screenshot` action, the screen will now flash and a sound will now be heard.
+* The console’s background will no longer be affected when entering the `vanilla` CCMD.
+* A fade transition is now applied after saving a game in the save game menu and the `fade` CVAR is `on`.
+* Further improvements have been made to when the player’s view should be lowered if the `r_liquid_lowerview` CVAR is `on`.
+* A bug has been fixed whereby the title in the automap could be positioned incorrectly in some rare instances.
+* The player’s arrow will now be positioned correctly in the automap when the `am_rotate` CVAR is `on` and the `am_followmode` CVAR is `off`.
+* The following changes have been made when the `am_path` CVAR is `on`:
+  * The player’s path in the automap will now still be updated when either freeze mode or no clipping mode is enabled.
+  * The player’s path will now be positioned correctly in the automap when the `am_rotate` CVAR is `on` and the `am_followmode` CVAR is `off`.
+  * The distance the player has traveled in the current map is now displayed in the top right corner of the automap.
+* A bug has been fixed whereby the timer displayed when using the `timer` CCMD could be positioned incorrectly in some rare instances.
+* The size of the crosshair has been reduced when the `crosshair` CVAR is `cross` and the `r_detail` CVAR is `low`.
+* The message displayed when entering the `IDMYPOS` cheat will now be visible when the `fade` CVAR is `on`.
+* The sky will now be stretched if the `weaponrecoil` CVAR is `on` and the `r_screensize` CVAR is `8`.
+* Sprites in liquid sectors now bob correctly when the player is first spawned into a map and the `r_liquid_bob` CVAR is `on`.
+
+![](https://github.com/bradharding/www.doomretro.com/raw/master/wiki/bigdivider.png)
+
+###### Friday, September 3, 2021
+
+#### DOOM Retro v4.2.2
+
+* Optimizations have been made to further improve the overall performance and stability of *DOOM Retro*.
+* The menu’s background animation is now smoother.
+* Further improvements have been made to the support for [*REKKR*](http://manbitesshark.com/).
+* A bug has been fixed whereby the automap wouldn’t be updated as the player moves around while it is open.
+
+![](https://github.com/bradharding/www.doomretro.com/raw/master/wiki/bigdivider.png)
+
+###### Wednesday, September 1, 2021
+
+#### DOOM Retro v4.2.1
+
+* *DOOM Retro* is now compiled using v16.11.2 of [*Microsoft Visual Studio Community 2019*](https://www.visualstudio.com/vs/).
+* Optimizations have been made to further improve the overall performance and stability of *DOOM Retro*.
+* Minor changes have been made to text that is output to the console.
+* The framerate will no longer drop to 35 frames per second if the game is paused, or the menu or console is open.
+* A slight dithered effect is now applied to fade transitions when the `fade` CVAR is `on`.
+* A fade transition will now always be applied when exiting the help screen and the `fade` CVAR is `on`.
+* Translucency is now applied to megaspheres when the `r_translucency` CVAR is `on`.
+* The following changes have been made when the `r_shake_damage` CVAR is greater than `0%` and god mode is enabled:
+  * The maximum amount of time the screen will shake when the player is attacked has been reduced.
+  * The screen will no longer shake if the player is in a sector with special 16 (“Damage -10% or -20% health”) or 4 (“Damage -10% or -20% health and light blinks (0.5 sec.)”).
+* Improvements have been made to the clipping of the bottom of sprites when in liquid and the `r_liquid_clipsprites` CVAR is `on`.
+* A bug has been fixed whereby an action couldn’t be bound to or unbound from the <kbd><b>;</b></kbd> key using the `bind` and `unbind` CCMDs.
+* The background of the player’s face will now be positioned correctly when the `facebackcolor` CVAR is a value other than its default of `5` and the `vid_widescreen` CVAR is `on`.
+* Zooming in and out of the automap is now more responsive.
+* The `M_LGTTL` and `M_SGTTL` lumps will now be used as the titles in the load and savegame menus if replaced in a PWAD.
+* Further improvements have been made to the support for [*Chex Quest*](https://doomwiki.org/wiki/Chex_Quest) and [*REKKR*](http://manbitesshark.com/).
+* A bug has been fixed whereby par times weren’t being displayed on the intermission screen in some instances.
+
+![](https://github.com/bradharding/www.doomretro.com/raw/master/wiki/bigdivider.png)
+
+###### Thursday, August 12, 2021
+
 #### DOOM Retro v4.2
 
 * *DOOM Retro* is now compiled using v16.11.0 of [*Microsoft Visual Studio Community 2019*](https://www.visualstudio.com/vs/).
@@ -2952,7 +3060,7 @@
 * A bug has been fixed whereby some teleporters in [*Back To Saturn X E1: Get Out Of My Stations*](https://www.doomworld.com/idgames/levels/doom2/megawads/btsx_e1) and [*Back To Saturn X E2: Tower In The Fountain Of Sparks*](https://www.doomworld.com/forum/topic/69960) were animating as if they were liquid.
 * The position of the player arrow is now drawn much more accurately when in the automap and rotate mode is on.
 * The automap will no longer disappear, nor the game crash, when zooming out in very large maps.
-* Translucency is now applied to MegaSpheres as originally intended.
+* Translucency is now applied to megaspheres as originally intended.
 
 ![](https://github.com/bradharding/www.doomretro.com/raw/master/wiki/bigdivider.png)
 
@@ -3588,7 +3696,7 @@
 * Settings are now saved to `default.cfg` the moment they change, rather than when quitting the game, so if the game crashes or exits with an error, those settings will be restored.
 * The player’s weapon now isn’t as distorted at reduced screen sizes.
 * A bug has been fixed whereby the muzzle of the super shotgun was translucent in some instances.
-* 33% alpha translucency rather additive translucency is now used for the SoulSphere, MegaSphere, Invincibility and Partial Invisibility power-ups.
+* 33% alpha translucency rather additive translucency is now used for the soulsphere, megasphere, invincibility and partial invisibility power-ups.
 * The <kbd><b>+</b></kbd> and <kbd><b>–</b></kbd> keys can no longer be used while the help screen is displayed.
 * In those levels that require one or more monsters to be killed for a sector to move to complete the level, if the `–nomonsters` command-line parameter is specified, those sectors will now automatically move.
 * Replicating what happens in *Heretic* and *Hexen*, the remaining monsters in the level will turn on each other once the player has been killed. The player will face their killer when they die, but unlike those games, their view won’t continue to follow their killer around.

@@ -47,8 +47,10 @@
 // Weapon info: sprite frames, ammunition use.
 typedef struct
 {
-    char        description[255];
+    char        name[255];
     ammotype_t  ammotype;
+    char        ammoname[255];
+    char        ammoplural[255];
     int         minammo;
     int         upstate;
     int         downstate;

@@ -90,7 +90,7 @@ char *P_SaveGameFile(int slot)
         filename = malloc(filename_size);
     }
 
-    M_snprintf(basename, sizeof(basename), PACKAGE_SAVE, slot);
+    M_snprintf(basename, sizeof(basename), DOOMRETRO_SAVE, slot);
     M_snprintf(filename, filename_size, "%s%s", savegamefolder, basename);
 
     return filename;
@@ -420,9 +420,9 @@ static void saveg_write_ticcmd_t(ticcmd_t *str)
 //
 static void saveg_read_pspdef_t(pspdef_t *str)
 {
-    int state;
+    int state = saveg_read32();
 
-    str->state = ((state = saveg_read32()) > 0 && state < NUMSTATES ? &states[state] : NULL);
+    str->state = (state > 0 && state < NUMSTATES ? &states[state] : NULL);
     str->tics = saveg_read32();
     str->sx = saveg_read32();
     str->sy = saveg_read32();
@@ -547,9 +547,9 @@ static void saveg_read_player_t(void)
         musinfo.current_item = -1;
 
     viewplayer->infightcount = saveg_read32();
+    viewplayer->resurrectioncount = saveg_read32();
 
     // [BH] For future features without breaking savegame compatibility
-    saveg_read32();
     saveg_read32();
     saveg_read32();
     saveg_read32();
@@ -657,9 +657,9 @@ static void saveg_write_player_t(void)
     saveg_write32(musinfo.current_item);
 
     saveg_write32(viewplayer->infightcount);
+    saveg_write32(viewplayer->resurrectioncount);
 
     // [BH] For future features without breaking savegame compatibility
-    saveg_write32(0);
     saveg_write32(0);
     saveg_write32(0);
     saveg_write32(0);
@@ -991,7 +991,7 @@ void P_WriteSaveGameHeader(char *description)
         saveg_write8(0);
 
     memset(name, 0, sizeof(name));
-    strcpy(name, PACKAGE_SAVEGAMEVERSIONSTRING);
+    strcpy(name, DOOMRETRO_SAVEGAMEVERSIONSTRING);
 
     for (i = 0; i < VERSIONSIZE; i++)
         saveg_write8(name[i]);
@@ -1028,14 +1028,14 @@ dboolean P_ReadSaveGameHeader(char *description)
         read_vcheck[i] = saveg_read8();
 
     memset(vcheck, 0, sizeof(vcheck));
-    strcpy(vcheck, PACKAGE_SAVEGAMEVERSIONSTRING);
+    strcpy(vcheck, DOOMRETRO_SAVEGAMEVERSIONSTRING);
 
     if (!M_StringCompare(read_vcheck, vcheck))
     {
         menuactive = false;
         quickSaveSlot = -1;
         C_ShowConsole();
-        C_Warning(1, "This savegame is incompatible with " ITALICS(PACKAGE_NAMEANDVERSIONSTRING "."));
+        C_Warning(1, "This savegame is incompatible with " ITALICS(DOOMRETRO_NAMEANDVERSIONSTRING "."));
 
         return false;   // bad version
     }
@@ -1321,7 +1321,8 @@ void P_UnArchiveThinkers(void)
         switch (tclass)
         {
             case tc_end:
-                return;         // end of list
+                // end of list
+                return;
 
             case tc_mobj:
             {

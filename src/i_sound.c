@@ -278,42 +278,51 @@ dboolean CacheSFX(sfxinfo_t *sfxinfo)
     int     lumpnum = sfxinfo->lumpnum;
     byte    *data = W_CacheLumpNum(lumpnum);
     int     lumplen = W_LumpLength(lumpnum);
-    int     samplerate;
-    int     bits = 8;
-    int     length;
 
     // Check the header, and ensure this is a valid sound
     if (lumplen > 44 && !memcmp(data, "RIFF", 4) && !memcmp(data + 8, "WAVEfmt ", 8))
     {
-        // Chunk size must be 16
-        if ((data[16] | (data[17] << 8) | (data[18] << 16) | (data[19] << 24)) != 16)
+        SDL_RWops       *rwops = SDL_RWFromMem(data, lumplen);
+        SDL_AudioSpec   spec;
+        uint8_t         *buffer = NULL;
+        uint32_t        length;
+
+        if (!SDL_LoadWAV_RW(rwops, 1, &spec, &buffer, &length))
             return false;
+        else
+        {
+            int bits;
 
-        // Format must be 1 (PCM)
-        if ((data[20] | (data[21] << 8)) != 1)
-            return false;
+            if (spec.channels != 1)
+            {
+                SDL_FreeWAV(buffer);
+                return false;
+            }
 
-        // Number of channels must be 1
-        if ((data[22] | (data[23] << 8)) != 1)
-            return false;
+            if (SDL_AUDIO_ISINT(spec.format))
+            {
+                if ((bits = SDL_AUDIO_BITSIZE(spec.format)) != 8 && bits != 16)
+                {
+                    SDL_FreeWAV(buffer);
+                    return false;
+                }
+            }
+            else
+            {
+                SDL_FreeWAV(buffer);
+                return false;
+            }
 
-        // Must be 8 or 16-bit
-        if ((bits = (data[34] | (data[35] << 8))) != 8 && bits != 16)
-            return false;
-
-        samplerate = (data[24] | (data[25] << 8) | (data[26] << 16) | (data[27] << 24));
-        length = MIN((data[40] | (data[41] << 8) | (data[42] << 16) | (data[43] << 24)), lumplen - 44);
-
-        ExpandSoundData(sfxinfo, data + 44, samplerate, bits, length);
-        return true;
+            ExpandSoundData(sfxinfo, buffer, spec.freq, bits, length);
+            return true;
+        }
     }
     else if (lumplen >= 8 && data[0] == 0x03 && data[1] == 0x00)
     {
-        samplerate = (data[2] | (data[3] << 8));
-        length = (data[4] | (data[5] << 8) | (data[6] << 16) | (data[7] << 24));
+        int length = (data[4] | (data[5] << 8) | (data[6] << 16) | (data[7] << 24));
 
         // If the header specifies that the length of the sound is greater than the length of the lump
-        // itself, this is an invalid sound lump
+        // itself, this is an invalid sound lump.
 
         // We also discard sound lumps that are less than 49 samples long, as this is how DMX behaves -
         // although the actual cut-off length seems to vary slightly depending on the sample rate. This
@@ -321,7 +330,7 @@ dboolean CacheSFX(sfxinfo_t *sfxinfo)
         if (length > lumplen - 8 || length <= 48)
             return false;
 
-        ExpandSoundData(sfxinfo, data + 24, samplerate, bits, length - 32);
+        ExpandSoundData(sfxinfo, data + 24, (data[2] | (data[3] << 8)), 8, length - 32);
         return true;
     }
     else
@@ -419,11 +428,11 @@ dboolean I_InitSound(void)
 
     if (linked->major != SDL_MIXER_MAJOR_VERSION || linked->minor != SDL_MIXER_MINOR_VERSION)
         I_Error("The wrong version of %s was found. %s requires v%i.%i.%i.",
-            SDL_MIXER_FILENAME, PACKAGE_NAME, SDL_MIXER_MAJOR_VERSION, SDL_MIXER_MINOR_VERSION, SDL_MIXER_PATCHLEVEL);
+            SDL_MIXER_FILENAME, DOOMRETRO_NAME, SDL_MIXER_MAJOR_VERSION, SDL_MIXER_MINOR_VERSION, SDL_MIXER_PATCHLEVEL);
 
     if (linked->patch != SDL_MIXER_PATCHLEVEL)
         C_Warning(1, "The wrong version of " BOLD("%s") " was found. " ITALICS("%s") " requires v%i.%i.%i.",
-            SDL_MIXER_FILENAME, PACKAGE_NAME, SDL_MIXER_MAJOR_VERSION, SDL_MIXER_MINOR_VERSION, SDL_MIXER_PATCHLEVEL);
+            SDL_MIXER_FILENAME, DOOMRETRO_NAME, SDL_MIXER_MAJOR_VERSION, SDL_MIXER_MINOR_VERSION, SDL_MIXER_PATCHLEVEL);
 
     if (Mix_OpenAudioDevice(SAMPLERATE, MIX_DEFAULT_FORMAT, MIX_DEFAULT_CHANNELS, CHUNKSIZE, DEFAULT_DEVICE,
         SDL_AUDIO_ALLOW_FREQUENCY_CHANGE) < 0)

@@ -306,6 +306,10 @@ dboolean W_AddFile(char *filename, dboolean automatic)
 
     if ((wadfile->freedoom = IsFreedoom(filename)))
         FREEDOOM = true;
+    else if (M_StringCompare(file, "chex.wad"))
+        chex = chex1 = true;
+    else if (M_StringCompare(file, "rekkrsa.wad"))
+        REKKR = REKKRSA = true;
 
     // WAD file
     W_Read(wadfile, 0, &header, sizeof(header));
@@ -497,7 +501,10 @@ int W_WadType(char *filename)
     W_Read(wadfile, 0, &header, sizeof(header));
     W_CloseFile(wadfile);
 
-    if (!strncmp(header.id, "IWAD", 4) || M_StringEndsWith(filename, "DOOM2.WAD") || M_StringEndsWith(filename, "rekkrsa.wad"))
+    if (!strncmp(header.id, "IWAD", 4)
+        || M_StringEndsWith(filename, "DOOM2.WAD")
+        || M_StringEndsWith(filename, "chex.wad")
+        || M_StringEndsWith(filename, "rekkrsa.wad"))
         return IWAD;
     else if (!strncmp(header.id, "PWAD", 4))
         return PWAD;
@@ -541,7 +548,7 @@ int W_CheckMultipleLumps(const char *name)
 {
     int count = 0;
 
-    if (FREEDOOM || hacx)
+    if (FREEDOOM || chex || hacx || REKKRSA)
         return 3;
 
     for (int i = numlumps - 1; i >= 0; i--)
@@ -571,7 +578,7 @@ void W_Init(void)
 
     // Insert nodes to the beginning of each chain, in first-to-last
     // lump order, so that the last lump of a given name appears first
-    // in any chain, observing pwad ordering rules. killough
+    // in any chain, observing PWAD ordering rules. killough
     for (int i = 0; i < numlumps; i++)
     {
         // hash function:

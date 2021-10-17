@@ -41,9 +41,14 @@
 
 #include "doomtype.h"
 
-#define MAXALIASES      256
+#define MAXALIASES          256
 
-#define DIVIDERSTRING   "===================================================================================================="
+#define DIVIDERSTRING       "===================================================================================================="
+
+#define UNITSPERFOOT        16
+#define FEETPERMETER        3.28084f
+#define METERSPERKILOMETER  1000
+#define FEETPERMILE         5280
 
 typedef enum
 {
@@ -131,5 +136,6 @@ void bind_cmd_func2(char *cmd, char *parms);
 
 int C_GetIndex(const char *cmd);
 dboolean C_ExecuteAlias(const char *alias);
+char *distancetraveled(uint64_t value, dboolean allowzero);
 
 #endif

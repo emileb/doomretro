@@ -177,6 +177,22 @@ static const char *root_path_subdirs[] =
     "base\\wads"
 };
 
+// Location where the Bethesda.net Launcher is installed
+static registryvalue_t bethesda_install_location =
+{
+    HKEY_LOCAL_MACHINE, SOFTWARE_KEY "\\Bethesda Softworks\\Bethesda.net", "installLocation"
+};
+
+// Subdirs of the Bethesda.net Launcher install directory where IWADs are found
+static const char *bethesda_install_subdirs[] =
+{
+    "games\\DOOM_II_Classic_2019\\base",
+    "games\\DOOM_II_Classic_2019\\rerelease\\DOOM II_Data\\StreamingAssets",
+    "games\\DOOM_Classic_2019\\base",
+    "games\\DOOM_Classic_2019\\rerelease\\DOOM_Data\\StreamingAssets",
+    "games\\DOOM 3 BFG Edition\\base\\wads"
+};
+
 // Locations where Steam is installed
 static registryvalue_t steam_install_locations[] =
 {
@@ -189,10 +205,10 @@ static const char *steam_install_subdirs[] =
 {
     "steamapps\\common\\Doom 2\\rerelease\\DOOM II_Data\\StreamingAssets",
     "steamapps\\common\\Doom 2\\base",
-    "steamapps\\common\\DOOM 3 BFG Edition\\base\\wads",
-    "steamapps\\common\\Final Doom\\base",
     "steamapps\\common\\Ultimate Doom\\rerelease\\DOOM_Data\\StreamingAssets",
     "steamapps\\common\\Ultimate Doom\\base"
+    "steamapps\\common\\DOOM 3 BFG Edition\\base\\wads",
+    "steamapps\\common\\Final Doom\\base",
 };
 
 static char *GetRegistryString(registryvalue_t *reg_val)
@@ -200,7 +216,7 @@ static char *GetRegistryString(registryvalue_t *reg_val)
     HKEY    key;
     DWORD   len = 0;
     DWORD   valtype;
-    char    *result = "";
+    char    *result = NULL;
 
     // Open the key (directory where the value is stored)
     if (RegOpenKeyEx(reg_val->root, reg_val->path, 0, KEY_READ, &key) != ERROR_SUCCESS)
@@ -273,6 +289,24 @@ static void CheckInstallRootPaths(void)
     }
 }
 
+// Check for DOOM downloaded via the Bethesda.net Launcher
+static void CheckBethesdaEdition(void)
+{
+    char    *install_path = GetRegistryString(&bethesda_install_location);
+
+    if (!install_path)
+        return;
+
+    for (size_t j = 0; j < arrlen(bethesda_install_subdirs); j++)
+    {
+        char    *path = M_StringJoin(install_path, DIR_SEPARATOR_S, bethesda_install_subdirs[j], NULL);
+
+        AddIWADDir(path);
+    }
+
+    free(install_path);
+}
+
 // Check for DOOM downloaded via Steam
 static void CheckSteamEdition(void)
 {
@@ -323,7 +357,7 @@ static void AddIWADPath(const char *path, const char *suffix)
         if ((p = strchr(left, PATH_SEPARATOR)))
         {
             // Break at the separator and use the left hand side
-            // as another iwad dir
+            // as another IWAD dir
             *p = '\0';
 
             AddIWADDir(M_StringJoin(left, suffix, NULL));
@@ -547,7 +581,7 @@ static void AddDoomWADPath(void)
         if ((p = strchr(p, PATH_SEPARATOR)))
         {
             // Break at the separator and store the right hand side
-            // as another iwad dir
+            // as another IWAD dir
             *p++ = '\0';
 
             AddIWADDir(p);
@@ -577,6 +611,7 @@ static void BuildIWADDirList(void)
 
 #if defined(_WIN32)
     // Search the registry and find where IWADs have been installed.
+    CheckBethesdaEdition();
     CheckSteamEdition();
     CheckInstallRootPaths();
     CheckUninstallStrings();
@@ -798,7 +833,7 @@ void D_IdentifyVersion(void)
 {
     // gamemission is set up by the D_FindIWAD() function. But if
     // we specify '-iwad', we have to identify using
-    // D_IdentifyIWADByName(). However, if the iwad does not match
+    // D_IdentifyIWADByName(). However, if the IWAD does not match
     // any known IWAD name, we may have a dilemma. Try to
     // identify by its contents.
     if (gamemission == none)
@@ -845,6 +880,10 @@ void D_SetGameDescription(void)
         M_StringCopy(gamedescription, s_CAPTION_BTSXE2, sizeof(gamedescription));
     else if (BTSXE3)
         M_StringCopy(gamedescription, s_CAPTION_BTSXE3, sizeof(gamedescription));
+    else if (REKKRSL)
+        M_StringCopy(gamedescription, s_CAPTION_REKKRSL, sizeof(gamedescription));
+    else if (REKKR)
+        M_StringCopy(gamedescription, s_CAPTION_REKKR, sizeof(gamedescription));
     else if (gamemission == doom)
     {
         // DOOM 1. But which version?
@@ -890,11 +929,11 @@ void D_SetGameDescription(void)
             C_Output("Playing " ITALICS("%s: %s") " and " ITALICS("%s: %s."), s_CAPTION_DOOM2, s_CAPTION_HELLONEARTH,
                 s_CAPTION_DOOM2, s_CAPTION_NERVE);
     }
-    else if (modifiedgame && !sigil && !chex && !BTSX)
+    else if (modifiedgame && !sigil && !chex && !BTSX && !REKKR)
         C_Output("Playing " BOLD("%s") ".", gamedescription);
     else
     {
-        if (bfgedition)
+        if (bfgedition && !chex && !BTSX && !REKKR)
             C_Output("Playing " ITALICS("%s (%s)."), gamedescription, s_CAPTION_BFGEDITION);
         else
             C_Output("Playing " ITALICS("%s."), gamedescription);

@@ -499,8 +499,18 @@ static void R_DrawVisSpriteWithShadow(const vissprite_t *vis)
     dc_colormap[0] = vis->colormap;
     dc_nextcolormap[0] = vis->nextcolormap;
     dc_black = dc_colormap[0][nearestblack];
-    dc_black33 = &tinttab33[dc_black << 8];
-    dc_black40 = &tinttab40[dc_black << 8];
+
+    if ((mobj->flags2 & MF2_TRANSLUCENT_33) && r_translucency)
+    {
+        dc_black33 = &tinttab10[dc_black << 8];
+        dc_black40 = &tinttab25[dc_black << 8];
+    }
+    else
+    {
+        dc_black33 = &tinttab33[dc_black << 8];
+        dc_black40 = &tinttab40[dc_black << 8];
+    }
+
     dc_iscale = FixedDiv(FRACUNIT, spryscale);
     dc_texturemid = vis->texturemid;
 
@@ -747,7 +757,7 @@ static void R_ProjectSprite(mobj_t *thing)
         if (r_blood == r_blood_nofuzz && thing->type == MT_FUZZYBLOOD)
             vis->colfunc = (r_translucency ? &R_DrawTranslucent33Column : &R_DrawColumn);
         else if (pausesprites)
-            vis->colfunc = (r_textures ? &R_DrawPausedFuzzColumn : thing->colfunc);
+            vis->colfunc = (r_textures && thing->colfunc == fuzzcolfunc ? &R_DrawPausedFuzzColumn : thing->colfunc);
         else
             vis->colfunc = (invulnerable && r_textures ? thing->altcolfunc : thing->colfunc);
     }
@@ -755,7 +765,7 @@ static void R_ProjectSprite(mobj_t *thing)
         vis->colfunc = (invulnerable && r_textures ? thing->altcolfunc : thing->colfunc);
 
     // foot clipping
-    if ((flags2 & MF2_FEETARECLIPPED) && fz <= floorheight + FRACUNIT && !heightsec && r_liquid_clipsprites)
+    if ((flags2 & MF2_FEETARECLIPPED) && !heightsec && r_liquid_clipsprites)
     {
         fixed_t height = spriteheight[lump];
         fixed_t clipfeet = MIN((height >> FRACBITS) / 4, 10) << FRACBITS;
@@ -958,7 +968,8 @@ void R_AddSprites(sector_t *sec, int lightlevel)
             if (lightlevel != prevlightlevel)
             {
                 spritelights = scalelight[BETWEEN(0, (lightlevel >> LIGHTSEGSHIFT) + extralight, LIGHTLEVELS - 1)];
-                nextspritelights = scalelight[BETWEEN(0, ((lightlevel + 4) >> LIGHTSEGSHIFT) + extralight, LIGHTLEVELS - 1)];
+                nextspritelights = (r_ditheredlighting && thing ?
+                    scalelight[BETWEEN(0, ((lightlevel + 4) >> LIGHTSEGSHIFT) + extralight, LIGHTLEVELS - 1)] : spritelights);
                 prevlightlevel = lightlevel;
             }
 
@@ -976,7 +987,8 @@ void R_AddSprites(sector_t *sec, int lightlevel)
             if (lightlevel != prevlightlevel)
             {
                 spritelights = scalelight[BETWEEN(0, (lightlevel >> LIGHTSEGSHIFT) + extralight, LIGHTLEVELS - 1)];
-                nextspritelights = scalelight[BETWEEN(0, ((lightlevel + 4) >> LIGHTSEGSHIFT) + extralight, LIGHTLEVELS - 1)];
+                nextspritelights = (r_ditheredlighting ?
+                    scalelight[BETWEEN(0, ((lightlevel + 4) >> LIGHTSEGSHIFT) + extralight, LIGHTLEVELS - 1)] : spritelights);
                 prevlightlevel = lightlevel;
             }
         }
@@ -990,7 +1002,8 @@ void R_AddSprites(sector_t *sec, int lightlevel)
         if (lightlevel != prevlightlevel)
         {
             spritelights = scalelight[BETWEEN(0, (lightlevel >> LIGHTSEGSHIFT) + extralight, LIGHTLEVELS - 1)];
-            nextspritelights = scalelight[BETWEEN(0, ((lightlevel + 4) >> LIGHTSEGSHIFT) + extralight, LIGHTLEVELS - 1)];
+            nextspritelights = (r_ditheredlighting ?
+                scalelight[BETWEEN(0, ((lightlevel + 4) >> LIGHTSEGSHIFT) + extralight, LIGHTLEVELS - 1)] : spritelights);
             prevlightlevel = lightlevel;
         }
 
@@ -1020,7 +1033,7 @@ static void R_DrawPlayerSprite(pspdef_t *psp, dboolean invisibility, dboolean al
     vissprite_t     *vis = &tempvis;
     state_t         *state = psp->state;
     spritenum_t     spr = state->sprite;
-    long            frame = state->frame;
+    int             frame = state->frame;
     spriteframe_t   *sprframe = &sprites[spr].spriteframes[frame & FF_FRAMEMASK];
     int             lump = sprframe->lump[0];
 

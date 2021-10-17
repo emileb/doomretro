@@ -521,7 +521,7 @@ floater:
                 player->jumptics = 7;
 
                 if (weaponbounce && !freeze)
-                    player->bouncemax = mo->momz >> 1;
+                    player->bouncemax = MAX(MINBOUNCEMAX, mo->momz) * 3 / 4;
 
                 if (mo->momz < -GRAVITY * 8)
                 {
@@ -786,6 +786,7 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
     mobj->radius = info->radius;
     mobj->flags = info->flags;
     mobj->flags2 = info->flags2;
+    mobj->flags3 = info->flags3;
     mobj->health = info->spawnhealth;
 
     if (gameskill != sk_nightmare)
@@ -1046,6 +1047,8 @@ static void P_SpawnPlayer(const mapthing_t *mthing)
     viewplayer->psprites[ps_weapon].sx = 0;
     viewplayer->mo->momx = 0;
     viewplayer->mo->momy = 0;
+    viewplayer->mo->bloodsplats = CORPSEBLOODSPLATS;
+    viewplayer->mo->floatbob = M_BigRandom();
     viewplayer->momx = 0;
     viewplayer->momy = 0;
     viewplayer->lookdir = 0;
@@ -1128,7 +1131,7 @@ mobj_t *P_SpawnMapThing(mapthing_t *mthing, dboolean spawnmonsters)
     //
     // We clear the flags unused in DOOM if we see flag mask 256 set, since
     // it is reserved to be 0 under the new scheme. A 1 in this reserved bit
-    // indicates it's a DOOM wad made by a DOOM editor which puts 1's in
+    // indicates it's a DOOM WAD made by a DOOM editor which puts 1's in
     // bits that weren't used in DOOM (such as HellMaker wads). So we should
     // then simply ignore all upper bits.
     if (options & MTF_RESERVED)
@@ -1230,7 +1233,7 @@ mobj_t *P_SpawnMapThing(mapthing_t *mthing, dboolean spawnmonsters)
         totalpickups++;
 
     if (mobj->tics > 0)
-        mobj->tics = 1 + M_BigRandom() % mobj->tics;
+        mobj->tics = (M_BigRandom() % mobj->tics) + 1;
 
     mobj->angle = ((mthing->angle % 45) ? mthing->angle * (ANG45 / 45) : ANG45 * (mthing->angle / 45));
 
@@ -1287,7 +1290,7 @@ mobj_t *P_SpawnMapThing(mapthing_t *mthing, dboolean spawnmonsters)
     mobj->pitch = ((mobj->flags & MF_SHOOTABLE) && type != Barrel ? NORM_PITCH + M_BigRandomInt(-16, 16) : NORM_PITCH);
 
     // [BH] initialize bobbing things
-    mobj->floatbob = prevthingbob = (x == prevthingx && y == prevthingy ? prevthingbob : M_BigRandom());
+    mobj->floatbob = prevthingbob = (x == prevthingx && y == prevthingy ? prevthingbob : TICRATE + M_BigRandom());
     prevthingx = x;
     prevthingy = y;
 

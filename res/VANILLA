@@ -16,6 +16,7 @@ am_gridsize 128x128
 am_markcolor 103
 am_path off
 am_playercolor 209
+am_playerstats off
 am_reddoorcolor 231
 am_rotatemode off
 am_teleportercolor 184
@@ -30,7 +31,7 @@ autotilt off
 autouse off
 centerweapon off
 crosshair none
-facebackcolor none
+facebackcolor 5
 fade off
 freeze off
 gp_analog off
@@ -103,6 +104,7 @@ s_randommusic off
 s_randompitch off
 s_stereo on
 stillbob 0%
+timer 0
 tossdrop off
 turbo 100%
 vid_capfps 35

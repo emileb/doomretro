@@ -49,7 +49,7 @@ typedef enum
 #define TIMERMAXMINUTES 3600
 
 extern int              timer;
-extern int              countdown;
+extern int              timeremaining;
 extern fixed_t          animatedliquiddiff;
 extern fixed_t          animatedliquidxdir;
 extern fixed_t          animatedliquidydir;
@@ -91,8 +91,6 @@ dboolean twoSided(int sector, int line);
 sector_t *getSector(int currentSector, int line, int side);
 
 side_t *getSide(int currentSector, int line, int side);
-
-dboolean P_IsSelfReferencingSector(sector_t *sec);
 
 fixed_t P_FindLowestFloorSurrounding(sector_t *sec);
 fixed_t P_FindHighestFloorSurrounding(sector_t *sec);
@@ -634,6 +632,10 @@ dboolean EV_SilentLineTeleport(line_t *line, int side, mobj_t *thing, dboolean r
 #define SECRET_MASK             0x0080
 #define FRICTION_MASK           0x0100
 #define PUSH_MASK               0x0200
+
+// reserved by BOOM spec - not implemented?
+// bit 10: suppress all sounds within the sector
+// bit 11: disable any sounds due to floor or ceiling motion by the sector
 
 // jff 02/04/98 Define masks, shifts, for fields in generalized linedef types
 #define GenEnd                  0x8000
