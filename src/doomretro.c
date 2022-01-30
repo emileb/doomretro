@@ -191,16 +191,21 @@ void I_ShutdownWindows32(void)
 }
 #endif
 
+#ifdef __ANDROID__
+int main_android(int argc, char **argv)
+#else
 int main(int argc, char **argv)
+#endif
 {
     myargc = argc;
 
     if ((myargv = (char **)malloc(myargc * sizeof(myargv[0]))))
     {
         memcpy(myargv, argv, myargc * sizeof(myargv[0]));
-
+#ifndef __ANDROID__ // Dont do this because it tries to change the argv memory which the JNI does not like
         for (int i = 0; i < myargc; i++)
             M_NormalizeSlashes(myargv[i]);
+#endif
     }
 
 #if defined(_WIN32)

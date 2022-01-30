@@ -814,8 +814,13 @@ enum
 #define KEYMARK_DEFAULT                    'm'
 #define KEYMAXZOOM_DEFAULT                 '0'
 #define KEYMOUSELOOK_DEFAULT               0
+#ifdef __ANDROID__
+#define KEYNEXTWEAPON_DEFAULT              ']'
+#define KEYPREVWEAPON_DEFAULT              '['
+#else
 #define KEYNEXTWEAPON_DEFAULT              0
 #define KEYPREVWEAPON_DEFAULT              0
+#endif
 #define KEYRIGHT_DEFAULT                   KEY_RIGHTARROW
 #define KEYROTATEMODE_DEFAULT              'r'
 #define KEYRUN_DEFAULT                     KEY_SHIFT

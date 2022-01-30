@@ -238,6 +238,10 @@ void C_Output(const char *string, ...)
         va_end(argptr);
     }
 
+#ifdef __ANDROID__
+    LOGI("%s",buffer);
+    LogWritter_Write(buffer);
+#endif
     if (consolestrings >= (int)consolestringsmax)
         console = I_Realloc(console, (consolestringsmax += CONSOLESTRINGSMAX) * sizeof(*console));
 

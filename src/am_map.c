@@ -1170,6 +1170,10 @@ static void AM_DoFollowPlayer(void)
     m_y = (mo->y >> FRACTOMAPBITS) - m_h / 2;
 }
 
+#ifdef __ANDROID__
+void Mobile_AM_controls(double *zoom, fixed_t *pan_x, fixed_t *pan_y );
+#endif
+
 //
 // Updates on Game Tic
 //
@@ -1181,6 +1185,35 @@ void AM_Ticker(void)
     if (am_followmode || menuactive)
         AM_DoFollowPlayer();
 
+#ifdef __ANDROID__
+    double zoom=0;
+    fixed_t touchX = 0;
+    fixed_t touchY = 0;
+ 	Mobile_AM_controls(&zoom,&touchX,&touchY);
+
+    if( am_followmode && (touchX || touchY)) // Turn off follow mode
+        AM_ToggleFollowMode(false);
+
+    m_paninc.x += touchX;
+    m_paninc.y += touchY;
+
+    if( zoom > 0 )
+    {
+        mtof_zoommul =  ((int) ((1. + zoom )*FRACUNIT));
+	    ftom_zoommul =  ((int) (FRACUNIT/(1. + zoom)));
+    }
+    else if ( zoom < 0 )
+    {
+        mtof_zoommul = ((int) (FRACUNIT/(1. - zoom)));
+        ftom_zoommul =  ((int) ((1. - zoom )*FRACUNIT));
+    }
+    else
+    {
+        ftom_zoommul = FRACUNIT;
+        mtof_zoommul = FRACUNIT;
+    }
+#endif
+
     // Change the zoom if necessary
     if (ftom_zoommul != FRACUNIT)
         AM_ChangeWindowScale();
@@ -1188,6 +1221,11 @@ void AM_Ticker(void)
     // Change x,y location
     if ((m_paninc.x || m_paninc.y) && !menuactive && !paused && !consoleactive)
         AM_ChangeWindowLoc();
+
+#ifdef __ANDROID__
+    if( touchX || touchY )
+        m_paninc.x = m_paninc.y = 0;
+#endif
 
     if (movement)
     {

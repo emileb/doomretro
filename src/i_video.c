@@ -783,6 +783,10 @@ void I_StartTic(void)
     I_GetEvent();
     I_ReadMouse();
     I_UpdateGameControllerRumble();
+#ifdef __ANDROID__
+    extern void I_UpdateAndroid(void);
+    I_UpdateAndroid();
+#endif
 }
 
 static void UpdateGrab(void)
@@ -1156,6 +1160,9 @@ void I_CreateExternalAutomap(void)
     if (!(maprenderer = SDL_CreateRenderer(mapwindow, -1, SDL_RENDERER_TARGETTEXTURE)))
         I_SDLError(SDL_CreateRenderer);
 
+#ifdef __ANDROID__
+    if( M_CheckParm("-android_aspect") )
+#endif
     if (SDL_RenderSetLogicalSize(maprenderer, MAPWIDTH, MAPHEIGHT) < 0)
         I_SDLError(SDL_RenderSetLogicalSize);
 
@@ -1462,6 +1469,11 @@ static void SetVideoMode(dboolean createwindow, dboolean output)
             if (!width || !height)
                 I_Error("Graphics couldn't be initialized.");
 
+
+#ifdef __ANDROID__
+            SDL_GL_SetAttribute( SDL_GL_DEPTH_SIZE, 16 ); // Defaults to 24 which is not needed and fails on old Tegras
+#endif
+
             if (createwindow && !(window = SDL_CreateWindow(DOOMRETRO_NAME, SDL_WINDOWPOS_UNDEFINED_DISPLAY(displayindex),
                 SDL_WINDOWPOS_UNDEFINED_DISPLAY(displayindex), width, height,
                 (windowflags | (vid_borderlesswindow ? SDL_WINDOW_FULLSCREEN_DESKTOP : SDL_WINDOW_FULLSCREEN)))))
@@ -1556,6 +1568,10 @@ static void SetVideoMode(dboolean createwindow, dboolean output)
     displaycenterx = displaywidth / 2;
     displaycentery = displayheight / 2;
 
+#ifdef __ANDROID__
+    rendererflags  = SDL_RENDERER_ACCELERATED;
+#endif
+
     if (createwindow && !(renderer = SDL_CreateRenderer(window, -1, rendererflags)) && !software)
     {
         if (!(renderer = SDL_CreateRenderer(window, -1, (SDL_RENDERER_SOFTWARE | SDL_RENDERER_TARGETTEXTURE))))
@@ -1568,6 +1584,9 @@ static void SetVideoMode(dboolean createwindow, dboolean output)
         }
     }
 
+#ifdef __ANDROID__
+    if( M_CheckParm("-android_aspect") )
+#endif
     if (SDL_RenderSetLogicalSize(renderer, !vid_widescreen * SCREENWIDTH, ACTUALHEIGHT) < 0)
         I_SDLError(SDL_RenderSetLogicalSize);
 
