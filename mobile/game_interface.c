@@ -58,7 +58,6 @@ int add_choc_event(evtype_t type, int data1, int data2, int data3){
 }
 ///////////////////////
 
-static char* consoleCmd = NULL;
 
 extern int SDL_SendKeyboardKey(Uint8 state, SDL_Scancode scancode);
 
@@ -189,31 +188,31 @@ void PortableAction(int state, int action)
 			break;
 		case PORT_ACT_WEAP1:
 			if( state )
-				consoleCmd = "+weapon1";
+				PortableCommand("+weapon1");
 			break;
 		case PORT_ACT_WEAP2:
 			if( state )
-				consoleCmd = "+weapon2";
+				PortableCommand("+weapon2");
 			break;
 		case PORT_ACT_WEAP3:
 			if( state )
-				consoleCmd = "+weapon3";
+				PortableCommand("+weapon3");
 			break;
 		case PORT_ACT_WEAP4:
 			if( state )
-				consoleCmd = "+weapon4";
+				PortableCommand("+weapon4");
 			break;
 		case PORT_ACT_WEAP5:
 			if( state )
-				consoleCmd = "+weapon5";
+				PortableCommand("+weapon5");
 			break;
 		case PORT_ACT_WEAP6:
 			if( state )
-				consoleCmd = "+weapon6";
+				PortableCommand("+weapon6");
 			break;
 		case PORT_ACT_WEAP7:
 			if( state )
-				consoleCmd = "+weapon7";
+				PortableCommand("+weapon7");
 			break;
         case PORT_ACT_CONSOLE:
             key = keyboardconsole;
@@ -225,9 +224,12 @@ void PortableAction(int state, int action)
 	}
 }
 
+static char* consoleCmd = NULL;
 void PortableCommand(const char * cmd)
 {
-
+	static char cmdBuffer[256];
+	snprintf(cmdBuffer, 256, "%s\n", cmd);
+	consoleCmd =  cmdBuffer;
 }
 
 // =================== FORWARD and SIDE MOVMENT ==============
