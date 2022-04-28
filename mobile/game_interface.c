@@ -166,10 +166,10 @@ void PortableAction(int state, int action)
 			key = keyboardautomap;
 			break;
 		case PORT_ACT_MAP_ZOOM_IN:
-			key = keyboardautomapzoomin;
+			key = keyboardzoomin;
 			break;
 		case PORT_ACT_MAP_ZOOM_OUT:
-			key = keyboardautomapzoomout;
+			key = keyboardzoomout;
 			break;
 		case PORT_ACT_NEXT_WEP:
 			key = keyboardnextweapon;
