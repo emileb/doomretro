@@ -9,8 +9,8 @@
   Copyright © 1993-2022 by id Software LLC, a ZeniMax Media company.
   Copyright © 2013-2022 by Brad Harding <mailto:brad@doomretro.com>.
 
-  DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
-  <https://github.com/bradharding/doomretro/wiki/CREDITS>.
+  DOOM Retro is a fork of Chocolate DOOM. For a list of acknowledgments,
+  see <https://github.com/bradharding/doomretro/wiki/ACKNOWLEDGMENTS>.
 
   This file is a part of DOOM Retro.
 
@@ -50,7 +50,7 @@ typedef struct
 } mpoint_t;
 
 // Called by main loop.
-dboolean AM_Responder(const event_t *ev);
+bool AM_Responder(const event_t *ev);
 
 // Called by main loop.
 void AM_Ticker(void);
@@ -59,12 +59,12 @@ void AM_Ticker(void);
 void AM_Drawer(void);
 void AM_ClearFB(void);
 
-void AM_Start(const dboolean mainwindow);
+void AM_Start(const bool mainwindow);
 void AM_ClearMarks(void);
-void AM_ToggleFollowMode(dboolean value);
+void AM_ToggleFollowMode(bool value);
 void AM_ToggleGrid(void);
 void AM_AddMark(void);
-void AM_ToggleRotateMode(dboolean value);
+void AM_ToggleRotateMode(bool value);
 void AM_ToggleMaxZoom(void);
 
 // Called to force the automap to quit if the level is completed while it is up.
@@ -99,4 +99,4 @@ extern int          pathpointnum_max;
 extern am_frame_t   am_frame;
 extern int          direction;
 
-dboolean keystate(int key);
+bool keystate(int key);

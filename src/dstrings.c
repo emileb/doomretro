@@ -9,8 +9,8 @@
   Copyright © 1993-2022 by id Software LLC, a ZeniMax Media company.
   Copyright © 2013-2022 by Brad Harding <mailto:brad@doomretro.com>.
 
-  DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
-  <https://github.com/bradharding/doomretro/wiki/CREDITS>.
+  DOOM Retro is a fork of Chocolate DOOM. For a list of acknowledgments,
+  see <https://github.com/bradharding/doomretro/wiki/ACKNOWLEDGMENTS>.
 
   This file is a part of DOOM Retro.
 
@@ -37,6 +37,7 @@
 */
 
 #include "d_deh.h"
+#include "dstrings.h"
 
 char **endmsg[] =
 {
@@ -59,4 +60,16 @@ char **endmsg[] =
     &s_QUITMSG12,
     &s_QUITMSG13,
     &s_QUITMSG14
+};
+
+char *devendmsg[] =
+{
+    DEVQUITMSG1,
+    DEVQUITMSG2,
+    DEVQUITMSG3,
+    DEVQUITMSG4,
+    DEVQUITMSG5,
+    DEVQUITMSG6,
+    DEVQUITMSG7,
+    DEVQUITMSG8
 };

@@ -9,8 +9,8 @@
   Copyright © 1993-2022 by id Software LLC, a ZeniMax Media company.
   Copyright © 2013-2022 by Brad Harding <mailto:brad@doomretro.com>.
 
-  DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
-  <https://github.com/bradharding/doomretro/wiki/CREDITS>.
+  DOOM Retro is a fork of Chocolate DOOM. For a list of acknowledgments,
+  see <https://github.com/bradharding/doomretro/wiki/ACKNOWLEDGMENTS>.
 
   This file is a part of DOOM Retro.
 
@@ -46,10 +46,10 @@ extern int  sc_Line;
 
 void SC_Open(char *name);
 void SC_Close(void);
-dboolean SC_GetString(void);
+bool SC_GetString(void);
 void SC_MustGetString(void);
-dboolean SC_GetNumber(void);
+bool SC_GetNumber(void);
 void SC_MustGetNumber(void);
 void SC_UnGet(void);
-dboolean SC_Compare(char *text);
+bool SC_Compare(char *text);
 int SC_MatchString(char **strings);

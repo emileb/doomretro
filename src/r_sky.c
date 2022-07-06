@@ -9,8 +9,8 @@
   Copyright © 1993-2022 by id Software LLC, a ZeniMax Media company.
   Copyright © 2013-2022 by Brad Harding <mailto:brad@doomretro.com>.
 
-  DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
-  <https://github.com/bradharding/doomretro/wiki/CREDITS>.
+  DOOM Retro is a fork of Chocolate DOOM. For a list of acknowledgments,
+  see <https://github.com/bradharding/doomretro/wiki/ACKNOWLEDGMENTS>.
 
   This file is a part of DOOM Retro.
 
@@ -45,21 +45,22 @@
 //
 // sky mapping
 //
-int         skyflatnum;
-int         skytexture;
-int         skytexturemid;
-int         skycolumnoffset;
-int         skyscrolldelta;
+int     skyflatnum;
+int     skytexture;
+int     skytexturemid;
+int     skycolumnoffset;
+int     skyscrolldelta;
 
-fixed_t     skyiscale;
+fixed_t skyiscale;
 
-dboolean    canmouselook = false;
+bool    canmouselook = false;
 
 void R_InitSkyMap(void)
 {
     int map = (gameepisode - 1) * 10 + gamemap;
 
     skyflatnum = R_FlatNumForName(SKYFLATNAME);
+    terraintypes[skyflatnum] = SKY;
     skytexture = P_GetMapSky1Texture(map);
     canmouselook = ((mouselook || keyboardmouselook || mousemouselook != -1 || autotilt
         || (weaponrecoil && r_screensize == r_screensize_max)) && !nomouselook);

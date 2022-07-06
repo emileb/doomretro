@@ -9,8 +9,8 @@
   Copyright © 1993-2022 by id Software LLC, a ZeniMax Media company.
   Copyright © 2013-2022 by Brad Harding <mailto:brad@doomretro.com>.
 
-  DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
-  <https://github.com/bradharding/doomretro/wiki/CREDITS>.
+  DOOM Retro is a fork of Chocolate DOOM. For a list of acknowledgments,
+  see <https://github.com/bradharding/doomretro/wiki/ACKNOWLEDGMENTS>.
 
   This file is a part of DOOM Retro.
 
@@ -71,7 +71,7 @@ struct lumpinfo_s
 extern lumpinfo_t   **lumpinfo;
 extern int          numlumps;
 
-dboolean IsUltimateDOOM(const char *iwadname);
+bool IsUltimateDOOM(const char *iwadname);
 
 char *GetCorrectCase(char *path);
 
@@ -79,7 +79,7 @@ char *GetCorrectCase(char *path);
 char *W_GuessFilename(char *path, char *string);
 #endif
 
-dboolean W_AddFile(char *filename, dboolean automatic);
+bool W_AddFile(char *filename, bool automatic);
 int W_WadType(char *filename);
 
 int W_CheckNumForName(const char *name);
@@ -110,4 +110,4 @@ void W_ReleaseLumpNum(int lumpnum);
 void W_CloseFiles(void);
 
 GameMission_t IWADRequiredByPWAD(char *pwadname);
-dboolean HasDehackedLump(const char *pwadname);
+bool HasDehackedLump(const char *pwadname);

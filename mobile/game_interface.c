@@ -318,10 +318,10 @@ void PortableAutomapControl(float zoom, float x, float y)
 }
 
 
-extern dboolean menuactive;
-extern dboolean paused;
-extern dboolean	messageNeedsInput;
-extern dboolean automapactive;
+extern bool menuactive;
+extern bool paused;
+extern bool	messageNeedsInput;
+extern bool automapactive;
 
 
 touchscreemode_t PortableGetScreenMode()

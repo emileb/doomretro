@@ -9,8 +9,8 @@
   Copyright © 1993-2022 by id Software LLC, a ZeniMax Media company.
   Copyright © 2013-2022 by Brad Harding <mailto:brad@doomretro.com>.
 
-  DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
-  <https://github.com/bradharding/doomretro/wiki/CREDITS>.
+  DOOM Retro is a fork of Chocolate DOOM. For a list of acknowledgments,
+  see <https://github.com/bradharding/doomretro/wiki/ACKNOWLEDGMENTS>.
 
   This file is a part of DOOM Retro.
 
@@ -234,7 +234,7 @@ static anim_t *anims[] =
 #define SHOWNEXTLOCDELAY    4
 
 // used to accelerate or skip a stage
-dboolean                acceleratestage;
+bool                    acceleratestage;
 
 // specifies current state
 static stateenum_t      state;
@@ -296,10 +296,6 @@ static patch_t          *sucks;
 // Name graphics of each level (centered)
 static patch_t          **lnames;
 
-//
-// CODE
-//
-
 // slam background
 static void WI_SlamBackground(void)
 {
@@ -309,7 +305,7 @@ static void WI_SlamBackground(void)
 // [BH] Draws character of "<Levelname>"
 static void WI_DrawWILVchar(int x, int y, int i)
 {
-    int w = (int)strlen(wilv[i]) / 13;
+    const int   w = (int)strlen(wilv[i]) / 13;
 
     for (int y1 = 0; y1 < 13; y1++)
         for (int x1 = 0; x1 < w; x1++)
@@ -321,26 +317,26 @@ static char nextmapname[128];
 
 static const int chartoi[130] =
 {
-    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, // 000 - 009
-    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, // 010 - 019
-    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, // 020 - 029
-    -1, -1, -1, 27, -1, -1, -1, -1, -1, 28, // 030 - 039
-    -1, -1, -1, -1, -1, 29, 26, 30, 31, 32, // 040 - 049
-    33, 34, 35, 36, 37, 38, 39, 40, -1, -1, // 050 - 059
-    -1, -1, -1, -1, -1,  0,  1,  2,  3,  4, // 060 - 069
-     5,  6,  7,  8,  9, 10, 11, 12, 13, 14, // 070 - 079
-    15, 16, 17, 18, 19, 20, 21, 22, 23, 24, // 080 - 089
-    25, -1, -1, -1, -1, -1, -1,  0,  1,  2, // 090 - 099
-     3,  4,  5,  6,  7,  8,  9, 10, 11, 12, // 100 - 109
-    13, 14, 15, 16, 17, 18, 19, 20, 21, 22, // 110 - 119
-    23, 24, 25, -1, -1, -1, -1, -1, -1, -1  // 120 - 129
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, // 000-009
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, // 010-019
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, // 020-029
+    -1, -1, -1, 27, -1, -1, -1, -1, -1, 28, // 030-039
+    -1, -1, -1, -1, -1, 29, 26, 30, 31, 32, // 040-049
+    33, 34, 35, 36, 37, 38, 39, 40, -1, -1, // 050-059
+    -1, -1, -1, -1, -1,  0,  1,  2,  3,  4, // 060-069
+     5,  6,  7,  8,  9, 10, 11, 12, 13, 14, // 070-079
+    15, 16, 17, 18, 19, 20, 21, 22, 23, 24, // 080-089
+    25, -1, -1, -1, -1, -1, -1,  0,  1,  2, // 090-099
+     3,  4,  5,  6,  7,  8,  9, 10, 11, 12, // 100-109
+    13, 14, 15, 16, 17, 18, 19, 20, 21, 22, // 110-119
+    23, 24, 25, -1, -1, -1, -1, -1, -1, -1  // 120-129
 };
 
 static void WI_DrawWILV(int y, char *str)
 {
-    int len = (int)strlen(str);
-    int w = 0;
-    int x;
+    const int   len = (int)strlen(str);
+    int         w = 0;
+    int         x;
 
     for (int i = 0; i < len; i++)
     {
@@ -371,15 +367,15 @@ static void WI_DrawWILV(int y, char *str)
 // Draws "<Levelname> Finished!"
 static void WI_DrawLF(void)
 {
-    int x = (VANILLAWIDTH - SHORT(finished->width)) / 2;
-    int y = WI_TITLEY;
-    int titlepatch = P_GetMapTitlePatch(wbs->epsd * 10 + wbs->last + 1);
+    const int   x = (VANILLAWIDTH - SHORT(finished->width)) / 2;
+    int         y = WI_TITLEY;
+    const int   titlepatch = P_GetMapTitlePatch(wbs->epsd * 10 + wbs->last + 1);
 
     // draw <LevelName>
     if (titlepatch > 0)
     {
-        patch_t *patch = W_CacheLumpNum(titlepatch);
-        short   height = SHORT(patch->height);
+        patch_t     *patch = W_CacheLumpNum(titlepatch);
+        const short height = SHORT(patch->height);
 
         if (height < VANILLAHEIGHT)
             V_DrawPatchWithShadow((VANILLAWIDTH - SHORT(patch->width)) / 2 + 1, y + 1, patch, false);
@@ -399,8 +395,8 @@ static void WI_DrawLF(void)
 
         if (W_CheckMultipleLumps(name) > 1 && !nerve)
         {
-            patch_t *patch = lnames[wbs->last];
-            short   height = SHORT(patch->height);
+            patch_t     *patch = lnames[wbs->last];
+            const short height = SHORT(patch->height);
 
             if (height < VANILLAHEIGHT)
                 V_DrawPatchWithShadow((VANILLAWIDTH - SHORT(patch->width)) / 2 + 1, y + 1, patch, false);
@@ -426,9 +422,9 @@ static void WI_DrawLF(void)
 // Draws "Entering <LevelName>"
 static void WI_DrawEL(void)
 {
-    int x = (VANILLAWIDTH - SHORT(entering->width)) / 2;
-    int y = WI_TITLEY;
-    int titlepatch = P_GetMapTitlePatch(wbs->epsd * 10 + wbs->next + 1);
+    const int   x = (VANILLAWIDTH - SHORT(entering->width)) / 2;
+    int         y = WI_TITLEY;
+    const int   titlepatch = P_GetMapTitlePatch(wbs->epsd * 10 + wbs->next + 1);
 
     // draw "Entering"
     V_DrawPatchWithShadow(x + 1, y + 1, entering, false);
@@ -438,8 +434,8 @@ static void WI_DrawEL(void)
 
     if (titlepatch > 0)
     {
-        patch_t *patch = W_CacheLumpNum(titlepatch);
-        short   height = SHORT(patch->height);
+        patch_t     *patch = W_CacheLumpNum(titlepatch);
+        const short height = SHORT(patch->height);
 
         if (height < VANILLAHEIGHT)
             V_DrawPatchWithShadow((VANILLAWIDTH - SHORT(patch->width)) / 2 + 1, y + 1, patch, false);
@@ -457,8 +453,8 @@ static void WI_DrawEL(void)
 
         if (W_CheckMultipleLumps(name) > 1 && !nerve)
         {
-            patch_t *patch = lnames[wbs->next];
-            short   height = SHORT(patch->height);
+            patch_t     *patch = lnames[wbs->next];
+            const short height = SHORT(patch->height);
 
             if (height < VANILLAHEIGHT)
                 V_DrawPatchWithShadow((VANILLAWIDTH - SHORT(patch->width)) / 2 + 1, y + 1, patch, false);
@@ -472,15 +468,15 @@ static void WI_DrawEL(void)
 
 static void WI_DrawOnLnode(int n, patch_t *c[])
 {
-    dboolean    fits = false;
-    int         i = 0;
+    bool    fits = false;
+    int     i = 0;
 
     do
     {
-        int left = lnodes[wbs->epsd][n].x - SHORT(c[i]->leftoffset);
-        int top = lnodes[wbs->epsd][n].y - SHORT(c[i]->topoffset);
-        int right = left + SHORT(c[i]->width);
-        int bottom = top + SHORT(c[i]->height);
+        const int   left = lnodes[wbs->epsd][n].x - SHORT(c[i]->leftoffset);
+        const int   top = lnodes[wbs->epsd][n].y - SHORT(c[i]->topoffset);
+        const int   right = left + SHORT(c[i]->width);
+        const int   bottom = top + SHORT(c[i]->height);
 
         if (left >= 0 && right < VANILLAWIDTH && top >= 0 && bottom < VANILLAHEIGHT)
             fits = true;
@@ -595,45 +591,39 @@ static void WI_DrawAnimatedBack(void)
 //
 static int WI_DrawNum(int x, int y, int n, int digits)
 {
-    // if non-number, do not draw it
-    if (n == 1994)
-        return 0;
-    else
+    const int   fontwidth = SHORT(num[0]->width);
+
+    if (digits < 0)
     {
-        int fontwidth = SHORT(num[0]->width);
-
-        if (digits < 0)
+        if (!n)
+            // make variable-length zeros 1 digit long
+            digits = 1;
+        else
         {
-            if (!n)
-                // make variable-length zeros 1 digit long
-                digits = 1;
-            else
+            int temp = n;
+
+            // figure out # of digits in #
+            digits = 0;
+
+            while (temp)
             {
-                int temp = n;
-
-                // figure out # of digits in #
-                digits = 0;
-
-                while (temp)
-                {
-                    temp /= 10;
-                    digits++;
-                }
+                temp /= 10;
+                digits++;
             }
         }
-
-        // draw the new number
-        while (digits--)
-        {
-            x -= fontwidth;
-            x += 2 * (n % 10 == 1);
-            V_DrawPatchWithShadow(x + 1, y + 1, num[n % 10], true);
-            x -= 2 * (n % 10 == 1);
-            n /= 10;
-        }
-
-        return x;
     }
+
+    // draw the new number
+    while (digits--)
+    {
+        x -= fontwidth;
+        x += 2 * (n % 10 == 1);
+        V_DrawPatchWithShadow(x + 1, y + 1, num[n % 10], true);
+        x -= 2 * (n % 10 == 1);
+        n /= 10;
+    }
+
+    return x;
 }
 
 static void WI_DrawPercent(int x, int y, int p)
@@ -702,7 +692,7 @@ static void WI_UpdateNoState(void)
         G_WorldDone();
 }
 
-static dboolean snl_pointeron;
+static bool snl_pointeron;
 
 static void WI_InitShowNextLoc(void)
 {
@@ -835,7 +825,7 @@ static void WI_InitStats(void)
 static void WI_UpdateStats(void)
 {
     // e6y
-    static dboolean play_early_explosion = true;
+    static bool play_early_explosion = true;
 
     WI_UpdateAnimatedBack();
 
@@ -902,7 +892,6 @@ static void WI_UpdateStats(void)
             }
         }
     }
-
     else if (sp_state == 8)
     {
         // e6y: do not play count sound after explosion sound
@@ -968,7 +957,7 @@ static void WI_UpdateStats(void)
 static void WI_DrawStats(void)
 {
     // line height
-    int lh = 3 * SHORT(num[0]->height) / 2;
+    const int   lh = 3 * SHORT(num[0]->height) / 2;
 
     WI_SlamBackground();
 
@@ -998,8 +987,8 @@ static void WI_DrawStats(void)
 
     if (wbs->partime)
     {
-        V_DrawPatchWithShadow(VANILLAWIDTH / 2 + SP_TIMEX + (BTSX ? 0 : SP_TIMEX - FREEDOOM * 17 + 3), SP_TIMEY + 1, par, false);
-        WI_DrawTime(VANILLAWIDTH - SP_TIMEX - 2 - (BTSX || FREEDOOM) * 17, SP_TIMEY, cnt_par);
+        V_DrawPatchWithShadow(VANILLAWIDTH / 2 + SP_TIMEX + (BTSX ? 0 : SP_TIMEX - (FREEDOOM ? 17 : 0) + 3), SP_TIMEY + 1, par, false);
+        WI_DrawTime(VANILLAWIDTH - SP_TIMEX - 2 - (BTSX || FREEDOOM ? 17 : 0), SP_TIMEY, cnt_par);
     }
 }
 
@@ -1175,7 +1164,7 @@ static void WI_LoadData(void)
         lump = W_CacheLastLumpName("INTERPIC");
     else if (gamemode == commercial)
     {
-        int lumpnum = P_GetMapEnterPic(gamemap);
+        const int   lumpnum = P_GetMapEnterPic(gamemap);
 
         if (lumpnum > 0)
             lump = W_CacheLumpNum(lumpnum);

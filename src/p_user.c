@@ -9,8 +9,8 @@
   Copyright © 1993-2022 by id Software LLC, a ZeniMax Media company.
   Copyright © 2013-2022 by Brad Harding <mailto:brad@doomretro.com>.
 
-  DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
-  <https://github.com/bradharding/doomretro/wiki/CREDITS>.
+  DOOM Retro is a fork of Chocolate DOOM. For a list of acknowledgments,
+  see <https://github.com/bradharding/doomretro/wiki/ACKNOWLEDGMENTS>.
 
   This file is a part of DOOM Retro.
 
@@ -54,16 +54,8 @@
 #define STEP1DISTANCE   24
 #define STEP2DISTANCE   32
 
-dboolean    autotilt = autotilt_default;
-dboolean    autouse = autouse_default;
-dboolean    infighting = infighting_default;
-int         movebob = movebob_default;
-dboolean    r_liquid_lowerview = r_liquid_lowerview_default;
-int         r_shake_damage = r_shake_damage_default;
-int         stillbob = stillbob_default;
-
-dboolean    autousing = false;
-int         deadlookdir = -1;
+bool    autousing = false;
+int     deadlookdir = -1;
 
 //
 // Movement
@@ -98,7 +90,7 @@ static void P_Bob(angle_t angle, fixed_t move)
 //
 // P_IsSelfReferencingSector
 //
-static dboolean P_IsSelfReferencingSector(sector_t *sec)
+static bool P_IsSelfReferencingSector(sector_t *sec)
 {
     const int   linecount = sec->linecount;
     int         count = 0;
@@ -128,9 +120,9 @@ void P_CalcHeight(void)
     {
         // Regular movement bobbing
         // (needs to be calculated for gun swing even if not on ground)
-        fixed_t momx = viewplayer->momx;
-        fixed_t momy = viewplayer->momy;
-        fixed_t bob = (MAXBOB * stillbob / 400) / 2;
+        const fixed_t   momx = viewplayer->momx;
+        const fixed_t   momy = viewplayer->momy;
+        fixed_t         bob = (MAXBOB * stillbob / 400) / 2;
 
         if (momx | momy)
             bob = MAX(MIN((FixedMul(momx, momx) + FixedMul(momy, momy)) >> 2, MAXBOB) * movebob / 200, bob);
@@ -197,15 +189,15 @@ void P_CalcHeight(void)
 //
 // P_CheckForSteps
 //
-static dboolean P_CheckForSteps(fixed_t width)
+static bool P_CheckForSteps(fixed_t width)
 {
     sector_t    *sector1 = R_PointInSubsector(viewx + width * viewcos, viewy + width * viewsin)->sector;
     sector_t    *sector2 = R_PointInSubsector(viewx + width * 2 * viewcos, viewy + width * 2 * viewsin)->sector;
 
     if (sector1->terraintype == sector2->terraintype)
     {
-        fixed_t step = sector1->floorheight;
-        int     delta = step - viewplayer->mo->floorz;
+        const fixed_t   step = sector1->floorheight;
+        const int       delta = step - viewplayer->mo->floorz;
 
         if (delta == sector2->floorheight - step)
         {
@@ -245,9 +237,9 @@ void P_MovePlayer(void)
     // thrust applied to the movement varies with 'movefactor'.
     if ((forward | side) && (mo->z <= mo->floorz || (mo->flags & MF_BOUNCES) || (mo->flags2 & MF2_ONMOBJ)))
     {
-        int     friction;
-        int     movefactor = P_GetMoveFactor(mo, &friction);
-        angle_t angle = mo->angle;
+        int         friction;
+        const int   movefactor = P_GetMoveFactor(mo, &friction);
+        angle_t     angle = mo->angle;
 
         // killough 11/98:
         // On sludge, make bobbing depend on efficiency.
@@ -319,10 +311,10 @@ static void P_ReduceDamageCount(void)
 //
 static void P_DeathThink(void)
 {
-    static dboolean facingkiller;
-    static int      deathcount;
-    mobj_t          *mo = viewplayer->mo;
-    mobj_t          *attacker = viewplayer->attacker;
+    static bool facingkiller;
+    static int  deathcount;
+    mobj_t      *mo = viewplayer->mo;
+    mobj_t      *attacker = viewplayer->attacker;
 
     weaponrumbletics = 1;
     idlechainsawrumblestrength = 0;
@@ -340,7 +332,7 @@ static void P_DeathThink(void)
 
             if (deadlookdir == -1)
             {
-                double  viewheightrange = (double)(viewplayer->viewheight - DEADVIEWHEIGHT) / FRACUNIT;
+                const double    viewheightrange = (double)(viewplayer->viewheight - DEADVIEWHEIGHT) / FRACUNIT;
 
                 inc = MAX(1, ABS(DEADLOOKDIR - viewplayer->lookdir));
 
@@ -372,8 +364,8 @@ static void P_DeathThink(void)
 
     if (attacker && attacker != mo && !facingkiller)
     {
-        angle_t angle = R_PointToAngle2(mo->x, mo->y, attacker->x, attacker->y);
-        angle_t delta = angle - mo->angle;
+        const angle_t   angle = R_PointToAngle2(mo->x, mo->y, attacker->x, attacker->y);
+        const angle_t   delta = angle - mo->angle;
 
         if (delta < ANG5 || delta > (unsigned int)(-ANG5))
         {
@@ -459,7 +451,7 @@ void P_ResurrectPlayer(int health)
 
 void P_ChangeWeapon(weapontype_t newweapon)
 {
-    weapontype_t    readyweapon = viewplayer->readyweapon;
+    const weapontype_t  readyweapon = viewplayer->readyweapon;
 
     if (newweapon == wp_fist)
     {
@@ -486,7 +478,7 @@ void P_ChangeWeapon(weapontype_t newweapon)
     else
     {
         // Don't switch to a weapon without any or enough ammo.
-        ammotype_t  ammotype = weaponinfo[newweapon].ammotype;
+        const ammotype_t    ammotype = weaponinfo[newweapon].ammotype;
 
         if (ammotype != am_noammo && viewplayer->ammo[ammotype] < weaponinfo[newweapon].ammopershot)
             newweapon = wp_nochange;
@@ -631,11 +623,15 @@ void P_PlayerThink(void)
 
     // [BH] Check all sectors player is touching are special
     for (const struct msecnode_s *seclist = mo->touching_sectorlist; seclist; seclist = seclist->m_tnext)
-        if (seclist->m_sector->special && mo->z == seclist->m_sector->floorheight)
+    {
+        sector_t    *sector = seclist->m_sector;
+
+        if (sector->special && mo->z == sector->floorheight)
         {
-            P_PlayerInSpecialSector(seclist->m_sector);
+            P_PlayerInSpecialSector(sector);
             break;
         }
+    }
 
     if ((cmd->buttons & BT_JUMP) && (mo->z <= mo->floorz || (mo->flags2 & MF2_ONMOBJ)) && !viewplayer->jumptics)
     {

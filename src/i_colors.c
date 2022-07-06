@@ -9,8 +9,8 @@
   Copyright © 1993-2022 by id Software LLC, a ZeniMax Media company.
   Copyright © 2013-2022 by Brad Harding <mailto:brad@doomretro.com>.
 
-  DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
-  <https://github.com/bradharding/doomretro/wiki/CREDITS>.
+  DOOM Retro is a fork of Chocolate DOOM. For a list of acknowledgments,
+  see <https://github.com/bradharding/doomretro/wiki/ACKNOWLEDGMENTS>.
 
   This file is a part of DOOM Retro.
 
@@ -127,7 +127,6 @@ byte        nearestwhite;
 byte        *black25;
 byte        *black40;
 byte        *yellow15;
-byte        *white25;
 
 int FindNearestColor(byte *palette, const int red, const int green, const int blue)
 {
@@ -181,7 +180,6 @@ void FindNearestColors(byte *palette)
     black25 = &tinttab25[nearestblack << 8];
     black40 = &tinttab40[nearestblack << 8];
     yellow15 = &tinttab15[nearestcolors[YELLOW] << 8];
-    white25 = &tinttab25[nearestwhite << 8];
 }
 
 int FindBrightDominantColor(patch_t *patch)
@@ -252,6 +250,8 @@ int FindDominantEdgeColor(patch_t *patch)
             for (int y = 0; y < length; y++)
                 colors[*source++]++;
         }
+
+        colors[nearestblack] /= 2;
 
         for (int i = 0, dominant = 1; i < 256; i++)
             if (colors[i] > dominant)

@@ -9,8 +9,8 @@
   Copyright © 1993-2022 by id Software LLC, a ZeniMax Media company.
   Copyright © 2013-2022 by Brad Harding <mailto:brad@doomretro.com>.
 
-  DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
-  <https://github.com/bradharding/doomretro/wiki/CREDITS>.
+  DOOM Retro is a fork of Chocolate DOOM. For a list of acknowledgments,
+  see <https://github.com/bradharding/doomretro/wiki/ACKNOWLEDGMENTS>.
 
   This file is a part of DOOM Retro.
 
@@ -811,7 +811,7 @@ mobjinfo_t mobjinfo[] =
         /* frames               */ 0,
         /* fullbright           */ false,
         /* blood                */ MT_BLUEBLOOD,
-        /* shadowoffset         */ 0,
+        /* shadowoffset         */ 6 * FRACUNIT,
         /* mbf21flags           */ 0,
         /* infightinggroup      */ IG_DEFAULT,
         /* projectilegroup      */ PG_DEFAULT,
@@ -1057,7 +1057,7 @@ mobjinfo_t mobjinfo[] =
         /* fullbright           */ false,
         /* blood                */ MT_BLOOD,
         /* shadowoffset         */ 12 * FRACUNIT,
-        /* mbf21flags           */ (MF_MBF21_NORADIUSDMG | MF_MBF21_RANGEHALF | MF_MBF21_BOSS | MF_MBF21_E3M8BOSS | MF_MBF21_E4M8BOSS),
+        /* mbf21flags           */ (MF_MBF21_NORADIUSDMG | MF_MBF21_RANGEHALF | MF_MBF21_FULLVOLSOUNDS | MF_MBF21_E3M8BOSS | MF_MBF21_E4M8BOSS),
         /* infightinggroup      */ IG_DEFAULT,
         /* projectilegroup      */ PG_DEFAULT,
         /* splashgroup          */ SG_DEFAULT,
@@ -1155,7 +1155,7 @@ mobjinfo_t mobjinfo[] =
         /* fullbright           */ false,
         /* blood                */ MT_BLOOD,
         /* shadowoffset         */ 4 * FRACUNIT,
-        /* mbf21flags           */ (MF_MBF21_NORADIUSDMG | MF_MBF21_HIGHERMPROB | MF_MBF21_RANGEHALF | MF_MBF21_BOSS | MF_MBF21_E2M8BOSS | MF_MBF21_E4M6BOSS),
+        /* mbf21flags           */ (MF_MBF21_NORADIUSDMG | MF_MBF21_HIGHERMPROB | MF_MBF21_RANGEHALF | MF_MBF21_FULLVOLSOUNDS | MF_MBF21_E2M8BOSS | MF_MBF21_E4M6BOSS),
         /* infightinggroup      */ IG_DEFAULT,
         /* projectilegroup      */ PG_DEFAULT,
         /* splashgroup          */ SG_DEFAULT,
@@ -5570,10 +5570,10 @@ mobjinfo_t mobjinfo[] =
         /* ripsound             */ sfx_none,
         /* altspeed             */ NO_ALTSPEED,
         /* meleerange           */ MELEERANGE,
-        /* name1                */ "cacodemon's corpse",
-        /* plural1              */ "",
-        /* name2                */ "dead cacodemon",
-        /* plural2              */ "dead cacodemons",
+        /* name1                */ "dead cacodemon",
+        /* plural1              */ "dead cacodemons",
+        /* name2                */ "",
+        /* plural2              */ "",
         /* name3                */ "",
         /* plural3              */ ""
     },
@@ -5619,8 +5619,8 @@ mobjinfo_t mobjinfo[] =
         /* ripsound             */ sfx_none,
         /* altspeed             */ NO_ALTSPEED,
         /* meleerange           */ MELEERANGE,
-        /* name1                */ "marine's corpse",
-        /* plural1              */ "marine corpses",
+        /* name1                */ "dead marine",
+        /* plural1              */ "dead marines",
         /* name2                */ "dead player",
         /* plural2              */ "dead players",
         /* name3                */ "",
@@ -5668,10 +5668,10 @@ mobjinfo_t mobjinfo[] =
         /* ripsound             */ sfx_none,
         /* altspeed             */ NO_ALTSPEED,
         /* meleerange           */ MELEERANGE,
-        /* name1                */ "zombieman's corpse",
-        /* plural1              */ "zombiemen corpses",
-        /* name2                */ "dead zombieman",
-        /* plural2              */ "dead zombiemen",
+        /* name1                */ "dead zombieman",
+        /* plural1              */ "dead zombiemen",
+        /* name2                */ "",
+        /* plural2              */ "",
         /* name3                */ "",
         /* plural3              */ ""
     },
@@ -5717,12 +5717,12 @@ mobjinfo_t mobjinfo[] =
         /* ripsound             */ sfx_none,
         /* altspeed             */ NO_ALTSPEED,
         /* meleerange           */ MELEERANGE,
-        /* name1                */ "pinky demon's corpse",
-        /* plural1              */ "pinky demon corpses",
-        /* name2                */ "dead pinky demon",
-        /* plural2              */ "dead pinky demons",
-        /* name3                */ "dead demon",
-        /* plural3              */ "dead demons"
+        /* name1                */ "dead pinky demon",
+        /* plural1              */ "dead pinky demons",
+        /* name2                */ "dead demon",
+        /* plural2              */ "dead demons",
+        /* name3                */ "",
+        /* plural3              */ ""
     },
 
     // Dead Lost Soul, invisible (MT_MISC65)
@@ -5766,10 +5766,10 @@ mobjinfo_t mobjinfo[] =
         /* ripsound             */ sfx_none,
         /* altspeed             */ NO_ALTSPEED,
         /* meleerange           */ MELEERANGE,
-        /* name1                */ "lost soul's corpse",
-        /* plural1              */ "lost soul corpses",
-        /* name2                */ "dead lost soul",
-        /* plural2              */ "dead lost souls",
+        /* name1                */ "dead lost soul",
+        /* plural1              */ "dead lost souls",
+        /* name2                */ "",
+        /* plural2              */ "",
         /* name3                */ "",
         /* plural3              */ ""
     },
@@ -5815,10 +5815,10 @@ mobjinfo_t mobjinfo[] =
         /* ripsound             */ sfx_none,
         /* altspeed             */ NO_ALTSPEED,
         /* meleerange           */ MELEERANGE,
-        /* name1                */ "imp's corpse",
-        /* plural1              */ "imp corpses",
-        /* name2                */ "dead imp",
-        /* plural2              */ "dead imps",
+        /* name1                */ "dead imp",
+        /* plural1              */ "dead imps",
+        /* name2                */ "",
+        /* plural2              */ "",
         /* name3                */ "",
         /* plural3              */ ""
     },
@@ -5864,10 +5864,10 @@ mobjinfo_t mobjinfo[] =
         /* ripsound             */ sfx_none,
         /* altspeed             */ NO_ALTSPEED,
         /* meleerange           */ MELEERANGE,
-        /* name1                */ "shotgun guy's corpse",
-        /* plural1              */ "shotgun guy corpses",
-        /* name2                */ "dead shotgun guy",
-        /* plural2              */ "dead shotgun guys",
+        /* name1                */ "dead shotgun guy",
+        /* plural1              */ "dead shotgun guys",
+        /* name2                */ "",
+        /* plural2              */ "",
         /* name3                */ "",
         /* plural3              */ ""
     },

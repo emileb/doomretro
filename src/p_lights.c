@@ -9,8 +9,8 @@
   Copyright © 1993-2022 by id Software LLC, a ZeniMax Media company.
   Copyright © 2013-2022 by Brad Harding <mailto:brad@doomretro.com>.
 
-  DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
-  <https://github.com/bradharding/doomretro/wiki/CREDITS>.
+  DOOM Retro is a fork of Chocolate DOOM. For a list of acknowledgments,
+  see <https://github.com/bradharding/doomretro/wiki/ACKNOWLEDGMENTS>.
 
   This file is a part of DOOM Retro.
 
@@ -39,6 +39,7 @@
 #include "doomstat.h"
 #include "m_random.h"
 #include "p_local.h"
+#include "p_setup.h"
 #include "p_tick.h"
 #include "z_zone.h"
 
@@ -161,7 +162,7 @@ void T_StrobeFlash(strobe_t *strobe)
 // After the map has been loaded, scan each sector
 // for specials that spawn thinkers
 //
-void P_SpawnStrobeFlash(sector_t *sector, int fastorslow, dboolean insync)
+void P_SpawnStrobeFlash(sector_t *sector, int fastorslow, bool insync)
 {
     strobe_t    *strobe = Z_Malloc(sizeof(*strobe), PU_LEVSPEC, NULL);
 
@@ -184,7 +185,7 @@ void P_SpawnStrobeFlash(sector_t *sector, int fastorslow, dboolean insync)
 //
 // Start strobing lights (usually from a trigger)
 //
-dboolean EV_StartLightStrobing(line_t *line)
+bool EV_StartLightStrobing(line_t *line)
 {
     int secnum = -1;
 
@@ -197,7 +198,7 @@ dboolean EV_StartLightStrobing(line_t *line)
 //
 // TURN LINE'S TAG LIGHTS OFF
 //
-dboolean EV_TurnTagLightsOff(line_t *line)
+bool EV_TurnTagLightsOff(line_t *line)
 {
     // search sectors for those with same tag as activating line
     // killough 10/98: replaced inefficient search with fast search
@@ -224,7 +225,7 @@ dboolean EV_TurnTagLightsOff(line_t *line)
 //
 // TURN LINE'S TAG LIGHTS ON
 //
-dboolean EV_LightTurnOn(line_t *line, int bright)
+bool EV_LightTurnOn(line_t *line, int bright)
 {
     // search all sectors for ones with same tag as activating line
     // killough 10/98: replace inefficient search with fast search
@@ -244,6 +245,9 @@ dboolean EV_LightTurnOn(line_t *line, int bright)
             }
 
         sector->lightlevel = sector->oldlightlevel = tbright;
+
+        if (compat_light)
+            bright = tbright;
     }
 
     return true;

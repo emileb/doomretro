@@ -9,8 +9,8 @@
   Copyright © 1993-2022 by id Software LLC, a ZeniMax Media company.
   Copyright © 2013-2022 by Brad Harding <mailto:brad@doomretro.com>.
 
-  DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
-  <https://github.com/bradharding/doomretro/wiki/CREDITS>.
+  DOOM Retro is a fork of Chocolate DOOM. For a list of acknowledgments,
+  see <https://github.com/bradharding/doomretro/wiki/ACKNOWLEDGMENTS>.
 
   This file is a part of DOOM Retro.
 
@@ -42,8 +42,8 @@
 
 #include "doomtype.h"
 
-dboolean I_Windows_InitMusic(void);
-void I_Windows_PlaySong(dboolean looping);
+bool I_Windows_InitMusic(void);
+void I_Windows_PlaySong(bool looping);
 void I_Windows_PauseSong(void);
 void I_Windows_ResumeSong(void);
 void I_Windows_StopSong(void);

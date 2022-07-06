@@ -9,8 +9,8 @@
   Copyright © 1993-2022 by id Software LLC, a ZeniMax Media company.
   Copyright © 2013-2022 by Brad Harding <mailto:brad@doomretro.com>.
 
-  DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
-  <https://github.com/bradharding/doomretro/wiki/CREDITS>.
+  DOOM Retro is a fork of Chocolate DOOM. For a list of acknowledgments,
+  see <https://github.com/bradharding/doomretro/wiki/ACKNOWLEDGMENTS>.
 
   This file is a part of DOOM Retro.
 
@@ -45,10 +45,10 @@
 
 #define GAMMALEVELS         31
 
-dboolean MouseShouldBeGrabbed(void);
+bool MouseShouldBeGrabbed(void);
 void I_InitKeyboard(void);
 void I_ShutdownKeyboard(void);
-dboolean GetCapsLockState(void);
+bool GetCapsLockState(void);
 
 // Called by D_DoomLoop,
 // called before processing each tic in a frame.
@@ -60,8 +60,8 @@ void I_StartTic(void);
 // determines the hardware configuration
 // and sets up the video mode
 void I_InitGraphics(void);
-void I_RestartGraphics(dboolean recreatewindow);
-void FreeSurfaces(dboolean freewindow);
+void I_RestartGraphics(bool recreatewindow);
+void FreeSurfaces(bool freewindow);
 void I_ShutdownGraphics(void);
 void I_CapFPS(int cap);
 
@@ -75,8 +75,8 @@ void I_SetExternalAutomapPalette(void);
 void I_SetSimplePalette(byte *playpal);
 void I_SetPaletteWithBrightness(byte *playpal, double brightness);
 
-void I_UpdateBlitFunc(dboolean shake);
-void I_CreateExternalAutomap(void);
+void I_UpdateBlitFunc(bool shake);
+bool I_CreateExternalAutomap(void);
 void I_DestroyExternalAutomap(void);
 
 void I_ToggleFullscreen(void);
@@ -92,8 +92,8 @@ void I_WindowResizeBlit(void);
 extern void (*blitfunc)(void);
 extern void (*mapblitfunc)(void);
 
-extern dboolean     sendpause;
-extern dboolean     waspaused;
+extern bool         sendpause;
+extern bool         waspaused;
 
 extern int          keydown;
 
@@ -105,7 +105,7 @@ extern int          windowy;
 extern int          windowheight;
 extern int          windowwidth;
 
-extern dboolean     windowfocused;
+extern bool         windowfocused;
 
 extern SDL_Window   *window;
 extern SDL_Renderer *renderer;
@@ -116,4 +116,4 @@ extern byte         *mapscreen;
 
 extern byte         *PLAYPAL;
 
-extern dboolean     altdown;
+extern bool         altdown;

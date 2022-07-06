@@ -9,8 +9,8 @@
   Copyright © 1993-2022 by id Software LLC, a ZeniMax Media company.
   Copyright © 2013-2022 by Brad Harding <mailto:brad@doomretro.com>.
 
-  DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
-  <https://github.com/bradharding/doomretro/wiki/CREDITS>.
+  DOOM Retro is a fork of Chocolate DOOM. For a list of acknowledgments,
+  see <https://github.com/bradharding/doomretro/wiki/ACKNOWLEDGMENTS>.
 
   This file is a part of DOOM Retro.
 
@@ -56,6 +56,8 @@
 //
 // "128 IWAD search directories should be enough for anybody".
 #define MAX_IWAD_DIRS   128
+
+char        screenshotfolder[MAX_PATH];
 
 static char *iwad_dirs[MAX_IWAD_DIRS];
 static int  num_iwad_dirs;
@@ -247,7 +249,7 @@ static char *GetRegistryString(registryvalue_t *reg_val)
 // Check for the uninstall strings from the CD versions
 static void CheckUninstallStrings(void)
 {
-    int len = (int)strlen(UNINSTALLER_STRING);
+    const int   len = (int)strlen(UNINSTALLER_STRING);
 
     for (size_t i = 0; i < arrlen(uninstall_values); i++)
     {
@@ -473,7 +475,7 @@ static const iwads_t iwads[] =
 #if !defined(_WIN32) && !defined(__APPLE__)
 // Returns true if the specified path is a path to a file
 // of the specified name.
-static dboolean DirIsFile(char *path, char *filename)
+static bool DirIsFile(char *path, char *filename)
 {
     return (strchr(path, DIR_SEPARATOR) && !strcasecmp(leafname(path), filename));
 }
@@ -596,8 +598,8 @@ static void AddDoomWADPath(void)
 //
 static void BuildIWADDirList(void)
 {
-    char            *doomwaddir;
-    static dboolean iwad_dirs_built;
+    char        *doomwaddir;
+    static bool iwad_dirs_built;
 
     if (iwad_dirs_built)
         return;
@@ -776,7 +778,7 @@ static char *SaveGameIWADName(void)
 //
 // Chooses the directory used to store saved games.
 //
-void D_SetSaveGameFolder(dboolean output)
+void D_SetSaveGameFolder(bool output)
 {
     int p = M_CheckParmsWithArgs("-save", "-savedir", "", 1, 1);
 
@@ -821,6 +823,27 @@ void D_SetSaveGameFolder(dboolean output)
     }
 }
 
+void D_SetScreenshotsFolder(void)
+{
+    int p = M_CheckParmsWithArgs("-shot", "-shotdir", "", 1, 1);
+
+    if (p)
+        M_StringCopy(screenshotfolder, myargv[p + 1], sizeof(screenshotfolder));
+    else
+    {
+        char    *appdatafolder = M_GetAppDataFolder();
+
+        M_snprintf(screenshotfolder, sizeof(screenshotfolder),
+            "%s" DIR_SEPARATOR_S "screenshots" DIR_SEPARATOR_S, appdatafolder);
+
+        free(appdatafolder);
+    }
+
+    M_MakeDirectory(screenshotfolder);
+
+    C_Output("All screenshots taken will be saved in " BOLD("%s") ".", screenshotfolder);
+}
+
 //
 // Find out what version of DOOM is playing.
 //
@@ -837,8 +860,7 @@ void D_IdentifyVersion(void)
             gamemission = doom2;
         else if (W_CheckNumForName("E1M1") >= 0)
             gamemission = doom;
-
-        if (gamemission == none)
+        else
             // Still no idea. I don't think this is going to work.
             I_Error("Unknown or invalid IWAD file.");
     }

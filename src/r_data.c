@@ -9,8 +9,8 @@
   Copyright © 1993-2022 by id Software LLC, a ZeniMax Media company.
   Copyright © 2013-2022 by Brad Harding <mailto:brad@doomretro.com>.
 
-  DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
-  <https://github.com/bradharding/doomretro/wiki/CREDITS>.
+  DOOM Retro is a fork of Chocolate DOOM. For a list of acknowledgments,
+  see <https://github.com/bradharding/doomretro/wiki/ACKNOWLEDGMENTS>.
 
   This file is a part of DOOM Retro.
 
@@ -70,7 +70,7 @@ int         firstspritelump;
 int         lastspritelump;
 int         numspritelumps;
 
-dboolean    suppresswarnings = false;
+bool        suppresswarnings = false;
 
 int         numtextures;
 texture_t   **textures;
@@ -80,7 +80,7 @@ char        berserk[64];
 // needed for texture pegging
 fixed_t     *textureheight;
 byte        **brightmap;
-dboolean    *nobrightmap;
+bool        *nobrightmap;
 
 // for global animation
 int         *flattranslation;
@@ -94,8 +94,6 @@ fixed_t     *spritetopoffset;
 
 fixed_t     *newspriteoffset;
 fixed_t     *newspritetopoffset;
-
-dboolean    r_fixspriteoffsets = r_fixspriteoffsets_default;
 
 byte        grays[256];
 
@@ -123,7 +121,19 @@ static byte notgrayorbrown[256] =
     1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
 };
 
-static byte redonly[256] =
+static byte notgrayorbrown2[256] =
+{
+    0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0,
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+};
+
+static byte redonly1[256] =
 {
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -131,6 +141,18 @@ static byte redonly[256] =
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+};
+
+static byte redonly2[256] =
+{
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
 };
@@ -171,6 +193,18 @@ static byte greenonly3[256] =
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
 };
 
+static byte redandgreen[256] =
+{
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+};
+
 static byte blueandgreen[256] =
 {
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -195,49 +229,71 @@ static byte brighttan[256] =
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
 };
 
+static byte yellowonly[256] =
+{
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0
+};
+
 static struct
 {
     char    texture[9];
     int     game;
     byte    *mask;
 } brightmaps[] = {
-    { "COMP2",    DOOM1AND2, blueandgreen   }, { "COMPSTA1", DOOM1AND2, notgray        },
-    { "COMPSTA2", DOOM1AND2, notgray        }, { "COMPUTE1", DOOM1AND2, notgrayorbrown },
-    { "COMPUTE2", DOOM1AND2, notgrayorbrown }, { "COMPUTE3", DOOM1AND2, notgrayorbrown },
-    { "EXITSIGN", DOOM1AND2, notgray        }, { "EXITSTON", DOOM1AND2, redonly        },
-    { "M_TEC",    DOOM2ONLY, greenonly2     }, { "PLANET1",  DOOM1AND2, notgray        },
-    { "PNK4EXIT", DOOM2ONLY, redonly        }, { "SILVER2",  DOOM1AND2, notgray        },
-    { "SILVER3",  DOOM1AND2, notgrayorbrown }, { "SLAD2",    DOOM2ONLY, notgrayorbrown },
-    { "SLAD3",    DOOM2ONLY, notgrayorbrown }, { "SLAD4",    DOOM2ONLY, notgrayorbrown },
-    { "SLAD5",    DOOM2ONLY, notgrayorbrown }, { "SLAD6",    DOOM2ONLY, notgrayorbrown },
-    { "SLAD7",    DOOM2ONLY, notgrayorbrown }, { "SLAD8",    DOOM2ONLY, notgrayorbrown },
-    { "SLAD9",    DOOM2ONLY, notgrayorbrown }, { "SLAD10",   DOOM2ONLY, notgrayorbrown },
-    { "SLAD11",   DOOM2ONLY, notgrayorbrown }, { "SLADSKUL", DOOM1AND2, redonly        },
-    { "SW1BRCOM", DOOM1AND2, redonly        }, { "SW1BRIK",  DOOM1AND2, redonly        },
-    { "SW1BRN1",  DOOM2ONLY, redonly        }, { "SW1COMM",  DOOM1AND2, redonly        },
-    { "SW1DIRT",  DOOM1AND2, redonly        }, { "SW1MET2",  DOOM1AND2, redonly        },
-    { "SW1STARG", DOOM2ONLY, redonly        }, { "SW1STON1", DOOM1AND2, redonly        },
-    { "SW1STON2", DOOM2ONLY, redonly        }, { "SW1STONE", DOOM1AND2, redonly        },
-    { "SW1STRTN", DOOM1AND2, redonly        }, { "SW2BLUE",  DOOM1AND2, redonly        },
-    { "SW2BRCOM", DOOM1AND2, greenonly2     }, { "SW2BRIK",  DOOM1AND2, greenonly1     },
-    { "SW2BRN1",  DOOM1AND2, greenonly2     }, { "SW2BRN2",  DOOM1AND2, greenonly1     },
-    { "SW2BRNGN", DOOM1AND2, greenonly3     }, { "SW2COMM",  DOOM1AND2, greenonly1     },
-    { "SW2COMP",  DOOM1AND2, redonly        }, { "SW2DIRT",  DOOM1AND2, greenonly2     },
-    { "SW2EXIT",  DOOM1AND2, notgray        }, { "SW2GARG",  DOOM1AND2, brighttan      },
-    { "SW2GRAY",  DOOM1AND2, notgray        }, { "SW2GRAY1", DOOM1AND2, notgray        },
-    { "SW2GSTON", DOOM1AND2, redonly        }, { "SW2LION",  DOOM1AND2, brighttan      },
-    { "SW2MARB",  DOOM2ONLY, redonly        }, { "SW2MET2",  DOOM1AND2, greenonly1     },
-    { "SW2METAL", DOOM1AND2, greenonly3     }, { "SW2MOD1",  DOOM1AND2, greenonly1     },
-    { "SW2PANEL", DOOM1AND2, redonly        }, { "SW2ROCK",  DOOM1AND2, redonly        },
-    { "SW2SATYR", DOOM1AND2, brighttan      }, { "SW2SLAD",  DOOM1AND2, redonly        },
-    { "SW2STARG", DOOM2ONLY, greenonly2     }, { "SW2STON1", DOOM1AND2, greenonly3     },
-    { "SW2STON2", DOOM1ONLY, redonly        }, { "SW2STON2", DOOM2ONLY, greenonly2     },
-    { "SW2STON6", DOOM1AND2, redonly        }, { "SW2STONE", DOOM1AND2, greenonly2     },
-    { "SW2STRTN", DOOM1AND2, greenonly1     }, { "SW2TEK",   DOOM1AND2, greenonly1     },
-    { "SW2VINE",  DOOM1AND2, greenonly1     }, { "SW2WOOD",  DOOM1AND2, redonly        },
-    { "SW2ZIM",   DOOM1AND2, redonly        }, { "WOOD4",    DOOM1AND2, redonly        },
-    { "WOODGARG", DOOM1AND2, redonly        }, { "WOODSKUL", DOOM1AND2, redonly        },
-    { "ZELDOOR",  DOOM1AND2, redonly        }, { "",         0,         0              }
+    { "BTNTMETL", DOOM2ONLY, notgrayorbrown  }, { "BTNTSLVR", DOOM2ONLY, notgrayorbrown  },
+    { "COMP2",    DOOM1AND2, blueandgreen    }, { "COMPSTA1", DOOM1AND2, notgray         },
+    { "COMPSTA2", DOOM1AND2, notgray         }, { "COMPUTE1", DOOM1AND2, notgrayorbrown  },
+    { "COMPUTE2", DOOM1AND2, notgrayorbrown  }, { "COMPUTE3", DOOM1AND2, notgrayorbrown  },
+    { "EXITSIGN", DOOM1AND2, notgray         }, { "EXITSTON", DOOM1AND2, redonly1        },
+    { "LITEBLU1", DOOM1AND2, notgray         }, { "LITEBLU2", DOOM1AND2, notgray         },
+    { "LITERED2", DOOM2ONLY, redonly1        }, { "LITEYEL2", DOOM2ONLY, yellowonly      },
+    { "LITEYEL3", DOOM2ONLY, yellowonly      }, { "M_TEC",    DOOM2ONLY, greenonly2      },
+    { "METAL3",   DOOM2ONLY, redonly1        }, { "PIPEWAL1", DOOM2ONLY, greenonly1      },
+    { "PLANET1",  DOOM1AND2, notgray         }, { "PNK4EXIT", DOOM2ONLY, redonly1        },
+    { "SILVER2",  DOOM1AND2, notgray         }, { "SILVER3",  DOOM1AND2, notgrayorbrown2 },
+    { "SLAD2",    DOOM2ONLY, notgrayorbrown  }, { "SLAD3",    DOOM2ONLY, notgrayorbrown  },
+    { "SLAD4",    DOOM2ONLY, notgrayorbrown  }, { "SLAD5",    DOOM2ONLY, notgrayorbrown  },
+    { "SLAD6",    DOOM2ONLY, notgrayorbrown  }, { "SLAD7",    DOOM2ONLY, notgrayorbrown  },
+    { "SLAD8",    DOOM2ONLY, notgrayorbrown  }, { "SLAD9",    DOOM2ONLY, notgrayorbrown  },
+    { "SLAD10",   DOOM2ONLY, notgrayorbrown  }, { "SLAD11",   DOOM2ONLY, notgrayorbrown  },
+    { "SLADRIP1", DOOM2ONLY, notgrayorbrown  }, { "SLADRIP3", DOOM2ONLY, notgrayorbrown  },
+    { "SLADSKUL", DOOM1AND2, redonly1        }, { "SPCDOOR3", DOOM2ONLY, greenonly1      },
+    { "SW1BRCOM", DOOM1AND2, redonly1        }, { "SW1BRIK",  DOOM1AND2, redonly1        },
+    { "SW1BRN1",  DOOM2ONLY, redonly1        }, { "SW1COMM",  DOOM1AND2, redonly1        },
+    { "SW1DIRT",  DOOM1AND2, redonly1        }, { "SW1MET2",  DOOM1AND2, redonly1        },
+    { "SW1STARG", DOOM2ONLY, redonly1        }, { "SW1STON1", DOOM1AND2, redonly1        },
+    { "SW1STON2", DOOM2ONLY, redonly1        }, { "SW1STONE", DOOM1AND2, redonly1        },
+    { "SW1STRTN", DOOM1AND2, redonly1        }, { "SW2BLUE",  DOOM1AND2, redonly1        },
+    { "SW2BRCOM", DOOM1AND2, greenonly2      }, { "SW2BRIK",  DOOM1AND2, greenonly1      },
+    { "SW2BRN1",  DOOM1AND2, greenonly2      }, { "SW2BRN2",  DOOM1AND2, greenonly1      },
+    { "SW2BRNGN", DOOM1AND2, greenonly3      }, { "SW2COMM",  DOOM1AND2, greenonly1      },
+    { "SW2COMP",  DOOM1AND2, redonly1        }, { "SW2DIRT",  DOOM1AND2, greenonly2      },
+    { "SW2EXIT",  DOOM1AND2, notgray         }, { "SW2GARG",  DOOM1AND2, brighttan       },
+    { "SW2GRAY",  DOOM1AND2, notgray         }, { "SW2GRAY1", DOOM1AND2, notgray         },
+    { "SW2GSTON", DOOM1AND2, redonly1        }, { "SW2HOT",   DOOM1AND2, redonly2        },
+    { "SW2LION",  DOOM1AND2, brighttan       }, { "SW2MARB",  DOOM2ONLY, redonly1        },
+    { "SW2MET2",  DOOM1AND2, greenonly1      }, { "SW2METAL", DOOM1AND2, greenonly3      },
+    { "SW2MOD1",  DOOM1AND2, greenonly1      }, { "SW2PANEL", DOOM1AND2, redonly1        },
+    { "SW2ROCK",  DOOM1AND2, redonly1        }, { "SW2SATYR", DOOM1AND2, brighttan       },
+    { "SW2SKULL", DOOM2ONLY, redandgreen     }, { "SW2SLAD",  DOOM1AND2, redonly1        },
+    { "SW2STARG", DOOM2ONLY, greenonly2      }, { "SW2STON1", DOOM1AND2, greenonly3      },
+    { "SW2STON2", DOOM1ONLY, redonly1        }, { "SW2STON2", DOOM2ONLY, greenonly2      },
+    { "SW2STON6", DOOM1AND2, redonly1        }, { "SW2STONE", DOOM1AND2, greenonly2      },
+    { "SW2STRTN", DOOM1AND2, greenonly1      }, { "SW2TEK",   DOOM1AND2, greenonly1      },
+    { "SW2VINE",  DOOM1AND2, greenonly1      }, { "SW2WOOD",  DOOM1AND2, redonly1        },
+    { "SW2ZIM",   DOOM1AND2, redonly1        }, { "WOOD4",    DOOM1AND2, redonly1        },
+    { "WOODGARG", DOOM1AND2, redonly1        }, { "WOODSKUL", DOOM1AND2, redonly1        },
+    { "ZELDOOR",  DOOM1AND2, redonly1        }, { "TEKLITE2", DOOM2ONLY, greenonly1      },
+    { "TEKBRON2", DOOM2ONLY, yellowonly      }, { "TEKWALL2", DOOM1ONLY, redonly1        },
+    { "TEKWALL5", DOOM1ONLY, redonly1        }, { "YELMETAL", DOOM2ONLY, yellowonly      },
+    { "",         0,         0               }
 };
 
 //
@@ -434,11 +490,13 @@ static void R_InitBrightmaps(void)
     if (BTSX || chex || FREEDOOM || hacx || REKKR)
         return;
 
-    for (int i = 0, game = brightmaps[i].game; brightmaps[i].mask; i++)
+    for (int i = 0; brightmaps[i].mask; i++)
         if (*brightmaps[i].texture
-            && (game == DOOM1AND2 || (gamemission == doom && game == DOOM1ONLY) || (gamemission != doom && game == DOOM2ONLY)))
+            && (brightmaps[i].game == DOOM1AND2
+                || (gamemission == doom && brightmaps[i].game == DOOM1ONLY)
+                || (gamemission != doom && brightmaps[i].game == DOOM2ONLY)))
         {
-            int num = R_CheckTextureNumForName(brightmaps[i].texture);
+            const int   num = R_CheckTextureNumForName(brightmaps[i].texture);
 
             if (num != -1)
                 brightmap[num] = brightmaps[i].mask;
@@ -488,7 +546,7 @@ static void R_InitFlats(void)
 //
 static void R_InitSpriteLumps(void)
 {
-    dboolean    fixspriteoffsets = false;
+    bool    fixspriteoffsets = false;
 
     SC_Open("DRCOMPAT");
 
@@ -598,6 +656,78 @@ static void R_InitSpriteLumps(void)
         M_StringCopy(weaponinfo[wp_bfg].name, "SKAG 1337", sizeof(weaponinfo[wp_bfg].name));
         M_StringCopy(weaponinfo[wp_chainsaw].name, "angle grinder", sizeof(weaponinfo[wp_chainsaw].name));
         M_StringCopy(weaponinfo[wp_supershotgun].name, "double-barreled shotgun", sizeof(weaponinfo[wp_supershotgun].name));
+
+        M_StringCopy(weaponinfo[wp_missile].ammoname, "missile", sizeof(weaponinfo[wp_missile].ammoname));
+        M_StringCopy(weaponinfo[wp_missile].ammoplural, "missiles", sizeof(weaponinfo[wp_missile].ammoplural));
+        M_StringCopy(weaponinfo[wp_plasma].ammoname, "polaric recharge", sizeof(weaponinfo[wp_plasma].ammoname));
+        M_StringCopy(weaponinfo[wp_plasma].ammoplural, "polaric recharges", sizeof(weaponinfo[wp_plasma].ammoplural));
+        M_StringCopy(weaponinfo[wp_bfg].ammoname, "polaric recharge", sizeof(weaponinfo[wp_bfg].ammoname));
+        M_StringCopy(weaponinfo[wp_bfg].ammoplural, "polaric recharges", sizeof(weaponinfo[wp_bfg].ammoplural));
+
+        M_StringCopy(mobjinfo[MT_MISC0].name1, "light armor vest", sizeof(mobjinfo[MT_MISC0].name1));
+        M_StringCopy(mobjinfo[MT_MISC0].plural1, "light armor vests", sizeof(mobjinfo[MT_MISC0].plural1));
+        M_StringCopy(mobjinfo[MT_MISC1].name1, "heavy armor vest", sizeof(mobjinfo[MT_MISC1].name1));
+        M_StringCopy(mobjinfo[MT_MISC1].plural1, "heavy armor vests", sizeof(mobjinfo[MT_MISC1].plural1));
+        M_StringCopy(mobjinfo[MT_MISC2].name1, "1% health bonus", sizeof(mobjinfo[MT_MISC2].name1));
+        M_StringCopy(mobjinfo[MT_MISC2].plural1, "1% health bonuses", sizeof(mobjinfo[MT_MISC2].plural1));
+        M_StringCopy(mobjinfo[MT_MISC3].name1, "1% armor bonus", sizeof(mobjinfo[MT_MISC3].name1));
+        M_StringCopy(mobjinfo[MT_MISC3].plural1, "1% armor bonuses", sizeof(mobjinfo[MT_MISC3].plural1));
+        M_StringCopy(mobjinfo[MT_MISC4].name1, "blue passcard", sizeof(mobjinfo[MT_MISC4].name1));
+        M_StringCopy(mobjinfo[MT_MISC4].plural1, "blue passcards", sizeof(mobjinfo[MT_MISC4].plural1));
+        M_StringCopy(mobjinfo[MT_MISC5].name1, "red passcard", sizeof(mobjinfo[MT_MISC5].name1));
+        M_StringCopy(mobjinfo[MT_MISC5].plural1, "red passcards", sizeof(mobjinfo[MT_MISC5].plural1));
+        M_StringCopy(mobjinfo[MT_MISC6].name1, "yellow passcard", sizeof(mobjinfo[MT_MISC6].name1));
+        M_StringCopy(mobjinfo[MT_MISC6].plural1, "yellow passcards", sizeof(mobjinfo[MT_MISC6].plural1));
+        M_StringCopy(mobjinfo[MT_MISC7].name1, "yellow skeleton key", sizeof(mobjinfo[MT_MISC7].name1));
+        M_StringCopy(mobjinfo[MT_MISC7].plural1, "yellow skeleton keys", sizeof(mobjinfo[MT_MISC7].plural1));
+        M_StringCopy(mobjinfo[MT_MISC8].name1, "red skeleton key", sizeof(mobjinfo[MT_MISC8].name1));
+        M_StringCopy(mobjinfo[MT_MISC8].plural1, "red skeleton keys", sizeof(mobjinfo[MT_MISC8].plural1));
+        M_StringCopy(mobjinfo[MT_MISC9].name1, "blue skeleton key", sizeof(mobjinfo[MT_MISC9].name1));
+        M_StringCopy(mobjinfo[MT_MISC9].plural1, "blue skeleton keys", sizeof(mobjinfo[MT_MISC9].plural1));
+        M_StringCopy(mobjinfo[MT_MISC10].name1, "small health pack", sizeof(mobjinfo[MT_MISC10].name1));
+        M_StringCopy(mobjinfo[MT_MISC10].plural1, "small health packs", sizeof(mobjinfo[MT_MISC10].plural1));
+        M_StringCopy(mobjinfo[MT_MISC11].name1, "large health pack", sizeof(mobjinfo[MT_MISC11].name1));
+        M_StringCopy(mobjinfo[MT_MISC11].plural1, "large health packs", sizeof(mobjinfo[MT_MISC11].plural1));
+        M_StringCopy(mobjinfo[MT_MISC12].name1, "overdrive sphere", sizeof(mobjinfo[MT_MISC12].name1));
+        M_StringCopy(mobjinfo[MT_MISC12].plural1, "overdrive spheres", sizeof(mobjinfo[MT_MISC12].plural1));
+        M_StringCopy(mobjinfo[MT_MISC13].name1, "steroids", sizeof(mobjinfo[MT_MISC13].name1));
+        M_StringCopy(mobjinfo[MT_MISC13].plural1, "steroids", sizeof(mobjinfo[MT_MISC13].plural1));
+        M_StringCopy(mobjinfo[MT_INS].name1, "stealth sphere", sizeof(mobjinfo[MT_INS].name1));
+        M_StringCopy(mobjinfo[MT_INS].plural1, "stealth spheres", sizeof(mobjinfo[MT_INS].plural1));
+        M_StringCopy(mobjinfo[MT_MISC14].name1, "hazard suit", sizeof(mobjinfo[MT_MISC14].name1));
+        M_StringCopy(mobjinfo[MT_MISC14].plural1, "hazard suits", sizeof(mobjinfo[MT_MISC14].plural1));
+        M_StringCopy(mobjinfo[MT_MISC15].name1, "tactical survey map", sizeof(mobjinfo[MT_MISC15].name1));
+        M_StringCopy(mobjinfo[MT_MISC15].plural1, "tactical survey maps", sizeof(mobjinfo[MT_MISC15].plural1));
+        M_StringCopy(mobjinfo[MT_MISC16].name1, "night vision goggles", sizeof(mobjinfo[MT_MISC16].name1));
+        M_StringCopy(mobjinfo[MT_MISC16].plural1, "night vision goggles", sizeof(mobjinfo[MT_MISC16].plural1));
+        M_StringCopy(mobjinfo[MT_MEGA].name1, "ultra-overdrive sphere", sizeof(mobjinfo[MT_MEGA].name1));
+        M_StringCopy(mobjinfo[MT_MEGA].plural1, "ultra-overdrive spheres", sizeof(mobjinfo[MT_MEGA].plural1));
+        M_StringCopy(mobjinfo[MT_CLIP].name1, "ammo clip", sizeof(mobjinfo[MT_CLIP].name1));
+        M_StringCopy(mobjinfo[MT_CLIP].plural1, "ammo clips", sizeof(mobjinfo[MT_CLIP].plural1));
+        M_StringCopy(mobjinfo[MT_MISC17].name1, "box of ammo", sizeof(mobjinfo[MT_MISC17].name1));
+        M_StringCopy(mobjinfo[MT_MISC17].plural1, "boxes of ammo", sizeof(mobjinfo[MT_MISC17].plural1));
+        M_StringCopy(mobjinfo[MT_MISC18].name1, "missile", sizeof(mobjinfo[MT_MISC18].name1));
+        M_StringCopy(mobjinfo[MT_MISC18].plural1, "missiles", sizeof(mobjinfo[MT_MISC18].plural1));
+        M_StringCopy(mobjinfo[MT_MISC19].name1, "crate of missiles", sizeof(mobjinfo[MT_MISC19].name1));
+        M_StringCopy(mobjinfo[MT_MISC19].plural1, "crates of missiles", sizeof(mobjinfo[MT_MISC19].plural1));
+        M_StringCopy(mobjinfo[MT_MISC20].name1, "small polaric recharge", sizeof(mobjinfo[MT_MISC20].name1));
+        M_StringCopy(mobjinfo[MT_MISC20].plural1, "small polaric recharges", sizeof(mobjinfo[MT_MISC20].plural1));
+        M_StringCopy(mobjinfo[MT_MISC21].name1, "large polaric recharge", sizeof(mobjinfo[MT_MISC21].name1));
+        M_StringCopy(mobjinfo[MT_MISC21].plural1, "large polaric recharges", sizeof(mobjinfo[MT_MISC21].plural1));
+        M_StringCopy(mobjinfo[MT_MISC25].name1, "SKAG 1337", sizeof(mobjinfo[MT_MISC25].name1));
+        M_StringCopy(mobjinfo[MT_MISC25].plural1, "SKAG 1337s", sizeof(mobjinfo[MT_MISC25].plural1));
+        M_StringCopy(mobjinfo[MT_CHAINGUN].name1, "minigun", sizeof(mobjinfo[MT_CHAINGUN].name1));
+        M_StringCopy(mobjinfo[MT_CHAINGUN].plural1, "miniguns", sizeof(mobjinfo[MT_CHAINGUN].plural1));
+        M_StringCopy(mobjinfo[MT_MISC26].name1, "angle grinder", sizeof(mobjinfo[MT_MISC26].name1));
+        M_StringCopy(mobjinfo[MT_MISC26].plural1, "angle grinders", sizeof(mobjinfo[MT_MISC26].plural1));
+        M_StringCopy(mobjinfo[MT_MISC27].name1, "missile launcher", sizeof(mobjinfo[MT_MISC27].name1));
+        M_StringCopy(mobjinfo[MT_MISC27].plural1, "missile launchers", sizeof(mobjinfo[MT_MISC27].plural1));
+        M_StringCopy(mobjinfo[MT_MISC28].name1, "polaric energy cannon", sizeof(mobjinfo[MT_MISC28].name1));
+        M_StringCopy(mobjinfo[MT_MISC28].plural1, "polaric energy cannons", sizeof(mobjinfo[MT_MISC28].plural1));
+        M_StringCopy(mobjinfo[MT_SHOTGUN].name1, "pump-action shotgun", sizeof(mobjinfo[MT_SHOTGUN].name1));
+        M_StringCopy(mobjinfo[MT_SHOTGUN].plural1, "pump-action shotguns", sizeof(mobjinfo[MT_SHOTGUN].plural1));
+        M_StringCopy(mobjinfo[MT_SUPERSHOTGUN].name1, "double-barreled shotgun", sizeof(mobjinfo[MT_SUPERSHOTGUN].name1));
+        M_StringCopy(mobjinfo[MT_SUPERSHOTGUN].plural1, "double-barreled shotguns", sizeof(mobjinfo[MT_SUPERSHOTGUN].plural1));
 
         M_StringCopy(mobjinfo[MT_POSSESSED].name1, "zombie", sizeof(mobjinfo[MT_POSSESSED].name1));
         M_StringCopy(mobjinfo[MT_POSSESSED].plural1, "zombies", sizeof(mobjinfo[MT_POSSESSED].plural1));
@@ -815,10 +945,9 @@ static void R_InitSpriteLumps(void)
 //
 static void R_InitColormaps(void)
 {
-    dboolean    COLORMAP = (W_CheckMultipleLumps("COLORMAP") > 1);
-    byte        *palsrc;
-    byte        *palette;
-    wadfile_t   *colormapwad;
+    bool        COLORMAP = (W_CheckMultipleLumps("COLORMAP") > 1);
+    byte        *palsrc = PLAYPAL;
+    wadfile_t   *colormapwad = lumpinfo[W_CheckNumForName("COLORMAP")]->wadfile;
 
     if (W_CheckNumForName("C_START") >= 0 && W_CheckNumForName("C_END") >= 0)
     {
@@ -834,8 +963,6 @@ static void R_InitColormaps(void)
         colormaps = Z_Malloc(sizeof(*colormaps), PU_STATIC, NULL);
 
     dc_colormap[1] = dc_nextcolormap[1] = colormaps[0] = W_CacheLumpName("COLORMAP");
-
-    colormapwad = lumpinfo[W_CheckNumForName("COLORMAP")]->wadfile;
 
     if (numcolormaps == 1)
         C_Output("Using the " BOLD("COLORMAP") " lump in the %s " BOLD("%s") ".",
@@ -853,8 +980,6 @@ static void R_InitColormaps(void)
                 (othercolormapwad->type == IWAD ? "IWAD" : "PWAD"), othercolormapwad->path);
     }
 
-    palsrc = palette = PLAYPAL;
-
     for (int i = 0; i < 255; i++)
     {
         double  red = *palsrc++;
@@ -862,12 +987,12 @@ static void R_InitColormaps(void)
         double  blue = *palsrc++;
         int     gray = (int)(red * 0.2126 + green * 0.7152 + blue * 0.0722);
 
-        grays[i] = FindNearestColor(palette, gray, gray, gray);
+        grays[i] = FindNearestColor(PLAYPAL, gray, gray, gray);
 
         if (!COLORMAP)
         {
             gray = 255 - gray;
-            colormaps[0][32 * 256 + i] = FindNearestColor(palette, gray, gray, gray);
+            colormaps[0][32 * 256 + i] = FindNearestColor(PLAYPAL, gray, gray, gray);
         }
     }
 }
@@ -993,7 +1118,7 @@ int R_TextureNumForName(char *name)
 // to avoid using alloca(), and to improve performance.
 void R_PrecacheLevel(void)
 {
-    dboolean    *hitlist = calloc(MAX(numtextures, numflats), sizeof(dboolean));
+    bool    *hitlist = calloc(MAX(numtextures, numflats), sizeof(bool));
 
     // Precache flats.
     for (int i = 0; i < numsectors; i++)

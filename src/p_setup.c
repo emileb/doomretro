@@ -9,8 +9,8 @@
   Copyright © 1993-2022 by id Software LLC, a ZeniMax Media company.
   Copyright © 2013-2022 by Brad Harding <mailto:brad@doomretro.com>.
 
-  DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
-  <https://github.com/bradharding/doomretro/wiki/CREDITS>.
+  DOOM Retro is a fork of Chocolate DOOM. For a list of acknowledgments,
+  see <https://github.com/bradharding/doomretro/wiki/ACKNOWLEDGMENTS>.
 
   This file is a part of DOOM Retro.
 
@@ -36,6 +36,7 @@
 ========================================================================
 */
 
+#include <math.h>
 #include <ctype.h>
 
 #include "am_map.h"
@@ -100,41 +101,46 @@
 #define MCMD_TITLEPATCH             32
 #define MCMD_ALLOWMONSTERTELEFRAGS  33
 #define MCMD_COMPAT_CORPSEGIBS      34
-#define MCMD_COMPAT_LIMITPAIN       35
+#define MCMD_COMPAT_VILEGHOSTS      35
+#define MCMD_COMPAT_LIMITPAIN       36
+#define MCMD_NOGRADUALLIGHTING      37
+#define MCMD_COMPAT_LIGHT           38
 
 typedef struct mapinfo_s mapinfo_t;
 
 struct mapinfo_s
 {
-    char        author[128];
-    int         cluster;
-    dboolean    endbunny;
-    dboolean    endcast;
-    dboolean    endgame;
-    int         endpic;
-    int         enterpic;
-    char        interbackdrop[9];
-    int         intermusic;
-    char        intertext[1024];
-    char        intertextsecret[1024];
-    int         liquid[NUMLIQUIDS];
-    int         music;
-    char        musiccomposer[128];
-    char        musictitle[128];
-    char        name[128];
-    int         next;
-    dboolean    nojump;
-    int         noliquid[NUMLIQUIDS];
-    dboolean    nomouselook;
-    int         par;
-    dboolean    pistolstart;
-    int         secretnext;
-    int         sky1texture;
-    int         sky1scrolldelta;
-    int         titlepatch;
-    dboolean    allowmonstertelefrags;
-    dboolean    compat_corpsegibs;
-    dboolean    compat_limitpain;
+    char    author[128];
+    int     cluster;
+    bool    endbunny;
+    bool    endcast;
+    bool    endgame;
+    int     endpic;
+    int     enterpic;
+    char    interbackdrop[9];
+    int     intermusic;
+    char    intertext[1024];
+    char    intertextsecret[1024];
+    int     liquid[NUMLIQUIDS];
+    int     music;
+    char    musiccomposer[128];
+    char    musictitle[128];
+    char    name[128];
+    int     next;
+    bool    nojump;
+    int     noliquid[NUMLIQUIDS];
+    bool    nomouselook;
+    int     par;
+    bool    pistolstart;
+    int     secretnext;
+    int     sky1texture;
+    int     sky1scrolldelta;
+    int     titlepatch;
+    bool    allowmonstertelefrags;
+    bool    compat_corpsegibs;
+    bool    compat_light;
+    bool    compat_limitpain;
+    bool    nograduallighting;
 };
 
 //
@@ -160,6 +166,7 @@ int                 numnodes;
 node_t              *nodes;
 
 int                 numlines;
+int                 numspeciallines;
 line_t              *lines;
 
 int                 numsides;
@@ -206,7 +213,7 @@ mobj_t              **blocklinks;
 int                 blockmapxneg = -257;
 int                 blockmapyneg = -257;
 
-dboolean            skipblstart;            // MaxW: Skip initial blocklist short
+bool                skipblstart;            // MaxW: Skip initial blocklist short
 
 // REJECT
 // For fast sight rejection.
@@ -255,7 +262,10 @@ static char *mapcmdnames[] =
     "TITLEPATCH",
     "ALLOWMONSTERTELEFRAGS",
     "COMPAT_CORPSEGIBS",
+    "COMPAT_VILEGHOSTS",
     "COMPAT_LIMITPAIN",
+    "NOGRADUALLIGHTING",
+    "COMPAT_LIGHT",
     NULL
 };
 
@@ -294,20 +304,23 @@ static int mapcmdids[] =
     MCMD_TITLEPATCH,
     MCMD_ALLOWMONSTERTELEFRAGS,
     MCMD_COMPAT_CORPSEGIBS,
-    MCMD_COMPAT_LIMITPAIN
+    MCMD_COMPAT_VILEGHOSTS,
+    MCMD_COMPAT_LIMITPAIN,
+    MCMD_NOGRADUALLIGHTING,
+    MCMD_COMPAT_LIGHT
 };
 
-dboolean        allowmonstertelefrags;
-dboolean        compat_corpsegibs;
-dboolean        compat_limitpain;
+bool            allowmonstertelefrags;
+bool            compat_corpsegibs;
+bool            compat_light;
+bool            compat_limitpain;
+bool            nograduallighting;
 
-dboolean        canmodify;
-dboolean        transferredsky;
+bool            canmodify;
+bool            transferredsky;
 static int      MAPINFO;
 
-dboolean        r_fixmaperrors = r_fixmaperrors_default;
-
-dboolean        samelevel;
+bool            samelevel;
 
 mapformat_t     mapformat;
 
@@ -318,12 +331,12 @@ const char *mapformats[] =
     ITALICS("ZDOOM") " extended (uncompressed)"
 };
 
-dboolean        boomcompatible;
-dboolean        mbfcompatible;
-dboolean        mbf21compatible = false;
-dboolean        blockmaprebuilt;
-dboolean        nojump = false;
-dboolean        nomouselook = false;
+bool            boomcompatible;
+bool            mbfcompatible;
+bool            mbf21compatible = false;
+bool            blockmaprebuilt;
+bool            nojump = false;
+bool            nomouselook = false;
 
 const char *linespecials[NUMLINESPECIALS] =
 {
@@ -704,6 +717,8 @@ static void P_CheckLinedefs(void)
 {
     line_t  *ld = lines;
 
+    numspeciallines = 0;
+
     for (int i = numlines; i--; ld++)
         if (!ld->special)
         {
@@ -758,6 +773,8 @@ static void P_CheckLinedefs(void)
                 free(temp2);
                 free(temp3);
             }
+            else
+                numspeciallines++;
         }
 }
 
@@ -1788,12 +1805,12 @@ static void P_LoadThings(int map, int lump)
     for (thingid = 0; thingid < numthings; thingid++)
     {
         mapthing_t  mt = data[thingid];
-        dboolean    spawn = true;
-        short       type = SHORT(mt.type);
+        bool        spawn = true;
+        const short type = SHORT(mt.type);
 
         if (gamemode != commercial && type >= ArchVile && type <= MonstersSpawner && W_CheckMultipleLumps("DEHACKED") == 1)
         {
-            int         doomednum = P_FindDoomedNum(type);
+            const int   doomednum = P_FindDoomedNum(type);
             static char buffer[128];
 
             M_StringCopy(buffer, mobjinfo[doomednum].plural1, sizeof(buffer));
@@ -1863,14 +1880,12 @@ static void P_LoadThings(int map, int lump)
             mobj_t  *thing;
 
             // Change each Wolfenstein SS into Zombiemen in BFG Edition
-            if (mt.type == WolfensteinSS && !allowwolfensteinss && !states[S_SSWV_STND].dehacked)
+            if (mt.type == WolfensteinSS && !allowwolfensteinss)
                 mt.type = Zombieman;
 
             if ((thing = P_SpawnMapThing(&mt, !nomonsters)))
             {
-                int flags = thing->flags;
-
-                if ((flags & MF_TOUCHY) || (flags & MF_BOUNCES) || (flags & MF_FRIEND))
+                if (thing->flags & (MF_TOUCHY | MF_BOUNCES | MF_FRIEND))
                     mbfcompatible = true;
 
                 thing->id = thingid;
@@ -1904,6 +1919,11 @@ static void P_LoadLineDefs(int lump)
 
         ld->id = i;
         ld->flags = (unsigned short)SHORT(mld->flags);
+
+        // [BH] Fix some linedefs in E2M7 only due to MBF21's ML_BLOCKPLAYERS flag
+        if (E2M7)
+            ld->flags = ((unsigned int)ld->flags & 0x03FF);
+
         ld->special = SHORT(mld->special);
         ld->tag = SHORT(mld->tag);
         v1 = ld->v1 = &vertexes[(unsigned short)SHORT(mld->v1)];
@@ -1981,7 +2001,7 @@ static void P_LoadLineDefs2(void)
             char    *temp = commify(ld->id);
 
             C_Warning(2, "Linedef %s is missing its first sidedef.", temp);
-            ld->sidenum[0] = 0;                         // Substitute dummy sidedef for missing right side
+            ld->sidenum[0] = 0;                                 // Substitute dummy sidedef for missing right side
             free(temp);
         }
 
@@ -1990,7 +2010,7 @@ static void P_LoadLineDefs2(void)
             char    *temp = commify(ld->id);
 
             C_Warning(2, "Linedef %s has the two-sided flag set but no second sidedef.", temp);
-            ld->flags &= ~ML_TWOSIDED;                  // Clear 2s flag for missing left side
+            ld->flags &= ~ML_TWOSIDED;                          // Clear 2s flag for missing left side
             free(temp);
         }
 
@@ -2000,15 +2020,15 @@ static void P_LoadLineDefs2(void)
         // killough 04/11/98: handle special types
         switch (ld->special)
         {
-            case Translucent_MiddleTexture:             // killough 04/11/98: translucent 2s textures
+            case Translucent_MiddleTexture:                     // killough 04/11/98: translucent 2s textures
             {
-                int lump = sides[*ld->sidenum].special; // translucency from sidedef
+                const int   lump = sides[*ld->sidenum].special; // translucency from sidedef
 
-                if (!ld->tag)                           // if tag == 0,
-                    ld->tranlump = lump;                // affect this linedef only
+                if (!ld->tag)                                   // if tag == 0,
+                    ld->tranlump = lump;                        // affect this linedef only
                 else
-                    for (int j = 0; j < numlines; j++)  // if tag != 0,
-                        if (lines[j].tag == ld->tag)    // affect all matching linedefs
+                    for (int j = 0; j < numlines; j++)          // if tag != 0,
+                        if (lines[j].tag == ld->tag)            // affect all matching linedefs
                             lines[j].tranlump = lump;
 
                 break;
@@ -2107,10 +2127,10 @@ static void P_LoadSideDefs2(int lump)
 //
 // haleyjd 03/04/10: do verification on validity of blockmap.
 //
-static dboolean P_VerifyBlockMap(int count)
+static bool P_VerifyBlockMap(int count)
 {
-    dboolean    isvalid = true;
-    int         *maxoffs = blockmaplump + count;
+    bool    isvalid = true;
+    int     *maxoffs = blockmaplump + count;
 
     skipblstart = true;
 
@@ -2444,8 +2464,8 @@ static void P_LoadBlockMap(int lump)
 //
 static void RejectOverrun(int lump, const byte **matrix)
 {
-    unsigned int    required = (numsectors * numsectors + 7) / 8;
-    unsigned int    length = W_LumpLength(lump);
+    const size_t    required = (numsectors * numsectors + 7) / 8;
+    const size_t    length = W_LumpLength(lump);
 
     if (length < required)
     {
@@ -2651,12 +2671,12 @@ static void P_RemoveSlimeTrails(void)                   // killough 10/98
                     if (v != l->v1 && v != l->v2)       // Exclude endpoints of linedefs
                     {
                         // Project the vertex back onto the parent linedef
-                        int64_t dx2 = (int64_t)(l->dx >> FRACBITS) * (l->dx >> FRACBITS);
-                        int64_t dy2 = (int64_t)(l->dy >> FRACBITS) * (l->dy >> FRACBITS);
-                        int64_t dxy = (int64_t)(l->dx >> FRACBITS) * (l->dy >> FRACBITS);
-                        int64_t s = dx2 + dy2;
-                        int     x0 = v->x, y0 = v->y;
-                        int     x1 = l->v1->x, y1 = l->v1->y;
+                        const int64_t   dx2 = (int64_t)(l->dx >> FRACBITS) * (l->dx >> FRACBITS);
+                        const int64_t   dy2 = (int64_t)(l->dy >> FRACBITS) * (l->dy >> FRACBITS);
+                        const int64_t   dxy = (int64_t)(l->dx >> FRACBITS) * (l->dy >> FRACBITS);
+                        const int64_t   s = dx2 + dy2;
+                        const int       x0 = v->x, y0 = v->y;
+                        const int       x1 = l->v1->x, y1 = l->v1->y;
 
                         v->x = (fixed_t)((dx2 * x0 + dy2 * x1 + dxy * ((int64_t)y0 - y1)) / s);
                         v->y = (fixed_t)((dy2 * y0 + dx2 * y1 + dxy * ((int64_t)x0 - x1)) / s);
@@ -2707,8 +2727,8 @@ char    automaptitle[512];
 // Determine map name to use
 void P_MapName(int ep, int map)
 {
-    dboolean    mapnumonly = false;
-    char        *mapinfoname = trimwhitespace(P_GetMapName((ep - 1) * 10 + map));
+    bool    mapnumonly = false;
+    char    *mapinfoname = trimwhitespace(P_GetMapName((ep - 1) * 10 + map));
 
     switch (gamemission)
     {
@@ -2725,7 +2745,7 @@ void P_MapName(int ep, int map)
                 M_StringCopy(mapnumandtitle, mapnum, sizeof(mapnumandtitle));
                 M_StringCopy(automaptitle, mapnum, sizeof(mapnumandtitle));
             }
-            else
+            else if (map <= nummapnames)
                 M_StringCopy(maptitle, trimwhitespace(*mapnames[(ep - 1) * 9 + map - 1]), sizeof(maptitle));
 
             break;
@@ -2742,9 +2762,10 @@ void P_MapName(int ep, int map)
                 M_StringCopy(mapnumandtitle, mapnum, sizeof(mapnumandtitle));
                 M_StringCopy(automaptitle, mapnum, sizeof(mapnumandtitle));
             }
-            else
-                M_StringCopy(maptitle, trimwhitespace(bfgedition && (!modifiedgame || nerve) ?
-                    *mapnames2_bfg[map - 1] : *mapnames2[map - 1]), sizeof(maptitle));
+            else if (bfgedition && (!modifiedgame || nerve) && map <= nummapnames2_bfg)
+                M_StringCopy(maptitle, trimwhitespace(*mapnames2_bfg[map - 1]), sizeof(maptitle));
+            else if (map <= nummapnames2)
+                M_StringCopy(maptitle, trimwhitespace(*mapnames2[map - 1]), sizeof(maptitle));
 
             break;
 
@@ -2753,7 +2774,7 @@ void P_MapName(int ep, int map)
 
             if (*mapinfoname)
                 M_StringCopy(maptitle, mapinfoname, sizeof(maptitle));
-            else
+            else if (map <= nummapnamesn)
                 M_StringCopy(maptitle, trimwhitespace(*mapnamesn[map - 1]), sizeof(maptitle));
 
             break;
@@ -2770,7 +2791,7 @@ void P_MapName(int ep, int map)
                 M_StringCopy(mapnumandtitle, mapnum, sizeof(mapnumandtitle));
                 M_StringCopy(automaptitle, mapnum, sizeof(mapnumandtitle));
             }
-            else
+            else if (map <= nummapnamesp)
                 M_StringCopy(maptitle, trimwhitespace(*mapnamesp[map - 1]), sizeof(maptitle));
 
             break;
@@ -2787,7 +2808,7 @@ void P_MapName(int ep, int map)
                 M_StringCopy(mapnumandtitle, mapnum, sizeof(mapnumandtitle));
                 M_StringCopy(automaptitle, mapnum, sizeof(mapnumandtitle));
             }
-            else
+            else if (map <= nummapnamest)
                 M_StringCopy(maptitle, trimwhitespace(*mapnamest[map - 1]), sizeof(maptitle));
 
             break;
@@ -2817,8 +2838,8 @@ void P_MapName(int ep, int map)
 
         if (pos)
         {
-            int     index = (int)(pos - maptitle) + 1;
-            char    *temp;
+            const int   index = (int)(pos - maptitle) + 1;
+            char        *temp;
 
             if (M_StringStartsWith(maptitle, "LEVEL"))
             {
@@ -2943,11 +2964,11 @@ void P_SetupLevel(int ep, int map)
         || (!M_StringStartsWith(console[consolestrings - 1].string, "map ")
             && !M_StringStartsWith(console[consolestrings - 1].string, "load ")
             && !M_StringStartsWith(console[consolestrings - 1].string, "newgame")
-            && !M_StringStartsWith(console[consolestrings - 1].string, "idclev")
+            && !M_StringStartsWith(console[consolestrings - 1].string, "Warping ")
             && !M_StringCompare(console[consolestrings - 1].string, "restartmap")))
         && ((consolestrings == 1
             || (!M_StringStartsWith(console[consolestrings - 2].string, "map ")
-                && !M_StringStartsWith(console[consolestrings - 2].string, "idclev")))))
+                && !M_StringStartsWith(console[consolestrings - 2].string, "Warping ")))))
         C_Input("map %s", lumpname);
 
     if (!(samelevel = (lumpnum == prevlumpnum)))
@@ -2984,7 +3005,8 @@ void P_SetupLevel(int ep, int map)
     free(temp1);
 
     leveltime = 0;
-    animatedliquiddiff = 2 * FRACUNIT;
+    animatedliquidtic = 0;
+    animatedliquiddiff = 2 * FRACUNIT + animatedliquiddiffs[M_BigRandom() & 63];
     animatedliquidxdir = M_BigRandomInt(-FRACUNIT, FRACUNIT) / 12;
     animatedliquidydir = M_BigRandomInt(-FRACUNIT, FRACUNIT) / 12;
 
@@ -3050,10 +3072,11 @@ void P_SetupLevel(int ep, int map)
     markpoints = NULL;
 
     pathpointnum = 0;
-    pathpointnum_max = 0;
-    pathpoints = NULL;
+    pathpointnum_max = 1024;
+    pathpoints = I_Realloc(pathpoints, pathpointnum_max * sizeof(*pathpoints));
 
     massacre = false;
+
     map = (ep - 1) * 10 + map;
 
     P_GetMapLiquids(map);
@@ -3081,6 +3104,8 @@ void P_SetupLevel(int ep, int map)
     allowmonstertelefrags = mapinfo[map].allowmonstertelefrags;
     compat_corpsegibs = mapinfo[map].compat_corpsegibs;
     compat_limitpain = mapinfo[map].compat_limitpain;
+    compat_light = mapinfo[map].compat_light;
+    nograduallighting = mapinfo[map].nograduallighting;
 }
 
 static int  liquidlumps;
@@ -3128,14 +3153,15 @@ static void P_ParseMapInfo(char *scriptname)
 {
     int         mapmax = 1;
     int         mcmdvalue;
+    int         mapinfolump;
     mapinfo_t   *info;
     char        *temp1;
     char        *temp2;
 
-    if (W_CheckNumForName(scriptname) < 0)
+    if ((mapinfolump = W_CheckNumForName(scriptname)) < 0)
         return;
 
-    MAPINFO = 1;
+    MAPINFO = mapinfolump;
 
     SC_Open(scriptname);
 
@@ -3516,11 +3542,20 @@ static void P_ParseMapInfo(char *scriptname)
                             break;
 
                         case MCMD_COMPAT_CORPSEGIBS:
+                        case MCMD_COMPAT_VILEGHOSTS:
                             info->compat_corpsegibs = true;
                             break;
 
                         case MCMD_COMPAT_LIMITPAIN:
                             info->compat_limitpain = true;
+                            break;
+
+                        case MCMD_NOGRADUALLIGHTING:
+                            info->nograduallighting = true;
+                            break;
+
+                        case MCMD_COMPAT_LIGHT:
+                            info->compat_light = true;
                             break;
                     }
             }
@@ -3575,17 +3610,17 @@ char *P_GetInterSecretText(int map)
     return mapinfo[map].intertextsecret;
 }
 
-dboolean P_GetMapEndBunny(int map)
+bool P_GetMapEndBunny(int map)
 {
     return mapinfo[map].endbunny;
 }
 
-dboolean P_GetMapEndCast(int map)
+bool P_GetMapEndCast(int map)
 {
     return mapinfo[map].endcast;
 }
 
-dboolean P_GetMapEndGame(int map)
+bool P_GetMapEndGame(int map)
 {
     return mapinfo[map].endgame;
 }
@@ -3632,7 +3667,7 @@ int P_GetMapNext(int map)
     return mapinfo[map].next;
 }
 
-dboolean P_GetMapNoJump(int map)
+bool P_GetMapNoJump(int map)
 {
     return (MAPINFO >= 0 ? mapinfo[map].nojump : nojump);
 }
@@ -3643,7 +3678,7 @@ void P_GetMapNoLiquids(int map)
         terraintypes[mapinfo[map].noliquid[i]] = SOLID;
 }
 
-dboolean P_GetMapNoMouselook(int map)
+bool P_GetMapNoMouselook(int map)
 {
     return (MAPINFO >= 0 ? mapinfo[map].nomouselook : nomouselook);
 }
@@ -3653,7 +3688,7 @@ int P_GetMapPar(int map)
     return mapinfo[map].par;
 }
 
-dboolean P_GetMapPistolStart(int map)
+bool P_GetMapPistolStart(int map)
 {
     return mapinfo[map].pistolstart;
 }

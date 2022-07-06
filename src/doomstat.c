@@ -9,8 +9,8 @@
   Copyright © 1993-2022 by id Software LLC, a ZeniMax Media company.
   Copyright © 2013-2022 by Brad Harding <mailto:brad@doomretro.com>.
 
-  DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
-  <https://github.com/bradharding/doomretro/wiki/CREDITS>.
+  DOOM Retro is a fork of Chocolate DOOM. For a list of acknowledgments,
+  see <https://github.com/bradharding/doomretro/wiki/ACKNOWLEDGMENTS>.
 
   This file is a part of DOOM Retro.
 
@@ -43,73 +43,73 @@ GameMode_t      gamemode = indetermined;
 GameMission_t   gamemission = doom;
 char            gamedescription[255];
 
-dboolean        sigil;
-dboolean        autosigil = false;
-dboolean        buckethead = false;
-dboolean        nerve;
-dboolean        bfgedition;
-dboolean        unity;
+bool            sigil;
+bool            autosigil = false;
+bool            buckethead = false;
+bool            nerve;
+bool            bfgedition;
+bool            unity;
 
-dboolean        chex;
-dboolean        chex1;
-dboolean        chex2;
-dboolean        hacx;
-dboolean        BTSX;
-dboolean        BTSXE1;
-dboolean        BTSXE1A;
-dboolean        BTSXE1B;
-dboolean        BTSXE2;
-dboolean        BTSXE2A;
-dboolean        BTSXE2B;
-dboolean        BTSXE3;
-dboolean        BTSXE3A;
-dboolean        BTSXE3B;
-dboolean        E1M4B;
-dboolean        E1M8B;
-dboolean        onehumanity;
-dboolean        sprfix18;
-dboolean        eviternity;
-dboolean        doom4vanilla;
-dboolean        REKKR;
-dboolean        REKKRSA;
-dboolean        REKKRSL;
+bool            chex;
+bool            chex1;
+bool            chex2;
+bool            hacx;
+bool            BTSX;
+bool            BTSXE1;
+bool            BTSXE1A;
+bool            BTSXE1B;
+bool            BTSXE2;
+bool            BTSXE2A;
+bool            BTSXE2B;
+bool            BTSXE3;
+bool            BTSXE3A;
+bool            BTSXE3B;
+bool            E1M4B;
+bool            E1M8B;
+bool            onehumanity;
+bool            sprfix18;
+bool            eviternity;
+bool            doom4vanilla;
+bool            REKKR;
+bool            REKKRSA;
+bool            REKKRSL;
 
-dboolean        moreblood;
+bool            moreblood;
 
 // Set if homebrew PWAD stuff has been added.
-dboolean        modifiedgame = false;
+bool            modifiedgame = false;
 
-dboolean        DMENUPIC = false;
-dboolean        DSSECRET;
-dboolean        FREEDOOM;
-dboolean        FREEDM;
-dboolean        M_DOOM;
-dboolean        M_EPISOD;
-dboolean        M_GDHIGH;
-dboolean        M_GDLOW;
-dboolean        M_LGTTL;
-dboolean        M_LOADG;
-dboolean        M_LSCNTR;
-dboolean        M_MSENS;
-dboolean        M_MSGOFF;
-dboolean        M_MSGON;
-dboolean        M_NEWG;
-dboolean        M_NGAME;
-dboolean        M_NMARE;
-dboolean        M_OPTTTL;
-dboolean        M_PAUSE;
-dboolean        M_SAVEG;
-dboolean        M_SGTTL;
-dboolean        M_SKILL;
-dboolean        M_SKULL1;
-dboolean        M_SVOL;
+bool            DMENUPIC = false;
+bool            DSSECRET;
+bool            FREEDOOM;
+bool            FREEDM;
+bool            M_DOOM;
+bool            M_EPISOD;
+bool            M_GDHIGH;
+bool            M_GDLOW;
+bool            M_LGTTL;
+bool            M_LOADG;
+bool            M_LSCNTR;
+bool            M_MSENS;
+bool            M_MSGOFF;
+bool            M_MSGON;
+bool            M_NEWG;
+bool            M_NGAME;
+bool            M_NMARE;
+bool            M_OPTTTL;
+bool            M_PAUSE;
+bool            M_SAVEG;
+bool            M_SGTTL;
+bool            M_SKILL;
+bool            M_SKULL1;
+bool            M_SVOL;
 short           RROCK05;
 short           RROCK08;
 short           SLIME09;
 short           SLIME12;
-dboolean        STCFN034;
-dboolean        STYSNUM0;
-dboolean        WISCRT2;
+bool            STCFN034;
+bool            STYSNUM0;
+bool            WISCRT2;
 
 int             PLAYPALs;
 int             STBARs;

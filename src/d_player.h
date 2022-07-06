@@ -9,8 +9,8 @@
   Copyright © 1993-2022 by id Software LLC, a ZeniMax Media company.
   Copyright © 2013-2022 by Brad Harding <mailto:brad@doomretro.com>.
 
-  DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
-  <https://github.com/bradharding/doomretro/wiki/CREDITS>.
+  DOOM Retro is a fork of Chocolate DOOM. For a list of acknowledgments,
+  see <https://github.com/bradharding/doomretro/wiki/ACKNOWLEDGMENTS>.
 
   This file is a part of DOOM Retro.
 
@@ -141,7 +141,7 @@ typedef struct player_s
     int             cards[NUMCARDS];
     int             neededcard;
     int             neededcardflash;
-    dboolean        backpack;
+    bool            backpack;
 
     weapontype_t    readyweapon;
 
@@ -153,8 +153,8 @@ typedef struct player_s
     int             maxammo[NUMAMMO];
 
     // True if button down last tic.
-    dboolean        attackdown;
-    dboolean        usedown;
+    bool            attackdown;
+    bool            usedown;
 
     // Bit flags, for cheats and debug.
     // See cheat_t, above.
@@ -191,12 +191,12 @@ typedef struct player_s
     pspdef_t        psprites[NUMPSPRITES];
 
     // True if secret level has been done.
-    dboolean        didsecret;
+    bool            didsecret;
 
     weapontype_t    preferredshotgun;
     weapontype_t    fistorchainsaw;
-    dboolean        invulnbeforechoppers;
-    dboolean        chainsawbeforechoppers;
+    bool            invulnbeforechoppers;
+    bool            chainsawbeforechoppers;
     weapontype_t    weaponbeforechoppers;
 
     // [AM] Previous position of viewz before think.
@@ -232,7 +232,9 @@ typedef struct player_s
     int             itemspickedup_armor;
     int             itemspickedup_health;
     int             infightcount;
+    int             respawncount;
     int             resurrectioncount;
+    int             telefragcount;
     int             automapopened;
 } player_t;
 
@@ -245,7 +247,7 @@ typedef struct
     int             epsd;           // episode # (0-2)
 
     // if true, splash the secret level
-    dboolean        didsecret;
+    bool            didsecret;
 
     // previous and next levels, origin 0
     int             last;

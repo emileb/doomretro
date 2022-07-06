@@ -9,8 +9,8 @@
   Copyright © 1993-2022 by id Software LLC, a ZeniMax Media company.
   Copyright © 2013-2022 by Brad Harding <mailto:brad@doomretro.com>.
 
-  DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
-  <https://github.com/bradharding/doomretro/wiki/CREDITS>.
+  DOOM Retro is a fork of Chocolate DOOM. For a list of acknowledgments,
+  see <https://github.com/bradharding/doomretro/wiki/ACKNOWLEDGMENTS>.
 
   This file is a part of DOOM Retro.
 
@@ -68,20 +68,11 @@
 #define LINEHEIGHT  17
 #define OFFSET      17
 
-int             episode = episode_default;
-int             expansion = expansion_default;
-int             m_sensitivity = m_sensitivity_default;
-dboolean        messages = messages_default;
-int             r_detail = r_detail_default;
-int             r_screensize = r_screensize_default;
-int             savegame = savegame_default;
-int             skilllevel = skilllevel_default;
-
 // -1 = no quicksave slot picked!
 int             quickSaveSlot;
 
 // true = message to be printed
-dboolean        messagetoprint;
+bool            messagetoprint;
 // ...and here is the message string!
 static char     *messageString;
 
@@ -89,25 +80,25 @@ static int      messageLastMenuActive;
 
 // timed message = no input from user
 #ifdef __ANDROID__
-dboolean messageNeedsInput; //Make global
+bool messageNeedsInput; //Make global
 #else
-static dboolean messageNeedsInput;
+static bool     messageNeedsInput;
 #endif
 
 static void (*messageRoutine)(int);
 
 // we are going to be entering a savegame string
-static dboolean saveStringEnter;
+static bool     saveStringEnter;
 static int      saveSlot;               // which slot to save in
 static int      saveCharIndex;          // which char we're editing
 
 // old save description before edit
 static char     saveOldString[SAVESTRINGSIZE];
 
-dboolean        inhelpscreens;
-dboolean        menuactive;
-dboolean        savegames;
-dboolean        quitting;
+bool            inhelpscreens = false;
+bool            menuactive;
+bool            savegames;
+bool            quitting;
 
 char            savegamestrings[6][SAVESTRINGSIZE];
 
@@ -117,7 +108,7 @@ static short    whichSkull;             // which skull to draw
 
 static int      functionkey;
 
-static dboolean usinggamecontroller;
+static bool     usinggamecontroller;
 
 // current menudef
 static menu_t   *currentMenu;
@@ -166,7 +157,7 @@ static void M_DrawSave(void);
 static void M_DrawSaveLoadBorder(int x, int y);
 static void M_SetupNextMenu(menu_t *menudef);
 static void M_DrawThermo(int x, int y, int thermWidth, float thermDot, float factor, int offset);
-static void M_WriteText(int x, int y, char *string, dboolean shadow);
+static void M_WriteText(int x, int y, char *string, bool shadow);
 
 //
 // DOOM MENU
@@ -465,9 +456,9 @@ static void BlurScreen(byte *src, byte *dest, int width, int area)
         for (int x = y + width - 2; x > y; x--)
             dest[x] = tinttab50[(dest[x - 1] << 8) + dest[x]];
 
-    for (int y = width; y <= area - width * 3; y += width)
-        for (int x = y; x <= y + width - 3; x++)
-            dest[x] = tinttab50[(dest[x + width * ((M_BigRandom() & 3) - 1) + (M_BigRandom() & 3) - 1] << 8) + dest[x]];
+    for (int y = width; y <= area - width * 2; y += width)
+        for (int x = y + 6; x <= y + width - 6; x++)
+            dest[x] = tinttab50[(dest[width * M_BigRandomInt(-1, 1) + x + M_BigRandomInt(-6, 6)] << 8) + dest[x]];
 
     for (int y = area - width; y >= width; y -= width)
         for (int x = y + width - 1; x >= y + 1; x--)
@@ -502,18 +493,12 @@ void M_DarkBackground(void)
 
     if (gametime != blurtic)
     {
-        if (vid_widescreen)
-        {
-            for (int y = 2 * SCREENWIDTH; y < SCREENAREA; y += 4 * SCREENWIDTH)
-                for (int x = 0; x < SCREENWIDTH; x++)
-                {
-                    byte    *dot = *screens + x + y;
+        int indent = 0;
 
-                    *dot = white25[*dot];
-                }
-        }
-        else
+        if (!vid_widescreen)
         {
+            indent = 2;
+
             for (int i = 0; i < SCREENAREA; i += SCREENWIDTH)
             {
                 screens[0][i] = nearestblack;
@@ -521,14 +506,18 @@ void M_DarkBackground(void)
                 screens[0][i + SCREENWIDTH - 2] = nearestblack;
                 screens[0][i + SCREENWIDTH - 1] = nearestblack;
             }
+        }
 
-            for (int y = 2 * SCREENWIDTH; y < SCREENAREA; y += 4 * SCREENWIDTH)
-                for (int x = 2; x < SCREENWIDTH - 2; x++)
-                {
-                    byte    *dot = *screens + x + y;
+        for (int y = 2 * SCREENWIDTH; y < SCREENAREA; y += 4 * SCREENWIDTH)
+        {
+            byte    *tinttab = (M_BigRandomInt(1, 100) < 4 ? tinttab33 : tinttab25);
 
-                    *dot = white25[*dot];
-                }
+            for (int x = indent; x < SCREENWIDTH - indent; x++)
+            {
+                byte    *dot = *screens + x + y;
+
+                *dot = tinttab[(nearestwhite << 8) + *dot];
+            }
         }
 
         BlurScreen(screens[0], blurscreen1, SCREENWIDTH, SCREENAREA);
@@ -603,7 +592,7 @@ static void M_DarkBlueBackground(void)
 // M_DrawChar
 //  draw a character on screen
 //
-static void M_DrawChar(int x, int y, int i, dboolean overlapping)
+static void M_DrawChar(int x, int y, int i, bool overlapping)
 {
     int w = (int)strlen(redcharset[i]) / 18;
 
@@ -677,13 +666,13 @@ static struct
 void M_DrawString(int x, int y, char *string)
 {
     static char prev;
-    int         len = (int)strlen(string);
+    const int   len = (int)strlen(string);
 
     for (int i = 0; i < len; i++)
     {
-        int         j = -1;
-        int         k = 0;
-        dboolean    overlapping = false;
+        int     j = -1;
+        int     k = 0;
+        bool    overlapping = false;
 
         if (string[i] < 123)
             j = chartoi[(int)string[i]];
@@ -732,7 +721,7 @@ static int M_BigStringWidth(char *string)
 {
     int         w = 0;
     static char prev;
-    int         len = (int)strlen(string);
+    const int   len = (int)strlen(string);
 
     for (int i = 0; i < len; i++)
     {
@@ -769,7 +758,7 @@ void M_DrawCenteredString(int y, char *string)
 //
 static void M_SplitString(char *string)
 {
-    int len = (int)strlen(string);
+    const int   len = (int)strlen(string);
 
     for (int i = len / 2 - 1; i < len; i++)
         if (string[i] == ' ')
@@ -864,7 +853,7 @@ static byte saveg_read8(FILE *file)
 //
 // M_CheckSaveGame
 //
-static dboolean M_CheckSaveGame(int *ep, int *map, int slot)
+static bool M_CheckSaveGame(int *ep, int *map, int slot)
 {
     FILE    *file = fopen(P_SaveGameFile(slot), "rb");
     int     mission;
@@ -1003,11 +992,37 @@ static void M_DrawLoad(void)
 
     for (int i = 0; i < load_end; i++)
     {
-        int y = LoadDef.y + LINEHEIGHT * i + OFFSET;
+        int     y = LoadDef.y + LINEHEIGHT * i + OFFSET;
+        int     len;
+        char    buffer[SAVESTRINGSIZE];
 
         M_DrawSaveLoadBorder(LoadDef.x - 11, y - 4);
-        M_WriteText(LoadDef.x - 2 + (M_StringCompare(savegamestrings[i], s_EMPTYSTRING) && s_EMPTYSTRING[0] == '-'
-            && s_EMPTYSTRING[1] == '\0') * 6, y - !M_LSCNTR, savegamestrings[i], false);
+
+        M_StringCopy(buffer, savegamestrings[i], sizeof(buffer));
+        len = (int)strlen(buffer);
+
+        while (M_StringWidth(buffer) > SAVESTRINGPIXELWIDTH)
+        {
+            if (len >= 2 && buffer[len - 2] == ' ')
+            {
+                buffer[len - 2] = '.';
+                buffer[len - 1] = '.';
+                buffer[len] = '.';
+                buffer[len + 1] = '\0';
+            }
+            else if (len >= 1)
+            {
+                buffer[len - 1] = '.';
+                buffer[len] = '.';
+                buffer[len + 1] = '.';
+                buffer[len + 2] = '\0';
+            }
+
+            len--;
+        }
+
+        M_WriteText(LoadDef.x - 2 + (M_StringCompare(buffer, s_EMPTYSTRING) && s_EMPTYSTRING[0] == '-'
+            && s_EMPTYSTRING[1] == '\0') * 6, y - !M_LSCNTR, buffer, false);
     }
 }
 
@@ -1032,7 +1047,7 @@ static void M_LoadSelect(int choice)
     else
     {
         C_ShowConsole();
-        C_Warning(1, "This savegame requires a different WAD.");
+        C_Warning(0, "This savegame requires a different WAD.");
     }
 
     M_ClearMenus();
@@ -1047,9 +1062,9 @@ static void M_LoadGame(int choice)
     M_ReadSaveStrings();
 }
 
-static dboolean showcaret;
-static int      caretwait;
-int             caretcolor;
+static bool showcaret;
+static int  caretwait;
+int         caretcolor;
 
 //
 //  M_SaveGame
@@ -1074,23 +1089,46 @@ static void M_DrawSave(void)
     // draw each save game slot
     for (int i = 0; i < load_end; i++)
     {
-        int y = LoadDef.y + i * LINEHEIGHT + OFFSET;
+        int     y = LoadDef.y + i * LINEHEIGHT + OFFSET;
+        int     len;
+        char    buffer[SAVESTRINGSIZE];
 
-        // draw save game slot background
         M_DrawSaveLoadBorder(LoadDef.x - 11, y - 4);
+
+        M_StringCopy(buffer, savegamestrings[i], sizeof(buffer));
+        len = (int)strlen(buffer);
+
+        while (M_StringWidth(buffer) > SAVESTRINGPIXELWIDTH)
+        {
+            if (len >= 2 && buffer[len - 2] == ' ')
+            {
+                buffer[len - 2] = '.';
+                buffer[len - 1] = '.';
+                buffer[len] = '.';
+                buffer[len + 1] = '\0';
+            }
+            else if (len >= 1)
+            {
+                buffer[len - 1] = '.';
+                buffer[len] = '.';
+                buffer[len + 1] = '.';
+                buffer[len + 2] = '\0';
+            }
+
+            len--;
+        }
 
         // draw save game description
         if (saveStringEnter && i == saveSlot)
         {
-            char    left[256] = "";
-            char    right[256] = "";
-            int     j;
-            int     len = (int)strlen(savegamestrings[i]);
-            int     x;
+            char        left[256] = "";
+            char        right[256] = "";
+            int         j;
+            int         x;
 
             // draw text to left of text caret
             for (j = 0; j < saveCharIndex; j++)
-                left[j] = savegamestrings[i][j];
+                left[j] = buffer[j];
 
             left[j] = '\0';
             M_WriteText(LoadDef.x - 2, y - !M_LSCNTR, left, false);
@@ -1098,7 +1136,7 @@ static void M_DrawSave(void)
 
             // draw text to right of text caret
             for (j = 0; j < len - saveCharIndex; j++)
-                right[j] = savegamestrings[i][j + saveCharIndex];
+                right[j] = buffer[j + saveCharIndex];
 
             right[j] = '\0';
             M_WriteText(x + 1, y - !M_LSCNTR, right, false);
@@ -1127,8 +1165,8 @@ static void M_DrawSave(void)
             }
         }
         else
-            M_WriteText(LoadDef.x - 2 + (M_StringCompare(savegamestrings[i], s_EMPTYSTRING) && s_EMPTYSTRING[0] == '-'
-                && s_EMPTYSTRING[1] == '\0') * 6, y - !M_LSCNTR, savegamestrings[i], false);
+            M_WriteText(LoadDef.x - 2 + (M_StringCompare(buffer, s_EMPTYSTRING) && s_EMPTYSTRING[0] == '-'
+                && s_EMPTYSTRING[1] == '\0') * 6, y - !M_LSCNTR, buffer, false);
     }
 }
 
@@ -1164,8 +1202,8 @@ static char *RemoveMapNum(char *string)
 
 void M_UpdateSaveGameName(int i)
 {
-    dboolean    match = false;
-    int         len = (int)strlen(savegamestrings[i]);
+    bool        match = false;
+    const int   len = (int)strlen(savegamestrings[i]);
 
     if (M_StringCompare(savegamestrings[i], s_EMPTYSTRING))
         match = true;
@@ -1230,30 +1268,7 @@ void M_UpdateSaveGameName(int i)
     }
 
     if (match)
-    {
         M_StringCopy(savegamestrings[i], maptitle, sizeof(savegamestrings[i]));
-        len = (int)strlen(savegamestrings[i]);
-
-        while (M_StringWidth(savegamestrings[i]) > SAVESTRINGPIXELWIDTH)
-        {
-            if (len >= 2 && savegamestrings[i][len - 2] == ' ')
-            {
-                savegamestrings[i][len - 2] = '.';
-                savegamestrings[i][len - 1] = '.';
-                savegamestrings[i][len] = '.';
-                savegamestrings[i][len + 1] = '\0';
-            }
-            else if (len >= 1)
-            {
-                savegamestrings[i][len - 1] = '.';
-                savegamestrings[i][len] = '.';
-                savegamestrings[i][len + 1] = '.';
-                savegamestrings[i][len + 2] = '\0';
-            }
-
-            len--;
-        }
-    }
 }
 
 static void M_SaveSelect(int choice)
@@ -1587,7 +1602,7 @@ static void M_DrawMainMenu(void)
 // M_Episode
 //
 static int      epi;
-dboolean        EpiCustom;
+bool            EpiCustom = false;
 static short    EpiMenuMap[] = { 1, 1, 1, 1, -1, -1, -1, -1 };
 static short    EpiMenuEpi[] = { 1, 2, 3, 4, -1, -1, -1, -1 };
 
@@ -1934,7 +1949,7 @@ static void M_ChangeMessages(int choice)
 //
 // M_EndGame
 //
-static dboolean endinggame;
+static bool endinggame;
 
 void M_EndingGame(void)
 {
@@ -2071,16 +2086,24 @@ void M_QuitDOOM(int choice)
     static char endstring[320];
     static char line1[160];
     static char line2[160];
-    static int  r = -1;
 
     quitting = true;
 
     if (deh_strlookup[p_QUITMSG].assigned == 2)
         M_StringCopy(line1, s_QUITMSG, sizeof(line1));
-    else if (gamemission == doom)
-        M_snprintf(line1, sizeof(line1), *endmsg[(r = M_RandomIntNoRepeat(0, NUM_QUITMESSAGES - 1, r))], WINDOWS);
     else
-        M_snprintf(line1, sizeof(line1), *endmsg[NUM_QUITMESSAGES + (r = M_RandomIntNoRepeat(0, NUM_QUITMESSAGES - 1, r))], WINDOWS);
+    {
+        static int  msg = -1;
+
+        msg = M_RandomIntNoRepeat(0, NUM_QUITMESSAGES - 1, msg);
+
+        if (devparm)
+            M_StringCopy(line1, devendmsg[msg], sizeof(line1));
+        else if (gamemission == doom)
+            M_snprintf(line1, sizeof(line1), *endmsg[msg], WINDOWS);
+        else
+            M_snprintf(line1, sizeof(line1), *endmsg[NUM_QUITMESSAGES + msg], WINDOWS);
+    }
 
     M_snprintf(line2, sizeof(line2), (usinggamecontroller ? s_DOSA : s_DOSY), DESKTOP);
     M_snprintf(endstring, sizeof(endstring), "%s\n\n%s", line1, line2);
@@ -2305,12 +2328,12 @@ static void M_DrawThermo(int x, int y, int thermWidth, float thermDot, float fac
     M_DrawPatchWithShadow(xx, y, W_CacheLumpName("M_THERMR"));
 
     for (int i = x + 9; i < x + (thermWidth + 1) * 8 + 1; i++)
-        V_DrawPixel(i - hacx, y + (hacx ? 9 : 13), PINK, true);
+        V_DrawPixel((hacx ? i - 1 : i), y + (hacx ? 9 : 13), PINK, true);
 
     V_DrawPatch(x + offset + (int)(thermDot * factor), y, 0, W_CacheLumpName("M_THERMO"));
 }
 
-void M_StartMessage(char *string, void *routine, dboolean input)
+void M_StartMessage(char *string, void *routine, bool input)
 {
     messageLastMenuActive = menuactive;
     messagetoprint = true;
@@ -2343,8 +2366,8 @@ static int M_CharacterWidth(char ch, char prev)
 //
 int M_StringWidth(char *string)
 {
-    int w = M_CharacterWidth(string[0], '\0');
-    int len = (int)strlen(string);
+    int         w = M_CharacterWidth(string[0], '\0');
+    const int   len = (int)strlen(string);
 
     for (int i = 1; i < len; i++)
         w += M_CharacterWidth(string[i], string[i - 1]);
@@ -2357,20 +2380,20 @@ int M_StringWidth(char *string)
 //
 static int M_StringHeight(char *string)
 {
-    int h = (STCFN034 ? SHORT(hu_font[0]->height) + 1 : 8);
-    int len = (int)strlen(string);
+    int         h = (STCFN034 ? SHORT(hu_font[0]->height) : 8) + 1;
+    const int   len = (int)strlen(string);
 
     for (int i = 1; i < len; i++)
         if (string[i] == '\n')
-            h += (string[i - 1] == '\n' ? 4 : (STCFN034 ? SHORT(hu_font[0]->height) + 1 : 8));
+            h += (string[i - 1] == '\n' ? 3 : (STCFN034 ? SHORT(hu_font[0]->height) : 8) + 1);
 
-    return h;
+    return (h - 1);
 }
 
 //
 //  Write a char
 //
-void M_DrawSmallChar(int x, int y, int i, dboolean shadow)
+void M_DrawSmallChar(int x, int y, int i, bool shadow)
 {
     int w = (int)strlen(smallcharset[i]) / 10;
 
@@ -2383,7 +2406,7 @@ void M_DrawSmallChar(int x, int y, int i, dboolean shadow)
 //
 // Write a string
 //
-static void M_WriteText(int x, int y, char *string, dboolean shadow)
+static void M_WriteText(int x, int y, char *string, bool shadow)
 {
     int     w;
     char    *ch = string;
@@ -2466,7 +2489,7 @@ static void M_ShowHelp(int choice)
         R_SetViewSize(r_screensize_max);
 }
 
-static void M_ChangeGamma(dboolean shift)
+static void M_ChangeGamma(bool shift)
 {
     static int  gammawait;
 
@@ -2533,11 +2556,11 @@ static void M_ChangeGamma(dboolean shift)
 //
 // M_Responder
 //
-int         gamecontrollerwait = 0;
-int         mousewait = 0;
-dboolean    gamecontrollerpress = false;
+int     gamecontrollerwait = 0;
+int     mousewait = 0;
+bool    gamecontrollerpress = false;
 
-dboolean M_Responder(event_t *ev)
+bool M_Responder(event_t *ev)
 {
     int         key = -1;
     static int  keywait;
@@ -2724,7 +2747,7 @@ dboolean M_Responder(event_t *ev)
 
             if (ch >= ' ' && ch <= '_' && M_StringWidth(savegamestrings[saveSlot]) + M_CharacterWidth(ch, 0) <= SAVESTRINGPIXELWIDTH)
             {
-                int len = (int)strlen(savegamestrings[saveSlot]);
+                const int   len = (int)strlen(savegamestrings[saveSlot]);
 
                 savegamestrings[saveSlot][len + 1] = '\0';
 
@@ -2755,7 +2778,7 @@ dboolean M_Responder(event_t *ev)
 
                 if (saveCharIndex > 0)
                 {
-                    int len = (int)strlen(savegamestrings[saveSlot]);
+                    const int   len = (int)strlen(savegamestrings[saveSlot]);
 
                     for (int j = saveCharIndex - 1; j < len; j++)
                         savegamestrings[saveSlot][j] = savegamestrings[saveSlot][j + 1];
@@ -2770,7 +2793,7 @@ dboolean M_Responder(event_t *ev)
             // delete character right of caret
             case KEY_DELETE:
             {
-                int len = (int)strlen(savegamestrings[saveSlot]);
+                const int   len = (int)strlen(savegamestrings[saveSlot]);
 
                 keydown = key;
 
@@ -2805,8 +2828,8 @@ dboolean M_Responder(event_t *ev)
             case KEY_ENTER:
                 if (!keydown)
                 {
-                    int         len = (int)strlen(savegamestrings[saveSlot]);
-                    dboolean    allspaces = true;
+                    const int   len = (int)strlen(savegamestrings[saveSlot]);
+                    bool        allspaces = true;
 
                     keydown = key;
 
@@ -2863,7 +2886,7 @@ dboolean M_Responder(event_t *ev)
             // move caret to end
             case KEY_END:
             {
-                int len = (int)strlen(savegamestrings[saveSlot]);
+                const int   len = (int)strlen(savegamestrings[saveSlot]);
 
                 if (saveCharIndex < len)
                 {
@@ -3691,17 +3714,17 @@ void M_Drawer(void)
     // Center string and print it.
     if (messagetoprint)
     {
-        char    string[80];
+        char    string[255];
         int     start = 0;
 
         M_DarkBackground();
 
-        y = (VANILLAHEIGHT - M_StringHeight(messageString)) / 2 - 1;
+        y = (VANILLAHEIGHT - M_StringHeight(messageString)) / 2;
 
         while (messageString[start] != '\0')
         {
-            int         len = (int)strlen(messageString + start);
-            dboolean    foundnewline = false;
+            const int   len = (int)strlen(messageString + start);
+            bool        foundnewline = false;
 
             for (int i = 0; i < len; i++)
                 if (messageString[start + i] == '\n')
@@ -3723,13 +3746,13 @@ void M_Drawer(void)
                 start += (int)strlen(string);
             }
 
-            x = (VANILLAWIDTH - M_StringWidth(string)) / 2;
-
-            if (!M_StringWidth(string))
-                y -= 4;
-
-            M_WriteText(x, y, string, true);
-            y += SHORT(hu_font[0]->height) + 1;
+            if (*string)
+            {
+                M_WriteText((VANILLAWIDTH - M_StringWidth(string)) / 2, y, string, true);
+                y += (STCFN034 ? SHORT(hu_font[0]->height) + 1 : 8) + 1;
+            }
+            else
+                y += 3;
         }
 
         return;
@@ -3773,13 +3796,13 @@ void M_Drawer(void)
             }
 
             if (M_SKULL1)
-                M_DrawPatchWithShadow(x - 43, y + itemOn * LINEHEIGHT - 8 + OFFSET + chex, skullpatch);
+                M_DrawPatchWithShadow(x - 43, y + itemOn * LINEHEIGHT - 8 + OFFSET + (chex ? 1 : 0), skullpatch);
             else
                 M_DrawPatchWithShadow(x - 37, y + itemOn * LINEHEIGHT - 7 + OFFSET, skullpatch);
         }
         else
         {
-            int yy = y + itemOn * (LINEHEIGHT - 1) - 5 + OFFSET + chex;
+            int yy = y + itemOn * (LINEHEIGHT - 1) - 5 + OFFSET + (chex ? 1 : 0);
             int max = currentMenu->numitems;
 
             if (currentMenu == &OptionsDef && !itemOn && gamestate != GS_LEVEL)

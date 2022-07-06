@@ -9,8 +9,8 @@
   Copyright © 1993-2022 by id Software LLC, a ZeniMax Media company.
   Copyright © 2013-2022 by Brad Harding <mailto:brad@doomretro.com>.
 
-  DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
-  <https://github.com/bradharding/doomretro/wiki/CREDITS>.
+  DOOM Retro is a fork of Chocolate DOOM. For a list of acknowledgments,
+  see <https://github.com/bradharding/doomretro/wiki/ACKNOWLEDGMENTS>.
 
   This file is a part of DOOM Retro.
 
@@ -50,7 +50,7 @@
 extern fixed_t      *textureheight;
 
 extern byte         **brightmap;
-extern dboolean     *nobrightmap;
+extern bool         *nobrightmap;
 
 // needed for pre rendering (fracs)
 extern fixed_t      *spritewidth;
@@ -98,6 +98,7 @@ extern int          numnodes;
 extern node_t       *nodes;
 
 extern int          numlines;
+extern int          numspeciallines;
 extern line_t       *lines;
 
 extern int          numsides;
@@ -119,12 +120,12 @@ typedef enum
 extern mapformat_t  mapformat;
 extern const char   *mapformats[];
 
-extern dboolean     boomcompatible;
-extern dboolean     mbfcompatible;
-extern dboolean     mbf21compatible;
-extern dboolean     blockmaprebuilt;
-extern dboolean     nojump;
-extern dboolean     nomouselook;
+extern bool         boomcompatible;
+extern bool         mbfcompatible;
+extern bool         mbf21compatible;
+extern bool         blockmaprebuilt;
+extern bool         nojump;
+extern bool         nomouselook;
 
 //
 // POV data.

@@ -9,8 +9,8 @@
   Copyright © 1993-2022 by id Software LLC, a ZeniMax Media company.
   Copyright © 2013-2022 by Brad Harding <mailto:brad@doomretro.com>.
 
-  DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
-  <https://github.com/bradharding/doomretro/wiki/CREDITS>.
+  DOOM Retro is a fork of Chocolate DOOM. For a list of acknowledgments,
+  see <https://github.com/bradharding/doomretro/wiki/ACKNOWLEDGMENTS>.
 
   This file is a part of DOOM Retro.
 
@@ -52,10 +52,10 @@ extern char     **skilllevels[];
 extern char     *packageconfig;
 extern char     *packagewad;
 extern char     *pwadfile;
-extern dboolean advancetitle;
-extern dboolean splashscreen;
-extern dboolean dowipe;
-extern dboolean dehfileignored;
+extern bool     advancetitle;
+extern bool     splashscreen;
+extern bool     dowipe;
+extern bool     dehfileignored;
 extern int      logotic;
 extern int      pagetic;
 extern int      titlesequence;
@@ -71,7 +71,6 @@ void D_Display(void);
 // D_DoomMain()
 // Not a globally visible function, just included for source reference,
 // calls all startup code, parses command line options.
-// If not overridden by user input, calls D_AdvanceTitle.
 //
 void D_DoomMain(void);
 
@@ -83,9 +82,9 @@ void D_PostEvent(event_t *ev);
 //
 void D_PageTicker(void);
 void D_PageDrawer(void);
-void D_AdvanceTitle(void);
+void D_SplashDrawer(void);
 void D_DoAdvanceTitle(void);
 void D_StartTitle(int page);
 void D_FadeScreenToBlack(void);
-void D_FadeScreen(dboolean screenshot);
-dboolean D_IsDOOMIWAD(char *filename);
+void D_FadeScreen(bool screenshot);
+bool D_IsDOOMIWAD(char *filename);

@@ -9,8 +9,8 @@
   Copyright © 1993-2022 by id Software LLC, a ZeniMax Media company.
   Copyright © 2013-2022 by Brad Harding <mailto:brad@doomretro.com>.
 
-  DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
-  <https://github.com/bradharding/doomretro/wiki/CREDITS>.
+  DOOM Retro is a fork of Chocolate DOOM. For a list of acknowledgments,
+  see <https://github.com/bradharding/doomretro/wiki/ACKNOWLEDGMENTS>.
 
   This file is a part of DOOM Retro.
 
@@ -38,7 +38,7 @@
 
 #if defined(_WIN32)
 
-#include <windows.h>
+#include <Windows.h>
 #include <mmsystem.h>
 
 #include "c_console.h"
@@ -66,7 +66,7 @@ typedef struct
     native_event_t      *native_events;
     int                 num_events;
     int                 position;
-    dboolean            looping;
+    bool                looping;
 } win_midi_song_t;
 
 static win_midi_song_t  song;
@@ -103,9 +103,9 @@ static buffer_t buffer;
 // Message for midiStream errors.
 static void MidiErrorMessage(DWORD dwError)
 {
-    char        szErrorBuf[MAXERRORLENGTH];
-    MMRESULT    mmr = midiOutGetErrorText(dwError, (LPSTR)szErrorBuf, MAXERRORLENGTH);
+    char    szErrorBuf[MAXERRORLENGTH];
 
+    midiOutGetErrorText(dwError, (LPSTR)szErrorBuf, MAXERRORLENGTH);
     C_Warning(2, "midiStream Error: %s", szErrorBuf);
 }
 
@@ -300,7 +300,7 @@ static void MIDItoStream(midi_file_t *file)
         free(tracks);
 }
 
-dboolean I_Windows_InitMusic(void)
+bool I_Windows_InitMusic(void)
 {
     UINT        MidiDevice = MIDI_MAPPER;
     MIDIHDR     *hdr = &buffer.MidiStreamHdr;
@@ -376,7 +376,7 @@ void I_Windows_StopSong(void)
         MidiErrorMessage(mmr);
 }
 
-void I_Windows_PlaySong(dboolean looping)
+void I_Windows_PlaySong(bool looping)
 {
     MMRESULT    mmr;
 

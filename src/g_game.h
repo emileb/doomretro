@@ -9,8 +9,8 @@
   Copyright © 1993-2022 by id Software LLC, a ZeniMax Media company.
   Copyright © 2013-2022 by Brad Harding <mailto:brad@doomretro.com>.
 
-  DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
-  <https://github.com/bradharding/doomretro/wiki/CREDITS>.
+  DOOM Retro is a fork of Chocolate DOOM. For a list of acknowledgments,
+  see <https://github.com/bradharding/doomretro/wiki/ACKNOWLEDGMENTS>.
 
   This file is a part of DOOM Retro.
 
@@ -83,13 +83,13 @@ void G_WorldDone(void);
 void G_BuildTiccmd(ticcmd_t *cmd);
 
 void G_Ticker(void);
-dboolean G_Responder(event_t *ev);
+bool G_Responder(event_t *ev);
 
 void G_PlayerReborn(void);
 
 void G_ScreenShot(void);
 
-void G_SetFastParms(dboolean fast_pending);
+void G_SetFastParms(bool fast_pending);
 void G_SetMovementSpeed(int scale);
 void G_ToggleAlwaysRun(evtype_t type);
 
@@ -102,9 +102,9 @@ void G_LoadedGameMessage(void);
 extern fixed_t      forwardmove[2];
 extern fixed_t      sidemove[2];
 extern fixed_t      angleturn[3];
-extern dboolean     gamekeydown[NUMKEYS];
-extern dboolean     *mousebuttons;
-extern dboolean     gamecontrollerpress;
+extern bool         gamekeydown[NUMKEYS];
+extern bool         *mousebuttons;
+extern bool         gamecontrollerpress;
 extern char         lbmname1[MAX_PATH];
 extern char         lbmpath1[MAX_PATH];
 extern char         lbmpath2[MAX_PATH];
@@ -113,8 +113,8 @@ extern char         mouseactionlist[MAX_MOUSE_BUTTONS + 2][255];
 extern int          mousewait;
 extern int          quickSaveSlot;
 extern int          st_facecount;
-extern dboolean     skipaction;
+extern bool         skipaction;
 extern char         savename[MAX_PATH];
-extern dboolean     usemouselook;
-extern dboolean     secretexit;
+extern bool         usemouselook;
+extern bool         secretexit;
 extern gameaction_t loadaction;

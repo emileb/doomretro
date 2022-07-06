@@ -9,8 +9,8 @@
   Copyright © 1993-2022 by id Software LLC, a ZeniMax Media company.
   Copyright © 2013-2022 by Brad Harding <mailto:brad@doomretro.com>.
 
-  DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
-  <https://github.com/bradharding/doomretro/wiki/CREDITS>.
+  DOOM Retro is a fork of Chocolate DOOM. For a list of acknowledgments,
+  see <https://github.com/bradharding/doomretro/wiki/ACKNOWLEDGMENTS>.
 
   This file is a part of DOOM Retro.
 
@@ -81,6 +81,7 @@ typedef struct
 typedef enum
 {
     SOLID,
+    SKY,
     LIQUID,
     NUKAGE,
     WATER,
@@ -202,7 +203,7 @@ typedef struct sector_s
 
     terraintype_t       terraintype;
 
-    dboolean            islift;
+    bool                islift;
 } sector_t;
 
 //
@@ -230,9 +231,9 @@ typedef struct
     // for other functions.
     int                 special;
 
-    dboolean            missingtoptexture;
-    dboolean            missingmidtexture;
-    dboolean            missingbottomtexture;
+    bool                missingtoptexture;
+    bool                missingmidtexture;
+    bool                missingbottomtexture;
 } side_t;
 
 //
@@ -612,7 +613,7 @@ enum
     LightFlickers_Randomly                              = 17
 };
 
-extern dboolean islightspecial[];
+extern const bool   islightspecial[];
 
 enum
 {
@@ -785,7 +786,7 @@ typedef struct msecnode_s
     struct msecnode_s   *m_tnext;       // next msecnode_t for this thing
     struct msecnode_s   *m_sprev;       // prev msecnode_t for this sector
     struct msecnode_s   *m_snext;       // next msecnode_t for this sector
-    dboolean            visited;        // killough 04/04/98, 4/7/98: used in search algorithms
+    bool                visited;        // killough 04/04/98, 4/7/98: used in search algorithms
 } msecnode_t;
 
 //
@@ -962,8 +963,8 @@ typedef struct
     int                 patch;
     lighttable_t        *colormap;
     lighttable_t        *nextcolormap;
+    int                 color;
     void                (*colfunc)(void);
-    fixed_t             blood;
 } bloodsplatvissprite_t;
 
 //
@@ -988,7 +989,7 @@ typedef struct
     //  we might as well insert the same name eight times.
     int                 rotate;
 
-    // Lump to use for view angles 0-7.
+    // Lump to use for view angles 0-15.
     short               lump[16];
 
     // Flip bit (1 = flip) to use for view angles 0-15.
@@ -1034,7 +1035,7 @@ typedef struct visplane_s
 
     unsigned int        pad4;
 
-    dboolean            modified;
+    bool                modified;
 } visplane_t;
 
 #endif

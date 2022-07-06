@@ -9,8 +9,8 @@
   Copyright © 1993-2022 by id Software LLC, a ZeniMax Media company.
   Copyright © 2013-2022 by Brad Harding <mailto:brad@doomretro.com>.
 
-  DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
-  <https://github.com/bradharding/doomretro/wiki/CREDITS>.
+  DOOM Retro is a fork of Chocolate DOOM. For a list of acknowledgments,
+  see <https://github.com/bradharding/doomretro/wiki/ACKNOWLEDGMENTS>.
 
   This file is a part of DOOM Retro.
 
@@ -44,6 +44,7 @@
 #define REMOVE  0
 
 #define E2M2    (gamemission == doom && gameepisode == 2 && gamemap == 2 && canmodify)
+#define E2M7    (gamemission == doom && gameepisode == 2 && gamemap == 7 && canmodify)
 #define E4M3    (gamemission == doom && gameepisode == 4 && gamemap == 3 && canmodify)
 #define MAP04   (gamemission == doom2 && gamemap == 4 && canmodify)
 #define MAP12   (gamemission == doom2 && gamemap == 12 && canmodify)

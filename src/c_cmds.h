@@ -9,8 +9,8 @@
   Copyright © 1993-2022 by id Software LLC, a ZeniMax Media company.
   Copyright © 2013-2022 by Brad Harding <mailto:brad@doomretro.com>.
 
-  DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
-  <https://github.com/bradharding/doomretro/wiki/CREDITS>.
+  DOOM Retro is a fork of Chocolate DOOM. For a list of acknowledgments,
+  see <https://github.com/bradharding/doomretro/wiki/ACKNOWLEDGMENTS>.
 
   This file is a part of DOOM Retro.
 
@@ -65,14 +65,14 @@ typedef struct
 
 typedef struct
 {
-    char        *action;
-    dboolean    hideconsole;
-    void        (*func)(void);
-    void        *keyboard1;
-    void        *keyboard2;
-    void        *mouse1;
-    void        *gamecontroller1;
-    void        *gamecontroller2;
+    char    *action;
+    bool    hideconsole;
+    void    (*func)(void);
+    void    *keyboard1;
+    void    *keyboard2;
+    void    *mouse1;
+    void    *gamecontroller1;
+    void    *gamecontroller2;
 } action_t;
 
 typedef enum
@@ -103,9 +103,9 @@ typedef struct
 {
     char        *name;
     char        *alternate;
-    dboolean    (*func1)(char *cmd, char *parms);
+    bool        (*func1)(char *cmd, char *parms);
     void        (*func2)(char *cmd, char *parms);
-    dboolean    parameters;
+    bool        parameters;
     cmdtype_t   type;
     int         flags;
     void        *variable;
@@ -128,16 +128,16 @@ extern action_t         actions[];
 extern const control_t  controls[];
 extern consolecmd_t     consolecmds[];
 extern alias_t          aliases[MAXALIASES];
-extern dboolean         executingalias;
-extern dboolean         resettingcvar;
-extern dboolean         vanilla;
-extern dboolean         togglingvanilla;
-extern dboolean         massacre;
-extern dboolean         nobindoutput;
+extern bool             executingalias;
+extern bool             resettingcvar;
+extern bool             vanilla;
+extern bool             togglingvanilla;
+extern bool             massacre;
+extern bool             nobindoutput;
 
 void alias_cmd_func2(char *cmd, char *parms);
 void bind_cmd_func2(char *cmd, char *parms);
 
 int C_GetIndex(const char *cmd);
-dboolean C_ExecuteAlias(const char *alias);
-char *distancetraveled(uint64_t value, dboolean allowzero);
+bool C_ExecuteAlias(const char *alias);
+char *distancetraveled(uint64_t value, bool allowzero);

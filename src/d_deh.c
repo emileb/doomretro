@@ -9,8 +9,8 @@
   Copyright © 1993-2022 by id Software LLC, a ZeniMax Media company.
   Copyright © 2013-2022 by Brad Harding <mailto:brad@doomretro.com>.
 
-  DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
-  <https://github.com/bradharding/doomretro/wiki/CREDITS>.
+  DOOM Retro is a fork of Chocolate DOOM. For a list of acknowledgments,
+  see <https://github.com/bradharding/doomretro/wiki/ACKNOWLEDGMENTS>.
 
   This file is a part of DOOM Retro.
 
@@ -62,13 +62,13 @@ typedef struct
     FILE    *f;
 } DEHFILE;
 
-static dboolean addtocount;
-static int      linecount;
+static bool addtocount;
+static int  linecount;
 
-int             dehcount;
-dboolean        dehacked;
+int         dehcount;
+bool        dehacked;
 
-byte            defined_codeptr_args[NUMSTATES];
+byte        defined_codeptr_args[NUMSTATES];
 
 // killough 10/98: emulate IO whether input really comes from a file or not
 
@@ -236,6 +236,7 @@ char    *s_PD_ALL3 = "";
 char    *s_PD_ALL6 = "";
 char    *s_KEYCARD = "";
 char    *s_SKULLKEY = "";
+char    *s_KEYCARDORSKULLKEY = "";
 char    *s_PD_BLUECO = "";
 char    *s_PD_REDCO = "";
 char    *s_PD_YELLOWCO = "";
@@ -485,6 +486,9 @@ char    *s_STSTR_RHOFF = "";
 char    *s_STSTR_VON = "";
 char    *s_STSTR_VOFF = "";
 char    *s_STSTR_FPS = "";
+char    *s_STSTR_KILLS = "";
+char    *s_STSTR_ITEMS = "";
+char    *s_STSTR_SECRETS = "";
 
 char    *s_E1TEXT = E1TEXT;
 char    *s_E2TEXT = E2TEXT;
@@ -817,6 +821,7 @@ deh_strs deh_strlookup[] =
     { &s_PD_ALL6,                     "PD_ALL6"                     },
     { &s_KEYCARD,                     "KEYCARD"                     },
     { &s_SKULLKEY,                    "SKULLKEY"                    },
+    { &s_KEYCARDORSKULLKEY,           "KEYCARDORSKULLKEY"           },
     { &s_PD_BLUECO,                   "PD_BLUECO"                   },
     { &s_PD_REDCO,                    "PD_REDCO"                    },
     { &s_PD_YELLOWCO,                 "PD_YELLOWCO"                 },
@@ -1063,6 +1068,9 @@ deh_strs deh_strlookup[] =
     { &s_STSTR_VON,                   "STSTR_VON"                   },
     { &s_STSTR_VOFF,                  "STSTR_VOFF"                  },
     { &s_STSTR_FPS,                   "STSTR_FPS"                   },
+    { &s_STSTR_KILLS,                 "STSTR_KILLS"                 },
+    { &s_STSTR_ITEMS,                 "STSTR_ITEMS"                 },
+    { &s_STSTR_SECRETS,               "STSTR_SECRETS"               },
 
     { &s_E1TEXT,                      "E1TEXT"                      },
     { &s_E2TEXT,                      "E2TEXT"                      },
@@ -1271,7 +1279,7 @@ deh_strs deh_strlookup[] =
     { &s_OB_MPDEFAULT,                "OB_MPDEFAULT"                }
 };
 
-static const int deh_numstrlookup = sizeof(deh_strlookup) / sizeof(deh_strlookup[0]);
+static const int    deh_numstrlookup = sizeof(deh_strlookup) / sizeof(deh_strlookup[0]);
 
 // DOOM shareware/registered/retail (Ultimate) names.
 char **mapnames[] =
@@ -1486,12 +1494,19 @@ char **mapnamesn[] =
     &s_NHUSTR_9
 };
 
+const int   nummapnames = sizeof(mapnames) / sizeof(mapnames[0]);
+const int   nummapnames2 = sizeof(mapnames2) / sizeof(mapnames2[0]);
+const int   nummapnames2_bfg = sizeof(mapnames2_bfg) / sizeof(mapnames2_bfg[0]);
+const int   nummapnamesp = sizeof(mapnamesp) / sizeof(mapnamesp[0]);
+const int   nummapnamest = sizeof(mapnamest) / sizeof(mapnamest[0]);
+const int   nummapnamesn = sizeof(mapnamesn) / sizeof(mapnamesn[0]);
+
 // Function prototypes
 static void lfstrip(char *s);       // strip the \r and/or \n off of a line
 static void rstrip(char *s);        // strip trailing whitespace
 static char *ptr_lstrip(char *p);   // point past leading whitespace
 static int deh_GetData(char *s, char *k, int *l, char **strval);
-static dboolean deh_procStringSub(char *key, char *lookfor, char *newstring);
+static bool deh_procStringSub(char *key, char *lookfor, char *newstring);
 static char *dehReformatStr(char *string);
 
 // Prototypes for block processing functions
@@ -1556,7 +1571,7 @@ static const deh_block deh_blocks[] =
 };
 
 // flag to skip included deh-style text, used with INCLUDE NOTEXT directive
-static dboolean includenotext;
+static bool includenotext;
 
 // MOBJINFO - Dehacked block name = "Thing"
 // Usage: Thing nn (name)
@@ -1600,7 +1615,7 @@ static const char *deh_mobjinfo[DEH_MOBJINFOMAX] =
     "Shadow offset",            // .shadowoffset
 
     // MBF21
-    "MBF21 Bits",               // .mbf21flags
+    "MBF21 bits",               // .mbf21flags
     "Infighting group",         // .infightinggroup
     "Projectile group",         // .projectilegroup
     "Splash group",             // .splashgroup
@@ -1684,7 +1699,6 @@ static const struct deh_flag_s deh_mobjflags2[] =
     { "TRANSLUCENT_REDTOBLUE_33",  MF2_TRANSLUCENT_REDTOBLUE_33  },
     { "TRANSLUCENT_BLUE_25",       MF2_TRANSLUCENT_BLUE_25       },
     { "REDTOGREEN",                MF2_REDTOGREEN                },
-    { "GREENTORED",                MF2_GREENTORED                },
     { "REDTOBLUE",                 MF2_REDTOBLUE                 },
     { "FLOATBOB",                  MF2_FLOATBOB                  },
     { "MIRRORED",                  MF2_MIRRORED                  },
@@ -1768,7 +1782,7 @@ static const char *deh_state[] =
     "Args6",            // .args[5]
     "Args7",            // .args[6]
     "Args8",            // .args[7]
-    "MBF21 Bits"        // .flags
+    "MBF21 bits"        // .flags
 };
 
 static const struct deh_flag_s deh_stateflags_mbf21[] =
@@ -1812,16 +1826,16 @@ static const char *deh_ammo[] =
 // Basically a list of frames and what kind of ammo (see above) it uses.
 static const char *deh_weapon[] =
 {
-    "Ammo Type",        // .ammo
-    "Deselect Frame",   // .upstate
-    "Select Frame",     // .downstate
-    "Bobbing Frame",    // .readystate
-    "Shooting Frame",   // .atkstate
-    "Firing Frame",     // .flashstate
+    "Ammo type",        // .ammo
+    "Deselect frame",   // .upstate
+    "Select frame",     // .downstate
+    "Bobbing frame",    // .readystate
+    "Shooting frame",   // .atkstate
+    "Firing frame",     // .flashstate
 
     // MBF21
     "Ammo per shot",    // .minammo
-    "MBF21 Bits"        // .flags
+    "MBF21 bits"        // .flags
 };
 
 // CHEATS - Dehacked block name = "Cheat"
@@ -1830,22 +1844,22 @@ static const char *deh_weapon[] =
 // These are just plain funky terms compared with id's
 static const char *deh_cheat[] =
 {
-    "Change Music",     // idmus
+    "Change music",     // idmus
     "Chainsaw",         // idchoppers
-    "God Mode",         // iddqd
-    "Ammo & Keys",      // idkfa
+    "God mode",         // iddqd
+    "Ammo & keys",      // idkfa
     "Ammo",             // idfa
-    "No Clipping 1",    // idspispopd
-    "No Clipping 2",    // idclip
+    "No clipping 1",    // idspispopd
+    "No clipping 2",    // idclip
     "Invincibility",    // idbeholdv
     "Berserk",          // idbeholds
     "Invisibility",     // idbeholdi
-    "Radiation Suit",   // idbeholdr
+    "Radiation suit",   // idbeholdr
     "Auto-map",         // idbeholda
-    "Lite-Amp Goggles", // idbeholdl
-    "BEHOLD Menu",      // idbehold
-    "Level Warp",       // idclev
-    "Player Position"   // idmypos
+    "Lite-amp goggles", // idbeholdl
+    "BEHOLD menu",      // idbehold
+    "Level warp",       // idclev
+    "Player position"   // idmypos
 };
 
 // MISC - Dehacked block name = "Misc"
@@ -1853,22 +1867,22 @@ static const char *deh_cheat[] =
 // Always uses a zero in the dehacked file, for consistency. No meaning.
 static const char *deh_misc[] =
 {
-    "Initial Health",           // initial_health
-    "Initial Bullets",          // initial_bullets
-    "Max Health",               // maxhealth
-    "Max Armor",                // max_armor
-    "Green Armor Class",        // green_armor_class
-    "Blue Armor Class",         // blue_armor_class
-    "Max Soulsphere",           // max_soul
-    "Soulsphere Health",        // soul_health
-    "Megasphere Health",        // mega_health
-    "God Mode Health",          // god_health
-    "IDFA Armor",               // idfa_armor
-    "IDFA Armor Class",         // idfa_armor_class
-    "IDKFA Armor",              // idkfa_armor
-    "IDKFA Armor Class",        // idkfa_armor_class
-    "BFG Cells/Shot",           // BFGCELLS
-    "Monsters Infight"          // species_infighting
+    "Initial health",           // initial_health
+    "Initial bullets",          // initial_bullets
+    "Max health",               // maxhealth
+    "Max armor",                // max_armor
+    "Green armor class",        // green_armor_class
+    "Blue armor class",         // blue_armor_class
+    "Max soulsphere",           // max_soul
+    "Soulsphere health",        // soul_health
+    "Megasphere health",        // mega_health
+    "God mode health",          // god_health
+    "IDFA armor",               // idfa_armor
+    "IDFA armor class",         // idfa_armor_class
+    "IDKFA armor",              // idkfa_armor
+    "IDKFA armor class",        // idkfa_armor_class
+    "BFG cells/shot",           // BFGCELLS
+    "Monsters infight"          // species_infighting
 };
 
 // TEXT - Dehacked block name = "Text"
@@ -1999,10 +2013,14 @@ extern void A_CheckAmmo(mobj_t *actor, player_t *player, pspdef_t *psp);
 extern void A_RefireTo(mobj_t *actor, player_t *player, pspdef_t *psp);
 extern void A_GunFlashTo(mobj_t *actor, player_t *player, pspdef_t *psp);
 
+#define MBF     1
+#define MBF21   2
+
 typedef struct
 {
     actionf_t   cptr;                       // actual pointer to the subroutine
     const char  *lookup;                    // mnemonic lookup string to be specified in BEX
+    int         mbf;
 
     // MBF21
     int         argcount;                   // [XA] number of MBF21 args this action uses, if any
@@ -2011,128 +2029,128 @@ typedef struct
 
 static const deh_bexptr deh_bexptrs[] =
 {
-    { A_Light0,              "A_Light0"                                               },
-    { A_WeaponReady,         "A_WeaponReady"                                          },
-    { A_Lower,               "A_Lower"                                                },
-    { A_Raise,               "A_Raise"                                                },
-    { A_Punch,               "A_Punch"                                                },
-    { A_ReFire,              "A_ReFire"                                               },
-    { A_FirePistol,          "A_FirePistol"                                           },
-    { A_Light1,              "A_Light1"                                               },
-    { A_FireShotgun,         "A_FireShotgun"                                          },
-    { A_Light2,              "A_Light2"                                               },
-    { A_FireShotgun2,        "A_FireShotgun2"                                         },
-    { A_CheckReload,         "A_CheckReload"                                          },
-    { A_OpenShotgun2,        "A_OpenShotgun2"                                         },
-    { A_LoadShotgun2,        "A_LoadShotgun2"                                         },
-    { A_CloseShotgun2,       "A_CloseShotgun2"                                        },
-    { A_FireCGun,            "A_FireCGun"                                             },
-    { A_GunFlash,            "A_GunFlash"                                             },
-    { A_FireMissile,         "A_FireMissile"                                          },
-    { A_Saw,                 "A_Saw"                                                  },
-    { A_FirePlasma,          "A_FirePlasma"                                           },
-    { A_BFGSound,            "A_BFGSound"                                             },
-    { A_FireBFG,             "A_FireBFG"                                              },
-    { A_BFGSpray,            "A_BFGSpray"                                             },
-    { A_Explode,             "A_Explode"                                              },
-    { A_Pain,                "A_Pain"                                                 },
-    { A_PlayerScream,        "A_PlayerScream"                                         },
-    { A_Fall,                "A_Fall"                                                 },
-    { A_XScream,             "A_XScream"                                              },
-    { A_Look,                "A_Look"                                                 },
-    { A_Chase,               "A_Chase"                                                },
-    { A_FaceTarget,          "A_FaceTarget"                                           },
-    { A_PosAttack,           "A_PosAttack"                                            },
-    { A_Scream,              "A_Scream"                                               },
-    { A_SPosAttack,          "A_SPosAttack"                                           },
-    { A_VileChase,           "A_VileChase"                                            },
-    { A_VileStart,           "A_VileStart"                                            },
-    { A_VileTarget,          "A_VileTarget"                                           },
-    { A_VileAttack,          "A_VileAttack"                                           },
-    { A_StartFire,           "A_StartFire"                                            },
-    { A_Fire,                "A_Fire"                                                 },
-    { A_FireCrackle,         "A_FireCrackle"                                          },
-    { A_Tracer,              "A_Tracer"                                               },
-    { A_SkelWhoosh,          "A_SkelWhoosh"                                           },
-    { A_SkelFist,            "A_SkelFist"                                             },
-    { A_SkelMissile,         "A_SkelMissile"                                          },
-    { A_FatRaise,            "A_FatRaise"                                             },
-    { A_FatAttack1,          "A_FatAttack1"                                           },
-    { A_FatAttack2,          "A_FatAttack2"                                           },
-    { A_FatAttack3,          "A_FatAttack3"                                           },
-    { A_BossDeath,           "A_BossDeath"                                            },
-    { A_CPosAttack,          "A_CPosAttack"                                           },
-    { A_CPosRefire,          "A_CPosRefire"                                           },
-    { A_TroopAttack,         "A_TroopAttack"                                          },
-    { A_SargAttack,          "A_SargAttack"                                           },
-    { A_HeadAttack,          "A_HeadAttack"                                           },
-    { A_BruisAttack,         "A_BruisAttack"                                          },
-    { A_SkullAttack,         "A_SkullAttack"                                          },
-    { A_Metal,               "A_Metal"                                                },
-    { A_SpidRefire,          "A_SpidRefire"                                           },
-    { A_BabyMetal,           "A_BabyMetal"                                            },
-    { A_BspiAttack,          "A_BspiAttack"                                           },
-    { A_Hoof,                "A_Hoof"                                                 },
-    { A_CyberAttack,         "A_CyberAttack"                                          },
-    { A_PainAttack,          "A_PainAttack"                                           },
-    { A_PainDie,             "A_PainDie"                                              },
-    { A_KeenDie,             "A_KeenDie"                                              },
-    { A_BrainPain,           "A_BrainPain"                                            },
-    { A_BrainScream,         "A_BrainScream"                                          },
-    { A_BrainDie,            "A_BrainDie"                                             },
-    { A_BrainAwake,          "A_BrainAwake"                                           },
-    { A_BrainSpit,           "A_BrainSpit"                                            },
-    { A_SpawnSound,          "A_SpawnSound"                                           },
-    { A_SpawnFly,            "A_SpawnFly"                                             },
-    { A_BrainExplode,        "A_BrainExplode"                                         },
-    { A_Detonate,            "A_Detonate"                                             },    // killough 08/09/98
-    { A_Mushroom,            "A_Mushroom"                                             },    // killough 10/98
-    { A_SkullPop,            "A_SkullPop"                                             },
-    { A_Die,                 "A_Die"                                                  },    // killough 11/98
-    { A_Spawn,               "A_Spawn"                                                },    // killough 11/98
-    { A_Turn,                "A_Turn"                                                 },    // killough 11/98
-    { A_Face,                "A_Face"                                                 },    // killough 11/98
-    { A_Scratch,             "A_Scratch"                                              },    // killough 11/98
-    { A_PlaySound,           "A_PlaySound"                                            },    // killough 11/98
-    { A_RandomJump,          "A_RandomJump"                                           },    // killough 11/98
-    { A_LineEffect,          "A_LineEffect"                                           },    // killough 11/98
+    { A_Light0,              "A_Light0"                                                      },
+    { A_WeaponReady,         "A_WeaponReady"                                                 },
+    { A_Lower,               "A_Lower"                                                       },
+    { A_Raise,               "A_Raise"                                                       },
+    { A_Punch,               "A_Punch"                                                       },
+    { A_ReFire,              "A_ReFire"                                                      },
+    { A_FirePistol,          "A_FirePistol"                                                  },
+    { A_Light1,              "A_Light1"                                                      },
+    { A_FireShotgun,         "A_FireShotgun"                                                 },
+    { A_Light2,              "A_Light2"                                                      },
+    { A_FireShotgun2,        "A_FireShotgun2"                                                },
+    { A_CheckReload,         "A_CheckReload"                                                 },
+    { A_OpenShotgun2,        "A_OpenShotgun2"                                                },
+    { A_LoadShotgun2,        "A_LoadShotgun2"                                                },
+    { A_CloseShotgun2,       "A_CloseShotgun2"                                               },
+    { A_FireCGun,            "A_FireCGun"                                                    },
+    { A_GunFlash,            "A_GunFlash"                                                    },
+    { A_FireMissile,         "A_FireMissile"                                                 },
+    { A_Saw,                 "A_Saw"                                                         },
+    { A_FirePlasma,          "A_FirePlasma"                                                  },
+    { A_BFGSound,            "A_BFGSound"                                                    },
+    { A_FireBFG,             "A_FireBFG"                                                     },
+    { A_BFGSpray,            "A_BFGSpray"                                                    },
+    { A_Explode,             "A_Explode"                                                     },
+    { A_Pain,                "A_Pain"                                                        },
+    { A_PlayerScream,        "A_PlayerScream"                                                },
+    { A_Fall,                "A_Fall"                                                        },
+    { A_XScream,             "A_XScream"                                                     },
+    { A_Look,                "A_Look"                                                        },
+    { A_Chase,               "A_Chase"                                                       },
+    { A_FaceTarget,          "A_FaceTarget"                                                  },
+    { A_PosAttack,           "A_PosAttack"                                                   },
+    { A_Scream,              "A_Scream"                                                      },
+    { A_SPosAttack,          "A_SPosAttack"                                                  },
+    { A_VileChase,           "A_VileChase"                                                   },
+    { A_VileStart,           "A_VileStart"                                                   },
+    { A_VileTarget,          "A_VileTarget"                                                  },
+    { A_VileAttack,          "A_VileAttack"                                                  },
+    { A_StartFire,           "A_StartFire"                                                   },
+    { A_Fire,                "A_Fire"                                                        },
+    { A_FireCrackle,         "A_FireCrackle"                                                 },
+    { A_Tracer,              "A_Tracer"                                                      },
+    { A_SkelWhoosh,          "A_SkelWhoosh"                                                  },
+    { A_SkelFist,            "A_SkelFist"                                                    },
+    { A_SkelMissile,         "A_SkelMissile"                                                 },
+    { A_FatRaise,            "A_FatRaise"                                                    },
+    { A_FatAttack1,          "A_FatAttack1"                                                  },
+    { A_FatAttack2,          "A_FatAttack2"                                                  },
+    { A_FatAttack3,          "A_FatAttack3"                                                  },
+    { A_BossDeath,           "A_BossDeath"                                                   },
+    { A_CPosAttack,          "A_CPosAttack"                                                  },
+    { A_CPosRefire,          "A_CPosRefire"                                                  },
+    { A_TroopAttack,         "A_TroopAttack"                                                 },
+    { A_SargAttack,          "A_SargAttack"                                                  },
+    { A_HeadAttack,          "A_HeadAttack"                                                  },
+    { A_BruisAttack,         "A_BruisAttack"                                                 },
+    { A_SkullAttack,         "A_SkullAttack"                                                 },
+    { A_Metal,               "A_Metal"                                                       },
+    { A_SpidRefire,          "A_SpidRefire"                                                  },
+    { A_BabyMetal,           "A_BabyMetal"                                                   },
+    { A_BspiAttack,          "A_BspiAttack"                                                  },
+    { A_Hoof,                "A_Hoof"                                                        },
+    { A_CyberAttack,         "A_CyberAttack"                                                 },
+    { A_PainAttack,          "A_PainAttack"                                                  },
+    { A_PainDie,             "A_PainDie"                                                     },
+    { A_KeenDie,             "A_KeenDie"                                                     },
+    { A_BrainPain,           "A_BrainPain"                                                   },
+    { A_BrainScream,         "A_BrainScream"                                                 },
+    { A_BrainDie,            "A_BrainDie"                                                    },
+    { A_BrainAwake,          "A_BrainAwake"                                                  },
+    { A_BrainSpit,           "A_BrainSpit"                                                   },
+    { A_SpawnSound,          "A_SpawnSound"                                                  },
+    { A_SpawnFly,            "A_SpawnFly"                                                    },
+    { A_BrainExplode,        "A_BrainExplode"                                                },
+    { A_Detonate,            "A_Detonate",            MBF,                                   },    // killough 08/09/98
+    { A_Mushroom,            "A_Mushroom",            MBF,                                   },    // killough 10/98
+    { A_SkullPop,            "A_SkullPop"                                                    },
+    { A_Die,                 "A_Die",                 MBF,                                   },    // killough 11/98
+    { A_Spawn,               "A_Spawn",               MBF,                                   },    // killough 11/98
+    { A_Turn,                "A_Turn",                MBF,                                   },    // killough 11/98
+    { A_Face,                "A_Face",                MBF,                                   },    // killough 11/98
+    { A_Scratch,             "A_Scratch",             MBF,                                   },    // killough 11/98
+    { A_PlaySound,           "A_PlaySound",           MBF,                                   },    // killough 11/98
+    { A_RandomJump,          "A_RandomJump",          MBF,                                   },    // killough 11/98
+    { A_LineEffect,          "A_LineEffect",          MBF,                                   },    // killough 11/98
 
-    { A_FireOldBFG,          "A_FireOldBFG"                                           },    // killough 07/19/98: classic BFG firing function
-    { A_BetaSkullAttack,     "A_BetaSkullAttack"                                      },    // killough 10/98: beta lost souls attacked different
-    { A_Stop,                "A_Stop"                                                 },
+    { A_FireOldBFG,          "A_FireOldBFG"                                                  },    // killough 07/19/98: classic BFG firing function
+    { A_BetaSkullAttack,     "A_BetaSkullAttack"                                             },    // killough 10/98: beta lost souls attacked different
+    { A_Stop,                "A_Stop"                                                        },
 
     // [XA] New MBF21 codepointers
-    { A_SpawnObject,         "A_SpawnObject",         8                               },
-    { A_MonsterProjectile,   "A_MonsterProjectile",   5                               },
-    { A_MonsterBulletAttack, "A_MonsterBulletAttack", 5, { 0, 0, 1, 3, 5 }            },
-    { A_MonsterMeleeAttack,  "A_MonsterMeleeAttack",  4, { 3, 8, 0, 0 }               },
-    { A_RadiusDamage,        "A_RadiusDamage",        2                               },
-    { A_NoiseAlert,          "A_NoiseAlert",          0                               },
-    { A_HealChase,           "A_HealChase",           2                               },
-    { A_SeekTracer,          "A_SeekTracer",          2                               },
-    { A_FindTracer,          "A_FindTracer",          2, { 0, 10 }                    },
-    { A_ClearTracer,         "A_ClearTracer",         0                               },
-    { A_JumpIfHealthBelow,   "A_JumpIfHealthBelow",   2                               },
-    { A_JumpIfTargetInSight, "A_JumpIfTargetInSight", 2                               },
-    { A_JumpIfTargetCloser,  "A_JumpIfTargetCloser",  2                               },
-    { A_JumpIfTracerInSight, "A_JumpIfTracerInSight", 2                               },
-    { A_JumpIfTracerCloser,  "A_JumpIfTracerCloser",  2                               },
-    { A_JumpIfFlagsSet,      "A_JumpIfFlagsSet",      3                               },
-    { A_AddFlags,            "A_AddFlags",            2                               },
-    { A_RemoveFlags,         "A_RemoveFlags",         2                               },
-    { A_WeaponProjectile,    "A_WeaponProjectile",    5                               },
-    { A_WeaponBulletAttack,  "A_WeaponBulletAttack",  5, {0, 0, 1, 5, 3 }             },
-    { A_WeaponMeleeAttack,   "A_WeaponMeleeAttack",   5, {2, 10, 1 * FRACUNIT, 0, 0 } },
-    { A_WeaponSound,         "A_WeaponSound",         2                               },
-    { A_WeaponAlert,         "A_WeaponAlert",         0                               },
-    { A_WeaponJump,          "A_WeaponJump",          2                               },
-    { A_ConsumeAmmo,         "A_ConsumeAmmo",         1                               },
-    { A_CheckAmmo,           "A_CheckAmmo",           2                               },
-    { A_RefireTo,            "A_RefireTo",            2                               },
-    { A_GunFlashTo,          "A_GunFlashTo",          2                               },
+    { A_SpawnObject,         "A_SpawnObject",         MBF21, 8                               },
+    { A_MonsterProjectile,   "A_MonsterProjectile",   MBF21, 5                               },
+    { A_MonsterBulletAttack, "A_MonsterBulletAttack", MBF21, 5, { 0, 0, 1, 3, 5 }            },
+    { A_MonsterMeleeAttack,  "A_MonsterMeleeAttack",  MBF21, 4, { 3, 8, 0, 0 }               },
+    { A_RadiusDamage,        "A_RadiusDamage",        MBF21, 2                               },
+    { A_NoiseAlert,          "A_NoiseAlert",          MBF21, 0                               },
+    { A_HealChase,           "A_HealChase",           MBF21, 2                               },
+    { A_SeekTracer,          "A_SeekTracer",          MBF21, 2                               },
+    { A_FindTracer,          "A_FindTracer",          MBF21, 2, { 0, 10 }                    },
+    { A_ClearTracer,         "A_ClearTracer",         MBF21, 0                               },
+    { A_JumpIfHealthBelow,   "A_JumpIfHealthBelow",   MBF21, 2                               },
+    { A_JumpIfTargetInSight, "A_JumpIfTargetInSight", MBF21, 2                               },
+    { A_JumpIfTargetCloser,  "A_JumpIfTargetCloser",  MBF21, 2                               },
+    { A_JumpIfTracerInSight, "A_JumpIfTracerInSight", MBF21, 2                               },
+    { A_JumpIfTracerCloser,  "A_JumpIfTracerCloser",  MBF21, 2                               },
+    { A_JumpIfFlagsSet,      "A_JumpIfFlagsSet",      MBF21, 3                               },
+    { A_AddFlags,            "A_AddFlags",            MBF21, 2                               },
+    { A_RemoveFlags,         "A_RemoveFlags",         MBF21, 2                               },
+    { A_WeaponProjectile,    "A_WeaponProjectile",    MBF21, 5                               },
+    { A_WeaponBulletAttack,  "A_WeaponBulletAttack",  MBF21, 5, {0, 0, 1, 5, 3 }             },
+    { A_WeaponMeleeAttack,   "A_WeaponMeleeAttack",   MBF21, 5, {2, 10, 1 * FRACUNIT, 0, 0 } },
+    { A_WeaponSound,         "A_WeaponSound",         MBF21, 2                               },
+    { A_WeaponAlert,         "A_WeaponAlert",         MBF21, 0                               },
+    { A_WeaponJump,          "A_WeaponJump",          MBF21, 2                               },
+    { A_ConsumeAmmo,         "A_ConsumeAmmo",         MBF21, 1                               },
+    { A_CheckAmmo,           "A_CheckAmmo",           MBF21, 2                               },
+    { A_RefireTo,            "A_RefireTo",            MBF21, 2                               },
+    { A_GunFlashTo,          "A_GunFlashTo",          MBF21, 2                               },
 
     // This NULL entry must be the last in the list
-    { NULL,                  "A_NULL"                                                 }
+    { NULL,                  "A_NULL"                                                        }
 };
 
 // to hold startup code pointers from INFO.C
@@ -2202,7 +2220,7 @@ void D_BuildBEXTables(void)
 //
 // killough 10/98:
 // substantially modified to allow input from WAD lumps instead of .deh files.
-void ProcessDehFile(char *filename, int lumpnum, dboolean automatic)
+void ProcessDehFile(char *filename, int lumpnum, bool automatic)
 {
     DEHFILE infile;
     DEHFILE *filein = &infile;              // killough 10/98
@@ -2232,7 +2250,7 @@ void ProcessDehFile(char *filename, int lumpnum, dboolean automatic)
     // loop until end of file
     while (dehfgets(inbuffer, sizeof(inbuffer), filein))
     {
-        dboolean            match = false;
+        bool                match = false;
         unsigned int        i;
         static unsigned int last_i = DEH_BLOCKMAX - 1;
         static int          filepos;
@@ -2255,8 +2273,8 @@ void ProcessDehFile(char *filename, int lumpnum, dboolean automatic)
             // preserve state while including a file
             // killough 10/98: moved to here
 
-            char        *nextfile;
-            dboolean    oldnotext = includenotext;              // killough 10/98
+            char    *nextfile;
+            bool    oldnotext = includenotext;              // killough 10/98
 
             // killough 10/98: exclude if inside wads (only to discourage
             // the practice, since the code could otherwise handle it)
@@ -2287,12 +2305,10 @@ void ProcessDehFile(char *filename, int lumpnum, dboolean automatic)
             continue;
         }
 
-        for (i = 0; i < DEH_BLOCKMAX; i++)
+        for (i = 0; i < DEH_BLOCKMAX - 1; i++)
             if (!strncasecmp(inbuffer, deh_blocks[i].key, strlen(deh_blocks[i].key)))
             {
-                if (i < DEH_BLOCKMAX - 1)
-                    match = true;
-
+                match = true;
                 break;                                          // we got one, that's enough for this block
             }
 
@@ -2375,8 +2391,8 @@ static void deh_procBexCodePointers(DEHFILE *fpin, char *line)
     // for this one, we just read 'em until we hit a blank line
     while (!dehfeof(fpin) && *inbuffer && *inbuffer != ' ')
     {
-        int         i = -1;                     // looper
-        dboolean    found = false;              // know if we found this one during lookup or not
+        int     i = -1;                         // looper
+        bool    found = false;                  // know if we found this one during lookup or not
 
         if (!dehfgets(inbuffer, sizeof(inbuffer), fpin))
             break;
@@ -2384,7 +2400,7 @@ static void deh_procBexCodePointers(DEHFILE *fpin, char *line)
         lfstrip(inbuffer);
 
         if (!*inbuffer)
-            break;      // killough 11/98: really exit on blank line
+            break;                              // killough 11/98: really exit on blank line
 
         // killough 08/98: allow hex numbers in input:
         if ((sscanf(inbuffer, "%s %i = %s", key, &indexnum, mnemonic) != 3)
@@ -2417,14 +2433,10 @@ static void deh_procBexCodePointers(DEHFILE *fpin, char *line)
                 if (devparm)
                     C_Output(" - applied %s from codeptr[%i] to states[%i]", deh_bexptrs[i].lookup, i, indexnum);
 
-                if (M_StringCompare(key, "A_Spawn")
-                    || M_StringCompare(key, "A_Turn")
-                    || M_StringCompare(key, "A_Face")
-                    || M_StringCompare(key, "A_Scratch")
-                    || M_StringCompare(key, "A_PlaySound")
-                    || M_StringCompare(key, "A_RandomJump")
-                    || M_StringCompare(key, "A_LineEffect"))
+                if (deh_bexptrs[i].mbf == MBF)
                     mbfcompatible = true;
+                else if (deh_bexptrs[i].mbf == MBF21)
+                    mbf21compatible = true;
 
                 found = true;
             }
@@ -2453,6 +2465,7 @@ static void deh_procThing(DEHFILE *fpin, char *line)
     int     indexnum;
     int     ix;
     char    *strval;
+    bool    namechange = false;
 
     M_StringCopy(inbuffer, line, DEH_BUFFERMAX - 1);
 
@@ -2481,9 +2494,9 @@ static void deh_procThing(DEHFILE *fpin, char *line)
     while (!dehfeof(fpin) && *inbuffer && *inbuffer != ' ')
     {
         // e6y: Correction of wrong processing of Bits parameter if its value is equal to zero
-        int         bGetData;
-        dboolean    gibhealth = false;
-        dboolean    string = false;
+        int     bGetData;
+        bool    gibhealth = false;
+        bool    string = false;
 
         if (!dehfgets(inbuffer, sizeof(inbuffer), fpin))
             break;
@@ -2502,15 +2515,25 @@ static void deh_procThing(DEHFILE *fpin, char *line)
         }
 
         if ((string = M_StringCompare(key, "Name")) || (string = M_StringCompare(key, "Name1")))
+        {
             M_StringCopy(mobjinfo[indexnum].name1, lowercase(trimwhitespace(strval)), sizeof(mobjinfo[indexnum].name1));
+            M_snprintf(mobjinfo[indexnum].plural1, sizeof(mobjinfo[indexnum].plural1), "%ss", mobjinfo[indexnum].name1);
+            namechange = true;
+        }
         else if ((string = M_StringCompare(key, "Plural")) || (string = M_StringCompare(key, "Plural1")))
             M_StringCopy(mobjinfo[indexnum].plural1, lowercase(trimwhitespace(strval)), sizeof(mobjinfo[indexnum].plural1));
         else if ((string = M_StringCompare(key, "Name2")))
+        {
             M_StringCopy(mobjinfo[indexnum].name2, lowercase(trimwhitespace(strval)), sizeof(mobjinfo[indexnum].name2));
+            M_snprintf(mobjinfo[indexnum].plural2, sizeof(mobjinfo[indexnum].plural2), "%ss", mobjinfo[indexnum].name2);
+        }
         else if ((string = M_StringCompare(key, "Plural2")))
             M_StringCopy(mobjinfo[indexnum].plural2, lowercase(trimwhitespace(strval)), sizeof(mobjinfo[indexnum].plural2));
         else if ((string = M_StringCompare(key, "Name3")))
+        {
             M_StringCopy(mobjinfo[indexnum].name3, lowercase(trimwhitespace(strval)), sizeof(mobjinfo[indexnum].name3));
+            M_snprintf(mobjinfo[indexnum].plural3, sizeof(mobjinfo[indexnum].plural3), "%ss", mobjinfo[indexnum].name3);
+        }
         else if ((string = M_StringCompare(key, "Plural3")))
             M_StringCopy(mobjinfo[indexnum].plural3, lowercase(trimwhitespace(strval)), sizeof(mobjinfo[indexnum].plural3));
 
@@ -2550,6 +2573,11 @@ static void deh_procThing(DEHFILE *fpin, char *line)
 
                             if (devparm)
                                 C_Output("ORed value 0x%08x %s.", deh_mobjflags[iy].value, strval);
+
+                            if (M_StringCompare(key, "TRANSLUCENT"))
+                                boomcompatible = true;
+                            else if (M_StringCompare(key, "TOUCHY") || M_StringCompare(key, "BOUNCES") || M_StringCompare(key, "FRIEND"))
+                                mbfcompatible = true;
 
                             value |= deh_mobjflags[iy].value;
                             break;
@@ -2597,11 +2625,6 @@ static void deh_procThing(DEHFILE *fpin, char *line)
 
                             if (devparm)
                                 C_Output("ORed value 0x%08x %s.", deh_mobjflags2[iy].value, strval);
-
-                            if (M_StringCompare(key, "TRANSLUCENT"))
-                                boomcompatible = true;
-                            else if (M_StringCompare(key, "TOUCHY") || M_StringCompare(key, "BOUNCES") || M_StringCompare(key, "FRIEND"))
-                                mbfcompatible = true;
 
                             value |= deh_mobjflags2[iy].value;
                             break;
@@ -2686,17 +2709,20 @@ static void deh_procThing(DEHFILE *fpin, char *line)
 
     // [BH] Disable bobbing and translucency if thing no longer a pickup
     if ((mobjinfo[indexnum].flags2 & MF2_FLOATBOB) && !(mobjinfo[indexnum].flags & MF_SPECIAL))
-    {
-        mobjinfo[indexnum].flags2 &= ~MF2_FLOATBOB;
-        mobjinfo[indexnum].flags2 &= ~MF2_TRANSLUCENT_33;
-        mobjinfo[indexnum].flags2 &= ~MF2_TRANSLUCENT_BLUE_25;
-    }
+        mobjinfo[indexnum].flags2 &= ~(MF2_FLOATBOB | MF2_TRANSLUCENT_33 | MF2_TRANSLUCENT_BLUE_25);
 
     // [BH] No extra barrel frame
     if (indexnum == MT_BARREL)
     {
         states[S_BAR1].nextstate = S_BAR2;
         mobjinfo[MT_BARREL].frames = 2;
+    }
+
+    // [BH] Call Wolf SS and Keen "monsters" if no name given
+    if ((indexnum == MT_WOLFSS || indexnum == MT_KEEN) && !namechange)
+    {
+        M_StringCopy(mobjinfo[indexnum].name1, "monster", sizeof(mobjinfo[indexnum].name1));
+        M_snprintf(mobjinfo[indexnum].plural1, sizeof(mobjinfo[indexnum].plural1), "monsters");
     }
 }
 
@@ -2848,7 +2874,7 @@ static void deh_procFrame(DEHFILE *fpin, char *line)
         }
 
         // MBF21: process state flags
-        else if (!strcasecmp(key, deh_state[15]))               // MBF21 Bits
+        else if (!strcasecmp(key, deh_state[15]))               // MBF21 bits
         {
             if (!value)
                 for (value = 0; (strval = strtok(strval, ",+| \t\f\r")); strval = NULL)
@@ -2873,7 +2899,7 @@ static void deh_procFrame(DEHFILE *fpin, char *line)
             if (devparm)
                 C_Output(" - translucent = %i", value);
 
-            states[indexnum].translucent = !!value;             // dboolean
+            states[indexnum].translucent = !!value;             // bool
             states[indexnum].dehacked = dehacked = !BTSX;
         }
         else
@@ -2904,7 +2930,7 @@ static void deh_procPointer(DEHFILE *fpin, char *line)
     }
 
     if (devparm)
-        C_Output("Processing Pointer at index %i: %s", indexnum, key);
+        C_Output("Processing pointer at index %i: %s", indexnum, key);
 
     if (indexnum < 0 || indexnum >= NUMSTATES)
     {
@@ -3155,7 +3181,7 @@ static void deh_procWeapon(DEHFILE *fpin, char *line)
             weaponinfo[indexnum].ammopershot = value;
             mbf21compatible = true;
         }
-        else if (M_StringCompare(key, deh_weapon[7]))       // MBF21 Bits
+        else if (M_StringCompare(key, deh_weapon[7]))       // MBF21 bits
         {
             if (bGetData == 1)
                 weaponinfo[indexnum].flags = value;
@@ -3231,9 +3257,9 @@ static void deh_procSprite(DEHFILE *fpin, char *line)   // Not supported
     }
 }
 
-extern dboolean newpars;
-extern int      pars[6][10];
-extern int      cpars[33];
+extern bool newpars;
+extern int  pars[6][10];
+extern int  cpars[33];
 
 // ====================================================================
 // deh_procPars
@@ -3639,12 +3665,12 @@ static void deh_procMisc(DEHFILE *fpin, char *line)
 //
 static void deh_procText(DEHFILE *fpin, char *line)
 {
-    char        key[DEH_MAXKEYLEN];
-    char        inbuffer[DEH_BUFFERMAX * 2];                // can't use line -- double size buffer too.
-    int         i;                                          // loop variable
-    int         fromlen, tolen;                             // as specified on the text block line
-    dboolean    found = false;                              // to allow early exit once found
-    char        *line2 = NULL;                              // duplicate line for rerouting
+    char    key[DEH_MAXKEYLEN];
+    char    inbuffer[DEH_BUFFERMAX * 2];                    // can't use line -- double size buffer too.
+    int     i;                                              // loop variable
+    int     fromlen, tolen;                                 // as specified on the text block line
+    bool    found = false;                                  // to allow early exit once found
+    char    *line2 = NULL;                                  // duplicate line for rerouting
 
     // Ty 04/11/98 - Included file may have NOTEXT skip flag set
     if (includenotext)                                      // flag to skip included deh-style text
@@ -3653,10 +3679,10 @@ static void deh_procText(DEHFILE *fpin, char *line)
         strcpy(inbuffer, line);
 
         while (!dehfeof(fpin) && *inbuffer && *inbuffer != ' ')
-            dehfgets(inbuffer, sizeof(inbuffer), fpin); // skip block
+            dehfgets(inbuffer, sizeof(inbuffer), fpin);     // skip block
 
         // Ty 05/17/98 - don't care if this fails
-        return;                             // ************** Early return
+        return;
     }
 
     if (sscanf(line, "%s %i %10i", key, &fromlen, &tolen) != 3)
@@ -3886,17 +3912,14 @@ static void deh_procStrings(DEHFILE *fpin, char *line)
 // Args:    key       -- place to put the mnemonic for the string if found
 //          lookfor   -- original value string to look for
 //          newstring -- string to put in its place if found
-// Returns: dboolean: True if string found, false if not
+// Returns: bool: True if string found, false if not
 //
-static dboolean deh_procStringSub(char *key, char *lookfor, char *newstring)
+static bool deh_procStringSub(char *key, char *lookfor, char *newstring)
 {
-    dboolean    found = false;  // loop exit flag
+    bool    found;  // loop exit flag
 
     for (int i = 0; i < deh_numstrlookup; i++)
-    {
-        found = (lookfor ? M_StringCompare(*deh_strlookup[i].ppstr, lookfor) : M_StringCompare(deh_strlookup[i].lookup, key));
-
-        if (found)
+        if ((found = (lookfor ? M_StringCompare(*deh_strlookup[i].ppstr, lookfor) : M_StringCompare(deh_strlookup[i].lookup, key))))
         {
             char    *t;
 
@@ -3946,7 +3969,6 @@ static dboolean deh_procStringSub(char *key, char *lookfor, char *newstring)
 
             break;
         }
-    }
 
     if (!found && !hacx)
         C_Warning(1, "The " BOLD("\"%s\"") " string can't be found.", (key ? key : lookfor));

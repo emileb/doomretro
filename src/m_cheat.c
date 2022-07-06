@@ -9,8 +9,8 @@
   Copyright © 1993-2022 by id Software LLC, a ZeniMax Media company.
   Copyright © 2013-2022 by Brad Harding <mailto:brad@doomretro.com>.
 
-  DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
-  <https://github.com/bradharding/doomretro/wiki/CREDITS>.
+  DOOM Retro is a fork of Chocolate DOOM. For a list of acknowledgments,
+  see <https://github.com/bradharding/doomretro/wiki/ACKNOWLEDGMENTS>.
 
   This file is a part of DOOM Retro.
 
@@ -41,6 +41,7 @@
 
 #include "c_console.h"
 #include "doomstat.h"
+#include "hu_stuff.h"
 #include "m_cheat.h"
 #include "m_misc.h"
 
@@ -49,12 +50,12 @@
 //
 
 //
-// Called in st_stuff module, which handles the input.
-// Returns true if the cheat was successful, false if failed.
+// Called in st_stuff.c, which handles the input.
+// Returns true if the cheat was successful, false if it failed.
 //
 char    cheatkey = '\0';
 
-dboolean cht_CheckCheat(cheatseq_t *cht, unsigned char key)
+bool cht_CheckCheat(cheatseq_t *cht, unsigned char key)
 {
     if (*consolecheat && M_StringCompare(consolecheat, cht->sequence))
     {
@@ -71,8 +72,8 @@ dboolean cht_CheckCheat(cheatseq_t *cht, unsigned char key)
         return true;
     }
 
-    // [BH] you have two seconds to enter all characters of a cheat sequence
-    if (cht->timeout && leveltime - cht->timeout > CHEATTIMEOUT)
+    // [BH] you have 2 or 4 seconds to enter all characters of a cheat sequence correctly
+    if (cht->timeout && leveltime - cht->timeout > (cht->longtimeout ? HU_MSGTIMEOUT : HU_MSGTIMEOUT / 2))
     {
         cht->chars_read = 0;
         cht->param_chars_read = 0;

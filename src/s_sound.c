@@ -9,8 +9,8 @@
   Copyright © 1993-2022 by id Software LLC, a ZeniMax Media company.
   Copyright © 2013-2022 by Brad Harding <mailto:brad@doomretro.com>.
 
-  DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
-  <https://github.com/bradharding/doomretro/wiki/CREDITS>.
+  DOOM Retro is a fork of Chocolate DOOM. For a list of acknowledgments,
+  see <https://github.com/bradharding/doomretro/wiki/ACKNOWLEDGMENTS>.
 
   This file is a part of DOOM Retro.
 
@@ -95,15 +95,6 @@ typedef struct
 static channel_t    *channels;
 static sobj_t       *sobjs;
 
-int                 s_channels = s_channels_default;
-dboolean            s_lowermenumusic = s_lowermenumusic_default;
-dboolean            s_musicinbackground = s_musicinbackground_default;
-int                 s_musicvolume = s_musicvolume_default;
-dboolean            s_randommusic = s_randommusic_default;
-dboolean            s_randompitch = s_randompitch_default;
-int                 s_sfxvolume = s_sfxvolume_default;
-dboolean            s_stereo = s_stereo_default;
-
 // Maximum volume of a sound effect.
 // Internal default is max out of 0-31.
 int                 sfxVolume;
@@ -115,13 +106,13 @@ int                 musicVolume;
 static int          snd_SfxVolume;
 
 // Whether songs are mus_paused
-static dboolean     mus_paused;
+static bool         mus_paused;
 
 // Music currently being played
 musicinfo_t         *mus_playing;
 
-dboolean            nosfx;
-dboolean            nomusic;
+bool                nosfx;
+bool                nomusic;
 
 musinfo_t           musinfo;
 
@@ -161,7 +152,7 @@ void S_Init(void)
 {
     if (M_CheckParm("-nosound"))
     {
-        C_Warning(1, "A " BOLD("-nosound") " parameter was found on the command-line. Both sound effects and music are now muted.");
+        C_Warning(1, "A " BOLD("-nosound") " parameter was found on the command-line. All sound is now muted.");
         nomusic = true;
         nosfx = true;
     }
@@ -169,13 +160,13 @@ void S_Init(void)
     {
         if (M_CheckParm("-nomusic"))
         {
-            C_Warning(1, "A " BOLD("-nomusic") " parameter was found on the command-line. Music is now muted.");
+            C_Warning(1, "A " BOLD("-nomusic") " parameter was found on the command-line. All music is now muted.");
             nomusic = true;
         }
 
         if (M_CheckParm("-nosfx"))
         {
-            C_Warning(1, "A " BOLD("-nosfx") " parameter was found on the command-line. Sound effects are now muted.");
+            C_Warning(1, "A " BOLD("-nosfx") " parameter was found on the command-line. All sound effects are now muted.");
             nosfx = true;
         }
     }
@@ -287,8 +278,6 @@ void S_StopSounds(void)
 
 static int S_GetMusicNum(void)
 {
-    int mnum;
-
     if (gamemode == commercial)
     {
         if (gamemission == pack_nerve)
@@ -306,18 +295,18 @@ static int S_GetMusicNum(void)
                 mus_ddtblu
             };
 
-            mnum = nmus[(s_randommusic ? M_RandomIntNoRepeat(1, 9, gamemap) : gamemap) - 1];
+            return nmus[(s_randommusic ? M_RandomIntNoRepeat(1, 9, gamemap) : gamemap) - 1];
         }
         else
-            mnum = mus_runnin + (s_randommusic ? M_RandomIntNoRepeat(1, 32, gamemap) : gamemap) - 1;
+            return (mus_runnin + (s_randommusic ? M_RandomIntNoRepeat(1, 32, gamemap) : gamemap) - 1);
     }
     else
     {
         if (gameepisode < 4)
-            mnum = mus_e1m1 + (s_randommusic ? M_RandomIntNoRepeat(1, 21, (gameepisode - 1) * 9 + gamemap) :
-                (gameepisode - 1) * 9 + gamemap) - 1;
+            return (mus_e1m1 + (s_randommusic ? M_RandomIntNoRepeat(1, 21, (gameepisode - 1) * 9 + gamemap) :
+                (gameepisode - 1) * 9 + gamemap) - 1);
         else if (gameepisode == 5 && sigil)
-            mnum = mus_e5m1 + (s_randommusic ? M_RandomIntNoRepeat(1, 9, gamemap) : gamemap) - 1;
+            return (mus_e5m1 + (s_randommusic ? M_RandomIntNoRepeat(1, 9, gamemap) : gamemap) - 1);
         else
         {
             const int   spmus[] =
@@ -334,11 +323,9 @@ static int S_GetMusicNum(void)
                 mus_e1m9    // Tim          E4M9
             };
 
-            mnum = spmus[(s_randommusic ? M_RandomIntNoRepeat(1, 9, gamemap) : gamemap) - 1];
+            return spmus[(s_randommusic ? M_RandomIntNoRepeat(1, 9, gamemap) : gamemap) - 1];
         }
     }
-
-    return mnum;
 }
 
 //
@@ -360,7 +347,7 @@ void S_Start(void)
 // so stereo positioning and distance calculations continue to work even after
 // the corresponding map object has already disappeared.
 // Thanks to jeff-d and kb1 for discussing this feature and the former for the
-// original implementation idea: <https://www.doomworld.com/forum/topic/1585325>
+// original implementation idea: <https://www.doomworld.com/forum/post/1585325>
 void S_UnlinkSound(mobj_t *origin)
 {
     if (!origin->madesound || nosfx)
@@ -426,11 +413,10 @@ static int S_GetChannel(mobj_t *origin, sfxinfo_t *sfxinfo)
 // Changes volume and stereo-separation variables from the norm of a sound
 // effect to be played. If the sound is not audible, returns false. Otherwise,
 // modifies parameters and returns true.
-static dboolean S_AdjustSoundParms(mobj_t *origin, int *vol, int *sep)
+static bool S_AdjustSoundParms(mobj_t *origin, int *vol, int *sep)
 {
     fixed_t     dist = 0;
     mobj_t      *listener = viewplayer->mo;
-    dboolean    boss = (origin->mbf21flags & MF_MBF21_BOSS);
     fixed_t     x = origin->x;
     fixed_t     y = origin->y;
 
@@ -455,7 +441,7 @@ static dboolean S_AdjustSoundParms(mobj_t *origin, int *vol, int *sep)
         return (*vol > 0);
     }
 
-    if (!boss && dist > S_CLIPPING_DIST)
+    if (dist > S_CLIPPING_DIST)
         return false;
 
     // stereo separation
@@ -471,7 +457,7 @@ static dboolean S_AdjustSoundParms(mobj_t *origin, int *vol, int *sep)
     }
 
     // volume calculation
-    *vol = (dist < S_CLOSE_DIST || boss ? snd_SfxVolume : snd_SfxVolume * (S_CLIPPING_DIST - dist) / S_ATTENUATOR);
+    *vol = (dist < S_CLOSE_DIST ? snd_SfxVolume : snd_SfxVolume * (S_CLIPPING_DIST - dist) / S_ATTENUATOR);
 
     return (*vol > 0);
 }
@@ -608,7 +594,7 @@ void S_StartMusic(int music_id)
     S_ChangeMusic(music_id, false, false, false);
 }
 
-void S_ChangeMusic(int music_id, dboolean looping, dboolean allowrestart, dboolean mapstart)
+void S_ChangeMusic(int music_id, bool looping, bool allowrestart, bool mapstart)
 {
     musicinfo_t *music = &S_music[music_id];
     char        namebuf[9];

@@ -9,8 +9,8 @@
   Copyright © 1993-2022 by id Software LLC, a ZeniMax Media company.
   Copyright © 2013-2022 by Brad Harding <mailto:brad@doomretro.com>.
 
-  DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
-  <https://github.com/bradharding/doomretro/wiki/CREDITS>.
+  DOOM Retro is a fork of Chocolate DOOM. For a list of acknowledgments,
+  see <https://github.com/bradharding/doomretro/wiki/ACKNOWLEDGMENTS>.
 
   This file is a part of DOOM Retro.
 
@@ -120,8 +120,8 @@ fixed_t         dc_iscale;
 fixed_t         dc_texturemid;
 fixed_t         dc_texheight;
 fixed_t         dc_texturefrac;
-byte            dc_solidblood;
-byte            *dc_blood;
+byte            dc_solidbloodcolor;
+byte            *dc_bloodcolor;
 byte            *dc_brightmap;
 int             dc_floorclip;
 int             dc_ceilingclip;
@@ -317,15 +317,7 @@ void R_DrawShadowColumn(void)
     int     count = dc_yh - dc_yl;
     byte    *dest = ylookup0[dc_yl] + dc_x;
 
-    if (!count)
-        *dest = *(*dest + dc_black33);
-    else if (count == 1)
-    {
-        *dest = *(*dest + dc_black33);
-        dest += SCREENWIDTH;
-        *dest = *(*dest + dc_black33);
-    }
-    else
+    if (count)
     {
         *dest = *(*dest + dc_black33);
         dest += SCREENWIDTH;
@@ -338,6 +330,8 @@ void R_DrawShadowColumn(void)
 
         *dest = *(*dest + (dc_yh == dc_floorclip ? dc_black40 : dc_black33));
     }
+    else
+        *dest = *(*dest + dc_black33);
 }
 
 void R_DrawFuzzyShadowColumn(void)
@@ -407,11 +401,11 @@ void R_DrawBloodSplatColumn(void)
 
     while (--count)
     {
-        *dest = *(*dest + dc_blood);
+        *dest = *(*dest + dc_bloodcolor);
         dest += SCREENWIDTH;
     }
 
-    *dest = *(*dest + dc_blood);
+    *dest = *(*dest + dc_bloodcolor);
 }
 
 void R_DrawSolidBloodSplatColumn(void)
@@ -421,11 +415,11 @@ void R_DrawSolidBloodSplatColumn(void)
 
     while (--count)
     {
-        *dest = dc_solidblood;
+        *dest = dc_solidbloodcolor;
         dest += SCREENWIDTH;
     }
 
-    *dest = dc_solidblood;
+    *dest = dc_solidbloodcolor;
 }
 
 void R_DrawWallColumn(void)
@@ -1188,36 +1182,41 @@ void R_DrawTranslucentBlue25Column(void)
 //
 void R_DrawFuzzColumn(void)
 {
-    byte    *dest;
-    int     count = dc_yh - dc_yl;
-
-    if (!count)
-        return;
-
-    dest = ylookup0[dc_yl] + dc_x;
-
-    // top
-    if (!dc_yl)
-        *dest = fullcolormap[6 * 256 + dest[(fuzztable[fuzzpos++] = FUZZ(0, 1))]];
-    else if (!(M_BigRandom() & 3))
-        *dest = fullcolormap[12 * 256 + dest[(fuzztable[fuzzpos++] = FUZZ(-1, 1))]];
-
-    dest += SCREENWIDTH;
-
-    while (--count)
+    if (pausesprites)
+        R_DrawPausedFuzzColumn();
+    else
     {
-        // middle
-        *dest = fullcolormap[6 * 256 + dest[(fuzztable[fuzzpos++] = FUZZ(-1, 1))]];
-        dest += SCREENWIDTH;
-    }
+        byte    *dest;
+        int     count = dc_yh - dc_yl;
 
-    // bottom
-    *dest = fullcolormap[5 * 256 + dest[(fuzztable[fuzzpos++] = FUZZ(-1, 0))]];
+        if (!count)
+            return;
 
-    if (dc_yh < dc_floorclip && !(M_BigRandom() & 3))
-    {
+        dest = ylookup0[dc_yl] + dc_x;
+
+        // top
+        if (!dc_yl)
+            *dest = fullcolormap[6 * 256 + dest[(fuzztable[fuzzpos++] = FUZZ(0, 1))]];
+        else if (!(M_BigRandom() & 3))
+            *dest = fullcolormap[12 * 256 + dest[(fuzztable[fuzzpos++] = FUZZ(-1, 1))]];
+
         dest += SCREENWIDTH;
-        *dest = fullcolormap[14 * 256 + dest[(fuzztable[fuzzpos++] = FUZZ(-1, 0))]];
+
+        while (--count)
+        {
+            // middle
+            *dest = fullcolormap[6 * 256 + dest[(fuzztable[fuzzpos++] = FUZZ(-1, 1))]];
+            dest += SCREENWIDTH;
+        }
+
+        // bottom
+        *dest = fullcolormap[5 * 256 + dest[(fuzztable[fuzzpos++] = FUZZ(-1, 0))]];
+
+        if (dc_yh < dc_floorclip && !(M_BigRandom() & 3))
+        {
+            dest += SCREENWIDTH;
+            *dest = fullcolormap[14 * 256 + dest[(fuzztable[fuzzpos++] = FUZZ(-1, 0))]];
+        }
     }
 }
 
@@ -1553,13 +1552,13 @@ void R_DrawDitherColorSpan(void)
 //
 // R_InitBuffer
 //
-void R_InitBuffer(int width, int height)
+void R_InitBuffer(void)
 {
     // Handle resize, e.g. smaller view windows with border and/or status bar.
-    viewwindowx = (SCREENWIDTH - width) / 2;
+    viewwindowx = (SCREENWIDTH - viewwidth) / 2;
 
     // Same with base row offset.
-    viewwindowy = (width == SCREENWIDTH ? 0 : (SCREENHEIGHT - SBARHEIGHT - height) / 2);
+    viewwindowy = (viewwidth == SCREENWIDTH ? 0 : (SCREENHEIGHT - SBARHEIGHT - viewheight) / 2);
 
     for (int i = 0, y = viewwindowy * SCREENWIDTH + viewwindowx; y < SCREENAREA; i++, y += SCREENWIDTH)
     {
@@ -1593,15 +1592,14 @@ void R_FillBezel(void)
         for (int x = 0; x < (SCREENWIDTH - NONWIDEWIDTH) / 2 / SCREENSCALE; x += 8)
             V_DrawPatch(x - WIDESCREENDELTA, VANILLAHEIGHT - VANILLASBARHEIGHT, 0, brdr_b);
 
-        for (int x = SCREENWIDTH / SCREENSCALE - 8; x >= ((SCREENWIDTH - NONWIDEWIDTH) / 2 + NONWIDEWIDTH) / SCREENSCALE - 8; x -= 8)
+        for (int x = SCREENWIDTH / SCREENSCALE - 8; x >= (SCREENWIDTH + NONWIDEWIDTH) / 2 / SCREENSCALE - 8; x -= 8)
             V_DrawPatch(x - WIDESCREENDELTA, VANILLAHEIGHT - VANILLASBARHEIGHT, 0, brdr_b);
     }
 }
 
 //
 // R_FillBackScreen
-// Fills the back screen with a pattern
-//  for variable screen sizes
+// Fills the back screen with a pattern for variable screen sizes.
 // Also draws a beveled edge.
 //
 void R_FillBackScreen(void)

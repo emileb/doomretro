@@ -9,8 +9,8 @@
   Copyright © 1993-2022 by id Software LLC, a ZeniMax Media company.
   Copyright © 2013-2022 by Brad Harding <mailto:brad@doomretro.com>.
 
-  DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
-  <https://github.com/bradharding/doomretro/wiki/CREDITS>.
+  DOOM Retro is a fork of Chocolate DOOM. For a list of acknowledgments,
+  see <https://github.com/bradharding/doomretro/wiki/ACKNOWLEDGMENTS>.
 
   This file is a part of DOOM Retro.
 
@@ -66,4 +66,17 @@
 #define QUITMSG13           "just leave. when you come\nback, i'll be waiting with a bat."
 #define QUITMSG14           "you're lucky i don't smack\nyou for thinking about leaving."
 
+// UNUSED messages included in the source release
+#define DEVQUITMSG1         "Fuck you, pussy!\nGet the fuck out!"
+#define DEVQUITMSG2         "You quit now and I'll\njizz in your cysthole!"
+#define DEVQUITMSG3         "If you leave, I'll make\nthe lord drink my jizz."
+#define DEVQUITMSG4         "Hey, Ron! Can we say\n\"fuck\" in this game?"
+#define DEVQUITMSG5         "I'd leave. There's just more\nmonsters and maps. What a load!"
+#define DEVQUITMSG6         "Suck it down, asshole!\nYou're a fucking wimp!"
+#define DEVQUITMSG7         "Don't quit now!\nWe're still spending your money!"
+
+// Internal debug. Different style, too.
+#define DEVQUITMSG8         "THIS IS NO MESSAGE!\nPage intentionally left blank."
+
 extern char **endmsg[];
+extern char *devendmsg[];

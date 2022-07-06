@@ -9,8 +9,8 @@
   Copyright © 1993-2022 by id Software LLC, a ZeniMax Media company.
   Copyright © 2013-2022 by Brad Harding <mailto:brad@doomretro.com>.
 
-  DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
-  <https://github.com/bradharding/doomretro/wiki/CREDITS>.
+  DOOM Retro is a fork of Chocolate DOOM. For a list of acknowledgments,
+  see <https://github.com/bradharding/doomretro/wiki/ACKNOWLEDGMENTS>.
 
   This file is a part of DOOM Retro.
 
@@ -97,7 +97,7 @@ int P_BoxOnLineSide(fixed_t *tmbox, line_t *ld)
 
 //
 // P_PointOnDivlineSide
-// Returns 0 or 1.
+// Returns 0 or 1
 //
 static int P_PointOnDivlineSide(fixed_t x, fixed_t y, divline_t *line)
 {
@@ -114,7 +114,7 @@ static int P_PointOnDivlineSide(fixed_t x, fixed_t y, divline_t *line)
 //
 fixed_t P_InterceptVector(divline_t *v2, divline_t *v1)
 {
-    int64_t den = ((int64_t)v1->dy * v2->dx - (int64_t)v1->dx * v2->dy) >> FRACBITS;
+    const int64_t   den = ((int64_t)v1->dy * v2->dx - (int64_t)v1->dx * v2->dy) >> FRACBITS;
 
     if (!den)
         return 0;
@@ -336,7 +336,7 @@ void P_SetBloodSplatPosition(bloodsplat_t *splat)
 // The validcount flags are used to avoid checking lines that are marked in multiple mapblocks, so
 // increment validcount before the first call to P_BlockLinesIterator, then make one or more calls to it.
 //
-dboolean P_BlockLinesIterator(int x, int y, dboolean func(line_t *))
+bool P_BlockLinesIterator(int x, int y, bool func(line_t *))
 {
     if (x < 0 || y < 0 || x >= bmapwidth || y >= bmapheight)
         return true;
@@ -367,7 +367,7 @@ dboolean P_BlockLinesIterator(int x, int y, dboolean func(line_t *))
 //
 // P_BlockThingsIterator
 //
-dboolean P_BlockThingsIterator(int x, int y, dboolean func(mobj_t *))
+bool P_BlockThingsIterator(int x, int y, bool func(mobj_t *))
 {
     if (x < 0 || y < 0 || x >= bmapwidth || y >= bmapheight)
         return true;
@@ -452,7 +452,7 @@ static intercept_t  *intercept_p;
 void P_CheckIntercepts(void)
 {
     static size_t   num_intercepts;
-    size_t          offset = intercept_p - intercepts;
+    const size_t    offset = intercept_p - intercepts;
 
     if (offset >= num_intercepts)
     {
@@ -469,14 +469,15 @@ divline_t   dltrace;
 // Looks for lines in the given block that intercept the given trace to add to the intercepts list.
 // A line is crossed if its endpoints are on opposite sides of the trace.
 //
-static dboolean PIT_AddLineIntercepts(line_t *ld)
+static bool PIT_AddLineIntercepts(line_t *ld)
 {
-    int         s1, s2;
+    int         s1;
+    int         s2;
     fixed_t     frac;
     divline_t   dl;
 
     // avoid precision problems with two routines
-    if (dltrace.dx > 16 * FRACUNIT || dltrace.dy > 16 * FRACUNIT || dltrace.dx < -16 * FRACUNIT || dltrace.dy < -16 * FRACUNIT)
+    if (dltrace.dx < -16 * FRACUNIT || dltrace.dx > 16 * FRACUNIT || dltrace.dy < -16 * FRACUNIT || dltrace.dy > 16 * FRACUNIT)
     {
         s1 = P_PointOnDivlineSide(ld->v1->x, ld->v1->y, &dltrace);
         s2 = P_PointOnDivlineSide(ld->v2->x, ld->v2->y, &dltrace);
@@ -512,13 +513,13 @@ static dboolean PIT_AddLineIntercepts(line_t *ld)
 //
 // PIT_AddThingIntercepts
 //
-static dboolean PIT_AddThingIntercepts(mobj_t *thing)
+static bool PIT_AddThingIntercepts(mobj_t *thing)
 {
-    int         numfronts = 0;
-    divline_t   dl;
-    fixed_t     radius = thing->radius;
-    fixed_t     x = thing->x;
-    fixed_t     y = thing->y;
+    int             numfronts = 0;
+    divline_t       dl;
+    const fixed_t   radius = thing->radius;
+    const fixed_t   x = thing->x;
+    const fixed_t   y = thing->y;
 
     // [RH] Don't check a corner to corner crosssection for hit.
     // Instead, check against the actual bounding box.
@@ -608,7 +609,7 @@ static dboolean PIT_AddThingIntercepts(mobj_t *thing)
 // P_TraverseIntercepts
 // Returns true if the traverser function returns true for all lines.
 //
-static dboolean P_TraverseIntercepts(traverser_t func, fixed_t maxfrac)
+static bool P_TraverseIntercepts(traverser_t func, fixed_t maxfrac)
 {
     size_t      count = intercept_p - intercepts;
     intercept_t *in = NULL;
@@ -643,7 +644,7 @@ static dboolean P_TraverseIntercepts(traverser_t func, fixed_t maxfrac)
 //
 #define MAX_SIGHT_COUNT 64
 
-dboolean P_PathTraverse(fixed_t x1, fixed_t y1, fixed_t x2, fixed_t y2, int flags, traverser_t trav)
+bool P_PathTraverse(fixed_t x1, fixed_t y1, fixed_t x2, fixed_t y2, int flags, traverser_t trav)
 {
     fixed_t xt1, yt1;
     fixed_t xt2, yt2;
@@ -844,7 +845,7 @@ static mobj_t *RoughBlockCheck(mobj_t *mo, int index, angle_t fov)
         }
 
         // skip actors outside of specified FOV
-        if (fov > 0 && !P_CheckFov(mo, link, fov))
+        if (fov > 0 && !P_CheckFOV(mo, link, fov))
         {
             link = link->bnext;
             continue;
@@ -873,9 +874,9 @@ static mobj_t *RoughBlockCheck(mobj_t *mo, int index, angle_t fov)
 // distance is in MAPBLOCKUNITS
 mobj_t *P_RoughTargetSearch(mobj_t *mo, angle_t fov, int distance)
 {
-    int     startx = (mo->x - bmaporgx) >> MAPBLOCKSHIFT;
-    int     starty = (mo->y - bmaporgy) >> MAPBLOCKSHIFT;
-    mobj_t  *target;
+    const int   startx = (mo->x - bmaporgx) >> MAPBLOCKSHIFT;
+    const int   starty = (mo->y - bmaporgy) >> MAPBLOCKSHIFT;
+    mobj_t      *target;
 
     if (startx >= 0 && startx < bmapwidth && starty >= 0 && starty < bmapheight
         && (target = RoughBlockCheck(mo, starty * bmapwidth + startx, fov)))

@@ -9,8 +9,8 @@
   Copyright © 1993-2022 by id Software LLC, a ZeniMax Media company.
   Copyright © 2013-2022 by Brad Harding <mailto:brad@doomretro.com>.
 
-  DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
-  <https://github.com/bradharding/doomretro/wiki/CREDITS>.
+  DOOM Retro is a fork of Chocolate DOOM. For a list of acknowledgments,
+  see <https://github.com/bradharding/doomretro/wiki/ACKNOWLEDGMENTS>.
 
   This file is a part of DOOM Retro.
 
@@ -43,19 +43,19 @@
 #include "m_config.h"
 #include "p_local.h"
 
-static dboolean     segtextured;        // True if any of the segs textures might be visible.
+static bool         segtextured;        // True if any of the segs textures might be visible.
 
-static dboolean     markfloor;          // False if the back side is the same plane.
-static dboolean     markceiling;
+static bool         markfloor;          // False if the back side is the same plane.
+static bool         markceiling;
 
-static dboolean     maskedtexture;
+static bool         maskedtexture;
 static int          toptexture;
 static int          midtexture;
 static int          bottomtexture;
 
-static dboolean     missingtoptexture;
-static dboolean     missingmidtexture;
-static dboolean     missingbottomtexture;
+static bool         missingtoptexture;
+static bool         missingmidtexture;
+static bool         missingbottomtexture;
 
 static fixed_t      toptexheight;
 static fixed_t      midtexheight;
@@ -92,14 +92,12 @@ static fixed_t      topstep;
 static int64_t      bottomfrac;
 static fixed_t      bottomstep;
 
-lighttable_t        **walllights;
-lighttable_t        **walllightsnext;
+static lighttable_t **walllights;
+static lighttable_t **walllightsnext;
 
 static int          *maskedtexturecol;  // dropoff overflow
 
-dboolean            r_brightmaps = r_brightmaps_default;
-
-extern dboolean     usebrightmaps;
+extern bool         usebrightmaps;
 
 //
 // R_FixWiggle()
@@ -245,9 +243,7 @@ void R_RenderMaskedSegRange(drawseg_t *ds, const int x1, const int x2)
         short       lightlevel = R_FakeFlat(frontsector, &tempsec, NULL, NULL, false)->lightlevel;
 
         walllights = GetLightTable(lightlevel);
-
-        if (r_ditheredlighting)
-            walllightsnext = GetLightTable(lightlevel + 4);
+        walllightsnext = GetLightTable(lightlevel + 4);
     }
 
     maskedtexturecol = ds->maskedtexturecol;
@@ -298,12 +294,8 @@ void R_RenderMaskedSegRange(drawseg_t *ds, const int x1, const int x2)
                 int index = MIN(spryscale >> LIGHTSCALESHIFT, MAXLIGHTSCALE - 1);
 
                 dc_colormap[0] = walllights[index];
-
-                if (r_ditheredlighting)
-                {
-                    dc_nextcolormap[0] = walllightsnext[index];
-                    dc_z = ((spryscale >> 5) & 255);
-                }
+                dc_nextcolormap[0] = walllightsnext[index];
+                dc_z = ((spryscale >> 5) & 255);
             }
 
             dc_iscale = UINT_MAX / (unsigned int)spryscale;
@@ -320,7 +312,7 @@ void R_RenderMaskedSegRange(drawseg_t *ds, const int x1, const int x2)
 // Can draw or mark the starting pixel of floor and ceiling textures.
 // CALLED: CORE LOOPING ROUTINE.
 //
-static dboolean didsolidcol;
+static bool didsolidcol;
 
 static void R_RenderSegLoop(void)
 {
@@ -382,12 +374,8 @@ static void R_RenderSegLoop(void)
                 int index = MIN(rw_scale >> LIGHTSCALESHIFT, MAXLIGHTSCALE - 1);
 
                 dc_colormap[0] = walllights[index];
-
-                if (r_ditheredlighting)
-                {
-                    dc_nextcolormap[0] = walllightsnext[index];
-                    dc_z = ((rw_scale >> 5) & 255);
-                }
+                dc_nextcolormap[0] = walllightsnext[index];
+                dc_z = ((rw_scale >> 5) & 255);
             }
 
             dc_x = rw_x;
@@ -677,7 +665,7 @@ void R_StoreWallRange(const int start, const int stop)
     worldbottom = frontsector->interpfloorheight - viewz;
 
     // [BH] animate liquid sectors
-    if (frontsector->terraintype != SOLID
+    if (frontsector->terraintype >= LIQUID
         && (!frontsector->heightsec || viewz > frontsector->heightsec->interpfloorheight)
         && r_liquid_bob)
         worldbottom += animatedliquiddiff;
@@ -778,7 +766,7 @@ void R_StoreWallRange(const int start, const int stop)
             worldtop = worldhigh;
 
         // [BH] animate liquid sectors
-        if (backsector->terraintype != SOLID
+        if (backsector->terraintype >= LIQUID
             && backsector->interpfloorheight >= frontsector->interpfloorheight
             && (!backsector->heightsec || viewz > backsector->heightsec->interpfloorheight)
             && r_liquid_bob)
@@ -887,9 +875,7 @@ void R_StoreWallRange(const int start, const int stop)
             short   lightlevel = frontsector->lightlevel;
 
             walllights = GetLightTable(lightlevel);
-
-            if (r_ditheredlighting)
-                walllightsnext = GetLightTable(lightlevel + 4);
+            walllightsnext = GetLightTable(lightlevel + 4);
         }
     }
 

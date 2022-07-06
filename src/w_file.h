@@ -9,8 +9,8 @@
   Copyright © 1993-2022 by id Software LLC, a ZeniMax Media company.
   Copyright © 2013-2022 by Brad Harding <mailto:brad@doomretro.com>.
 
-  DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
-  <https://github.com/bradharding/doomretro/wiki/CREDITS>.
+  DOOM Retro is a fork of Chocolate DOOM. For a list of acknowledgments,
+  see <https://github.com/bradharding/doomretro/wiki/ACKNOWLEDGMENTS>.
 
   This file is a part of DOOM Retro.
 
@@ -53,29 +53,30 @@
 #if defined(_WIN32)
 FILE    *D_fopen(const char *filename, const char *mode);
 int     D_remove(const char *path);
+int     D_rename(const char *oldname, const char *newname);
 int     D_stat(const char *path, struct stat *buffer);
 int     D_mkdir(const char *dirname);
 
 #undef fopen
 #undef remove
+#undef rename
 #undef stat
 #undef mkdir
 
-#define fopen(filename, mode)   D_fopen(filename, mode)
-#define remove(path)            D_remove(path)
-#define stat(path, buffer)      D_stat(path, buffer)
-#define mkdir(dirname)          D_mkdir(dirname)
+#define fopen(filename, mode)       D_fopen(filename, mode)
+#define remove(path)                D_remove(path)
+#define rename(oldname, newname)    D_rename(oldname, newname)
+#define stat(path, buffer)          D_stat(path, buffer)
+#define mkdir(dirname)              D_mkdir(dirname)
 #endif
 
-typedef struct wadfile_s wadfile_t;
-
-struct wadfile_s
+typedef struct
 {
-    FILE        *fstream;
-    dboolean    freedoom;
-    char        path[MAX_PATH];
-    int         type;
-};
+    FILE    *fstream;
+    bool    freedoom;
+    char    path[MAX_PATH];
+    int     type;
+} wadfile_t;
 
 // Open the specified file. Returns a pointer to a new wadfile_t
 // handle for the WAD file, or NULL if it could not be opened.
@@ -89,4 +90,4 @@ void W_CloseFile(wadfile_t *wad);
 // Returns the number of bytes read.
 size_t W_Read(wadfile_t *wad, unsigned int offset, void *buffer, size_t buffer_len);
 
-dboolean W_WriteFile(char const *name, const void *source, size_t length);
+bool W_WriteFile(char const *name, const void *source, size_t length);

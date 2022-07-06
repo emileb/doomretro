@@ -23,11 +23,13 @@ ANDROID_FILES = \
 FILE_LIST := $(wildcard $(LOCAL_PATH)*.c)
 LOCAL_SRC_FILES := $(ANDROID_FILES) $(FILE_LIST:$(LOCAL_PATH)%=%)
 
-
 LOCAL_LDLIBS += -llog -lz -lGLESv1_CM
 
 LOCAL_SHARED_LIBRARIES := touchcontrols SDL2 SDL2_mixer SDL2_image logwritter core_shared saffal
-LOCAL_STATIC_LIBRARIES +=
+
+#Strip unused functions/data
+LOCAL_CFLAGS += -fvisibility=hidden -fdata-sections -ffunction-sections -fPIC
+LOCAL_LDFLAGS += -Wl,--gc-sections -flto
 
 include $(BUILD_SHARED_LIBRARY)
 

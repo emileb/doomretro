@@ -9,8 +9,8 @@
   Copyright © 1993-2022 by id Software LLC, a ZeniMax Media company.
   Copyright © 2013-2022 by Brad Harding <mailto:brad@doomretro.com>.
 
-  DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
-  <https://github.com/bradharding/doomretro/wiki/CREDITS>.
+  DOOM Retro is a fork of Chocolate DOOM. For a list of acknowledgments,
+  see <https://github.com/bradharding/doomretro/wiki/ACKNOWLEDGMENTS>.
 
   This file is a part of DOOM Retro.
 
@@ -47,18 +47,18 @@
 #include "SDL_mixer.h"
 #include "version.h"
 
-dboolean        midimusictype;
-dboolean        musmusictype;
+bool        midimusictype;
+bool        musmusictype;
 
 #if defined(_WIN32)
-dboolean        windowsmidi = false;
+bool        windowsmidi = false;
 #else
-static int      paused_midi_volume;
+static int  paused_midi_volume;
 #endif
 
-static dboolean music_initialized;
+static bool music_initialized;
 
-int             current_music_volume = 0;
+int         current_music_volume = 0;
 
 // Shutdown music
 void I_ShutdownMusic(void)
@@ -84,7 +84,7 @@ void I_ShutdownMusic(void)
 }
 
 // Initialize music subsystem
-dboolean I_InitMusic(void)
+bool I_InitMusic(void)
 {
     int         freq = MIX_DEFAULT_FREQUENCY;
     int         channels;
@@ -128,7 +128,7 @@ void I_SetMusicVolume(int volume)
 }
 
 // Start playing a mid
-void I_PlaySong(void *handle, dboolean looping)
+void I_PlaySong(void *handle, bool looping)
 {
     if (!music_initialized)
         return;

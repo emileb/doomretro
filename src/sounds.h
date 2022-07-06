@@ -9,8 +9,8 @@
   Copyright © 1993-2022 by id Software LLC, a ZeniMax Media company.
   Copyright © 2013-2022 by Brad Harding <mailto:brad@doomretro.com>.
 
-  DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
-  <https://github.com/bradharding/doomretro/wiki/CREDITS>.
+  DOOM Retro is a fork of Chocolate DOOM. For a list of acknowledgments,
+  see <https://github.com/bradharding/doomretro/wiki/ACKNOWLEDGMENTS>.
 
   This file is a part of DOOM Retro.
 
@@ -105,11 +105,11 @@ extern musicinfo_t  S_music[];
 
 extern musicinfo_t  *mus_playing;
 
-extern dboolean     midimusictype;
-extern dboolean     musmusictype;
+extern bool         midimusictype;
+extern bool         musmusictype;
 
 #if defined(_WIN32)
-extern dboolean     windowsmidi;
+extern bool         windowsmidi;
 #endif
 
 extern int          current_music_volume;

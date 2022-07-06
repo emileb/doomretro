@@ -9,8 +9,8 @@
   Copyright © 1993-2022 by id Software LLC, a ZeniMax Media company.
   Copyright © 2013-2022 by Brad Harding <mailto:brad@doomretro.com>.
 
-  DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
-  <https://github.com/bradharding/doomretro/wiki/CREDITS>.
+  DOOM Retro is a fork of Chocolate DOOM. For a list of acknowledgments,
+  see <https://github.com/bradharding/doomretro/wiki/ACKNOWLEDGMENTS>.
 
   This file is a part of DOOM Retro.
 
@@ -38,6 +38,7 @@
 
 #include "c_cmds.h"
 #include "c_console.h"
+#include "d_iwad.h"
 #include "d_main.h"
 #include "doomstat.h"
 #include "hu_lib.h"
@@ -58,22 +59,18 @@
 #include "z_zone.h"
 
 #define WHITE       4
-#define LIGHTGRAY   82
+#define LIGHTGRAY  82
 
-byte        *screens[NUMSCREENS];
-int         lowpixelwidth;
-int         lowpixelheight;
-char        screenshotfolder[MAX_PATH];
-
-char        *r_lowpixelsize = r_lowpixelsize_default;
-dboolean    r_supersampling = r_supersampling_default;
+byte    *screens[NUMSCREENS];
+int     lowpixelwidth;
+int     lowpixelheight;
 
 void (*postprocessfunc)(int, int, int, int, int, int);
 
 //
 // V_FillRect
 //
-void V_FillRect(int scrn, int x, int y, int width, int height, int color, dboolean right)
+void V_FillRect(int scrn, int x, int y, int width, int height, int color, bool right)
 {
     byte    *dest = &screens[scrn][y * SCREENWIDTH + x];
 
@@ -84,7 +81,7 @@ void V_FillRect(int scrn, int x, int y, int width, int height, int color, dboole
     }
 }
 
-void V_FillTransRect(int scrn, int x, int y, int width, int height, int color, dboolean right)
+void V_FillTransRect(int scrn, int x, int y, int width, int height, int color, bool right)
 {
     byte        *dest = &screens[scrn][y * SCREENWIDTH + x];
     const byte  *tint60 = &alttinttab60[color << 8];
@@ -98,7 +95,7 @@ void V_FillTransRect(int scrn, int x, int y, int width, int height, int color, d
     }
 }
 
-void V_FillSoftTransRect(int scrn, int x, int y, int width, int height, int color, dboolean right)
+void V_FillSoftTransRect(int scrn, int x, int y, int width, int height, int color, bool right)
 {
     byte        *dest = &screens[scrn][y * SCREENWIDTH + x];
     byte        *dot;
@@ -500,7 +497,7 @@ void V_DrawBigPatch(int x, int y, patch_t *patch)
 }
 
 void V_DrawConsoleInputTextPatch(byte *screen, int screenwidth, int x, int y, patch_t *patch, int width, int color,
-    int backgroundcolor, dboolean italics, byte *translucency)
+    int backgroundcolor, bool italics, byte *translucency)
 {
     byte    *desttop = &screens[0][y * screenwidth + x];
 
@@ -535,7 +532,7 @@ void V_DrawConsoleInputTextPatch(byte *screen, int screenwidth, int x, int y, pa
 }
 
 void V_DrawConsoleOutputTextPatch(byte *screen, int screenwidth, int x, int y, patch_t *patch, int width, int color,
-    int backgroundcolor, dboolean italics, byte *translucency)
+    int backgroundcolor, bool italics, byte *translucency)
 {
     byte        *desttop = &screen[y * screenwidth + x];
     const int   italicize[] = { 2, 2, 2, 1, 1, 1, 1, 0, 0, 0, 0, -1, -1, -1 };
@@ -684,7 +681,7 @@ void V_DrawConsoleBrandingPatch(int x, int y, patch_t *patch, int color)
     }
 }
 
-dboolean V_IsEmptyPatch(patch_t *patch)
+bool V_IsEmptyPatch(patch_t *patch)
 {
     const int   w = SHORT(patch->width);
 
@@ -811,7 +808,7 @@ void V_DrawTranslucentHUDText(int x, int y, byte *screen, patch_t *patch, int sc
     }
 }
 
-void V_DrawAltHUDText(int x, int y, byte *screen, patch_t *patch, dboolean italics, int color, int screenwidth, byte *tinttab)
+void V_DrawAltHUDText(int x, int y, byte *screen, patch_t *patch, bool italics, int color, int screenwidth, byte *tinttab)
 {
     byte        *desttop = &screen[y * screenwidth + x];
     const int   w = SHORT(patch->width);
@@ -849,7 +846,7 @@ void V_DrawAltHUDText(int x, int y, byte *screen, patch_t *patch, dboolean itali
     }
 }
 
-void V_DrawTranslucentAltHUDText(int x, int y, byte *screen, patch_t *patch, dboolean italics, int color, int screenwidth, byte *tinttab)
+void V_DrawTranslucentAltHUDText(int x, int y, byte *screen, patch_t *patch, bool italics, int color, int screenwidth, byte *tinttab)
 {
     byte        *desttop = &screen[y * screenwidth + x];
     const int   w = SHORT(patch->width);
@@ -887,7 +884,7 @@ void V_DrawTranslucentAltHUDText(int x, int y, byte *screen, patch_t *patch, dbo
     }
 }
 
-void V_DrawPatchWithShadow(int x, int y, patch_t *patch, dboolean flag)
+void V_DrawPatchWithShadow(int x, int y, patch_t *patch, bool flag)
 {
     byte        *desttop;
     const int   w = SHORT(patch->width) << FRACBITS;
@@ -1428,7 +1425,7 @@ void V_DrawFuzzPatch(int x, int y, patch_t *patch)
 
             while (count--)
             {
-                if (!menuactive && !paused && !consoleactive)
+                if (!menuactive && !consoleactive && !paused)
                     fuzztable[fuzzpos] = FUZZ(-1, 1);
 
                 *dest = fullcolormap[6 * 256 + dest[fuzztable[fuzzpos++]]];
@@ -1464,7 +1461,7 @@ void V_DrawFlippedFuzzPatch(int x, int y, patch_t *patch)
 
             while (count--)
             {
-                if (!menuactive && !paused && !consoleactive)
+                if (!menuactive && !consoleactive && !paused)
                     fuzztable[fuzzpos] = FUZZ(-1, 1);
 
                 *dest = fullcolormap[6 * 256 + dest[fuzztable[fuzzpos++]]];
@@ -1574,7 +1571,7 @@ void V_DrawTranslucentNoGreenPatch(int x, int y, patch_t *patch)
     }
 }
 
-void V_DrawPixel(int x, int y, byte color, dboolean drawshadow)
+void V_DrawPixel(int x, int y, byte color, bool drawshadow)
 {
     x += WIDESCREENDELTA;   // [crispy] horizontal widescreen offset
 
@@ -1777,7 +1774,6 @@ void V_Init(void)
 {
     byte                *base = Z_Malloc(MAXSCREENAREA * NUMSCREENS, PU_STATIC, NULL);
     const SDL_version   *linked = IMG_Linked_Version();
-    int                 p;
 
     if (linked->major != SDL_IMAGE_MAJOR_VERSION || linked->minor != SDL_IMAGE_MINOR_VERSION)
         I_Error("The wrong version of %s was found. %s requires v%i.%i.%i.",
@@ -1789,32 +1785,17 @@ void V_Init(void)
 
     for (int i = 0; i < NUMSCREENS; i++)
         screens[i] = &base[i * MAXSCREENAREA];
-
-    if ((p = M_CheckParmsWithArgs("-shot", "-shotdir", "", 1, 1)))
-        M_StringCopy(screenshotfolder, myargv[p + 1], sizeof(screenshotfolder));
-    else
-    {
-        char    *appdatafolder = M_GetAppDataFolder();
-
-        M_snprintf(screenshotfolder, sizeof(screenshotfolder), "%s" DIR_SEPARATOR_S "screenshots" DIR_SEPARATOR_S, appdatafolder);
-
-#if !defined(__APPLE__)
-        free(appdatafolder);
-#endif
-    }
-
-    M_MakeDirectory(screenshotfolder);
 }
 
 char    lbmname1[MAX_PATH];
 char    lbmpath1[MAX_PATH];
 char    lbmpath2[MAX_PATH];
 
-static dboolean V_SavePNG(SDL_Renderer *sdlrenderer, char *path)
+static bool V_SavePNG(SDL_Renderer *sdlrenderer, char *path)
 {
-    dboolean    result = false;
-    int         width;
-    int         height;
+    bool    result = false;
+    int     width;
+    int     height;
 
     if (!SDL_GetRendererOutputSize(sdlrenderer, &width, &height))
     {
@@ -1832,12 +1813,12 @@ static dboolean V_SavePNG(SDL_Renderer *sdlrenderer, char *path)
     return result;
 }
 
-dboolean V_ScreenShot(void)
+bool V_ScreenShot(void)
 {
-    dboolean    result = false;
-    char        mapname[128];
-    char        *temp1;
-    int         count = 0;
+    bool    result = false;
+    char    mapname[128];
+    char    *temp1;
+    int     count = 0;
 
     if (consoleactive)
         M_StringCopy(mapname, "Console", sizeof(mapname));

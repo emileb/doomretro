@@ -9,8 +9,8 @@
   Copyright © 1993-2022 by id Software LLC, a ZeniMax Media company.
   Copyright © 2013-2022 by Brad Harding <mailto:brad@doomretro.com>.
 
-  DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
-  <https://github.com/bradharding/doomretro/wiki/CREDITS>.
+  DOOM Retro is a fork of Chocolate DOOM. For a list of acknowledgments,
+  see <https://github.com/bradharding/doomretro/wiki/ACKNOWLEDGMENTS>.
 
   This file is a part of DOOM Retro.
 
@@ -43,27 +43,26 @@
 //
 
 // declaring a cheat
-#define CHEAT(value, parameters)    { value, parameters, 0, 0, "", 0 }
-
-#define CHEATTIMEOUT                (2 * TICRATE)
+#define CHEAT(value, parameters, longtimeout)   { value, parameters, longtimeout, 0, 0, "", 0 }
 
 typedef struct
 {
     // settings for this cheat
-    char        *sequence;
-    int         parameter_chars;
+    char    *sequence;
+    int     parameter_chars;
+    bool    longtimeout;
 
     // state used during the game
-    size_t      chars_read;
-    int         param_chars_read;
-    char        parameter_buf[5];
+    size_t  chars_read;
+    int     param_chars_read;
+    char    parameter_buf[5];
 
-    int         timeout;
+    int     timeout;
 
-    dboolean    movekey;
+    bool    movekey;
 } cheatseq_t;
 
-dboolean cht_CheckCheat(cheatseq_t *cht, unsigned char key);
+bool cht_CheckCheat(cheatseq_t *cht, unsigned char key);
 
 void cht_GetParam(cheatseq_t *cht, char *buffer);
 

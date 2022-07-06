@@ -9,8 +9,8 @@
   Copyright © 1993-2022 by id Software LLC, a ZeniMax Media company.
   Copyright © 2013-2022 by Brad Harding <mailto:brad@doomretro.com>.
 
-  DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
-  <https://github.com/bradharding/doomretro/wiki/CREDITS>.
+  DOOM Retro is a fork of Chocolate DOOM. For a list of acknowledgments,
+  see <https://github.com/bradharding/doomretro/wiki/ACKNOWLEDGMENTS>.
 
   This file is a part of DOOM Retro.
 
@@ -43,6 +43,7 @@
 #include "i_system.h"
 #include "m_config.h"
 #include "m_misc.h"
+#include "p_fix.h"
 #include "p_inter.h"
 #include "p_local.h"
 #include "p_saveg.h"
@@ -56,27 +57,14 @@
 #define SAVEGAME_EOF    0x1D
 #define TARGETLIMIT     4192
 
-FILE            *save_stream;
+FILE        *save_stream;
 
-static int      thingindex;
-static int      targets[TARGETLIMIT];
-static int      tracers[TARGETLIMIT];
-static int      lastenemies[TARGETLIMIT];
-static int      soundtargets[TARGETLIMIT];
-static int      attacker;
-
-// Get the filename of a temporary file to write the savegame to. After
-// the file has been successfully saved, it will be renamed to the
-// real file.
-char *P_TempSaveGameFile(void)
-{
-    static char *filename;
-
-    if (!filename)
-        filename = M_StringJoin(savegamefolder, "temp.save", NULL);
-
-    return filename;
-}
+static int  thingindex;
+static int  targets[TARGETLIMIT];
+static int  tracers[TARGETLIMIT];
+static int  lastenemies[TARGETLIMIT];
+static int  soundtargets[TARGETLIMIT];
+static int  attacker;
 
 // Get the filename of the savegame to use for the specified slot.
 char *P_SaveGameFile(int slot)
@@ -379,17 +367,17 @@ static void saveg_read_bloodsplat_t(bloodsplat_t *str)
     str->x = saveg_read32();
     str->y = saveg_read32();
     str->patch = saveg_read32();
-    str->flip = saveg_read_bool();
-    str->blood = saveg_read32();
+    saveg_read_bool();          // deprecated
+    str->color = saveg_read32();
 }
 
 static void saveg_write_bloodsplat_t(bloodsplat_t *str)
 {
     saveg_write32(str->x);
     saveg_write32(str->y);
-    saveg_write32(str->patch);
-    saveg_write_bool(str->flip);
-    saveg_write32(str->blood);
+    saveg_write32(str->patch - firstspritelump);
+    saveg_write_bool(false);    // deprecated
+    saveg_write32(str->color);
 }
 
 //
@@ -544,10 +532,10 @@ static void saveg_read_player_t(void)
     viewplayer->infightcount = saveg_read32();
     viewplayer->resurrectioncount = saveg_read32();
     viewplayer->automapopened = saveg_read32();
+    viewplayer->telefragcount = saveg_read32();
+    viewplayer->respawncount = saveg_read32();
 
     // [BH] For future features without breaking savegame compatibility
-    saveg_read32();
-    saveg_read32();
     saveg_read32();
     saveg_read32();
     saveg_read32();
@@ -654,10 +642,10 @@ static void saveg_write_player_t(void)
     saveg_write32(viewplayer->infightcount);
     saveg_write32(viewplayer->resurrectioncount);
     saveg_write32(viewplayer->automapopened);
+    saveg_write32(viewplayer->telefragcount);
+    saveg_write32(viewplayer->respawncount);
 
     // [BH] For future features without breaking savegame compatibility
-    saveg_write32(0);
-    saveg_write32(0);
     saveg_write32(0);
     saveg_write32(0);
     saveg_write32(0);
@@ -1010,7 +998,7 @@ void P_WriteSaveGameHeader(char *description)
 //
 // Read the header for a savegame
 //
-dboolean P_ReadSaveGameHeader(char *description)
+bool P_ReadSaveGameHeader(char *description)
 {
     byte    a, b, c;
     char    vcheck[VERSIONSIZE];
@@ -1030,7 +1018,7 @@ dboolean P_ReadSaveGameHeader(char *description)
         menuactive = false;
         quickSaveSlot = -1;
         C_ShowConsole();
-        C_Warning(1, "This savegame is incompatible with " ITALICS(DOOMRETRO_NAMEANDVERSIONSTRING "."));
+        C_Warning(0, "This savegame is incompatible with " ITALICS(DOOMRETRO_NAMEANDVERSIONSTRING "."));
 
         return false;   // bad version
     }
@@ -1067,7 +1055,7 @@ dboolean P_ReadSaveGameHeader(char *description)
 //
 // Read the end of file marker. Returns true if read successfully.
 //
-dboolean P_ReadSaveGameEOF(void)
+bool P_ReadSaveGameEOF(void)
 {
     return (saveg_read8() == SAVEGAME_EOF);
 }
@@ -1194,6 +1182,11 @@ void P_UnArchiveWorld(void)
     for (int i = 0; i < numlines; i++, line++)
     {
         line->flags = saveg_read16();
+
+        // [BH] Fix some linedefs in E2M7 only due to MBF21's ML_BLOCKPLAYERS flag
+        if (E2M7)
+            line->flags = ((unsigned int)line->flags & 0x03FF);
+
         line->special = saveg_read16();
         line->tag = saveg_read16();
 
@@ -1299,7 +1292,7 @@ void P_UnArchiveThinkers(void)
     // read in saved thinkers
     while (true)
     {
-        byte    tclass = saveg_read8();
+        const byte  tclass = saveg_read8();
 
         switch (tclass)
         {
@@ -1337,9 +1330,10 @@ void P_UnArchiveThinkers(void)
                     if (r_bloodsplats_total < r_bloodsplats_max)
                     {
                         splat->width = spritewidth[splat->patch];
+                        splat->patch += firstspritelump;
+                        P_SetBloodSplatColor(splat);
                         splat->sector = R_PointInSubsector(splat->x, splat->y)->sector;
                         P_SetBloodSplatPosition(splat);
-                        splat->colfunc = (splat->blood == FUZZYBLOOD ? fuzzcolfunc : bloodsplatcolfunc);
                         r_bloodsplats_total++;
                     }
                 }
@@ -1490,7 +1484,7 @@ void P_UnArchiveSpecials(void)
     // read in saved thinkers
     while (true)
     {
-        byte    tclass = saveg_read8();
+        const byte  tclass = saveg_read8();
 
         switch (tclass)
         {
@@ -1602,7 +1596,6 @@ void P_UnArchiveSpecials(void)
                 saveg_read_elevator_t(elevator);
                 elevator->sector->ceilingdata = elevator;
                 elevator->thinker.function = &T_MoveElevator;
-                elevator->thinker.menu = false;
                 P_AddThinker(&elevator->thinker);
 
                 break;

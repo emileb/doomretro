@@ -9,8 +9,8 @@
   Copyright © 1993-2022 by id Software LLC, a ZeniMax Media company.
   Copyright © 2013-2022 by Brad Harding <mailto:brad@doomretro.com>.
 
-  DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
-  <https://github.com/bradharding/doomretro/wiki/CREDITS>.
+  DOOM Retro is a fork of Chocolate DOOM. For a list of acknowledgments,
+  see <https://github.com/bradharding/doomretro/wiki/ACKNOWLEDGMENTS>.
 
   This file is a part of DOOM Retro.
 
@@ -73,9 +73,9 @@ typedef struct
 {
     hu_textline_t   l;                              // text line to draw
 
-    // pointer to dboolean stating whether to update window
-    dboolean        *on;
-    dboolean        laston;                         // last value of *->on.
+    // pointer to bool stating whether to update window
+    bool            *on;
+    bool            laston;                         // last value of *->on.
 } hu_stext_t;
 
 //
@@ -89,11 +89,11 @@ typedef struct
 void HUlib_InitTextLine(hu_textline_t *t, int x, int y, patch_t **f, int sc);
 
 // returns success
-dboolean HUlib_AddCharToTextLine(hu_textline_t *t, char ch);
+bool HUlib_AddCharToTextLine(hu_textline_t *t, char ch);
 
 // draws text line
-void HUlib_DrawAutomapTextLine(hu_textline_t *l, dboolean external);
-void HUlib_DrawAltAutomapTextLine(hu_textline_t *l, dboolean external);
+void HUlib_DrawAutomapTextLine(hu_textline_t *l, bool external);
+void HUlib_DrawAltAutomapTextLine(hu_textline_t *l, bool external);
 
 // erases text line
 void HUlib_EraseTextLine(hu_textline_t *l);
@@ -102,18 +102,18 @@ void HUlib_EraseTextLine(hu_textline_t *l);
 // Scrolling Text window widget routines
 //
 
-void HUlib_InitSText(hu_stext_t *s, int x, int y, patch_t **font, int startchar, dboolean *on);
+void HUlib_InitSText(hu_stext_t *s, int x, int y, patch_t **font, int startchar, bool *on);
 
 void HUlib_AddMessageToSText(hu_stext_t *s, const char *msg);
 
 // draws stext
-void HUlib_DrawSText(hu_stext_t *s, dboolean external);
+void HUlib_DrawSText(hu_stext_t *s, bool external);
 
 // erases all stext lines
 void HUlib_EraseSText(hu_stext_t *s);
 
-extern void (*althudtextfunc)(int, int, byte *, patch_t *, dboolean, int, int, byte *);
+extern void (*althudtextfunc)(int, int, byte *, patch_t *, bool, int, int, byte *);
 
-extern dboolean s_STSTR_BEHOLD2;
+extern bool     s_STSTR_BEHOLD2;
 extern byte     tempscreen[MAXSCREENAREA];
 #pragma once

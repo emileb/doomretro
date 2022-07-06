@@ -9,8 +9,8 @@
   Copyright © 1993-2022 by id Software LLC, a ZeniMax Media company.
   Copyright © 2013-2022 by Brad Harding <mailto:brad@doomretro.com>.
 
-  DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
-  <https://github.com/bradharding/doomretro/wiki/CREDITS>.
+  DOOM Retro is a fork of Chocolate DOOM. For a list of acknowledgments,
+  see <https://github.com/bradharding/doomretro/wiki/ACKNOWLEDGMENTS>.
 
   This file is a part of DOOM Retro.
 
@@ -88,10 +88,10 @@ typedef struct
     int         *inum;
 
     // list of icons
-    patch_t     **p;
+    patch_t     **patch;
 } st_multicon_t;
 
-extern dboolean usesmallnums;
+extern bool usesmallnums;
 
 //
 // Widget creation, access, and update routines
@@ -104,19 +104,22 @@ extern dboolean usesmallnums;
 // Number widget routines
 void STlib_InitNum(st_number_t *n, int x, int y, patch_t **pl, int *num, int width);
 
-void STlib_UpdateBigNum(st_number_t *n);
+void STlib_UpdateBigAmmoNum(st_number_t *n);
+void STlib_UpdateBigArmorNum(st_number_t *n);
+void STlib_UpdateBigHealthNum(st_number_t *n);
 void STlib_UpdateSmallNum(st_number_t *n);
 
 // Percent widget routines
 void STlib_InitPercent(st_percent_t *p, int x, int y, patch_t **pl, int *num, patch_t *percent);
 
-void STlib_UpdatePercent(st_percent_t *per, int refresh);
+void STlib_UpdateHealthPercent(st_percent_t *per, int refresh);
+void STlib_UpdateArmorPercent(st_percent_t *per, int refresh);
 
 // Multiple Icon widget routines
 void STlib_InitMultIcon(st_multicon_t *mi, int x, int y, patch_t **il, int *inum);
 
-void STlib_UpdateMultIcon(st_multicon_t *mi, dboolean refresh);
+void STlib_UpdateMultIcon(st_multicon_t *mi, bool refresh);
 
-void STlib_UpdateArmsIcon(st_multicon_t *mi, dboolean refresh, int i);
+void STlib_UpdateArmsIcon(st_multicon_t *mi, bool refresh, int i);
 
 void STLib_Init(void);

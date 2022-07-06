@@ -9,8 +9,8 @@
   Copyright © 1993-2022 by id Software LLC, a ZeniMax Media company.
   Copyright © 2013-2022 by Brad Harding <mailto:brad@doomretro.com>.
 
-  DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
-  <https://github.com/bradharding/doomretro/wiki/CREDITS>.
+  DOOM Retro is a fork of Chocolate DOOM. For a list of acknowledgments,
+  see <https://github.com/bradharding/doomretro/wiki/ACKNOWLEDGMENTS>.
 
   This file is a part of DOOM Retro.
 
@@ -80,14 +80,14 @@ static char             *finaleflat;
 
 static void F_StartCast(void);
 static void F_CastTicker(void);
-static dboolean F_CastResponder(event_t *ev);
+static bool F_CastResponder(event_t *ev);
 
 void WI_CheckForAccelerate(void);
 void A_RandomJump(mobj_t *actor, player_t *player, pspdef_t *psp);
 
-static dboolean         midstage;               // whether we're in "mid-stage"
+static bool             midstage;               // whether we're in "mid-stage"
 
-extern dboolean         acceleratestage;        // accelerate intermission screens
+extern bool             acceleratestage;        // accelerate intermission screens
 
 //
 // F_ConsoleFinaleText
@@ -289,7 +289,7 @@ void F_StartFinale(void)
     F_ConsoleFinaleText();
 }
 
-dboolean F_Responder(event_t *ev)
+bool F_Responder(event_t *ev)
 {
     if (finalestage == F_STAGE_CAST)
         return F_CastResponder(ev);
@@ -497,13 +497,13 @@ static int      castnum;
 static int      casttics;
 static state_t  *caststate;
 static int      castrot;
-static dboolean castdeath;
-static dboolean castdeathflip;
+static bool     castdeath;
+static bool     castdeathflip;
 static int      castframes;
-static dboolean castonmelee;
-static dboolean castattacking;
+static bool     castonmelee;
+static bool     castattacking;
 
-dboolean        firstevent;
+bool            firstevent;
 
 // [crispy] randomize seestate and deathstate sounds in the cast
 static int F_RandomizeSound(int sound)
@@ -703,7 +703,7 @@ stopattack:
 //
 // F_CastResponder
 //
-static dboolean F_CastResponder(event_t *ev)
+static bool F_CastResponder(event_t *ev)
 {
     mobjtype_t  type;
 
@@ -834,13 +834,13 @@ static void F_CastPrint(const char *text)
 //
 static void F_CastDrawer(void)
 {
-    spritedef_t     *sprdef;
-    spriteframe_t   *sprframe;
-    int             lump;
-    int             rot = 0;
-    patch_t         *patch;
-    int             y = VANILLAHEIGHT - 30;
-    mobjtype_t      type = castorder[castnum].type;
+    spritedef_t         *sprdef;
+    spriteframe_t       *sprframe;
+    int                 lump;
+    int                 rot = 0;
+    patch_t             *patch;
+    int                 y = VANILLAHEIGHT - 30;
+    const mobjtype_t    type = castorder[castnum].type;
 
     if (gamemission == pack_plut)
         patch = W_CacheLumpName("BOSSBAC2");

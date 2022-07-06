@@ -9,8 +9,8 @@
   Copyright © 1993-2022 by id Software LLC, a ZeniMax Media company.
   Copyright © 2013-2022 by Brad Harding <mailto:brad@doomretro.com>.
 
-  DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
-  <https://github.com/bradharding/doomretro/wiki/CREDITS>.
+  DOOM Retro is a fork of Chocolate DOOM. For a list of acknowledgments,
+  see <https://github.com/bradharding/doomretro/wiki/ACKNOWLEDGMENTS>.
 
   This file is a part of DOOM Retro.
 
@@ -52,9 +52,7 @@
 #include "p_tick.h"
 #include "s_sound.h"
 
-// distance friends tend to move towards players
-#define DISTFRIEND  (128 * FRACUNIT)
-
+#define DISTFRIEND  (128 * FRACUNIT)    // distance friends tend to move towards players
 #define BARRELRANGE (512 * FRACUNIT)
 
 int barrelms = 0;
@@ -125,12 +123,9 @@ void P_NoiseAlert(mobj_t *target)
 //
 // P_CheckRange
 //
-dboolean P_CheckRange(mobj_t *actor, fixed_t range)
+static bool P_CheckRange(mobj_t *actor, fixed_t range)
 {
     mobj_t  *target = actor->target;
-
-    if (!target)
-        return false;
 
     // killough 07/18/98: friendly monsters don't attack other friends
     if (actor->flags & target->flags & MF_FRIEND)
@@ -154,13 +149,14 @@ dboolean P_CheckRange(mobj_t *actor, fixed_t range)
 //
 // MBF21: add meleerange property
 //
-dboolean P_CheckMeleeRange(mobj_t *actor)
+bool P_CheckMeleeRange(mobj_t *actor)
 {
-    int range = actor->info->meleerange;
+    mobj_t  *target = actor->target;
 
-    range += actor->target->info->radius - 20 * FRACUNIT;
+    if (!target)
+        return false;
 
-    return P_CheckRange(actor, range);
+    return P_CheckRange(actor, actor->info->meleerange + target->info->radius - 20 * FRACUNIT);
 }
 
 //
@@ -169,7 +165,7 @@ dboolean P_CheckMeleeRange(mobj_t *actor)
 // killough 12/98
 // This function tries to prevent shooting at friends
 //
-static dboolean P_HitFriend(mobj_t *actor)
+static bool P_HitFriend(mobj_t *actor)
 {
     mobj_t  *target;
 
@@ -185,7 +181,7 @@ static dboolean P_HitFriend(mobj_t *actor)
 //
 // P_CheckMissileRange
 //
-static dboolean P_CheckMissileRange(mobj_t *actor)
+static bool P_CheckMissileRange(mobj_t *actor)
 {
     fixed_t dist;
     mobj_t  *target = actor->target;
@@ -203,7 +199,7 @@ static dboolean P_CheckMissileRange(mobj_t *actor)
         return (!(actor->flags & MF_FRIEND)
             || (target->health > 0
                 && (!(target->flags & MF_FRIEND)
-                    || (target->player ? M_Random() > 128 : !(target->flags & MF_JUSTHIT) && M_Random() > 128))));
+                    || (target->player ? M_Random() > 128 : (!(target->flags & MF_JUSTHIT) && M_Random() > 128)))));
     }
 
     // killough 07/18/98: friendly monsters don't attack other friendly
@@ -279,7 +275,7 @@ static const fixed_t    yspeed[] = { 0, 47000, FRACUNIT, 47000, 0, -47000, -FRAC
 extern line_t   **spechit;
 extern int      numspechit;
 
-static dboolean P_Move(mobj_t *actor, int dropoff)  // killough 09/12/98
+static bool P_Move(mobj_t *actor, int dropoff)  // killough 09/12/98
 {
     fixed_t tryx, tryy;
     fixed_t deltax, deltay;
@@ -369,16 +365,16 @@ static dboolean P_Move(mobj_t *actor, int dropoff)  // killough 09/12/98
 //
 // killough 09/12/98: Same as P_Move(), except smarter
 //
-static dboolean P_SmartMove(mobj_t *actor)
+static bool P_SmartMove(mobj_t *actor)
 {
-    mobj_t      *target = actor->target;
-    int         dropoff = 0;
-    int         underdamage = P_IsUnderDamage(actor);
+    mobj_t  *target = actor->target;
+    int     dropoff = 0;
+    int     underdamage = P_IsUnderDamage(actor);
 
     // killough 09/12/98: stay on a lift if target is on one
-    dboolean    onlift = (target && target->health > 0
-                    && target->subsector->sector->tag == actor->subsector->sector->tag
-                    && actor->subsector->sector->islift);
+    bool    onlift = (target && target->health > 0
+                && target->subsector->sector->tag == actor->subsector->sector->tag
+                && actor->subsector->sector->islift);
 
     // killough 10/98: allow dogs to drop off of taller ledges sometimes.
     // dropoff == 1 means always allow it, dropoff == 2 means only up to 128 high,
@@ -414,7 +410,7 @@ static dboolean P_SmartMove(mobj_t *actor)
 // If a door is in the way,
 // an OpenDoor call is made to start it opening.
 //
-static dboolean P_TryWalk(mobj_t *actor)
+static bool P_TryWalk(mobj_t *actor)
 {
     if (!P_SmartMove(actor))
         return false;
@@ -433,7 +429,7 @@ static dboolean P_TryWalk(mobj_t *actor)
 //
 static void P_DoNewChaseDir(mobj_t *actor, fixed_t deltax, fixed_t deltay)
 {
-    dirtype_t opposite[] =
+    const dirtype_t opposite[] =
     {
         DI_WEST,
         DI_SOUTHWEST,
@@ -446,7 +442,7 @@ static void P_DoNewChaseDir(mobj_t *actor, fixed_t deltax, fixed_t deltay)
         DI_NODIR
     };
 
-    dirtype_t diags[] =
+    const dirtype_t diags[] =
     {
         DI_NORTHWEST,
         DI_NORTHEAST,
@@ -457,7 +453,7 @@ static void P_DoNewChaseDir(mobj_t *actor, fixed_t deltax, fixed_t deltay)
     dirtype_t       xdir, ydir;
     const dirtype_t olddir = actor->movedir;
     const dirtype_t turnaround = opposite[olddir];
-    dboolean        attempts[NUMDIRS - 1] = { false };
+    bool            attempts[NUMDIRS - 1] = { false };
 
     xdir = (deltax > 10 * FRACUNIT ? DI_EAST : (deltax < -10 * FRACUNIT ? DI_WEST : DI_NODIR));
     ydir = (deltay < -10 * FRACUNIT ? DI_SOUTH : (deltay > 10 * FRACUNIT ? DI_NORTH : DI_NODIR));
@@ -564,12 +560,12 @@ static fixed_t  dropoff_deltax;
 static fixed_t  dropoff_deltay;
 static fixed_t  floorz;
 
-static dboolean PIT_AvoidDropoff(line_t *line)
+static bool PIT_AvoidDropoff(line_t *line)
 {
-    if (line->backsector                                                            // Ignore one-sided linedefs
+    if (line->backsector                                                            // ignore one-sided linedefs
         && tmbbox[BOXRIGHT] > line->bbox[BOXLEFT]
         && tmbbox[BOXLEFT] < line->bbox[BOXRIGHT]
-        && tmbbox[BOXTOP] > line->bbox[BOXBOTTOM]                                   // Linedef must be contacted
+        && tmbbox[BOXTOP] > line->bbox[BOXBOTTOM]                                   // linedef must be contacted
         && tmbbox[BOXBOTTOM] < line->bbox[BOXTOP]
         && P_BoxOnLineSide(tmbbox, line) == -1)
     {
@@ -598,7 +594,7 @@ static dboolean PIT_AvoidDropoff(line_t *line)
 //
 // Driver for above
 //
-static fixed_t P_AvoidDropoff(mobj_t *actor)
+static bool P_AvoidDropoff(mobj_t *actor)
 {
     const int   xh = P_GetSafeBlockX((tmbbox[BOXRIGHT] = actor->x + actor->radius) - bmaporgx);
     const int   xl = P_GetSafeBlockX((tmbbox[BOXLEFT] = actor->x - actor->radius) - bmaporgx);
@@ -616,7 +612,7 @@ static fixed_t P_AvoidDropoff(mobj_t *actor)
         for (int by = yl; by <= yh; by++)
             P_BlockLinesIterator(bx, by, &PIT_AvoidDropoff);    // all contacted lines
 
-    return (dropoff_deltax | dropoff_deltay);                   // Non-zero if movement prescribed
+    return (dropoff_deltax || dropoff_deltay);                  // false if movement prescribed
 }
 
 //
@@ -631,7 +627,7 @@ static void P_NewChaseDir(mobj_t *actor)
     fixed_t dist;
 
     if (actor->floorz - actor->dropoffz > 24 * FRACUNIT && actor->z <= actor->floorz
-        && !(actor->flags & (MF_DROPOFF | MF_FLOAT)) && P_AvoidDropoff(actor))   // Move away from dropoff
+        && !(actor->flags & (MF_DROPOFF | MF_FLOAT)) && P_AvoidDropoff(actor))   // move away from dropoff
     {
         P_DoNewChaseDir(actor, dropoff_deltax, dropoff_deltay);
 
@@ -657,7 +653,7 @@ static void P_NewChaseDir(mobj_t *actor)
     P_DoNewChaseDir(actor, deltax, deltay);
 }
 
-static dboolean P_LookForMonsters(mobj_t *actor)
+static bool P_LookForMonsters(mobj_t *actor)
 {
     // Remember last enemy
     if (actor->lastenemy && actor->lastenemy->health > 0
@@ -715,7 +711,7 @@ static dboolean P_LookForMonsters(mobj_t *actor)
 // If allaround is false, only look 180 degrees in front.
 // Returns true if the player is targeted.
 //
-static dboolean P_LookForPlayer(mobj_t *actor, dboolean allaround)
+static bool P_LookForPlayer(mobj_t *actor, bool allaround)
 {
     mobj_t  *mo = viewplayer->mo;
 
@@ -803,7 +799,7 @@ static dboolean P_LookForPlayer(mobj_t *actor, dboolean allaround)
     return true;
 }
 
-static dboolean P_LookForTargets(mobj_t *actor, int allaround)
+static bool P_LookForTargets(mobj_t *actor, int allaround)
 {
     if ((actor->flags & MF_FRIEND) && P_LookForMonsters(actor))
         return true;
@@ -822,8 +818,8 @@ static dboolean P_LookForTargets(mobj_t *actor, int allaround)
 void A_Look(mobj_t *actor, player_t *player, pspdef_t *psp)
 {
     mobj_t      *target;
-    int         flags = actor->flags;
-    dboolean    friend = (flags & MF_FRIEND);
+    const int   flags = actor->flags;
+    const bool  friend = (flags & MF_FRIEND);
 
     actor->threshold = 0;       // any shot will wake up
 
@@ -858,7 +854,7 @@ void A_Look(mobj_t *actor, player_t *player, pspdef_t *psp)
                 break;
 
             default:
-                S_StartSound(((actor->mbf21flags & MF_MBF21_BOSS) ? NULL : actor), actor->info->seesound);
+                S_StartSound(((actor->mbf21flags & (MF_MBF21_BOSS | MF_MBF21_FULLVOLSOUNDS)) ? NULL : actor), actor->info->seesound);
                 break;
         }
 
@@ -1115,7 +1111,7 @@ void A_TroopAttack(mobj_t *actor, player_t *player, pspdef_t *psp)
     if (P_CheckMeleeRange(actor))
     {
         S_StartSound(actor, sfx_claw);
-        P_DamageMobj(target, actor, actor, ((M_Random() & 7) + 1) * 3, true);
+        P_DamageMobj(target, actor, actor, ((M_Random() & 7) + 1) * 3, true, false);
 
         return;
     }
@@ -1137,7 +1133,7 @@ void A_SargAttack(mobj_t *actor, player_t *player, pspdef_t *psp)
     A_FaceTarget(actor, NULL, NULL);
 
     if (P_CheckMeleeRange(actor))
-        P_DamageMobj(target, actor, actor, (M_Random() % 10 + 1) * 4, true);
+        P_DamageMobj(target, actor, actor, (M_Random() % 10 + 1) * 4, true, false);
 }
 
 void A_HeadAttack(mobj_t *actor, player_t *player, pspdef_t *psp)
@@ -1151,7 +1147,7 @@ void A_HeadAttack(mobj_t *actor, player_t *player, pspdef_t *psp)
 
     if (P_CheckMeleeRange(actor))
     {
-        P_DamageMobj(target, actor, actor, (M_Random() % 6 + 1) * 10, true);
+        P_DamageMobj(target, actor, actor, (M_Random() % 6 + 1) * 10, true, false);
         return;
     }
 
@@ -1192,7 +1188,7 @@ void A_BruisAttack(mobj_t *actor, player_t *player, pspdef_t *psp)
     if (P_CheckMeleeRange(actor))
     {
         S_StartSound(actor, sfx_claw);
-        P_DamageMobj(target, actor, actor, ((M_Random() & 7) + 1) * 10, true);
+        P_DamageMobj(target, actor, actor, ((M_Random() & 7) + 1) * 10, true, false);
 
         return;
     }
@@ -1303,7 +1299,7 @@ void A_SkelFist(mobj_t *actor, player_t *player, pspdef_t *psp)
     if (P_CheckMeleeRange(actor))
     {
         S_StartSound(actor, sfx_skepch);
-        P_DamageMobj(target, actor, actor, (M_Random() % 10 + 1) * 6, true);
+        P_DamageMobj(target, actor, actor, (M_Random() % 10 + 1) * 6, true, false);
     }
 }
 
@@ -1316,10 +1312,10 @@ static fixed_t  viletryx;
 static fixed_t  viletryy;
 static int      viletryradius;
 
-static dboolean PIT_VileCheck(mobj_t *thing)
+static bool PIT_VileCheck(mobj_t *thing)
 {
-    int         maxdist;
-    dboolean    check;
+    int     maxdist;
+    bool    check;
 
     if (!(thing->flags & MF_CORPSE))
         return true;    // not a monster
@@ -1350,38 +1346,38 @@ static dboolean PIT_VileCheck(mobj_t *thing)
     else
     {
         // [BH] fix <https://doomwiki.org/wiki/Ghost_monster>
-        fixed_t height = corpsehit->height;
-        fixed_t radius = corpsehit->radius;
+        const fixed_t   height = corpsehit->height;
+        const fixed_t   radius = corpsehit->radius;
 
         corpsehit->height = corpsehit->info->height;
         corpsehit->radius = corpsehit->info->radius;
         corpsehit->flags |= MF_SOLID;
         corpsehit->flags2 |= MF2_RESURRECTING;
         check = P_CheckPosition(corpsehit, corpsehit->x, corpsehit->y);
-        corpsehit->height = height;
-        corpsehit->radius = radius;
-        corpsehit->flags &= ~MF_SOLID;
         corpsehit->flags2 &= ~MF2_RESURRECTING;
+        corpsehit->flags &= ~MF_SOLID;
+        corpsehit->radius = radius;
+        corpsehit->height = height;
     }
 
-    return !check;        // got one, so stop checking
+    return !check;      // got one, so stop checking
 }
 
 //
 // MBF21: P_HealCorpse
 // Check for resurrecting a body
 //
-static dboolean P_HealCorpse(mobj_t *actor, int radius, statenum_t healstate, sfxenum_t healsound)
+static bool P_HealCorpse(mobj_t *actor, int radius, statenum_t healstate, sfxenum_t healsound)
 {
-    int movedir = actor->movedir;
+    const dirtype_t movedir = actor->movedir;
 
     if (movedir != DI_NODIR)
     {
-        int xl;
-        int xh;
-        int yl;
-        int yh;
-        int speed = actor->info->speed;
+        int         xl;
+        int         xh;
+        int         yl;
+        int         yh;
+        const int   speed = actor->info->speed;
 
         // check for corpses to raise
         viletryx = actor->x + speed * xspeed[movedir];
@@ -1395,13 +1391,13 @@ static dboolean P_HealCorpse(mobj_t *actor, int radius, statenum_t healstate, sf
 
         for (int bx = xl; bx <= xh; bx++)
             for (int by = yl; by <= yh; by++)
-            {
                 // Call PIT_VileCheck() to check whether object is a corpse that can be raised.
                 if (!P_BlockThingsIterator(bx, by, &PIT_VileCheck))
                 {
                     // got one!
-                    mobj_t      *prevtarget = actor->target;
-                    mobjinfo_t  *info = corpsehit->info;
+                    mobj_t              *prevtarget = actor->target;
+                    mobjinfo_t          *info = corpsehit->info;
+                    const mobjtype_t    type = corpsehit->type;
 
                     actor->target = corpsehit;
                     A_FaceTarget(actor, NULL, NULL);
@@ -1424,7 +1420,7 @@ static dboolean P_HealCorpse(mobj_t *actor, int radius, statenum_t healstate, sf
                     // killough 07/18/98: friendliness is transferred from AV to raised corpse
                     corpsehit->flags = ((info->flags & ~MF_FRIEND) | (actor->flags & MF_FRIEND));
 
-                    corpsehit->flags2 = info->flags2;
+                    corpsehit->flags2 &= ~MF2_MIRRORED;
                     corpsehit->health = info->spawnhealth;
                     corpsehit->shadowoffset = info->shadowoffset;
                     P_SetTarget(&corpsehit->target, NULL);
@@ -1434,16 +1430,16 @@ static dboolean P_HealCorpse(mobj_t *actor, int radius, statenum_t healstate, sf
                     corpsehit->flags &= ~MF_JUSTHIT;
 
                     viewplayer->killcount--;
-                    stat_monsterskilled--;
+                    stat_monsterskilled_total--;
                     viewplayer->resurrectioncount++;
                     stat_monstersresurrected = SafeAdd(stat_monstersresurrected, 1);
-                    P_UpdateKillStat(corpsehit->type, -1);
+                    stat_monsterskilled[type] = SafeAdd(stat_monsterskilled[type], -1);
 
                     // [BH] display an obituary message in the console
                     if (con_obituaries)
                     {
-                        char    actorname[33];
-                        char    corpsehitname[33];
+                        char    actorname[128];
+                        char    corpsehitname[128];
                         char    *temp;
 
                         if (*actor->name)
@@ -1473,7 +1469,6 @@ static dboolean P_HealCorpse(mobj_t *actor, int radius, statenum_t healstate, sf
                     P_UpdateThinker(&corpsehit->thinker);
                     return true;
                 }
-            }
     }
 
     return false;
@@ -1586,7 +1581,7 @@ void A_VileAttack(mobj_t *actor, player_t *player, pspdef_t *psp)
         return;
 
     S_StartSound(actor, sfx_barexp);
-    P_DamageMobj(target, actor, actor, 20, true);
+    P_DamageMobj(target, actor, actor, 20, true, false);
 
     // [BH] don't apply upward momentum from vile attack to player when no clipping mode on
     if (!target->player || !(target->flags & MF_NOCLIP))
@@ -1724,7 +1719,7 @@ void A_BetaSkullAttack(mobj_t *actor, player_t *player, pspdef_t *psp)
 
     S_StartSound(actor, actor->info->attacksound);
     A_FaceTarget(actor, NULL, NULL);
-    P_DamageMobj(target, actor, actor, ((M_Random() & 7) + 1) * actor->info->damage, true);
+    P_DamageMobj(target, actor, actor, ((M_Random() & 7) + 1) * actor->info->damage, true, false);
 }
 
 void A_Stop(mobj_t *actor, player_t *player, pspdef_t *psp)
@@ -1772,7 +1767,8 @@ static void A_PainShootSkull(mobj_t *actor, angle_t angle)
     {
         // kill it immediately
         massacre = true;    // [BH] set this to avoid obituary
-        P_DamageMobj(newmobj, actor, actor, 10000, true);
+        newmobj->flags &= ~MF_COUNTKILL;
+        P_DamageMobj(newmobj, actor, actor, 10000, true, false);
         massacre = false;
 
         return;
@@ -1782,6 +1778,7 @@ static void A_PainShootSkull(mobj_t *actor, angle_t angle)
     newmobj->flags = ((newmobj->flags & ~MF_FRIEND) | (actor->flags & MF_FRIEND));
 
     // [BH] count lost soul in player stats
+    totalkills++;
     monstercount[MT_SKULL]++;
 
     // killough 08/29/98: add to appropriate thread
@@ -1810,7 +1807,7 @@ void A_PainAttack(mobj_t *actor, player_t *player, pspdef_t *psp)
 
 void A_PainDie(mobj_t *actor, player_t *player, pspdef_t *psp)
 {
-    angle_t angle = actor->angle;
+    const angle_t   angle = actor->angle;
 
     A_Fall(actor, NULL, NULL);
     A_PainShootSkull(actor, angle + ANG90);
@@ -1830,7 +1827,7 @@ void A_Scream(mobj_t *actor, player_t *player, pspdef_t *psp)
     else if (sound == sfx_bgdth1 || sound == sfx_bgdth2)
         sound = sfx_bgdth1 + M_Random() % 2;
 
-    S_StartSound(((actor->mbf21flags & MF_MBF21_BOSS) ? NULL : actor), sound);
+    S_StartSound(((actor->mbf21flags & (MF_MBF21_BOSS | MF_MBF21_FULLVOLSOUNDS)) ? NULL : actor), sound);
 }
 
 void A_XScream(mobj_t *actor, player_t *player, pspdef_t *psp)
@@ -1866,7 +1863,7 @@ void A_SkullPop(mobj_t *actor, player_t *player, pspdef_t *psp)
 
 void A_Pain(mobj_t *actor, player_t *player, pspdef_t *psp)
 {
-    int painsound = actor->info->painsound;
+    const int   painsound = actor->info->painsound;
 
     if (painsound)
         S_StartSound(actor, painsound);
@@ -2072,9 +2069,7 @@ void A_BrainScream(mobj_t *actor, player_t *player, pspdef_t *psp)
     // [BH] Fix <https://doomwiki.org/wiki/Lopsided_final_boss_explosions>
     for (int x = actor->x - 258 * FRACUNIT; x < actor->x + 258 * FRACUNIT; x += 8 * FRACUNIT)
     {
-        int     y = actor->y - 320 * FRACUNIT;
-        int     z = 128 + M_Random() * 2 * FRACUNIT;
-        mobj_t  *th = P_SpawnMobj(x, y, z, MT_ROCKET);
+        mobj_t  *th = P_SpawnMobj(x, actor->y - 320 * FRACUNIT, 128 + M_Random() * 2 * FRACUNIT, MT_ROCKET);
 
         th->momz = M_Random() * 512;
         P_SetMobjState(th, S_BRAINEXPLODE1);
@@ -2133,8 +2128,8 @@ static mobj_t *A_NextBrainTarget(void)
 
 void A_BrainSpit(mobj_t *actor, player_t *player, pspdef_t *psp)
 {
-    mobj_t          *target;
-    static dboolean easy;
+    mobj_t      *target;
+    static bool easy;
 
     easy = !easy;
 
@@ -2285,7 +2280,7 @@ void A_KeenDie(mobj_t *actor, player_t *player, pspdef_t *psp)
 // killough 11/98: kill an object
 void A_Die(mobj_t *actor, player_t *player, pspdef_t *psp)
 {
-    P_DamageMobj(actor, NULL, NULL, actor->health, true);
+    P_DamageMobj(actor, NULL, NULL, actor->health, true, false);
 }
 
 //
@@ -2302,11 +2297,11 @@ void A_Detonate(mobj_t *actor, player_t *player, pspdef_t *psp)
 //
 void A_Mushroom(mobj_t *actor, player_t *player, pspdef_t *psp)
 {
-    int     n = actor->info->damage;
+    const int       n = actor->info->damage;
 
     // Mushroom parameters are part of code pointer's state
-    fixed_t misc1 = (actor->state->misc1 ? actor->state->misc1 : 4 * FRACUNIT);
-    fixed_t misc2 = (actor->state->misc2 ? actor->state->misc2 : FRACUNIT / 2);
+    const fixed_t   misc1 = (actor->state->misc1 ? actor->state->misc1 : 4 * FRACUNIT);
+    const fixed_t   misc2 = (actor->state->misc2 ? actor->state->misc2 : FRACUNIT / 2);
 
     A_Explode(actor, NULL, NULL);                               // First make normal explosion
 
@@ -2382,7 +2377,7 @@ void A_Scratch(mobj_t *actor, player_t *player, pspdef_t *psp)
         if (state->misc2)
             S_StartSound(actor, state->misc2);
 
-        P_DamageMobj(target, actor, actor, state->misc1, true);
+        P_DamageMobj(target, actor, actor, state->misc1, true, false);
     }
 }
 
@@ -2602,7 +2597,7 @@ void A_MonsterMeleeAttack(mobj_t *actor, player_t *player, pspdef_t *psp)
 
     S_StartSound(actor, actor->state->args[2]);
 
-    P_DamageMobj(target, actor, actor, (M_Random() % actor->state->args[1] + 1) * actor->state->args[0], true);
+    P_DamageMobj(target, actor, actor, (M_Random() % actor->state->args[1] + 1) * actor->state->args[0], true, false);
 }
 
 //
@@ -2716,7 +2711,7 @@ void A_JumpIfTargetInSight(mobj_t *actor, player_t *player, pspdef_t *psp)
         return;
 
     // Check FOV first since it's faster
-    if ((fieldofview = FixedToAngle(actor->state->args[1])) > 0 && !P_CheckFov(actor, target, fieldofview))
+    if ((fieldofview = FixedToAngle(actor->state->args[1])) > 0 && !P_CheckFOV(actor, target, fieldofview))
         return;
 
     if (P_CheckSight(actor, target))
@@ -2754,7 +2749,7 @@ void A_JumpIfTracerInSight(mobj_t *actor, player_t *player, pspdef_t *psp)
         return;
 
     // Check FOV first since it's faster
-    if ((fieldofview = FixedToAngle(actor->state->args[1])) > 0 && !P_CheckFov(actor, actor->tracer, fieldofview))
+    if ((fieldofview = FixedToAngle(actor->state->args[1])) > 0 && !P_CheckFOV(actor, actor->tracer, fieldofview))
         return;
 
     if (P_CheckSight(actor, actor->tracer))
@@ -2786,15 +2781,15 @@ void A_JumpIfTracerCloser(mobj_t *actor, player_t *player, pspdef_t *psp)
 void A_JumpIfFlagsSet(mobj_t *actor, player_t *player, pspdef_t *psp)
 {
     int flags;
-    int flags2;
+    int mbf21flags;
 
     if (!actor)
         return;
 
     flags = actor->state->args[1];
-    flags2 = actor->state->args[2];
+    mbf21flags = actor->state->args[2];
 
-    if ((actor->flags & flags) == flags && (actor->flags2 & flags2) == flags2)
+    if ((actor->flags & flags) == flags && (actor->mbf21flags & mbf21flags) == mbf21flags)
         P_SetMobjState(actor, actor->state->args[0]);
 }
 
@@ -2810,7 +2805,9 @@ void A_AddFlags(mobj_t *actor, player_t *player, pspdef_t *psp)
         return;
 
     actor->flags |= actor->state->args[0];
-    actor->flags2 |= actor->state->args[1];
+    actor->mbf21flags |= actor->state->args[1];
+
+    R_UpdateMobjColfunc(actor);
 }
 
 //
@@ -2825,5 +2822,7 @@ void A_RemoveFlags(mobj_t *actor, player_t *player, pspdef_t *psp)
         return;
 
     actor->flags &= ~actor->state->args[0];
-    actor->flags2 &= ~actor->state->args[1];
+    actor->mbf21flags &= ~actor->state->args[1];
+
+    R_UpdateMobjColfunc(actor);
 }

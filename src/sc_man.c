@@ -9,8 +9,8 @@
   Copyright © 1993-2022 by id Software LLC, a ZeniMax Media company.
   Copyright © 2013-2022 by Brad Harding <mailto:brad@doomretro.com>.
 
-  DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
-  <https://github.com/bradharding/doomretro/wiki/CREDITS>.
+  DOOM Retro is a fork of Chocolate DOOM. For a list of acknowledgments,
+  see <https://github.com/bradharding/doomretro/wiki/ACKNOWLEDGMENTS>.
 
   This file is a part of DOOM Retro.
 
@@ -56,9 +56,9 @@ static char     *ScriptBuffer;
 static char     *ScriptPtr;
 static char     *ScriptEndPtr;
 static int      ScriptLumpNum;
-static dboolean sc_End;
-static dboolean ScriptOpen;
-static dboolean AlreadyGot;
+static bool     sc_End;
+static bool     ScriptOpen;
+static bool     AlreadyGot;
 
 static void SC_ScriptError(void)
 {
@@ -97,10 +97,10 @@ void SC_Close(void)
     }
 }
 
-dboolean SC_GetString(void)
+bool SC_GetString(void)
 {
-    char        *text;
-    dboolean    foundToken = false;
+    char    *text;
+    bool    foundToken = false;
 
     if (AlreadyGot)
     {
@@ -188,7 +188,7 @@ void SC_MustGetString(void)
         SC_ScriptError();
 }
 
-dboolean SC_GetNumber(void)
+bool SC_GetNumber(void)
 {
     if (SC_GetString())
     {
@@ -219,7 +219,7 @@ int SC_MatchString(char **strings)
     return -1;
 }
 
-dboolean SC_Compare(char *text)
+bool SC_Compare(char *text)
 {
     return M_StringCompare(text, sc_String);
 }

@@ -2,7 +2,7 @@
 <br>
 <br>
 <br>
-*DOOM Retro* is the classic, refined *DOOM* source port for Windows PC. It represents how I like my *DOOM* to be today, in all its dark and gritty, unapologetically pixelated glory. I have strived to craft a unique ensemble of compelling features, while always respecting that classic, nostalgic *DOOM* experience many of us still hold dear.
+*DOOM Retro* is the classic, refined *DOOM* source port for Windows PC. It represents how I like my *DOOM* to be today, in all its dark and gritty, unapologetically pixelated glory. I have strived to craft a unique and cohesive set of compelling features, while continuing to respect that classic, nostalgic *DOOM* experience many of us, after all this time, still hold dear.
 
 Open the <b><i>[DOOM Retro Wiki](https://github.com/bradharding/doomretro/wiki)</i></b> for more information.
 
@@ -11,6 +11,7 @@ Open the <b><i>[DOOM Retro Wiki](https://github.com/bradharding/doomretro/wiki)<
 [![](https://img.shields.io/github/languages/top/bradharding/doomretro.svg)](https://github.com/bradharding/doomretro/search?l=c)
 [![](https://img.shields.io/github/languages/code-size/bradharding/doomretro.svg)](https://github.com/bradharding/doomretro)
 [![](https://img.shields.io/tokei/lines/github/bradharding/doomretro)](https://github.com/bradharding/doomretro)
+[![](https://img.shields.io/github/workflow/status/bradharding/doomretro/build?logo=github&label=CI)](https://github.com/bradharding/doomretro/actions/workflows/build.yml)
 [![](https://img.shields.io/lgtm/grade/cpp/g/bradharding/doomretro.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/bradharding/doomretro/context:cpp)
 [![](https://img.shields.io/lgtm/alerts/g/bradharding/doomretro.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/bradharding/doomretro/alerts/)
 [![](https://img.shields.io/github/license/bradharding/doomretro.svg?logo=gnu)](https://github.com/bradharding/doomretro/wiki/LICENSE)
@@ -22,9 +23,9 @@ Open the <b><i>[DOOM Retro Wiki](https://github.com/bradharding/doomretro/wiki)<
 [![](https://img.shields.io/github/commits-since/bradharding/doomretro/latest.svg)](https://github.com/bradharding/doomretro/commits/master)
 [![](https://img.shields.io/github/last-commit/bradharding/doomretro.svg)](https://github.com/bradharding/doomretro/commits/master)
 [![](https://img.shields.io/github/stars/bradharding/doomretro.svg?logo=github)](https://github.com/bradharding/doomretro/stargazers)
-[![](https://img.shields.io/twitter/follow/doomretro.svg?style=flat&logo=twitter)](https://twitter.com/doomretro)
+[![](https://img.shields.io/twitter/follow/doomretro?style=flat&logo=twitter)](https://twitter.com/doomretro)
 [![](https://img.shields.io/discord/485551763542245427?style=flat&logo=discord&label=discord)](http://discordapp.com/invite/jAfAyWG)
-[![](https://img.shields.io/badge/donations-AU$313.72-<COLOR>?style=flat&logo=paypal&label=sponsors)](https://www.paypal.com/donate?business=8WGJ8VDFSVU7J&no_recurring=0&currency_code=AUD)
+[![](https://img.shields.io/badge/donations-AU$343.72-<COLOR>?style=flat&logo=paypal&label=sponsors)](https://www.paypal.com/donate?business=8WGJ8VDFSVU7J&no_recurring=0&currency_code=AUD)
 
 <br>
 <br>

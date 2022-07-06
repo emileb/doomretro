@@ -9,8 +9,8 @@
   Copyright © 1993-2022 by id Software LLC, a ZeniMax Media company.
   Copyright © 2013-2022 by Brad Harding <mailto:brad@doomretro.com>.
 
-  DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
-  <https://github.com/bradharding/doomretro/wiki/CREDITS>.
+  DOOM Retro is a fork of Chocolate DOOM. For a list of acknowledgments,
+  see <https://github.com/bradharding/doomretro/wiki/ACKNOWLEDGMENTS>.
 
   This file is a part of DOOM Retro.
 
@@ -90,8 +90,8 @@ void HU_Ticker(void);
 void HU_Drawer(void);
 void HU_Erase(void);
 
-void HU_SetPlayerMessage(char *message, dboolean group, dboolean external);
-void HU_PlayerMessage(char *message, dboolean group, dboolean external);
+void HU_SetPlayerMessage(char *message, bool group, bool external);
+void HU_PlayerMessage(char *message, bool group, bool external);
 
 void HU_ClearMessages(void);
 void HU_DrawDisk(void);
@@ -102,9 +102,9 @@ extern patch_t  *minuspatch;
 extern int      healthhighlight;
 extern int      ammohighlight;
 extern int      armorhighlight;
-extern dboolean drawdisk;
-extern dboolean idbehold;
+extern bool     drawdisk;
+extern bool     idbehold;
 extern int      message_counter;
-extern dboolean message_dontfuckwithme;
-extern dboolean message_fadeon;
+extern bool     message_dontfuckwithme;
+extern bool     message_fadeon;
 extern short    minuspatchwidth;

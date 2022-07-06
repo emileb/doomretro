@@ -9,8 +9,8 @@
   Copyright © 1993-2022 by id Software LLC, a ZeniMax Media company.
   Copyright © 2013-2022 by Brad Harding <mailto:brad@doomretro.com>.
 
-  DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
-  <https://github.com/bradharding/doomretro/wiki/CREDITS>.
+  DOOM Retro is a fork of Chocolate DOOM. For a list of acknowledgments,
+  see <https://github.com/bradharding/doomretro/wiki/ACKNOWLEDGMENTS>.
 
   This file is a part of DOOM Retro.
 
@@ -79,10 +79,7 @@ fixed_t             yslopes[LOOKDIRS][MAXHEIGHT];
 
 static fixed_t      cachedheight[MAXHEIGHT];
 
-dboolean            r_liquid_current = r_liquid_current_default;
-dboolean            r_liquid_swirl = r_liquid_swirl_default;
-
-static dboolean     updateswirl;
+static bool         updateswirl;
 
 //
 // R_MapPlane
@@ -308,7 +305,7 @@ static void R_MakeSpans(visplane_t *pl)
     static int  spanstart[MAXHEIGHT];
     int         stop = pl->right + 1;
 
-    if (terraintypes[pl->picnum] != SOLID && r_liquid_current)
+    if (terraintypes[pl->picnum] >= LIQUID && r_liquid_current)
     {
         xoffset = animatedliquidxoffs;
         yoffset = animatedliquidyoffs;
@@ -346,7 +343,7 @@ static void R_MakeSpans(visplane_t *pl)
 }
 
 // Ripple Effect from SMMU (r_ripple.cpp) by Simon Howard
-#define SPEED           40
+#define SPEED           24
 
 // swirl factors determine the number of waves per flat width
 // 1 cycle per 64 units
@@ -389,15 +386,15 @@ void R_InitDistortedFlats(void)
 static byte *R_DistortedFlat(int flatnum)
 {
     static byte distortedflat[64 * 64];
-    static int  prevgametime = -1;
     static int  prevflatnum = -1;
+    static int  prevtic = -1;
     static byte *normalflat;
     static int  *offset = offsets;
 
-    if (prevgametime != gametime && updateswirl)
+    if (prevtic != animatedliquidtic && updateswirl)
     {
-        offset = &offsets[(gametime & 1023) << 12];
-        prevgametime = gametime;
+        offset = &offsets[(animatedliquidtic & 1023) << 12];
+        prevtic = animatedliquidtic;
 
         if (prevflatnum != flatnum)
         {
@@ -427,7 +424,7 @@ static byte *R_DistortedFlat(int flatnum)
 void R_DrawPlanes(void)
 {
     if (r_liquid_swirl)
-        updateswirl = (!consoleactive && !inhelpscreens && !paused && !freeze);
+        updateswirl = !(consoleactive || inhelpscreens || paused || freeze);
 
     dc_colormap[0] = (viewplayer->fixedcolormap == INVERSECOLORMAP && r_textures ? fixedcolormap : fullcolormap);
 
@@ -435,7 +432,7 @@ void R_DrawPlanes(void)
         for (visplane_t *pl = visplanes[i]; pl; pl = pl->next)
             if (pl->modified && pl->left <= pl->right)
             {
-                int picnum = pl->picnum;
+                const int   picnum = pl->picnum;
 
                 if (picnum == skyflatnum || (picnum & PL_SKYFLAT))
                 {
@@ -515,7 +512,7 @@ void R_DrawPlanes(void)
                 else
                 {
                     // regular flat
-                    ds_source = (terraintypes[picnum] != SOLID && r_liquid_swirl ?
+                    ds_source = (terraintypes[picnum] >= LIQUID && r_liquid_swirl ?
                         R_DistortedFlat(picnum) : lumpinfo[flattranslation[picnum]]->cache);
 
                     R_MakeSpans(pl);

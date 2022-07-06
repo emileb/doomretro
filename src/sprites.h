@@ -9,8 +9,8 @@
   Copyright © 1993-2022 by id Software LLC, a ZeniMax Media company.
   Copyright © 2013-2022 by Brad Harding <mailto:brad@doomretro.com>.
 
-  DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
-  <https://github.com/bradharding/doomretro/wiki/CREDITS>.
+  DOOM Retro is a fork of Chocolate DOOM. For a list of acknowledgments,
+  see <https://github.com/bradharding/doomretro/wiki/ACKNOWLEDGMENTS>.
 
   This file is a part of DOOM Retro.
 
@@ -87,12 +87,12 @@ typedef enum
 
 typedef struct
 {
-    char        name[9];
-    short       x, y;
-    short       width;
-    short       height;
-    dboolean    sprfix18;
+    char    name[9];
+    short   x, y;
+    short   width;
+    short   height;
+    bool    sprfix18;
 } sproffset_t;
 
-extern char         *sprnames[];
-extern sproffset_t  sproffsets[];
+extern char                 *sprnames[];
+extern const sproffset_t    sproffsets[];

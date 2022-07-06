@@ -9,8 +9,8 @@
   Copyright © 1993-2022 by id Software LLC, a ZeniMax Media company.
   Copyright © 2013-2022 by Brad Harding <mailto:brad@doomretro.com>.
 
-  DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
-  <https://github.com/bradharding/doomretro/wiki/CREDITS>.
+  DOOM Retro is a fork of Chocolate DOOM. For a list of acknowledgments,
+  see <https://github.com/bradharding/doomretro/wiki/ACKNOWLEDGMENTS>.
 
   This file is a part of DOOM Retro.
 
@@ -47,8 +47,7 @@
 // Patches.
 // A patch holds one or more columns.
 // Patches are used for sprites and all masked pictures,
-// and we compose textures from the TEXTURE1/2 lists
-// of patches.
+// and we compose textures from the TEXTURE1/2 lists  of patches.
 //
 
 // Re-engineered patch support
@@ -60,7 +59,7 @@ static short    FIREBLU1;
 static short    SKY1;
 static short    STEP2;
 
-static dboolean getIsSolidAtSpot(const column_t *column, int spot)
+static bool getIsSolidAtSpot(const column_t *column, int spot)
 {
     if (!column)
         return false;
@@ -80,10 +79,10 @@ static dboolean getIsSolidAtSpot(const column_t *column, int spot)
 }
 
 // Checks if the lump can be a DOOM patch
-static dboolean CheckIfPatch(int lump)
+static bool CheckIfPatch(int lump)
 {
     const int   size = W_LumpLength(lump);
-    dboolean    result = false;
+    bool        result = false;
 
     if (size >= 13)
     {

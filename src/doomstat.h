@@ -9,8 +9,8 @@
   Copyright © 1993-2022 by id Software LLC, a ZeniMax Media company.
   Copyright © 2013-2022 by Brad Harding <mailto:brad@doomretro.com>.
 
-  DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
-  <https://github.com/bradharding/doomretro/wiki/CREDITS>.
+  DOOM Retro is a fork of Chocolate DOOM. For a list of acknowledgments,
+  see <https://github.com/bradharding/doomretro/wiki/ACKNOWLEDGMENTS>.
 
   This file is a part of DOOM Retro.
 
@@ -50,14 +50,14 @@
 // ------------------------
 // Command line parameters.
 //
-extern dboolean         nomonsters;             // checkparm of -nomonsters
-extern dboolean         regenhealth;
-extern dboolean         respawnitems;
-extern dboolean         respawnmonsters;        // checkparm of -respawn
-extern dboolean         pistolstart;            // [BH] checkparm of -pistolstart
-extern dboolean         fastparm;               // checkparm of -fast
+extern bool             nomonsters;             // checkparm of -nomonsters
+extern bool             regenhealth;
+extern bool             respawnitems;
+extern bool             respawnmonsters;        // checkparm of -respawn
+extern bool             pistolstart;            // [BH] checkparm of -pistolstart
+extern bool             fastparm;               // checkparm of -fast
 
-extern dboolean         devparm;                // DEBUG: launched with -devparm
+extern bool             devparm;                // DEBUG: launched with -devparm
 
 // -----------------------------------------------------
 // Game Mode - identify IWAD as shareware, retail etc.
@@ -67,7 +67,7 @@ extern GameMission_t    gamemission;
 extern char             gamedescription[255];
 
 // Set if homebrew PWAD stuff has been added.
-extern dboolean         modifiedgame;
+extern bool             modifiedgame;
 
 // -------------------------------------------
 // Selected skill type, map etc.
@@ -77,7 +77,7 @@ extern dboolean         modifiedgame;
 extern skill_t          startskill;
 extern int              startepisode;
 
-extern dboolean         autostart;
+extern bool          autostart;
 
 // Selected by user.
 extern skill_t          gameskill;
@@ -86,72 +86,72 @@ extern int              gameepisode;
 extern int              gamemap;
 extern char             speciallumpname[6];
 
-extern dboolean         freeze;
+extern bool             freeze;
 
-extern dboolean         sigil;
-extern dboolean         autosigil;
-extern dboolean         buckethead;
-extern dboolean         nerve;
-extern dboolean         bfgedition;
-extern dboolean         unity;
+extern bool             sigil;
+extern bool             autosigil;
+extern bool             buckethead;
+extern bool             nerve;
+extern bool             bfgedition;
+extern bool             unity;
 
-extern dboolean         chex;
-extern dboolean         chex1;
-extern dboolean         chex2;
-extern dboolean         hacx;
-extern dboolean         BTSX;
-extern dboolean         BTSXE1;
-extern dboolean         BTSXE1A;
-extern dboolean         BTSXE1B;
-extern dboolean         BTSXE2;
-extern dboolean         BTSXE2A;
-extern dboolean         BTSXE2B;
-extern dboolean         BTSXE3;
-extern dboolean         BTSXE3A;
-extern dboolean         BTSXE3B;
-extern dboolean         E1M4B;
-extern dboolean         E1M8B;
-extern dboolean         onehumanity;
-extern dboolean         sprfix18;
-extern dboolean         eviternity;
-extern dboolean         doom4vanilla;
-extern dboolean         REKKR;
-extern dboolean         REKKRSA;
-extern dboolean         REKKRSL;
+extern bool             chex;
+extern bool             chex1;
+extern bool             chex2;
+extern bool             hacx;
+extern bool             BTSX;
+extern bool             BTSXE1;
+extern bool             BTSXE1A;
+extern bool             BTSXE1B;
+extern bool             BTSXE2;
+extern bool             BTSXE2A;
+extern bool             BTSXE2B;
+extern bool             BTSXE3;
+extern bool             BTSXE3A;
+extern bool             BTSXE3B;
+extern bool             E1M4B;
+extern bool             E1M8B;
+extern bool             onehumanity;
+extern bool             sprfix18;
+extern bool             eviternity;
+extern bool             doom4vanilla;
+extern bool             REKKR;
+extern bool             REKKRSA;
+extern bool             REKKRSL;
 
-extern dboolean         moreblood;
+extern bool             moreblood;
 
-extern dboolean         DMENUPIC;
-extern dboolean         DSSECRET;
-extern dboolean         FREEDOOM;
-extern dboolean         FREEDM;
-extern dboolean         M_DOOM;
-extern dboolean         M_EPISOD;
-extern dboolean         M_GDHIGH;
-extern dboolean         M_GDLOW;
-extern dboolean         M_LGTTL;
-extern dboolean         M_LOADG;
-extern dboolean         M_LSCNTR;
-extern dboolean         M_MSENS;
-extern dboolean         M_MSGOFF;
-extern dboolean         M_MSGON;
-extern dboolean         M_NEWG;
-extern dboolean         M_NGAME;
-extern dboolean         M_NMARE;
-extern dboolean         M_OPTTTL;
-extern dboolean         M_PAUSE;
-extern dboolean         M_SAVEG;
-extern dboolean         M_SGTTL;
-extern dboolean         M_SKILL;
-extern dboolean         M_SKULL1;
-extern dboolean         M_SVOL;
+extern bool             DMENUPIC;
+extern bool             DSSECRET;
+extern bool             FREEDOOM;
+extern bool             FREEDM;
+extern bool             M_DOOM;
+extern bool             M_EPISOD;
+extern bool             M_GDHIGH;
+extern bool             M_GDLOW;
+extern bool             M_LGTTL;
+extern bool             M_LOADG;
+extern bool             M_LSCNTR;
+extern bool             M_MSENS;
+extern bool             M_MSGOFF;
+extern bool             M_MSGON;
+extern bool             M_NEWG;
+extern bool             M_NGAME;
+extern bool             M_NMARE;
+extern bool             M_OPTTTL;
+extern bool             M_PAUSE;
+extern bool             M_SAVEG;
+extern bool             M_SGTTL;
+extern bool             M_SKILL;
+extern bool             M_SKULL1;
+extern bool             M_SVOL;
 extern short            RROCK05;
 extern short            RROCK08;
 extern short            SLIME09;
 extern short            SLIME12;
-extern dboolean         STCFN034;
-extern dboolean         STYSNUM0;
-extern dboolean         WISCRT2;
+extern bool             STCFN034;
+extern bool             STYSNUM0;
+extern bool             WISCRT2;
 
 extern int              PLAYPALs;
 extern int              STBARs;
@@ -173,11 +173,11 @@ extern int              musicVolume;
 // Status flags for refresh.
 //
 
-extern dboolean         automapactive;  // In automap mode?
-extern dboolean         menuactive;     // Menu overlaid?
-extern dboolean         paused;         // Game Pause?
+extern bool             automapactive;  // In automap mode?
+extern bool             menuactive;     // Menu overlaid?
+extern bool             paused;         // Game Pause?
 
-extern dboolean         viewactive;
+extern bool             viewactive;
 
 // -------------------------------------
 // Scores, rating.
@@ -205,7 +205,7 @@ extern gamestate_t      gamestate;
 extern int              gametime;
 extern struct tm        gamestarttime;
 
-extern dboolean         realframe;
+extern bool             realframe;
 
 // Intermission stats.
 // Parameters for world map/intermission.

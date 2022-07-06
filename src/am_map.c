@@ -9,8 +9,8 @@
   Copyright © 1993-2022 by id Software LLC, a ZeniMax Media company.
   Copyright © 2013-2022 by Brad Harding <mailto:brad@doomretro.com>.
 
-  DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
-  <https://github.com/bradharding/doomretro/wiki/CREDITS>.
+  DOOM Retro is a fork of Chocolate DOOM. For a list of acknowledgments,
+  see <https://github.com/bradharding/doomretro/wiki/ACKNOWLEDGMENTS>.
 
   This file is a part of DOOM Retro.
 
@@ -36,9 +36,11 @@
 ========================================================================
 */
 
+#include <math.h>
 #include <string.h>
 
 #include "am_map.h"
+#include "c_cmds.h"
 #include "c_console.h"
 #include "d_deh.h"
 #include "doomstat.h"
@@ -54,34 +56,6 @@
 #include "p_local.h"
 #include "st_stuff.h"
 
-int         am_allmapcdwallcolor = am_allmapcdwallcolor_default;
-int         am_allmapfdwallcolor = am_allmapfdwallcolor_default;
-int         am_allmapwallcolor = am_allmapwallcolor_default;
-int         am_backcolor = am_backcolor_default;
-int         am_bluedoorcolor = am_bluedoorcolor_default;
-int         am_cdwallcolor = am_cdwallcolor_default;
-int         am_crosshaircolor = am_crosshaircolor_default;
-dboolean    am_external = am_external_default;
-int         am_fdwallcolor = am_fdwallcolor_default;
-dboolean    am_followmode = am_followmode_default;
-dboolean    am_grid = am_grid_default;
-int         am_gridcolor = am_gridcolor_default;
-char        *am_gridsize = am_gridsize_default;
-int         am_markcolor = am_markcolor_default;
-dboolean    am_path = am_path_default;
-int         am_pathcolor = am_pathcolor_default;
-int         am_playercolor = am_playercolor_default;
-dboolean    am_playerstats = am_playerstats_default;
-int         am_reddoorcolor = am_reddoorcolor_default;
-dboolean    am_rotatemode = am_rotatemode_default;
-int         am_teleportercolor = am_teleportercolor_default;
-int         am_thingcolor = am_thingcolor_default;
-int         am_tswallcolor = am_tswallcolor_default;
-int         am_wallcolor = am_wallcolor_default;
-int         am_yellowdoorcolor = am_yellowdoorcolor_default;
-
-uint64_t    stat_automapopened = 0;
-
 // Automap color priorities
 #define PATHPRIORITY        9
 #define WALLPRIORITY        8
@@ -95,6 +69,9 @@ uint64_t    stat_automapopened = 0;
 
 static byte playercolor;
 static byte thingcolor;
+static byte bluekeycolor;
+static byte redkeycolor;
+static byte yellowkeycolor;
 static byte markcolor;
 static byte backcolor;
 static byte pathcolor;
@@ -145,7 +122,7 @@ typedef struct
     mpoint_t    b;
 } mline_t;
 
-dboolean            automapactive;
+bool                automapactive;
 
 static mpoint_t     m_paninc;       // how far the window pans each tic (map coords)
 static fixed_t      mtof_zoommul;   // how far the window zooms in each tic (map coords)
@@ -188,16 +165,16 @@ int                 pathpointnum_max;
 static int          gridwidth;
 static int          gridheight;
 
-static dboolean     bigstate;
-static dboolean     movement;
-static dboolean     speedtoggle;
+static bool         bigstate;
+static bool         movement;
+static bool         speedtoggle;
 static SDL_Keymod   modstate;
 int                 keydown;
 int                 direction;
 
 am_frame_t          am_frame;
 
-static dboolean isteleportline[NUMLINESPECIALS];
+static bool         isteleportline[NUMLINESPECIALS];
 
 static void AM_Rotate(fixed_t *x, fixed_t *y, angle_t angle);
 static void (*putbigdot)(unsigned int, unsigned int, const byte *);
@@ -311,9 +288,22 @@ void AM_SetColors(void)
 
     playercolor = nearestcolors[am_playercolor];
     thingcolor = nearestcolors[am_thingcolor];
+    bluekeycolor = nearestcolors[am_bluekeycolor];
+    redkeycolor = nearestcolors[am_redkeycolor];
+    yellowkeycolor = nearestcolors[am_yellowkeycolor];
     markcolor = nearestcolors[am_markcolor];
     backcolor = nearestcolors[am_backcolor];
     pathcolor = nearestcolors[am_pathcolor];
+
+    for (mobjtype_t i = 0; i < NUMMOBJTYPES; i++)
+        mobjinfo[i].automapcolor = thingcolor;
+
+    mobjinfo[MT_MISC4].automapcolor = bluekeycolor;
+    mobjinfo[MT_MISC5].automapcolor = redkeycolor;
+    mobjinfo[MT_MISC6].automapcolor = yellowkeycolor;
+    mobjinfo[MT_MISC7].automapcolor = yellowkeycolor;
+    mobjinfo[MT_MISC8].automapcolor = redkeycolor;
+    mobjinfo[MT_MISC9].automapcolor = bluekeycolor;
 
     am_crosshaircolor2 = &tinttab60[nearestcolors[am_crosshaircolor] << 8];
 
@@ -388,7 +378,7 @@ void AM_SetAutomapSize(int screensize)
     m_h = FTOM(MAPHEIGHT);
 }
 
-static void AM_InitVariables(const dboolean mainwindow)
+static void AM_InitVariables(const bool mainwindow)
 {
     automapactive = mainwindow;
 
@@ -428,7 +418,7 @@ void AM_Stop(void)
     HU_ClearMessages();
 }
 
-void AM_Start(const dboolean mainwindow)
+void AM_Start(const bool mainwindow)
 {
     if (lastlevel != gamemap || lastepisode != gameepisode || !mainwindow)
     {
@@ -465,7 +455,7 @@ static void AM_MaxOutWindowScale(void)
     AM_ActivateNewScale();
 }
 
-static dboolean AM_GetSpeedToggle(void)
+static bool AM_GetSpeedToggle(void)
 {
     return ((!!(gamecontrollerbuttons & GAMECONTROLLER_LEFT_TRIGGER)) ^ (!!(modstate & KMOD_SHIFT)));
 }
@@ -503,7 +493,7 @@ void AM_ToggleMaxZoom(void)
         D_FadeScreen(false);
 }
 
-void AM_ToggleFollowMode(dboolean value)
+void AM_ToggleFollowMode(bool value)
 {
     if ((am_followmode = value))
     {
@@ -614,9 +604,8 @@ void AM_ClearMarks(void)
 
 void AM_AddToPath(void)
 {
-    mobj_t      *mo = viewplayer->mo;
-    const int   x = mo->x >> FRACTOMAPBITS;
-    const int   y = mo->y >> FRACTOMAPBITS;
+    const int   x = viewx >> FRACTOMAPBITS;
+    const int   y = viewy >> FRACTOMAPBITS;
     static int  prevx = INT_MAX;
     static int  prevy = INT_MAX;
 
@@ -624,16 +613,13 @@ void AM_AddToPath(void)
         return;
 
     if (pathpointnum >= pathpointnum_max)
-    {
-        pathpointnum_max = (pathpointnum_max ? pathpointnum_max * 2 : 1024);
-        pathpoints = I_Realloc(pathpoints, pathpointnum_max * sizeof(*pathpoints));
-    }
+        pathpoints = I_Realloc(pathpoints, (pathpointnum_max *= 2) * sizeof(*pathpoints));
 
     pathpoints[pathpointnum].x = prevx = x;
     pathpoints[pathpointnum++].y = prevy = y;
 }
 
-void AM_ToggleRotateMode(dboolean value)
+void AM_ToggleRotateMode(bool value)
 {
     if ((am_rotatemode = value))
     {
@@ -658,7 +644,7 @@ void AM_ToggleRotateMode(dboolean value)
 //
 // Handle events (user inputs) in automap mode
 //
-dboolean AM_Responder(const event_t *ev)
+bool AM_Responder(const event_t *ev)
 {
     int rc = false;
 
@@ -667,7 +653,7 @@ dboolean AM_Responder(const event_t *ev)
 
     if (!menuactive && !paused)
     {
-        static dboolean backbuttondown;
+        static bool backbuttondown;
 
         if (!(gamecontrollerbuttons & gamecontrollerautomap))
             backbuttondown = false;
@@ -763,14 +749,14 @@ dboolean AM_Responder(const event_t *ev)
                 }
 
                 // zoom out
-                else if (key == keyboardzoomout && !movement)
+                else if (key == keyboardzoomout && !movement && (!mapwindow || keyboardzoomout != KEY_MINUS))
                 {
                     keydown = key;
                     AM_ToggleZoomOut();
                 }
 
                 // zoom in
-                else if (key == keyboardzoomin && !movement)
+                else if (key == keyboardzoomin && !movement && (!mapwindow || keyboardzoomin != KEY_EQUALS))
                 {
                     keydown = key;
                     AM_ToggleZoomIn();
@@ -882,12 +868,12 @@ dboolean AM_Responder(const event_t *ev)
 
                     if (key2)
                     {
-                        event_t event;
+                        event_t temp;
 
-                        event.type = ev_keydown;
-                        event.data1 = key2;
-                        event.data2 = 0;
-                        D_PostEvent(&event);
+                        temp.type = ev_keydown;
+                        temp.data1 = key2;
+                        temp.data2 = 0;
+                        D_PostEvent(&temp);
                     }
                 }
                 else if (!am_followmode)
@@ -1219,7 +1205,7 @@ void AM_Ticker(void)
         AM_ChangeWindowScale();
 
     // Change x,y location
-    if ((m_paninc.x || m_paninc.y) && !menuactive && !paused && !consoleactive)
+    if ((m_paninc.x || m_paninc.y) && !menuactive && !consoleactive && !paused)
         AM_ChangeWindowLoc();
 
 #ifdef __ANDROID__
@@ -1250,7 +1236,7 @@ void AM_ClearFB(void)
 //
 // Based on Cohen-Sutherland clipping algorithm but with a slightly faster reject and precalculated
 // slopes. If the speed is needed, use a hash algorithm to handle the common cases.
-static dboolean AM_ClipMline(int *x0, int *y0, int *x1, int *y1)
+static bool AM_ClipMline(int *x0, int *y0, int *x1, int *y1)
 {
     enum
     {
@@ -1323,9 +1309,9 @@ static inline void PUTBIGDOT(unsigned int x, unsigned int y, const byte *color)
 {
     if (x < (unsigned int)MAPWIDTH)
     {
-        byte            *dot = mapscreen + y + x;
-        const dboolean  attop = (y < MAPAREA);
-        const dboolean  atbottom = (y < (unsigned int)MAPBOTTOM);
+        byte        *dot = mapscreen + y + x;
+        const bool  attop = (y < MAPAREA);
+        const bool  atbottom = (y < (unsigned int)MAPBOTTOM);
 
         if (attop)
             *dot = *(*dot + color);
@@ -1737,7 +1723,7 @@ static void AM_DrawTranslucentPlayerArrow(const mline_t *lineguy, const int line
 }
 
 static void AM_DrawThingTriangle(const mline_t *lineguy, const int lineguylines,
-    const fixed_t scale, angle_t angle, fixed_t x, fixed_t y)
+    const fixed_t scale, angle_t angle, fixed_t x, fixed_t y, byte color)
 {
     for (int i = 0; i < lineguylines; i++)
     {
@@ -1763,7 +1749,7 @@ static void AM_DrawThingTriangle(const mline_t *lineguy, const int lineguylines,
         AM_Rotate(&x1, &y1, angle);
         AM_Rotate(&x2, &y2, angle);
 
-        AM_DrawFline(x + x1, y + y1, x + x2, y + y2, &thingcolor, &PUTDOT2);
+        AM_DrawFline(x + x1, y + y1, x + x2, y + y2, &color, &PUTDOT2);
     }
 }
 
@@ -1844,7 +1830,7 @@ static void AM_DrawThings(void)
         { { -32768,  45875 }, { -32768, -45875 } }
     };
 
-    angle_t angleoffset = (am_rotatemode ? viewangle - ANG90 : 0);
+    const angle_t   angleoffset = (am_rotatemode ? viewangle - ANG90 : 0);
 
     for (int i = 0; i < numsectors; i++)
     {
@@ -1891,11 +1877,10 @@ static void AM_DrawThings(void)
                     if (am_rotatemode)
                         AM_RotatePoint(&point);
 
-                    fx = CXMTOF(point.x);
-                    fy = CYMTOF(point.y);
-
-                    if (fx >= -width && fx <= MAPWIDTH + width && fy >= -width && fy <= (int)MAPHEIGHT + width)
-                        AM_DrawThingTriangle(thingtriangle, THINGTRIANGLELINES, width, thing->angle - angleoffset, point.x, point.y);
+                    if ((fx = CXMTOF(point.x)) >= -width && fx <= MAPWIDTH + width
+                        && (fy = CYMTOF(point.y)) >= -width && fy <= (int)MAPHEIGHT + width)
+                        AM_DrawThingTriangle(thingtriangle, THINGTRIANGLELINES, width,
+                            thing->angle - angleoffset, point.x, point.y, mobjinfo[thing->type].automapcolor);
                 }
 
                 thing = thing->snext;
@@ -1992,13 +1977,14 @@ static void AM_DrawMarks(void)
 
 static void AM_DrawPath(void)
 {
-    if (pathpointnum >= 1)
+    if (pathpointnum > 1)
     {
-        mpoint_t        end;
-        const mobj_t    *mo = viewplayer->mo;
+        mpoint_t    end;
 
         if (am_rotatemode)
         {
+            mpoint_t    player = { viewx >> FRACTOMAPBITS, viewy >> FRACTOMAPBITS };
+
             for (int i = 1; i < pathpointnum; i++)
             {
                 mpoint_t    start = { pathpoints[i - 1].x, pathpoints[i - 1].y };
@@ -2014,13 +2000,8 @@ static void AM_DrawPath(void)
                 AM_DrawFline(start.x, start.y, end.x, end.y, &pathcolor, &PUTDOT2);
             }
 
-            if (pathpointnum > 1)
-            {
-                mpoint_t    player = { mo->x >> FRACTOMAPBITS, mo->y >> FRACTOMAPBITS };
-
-                AM_RotatePoint(&player);
-                AM_DrawFline(end.x, end.y, player.x, player.y, &pathcolor, &PUTDOT2);
-            }
+            AM_RotatePoint(&player);
+            AM_DrawFline(end.x, end.y, player.x, player.y, &pathcolor, &PUTDOT2);
         }
         else
         {
@@ -2037,8 +2018,7 @@ static void AM_DrawPath(void)
                 AM_DrawFline(start.x, start.y, end.x, end.y, &pathcolor, &PUTDOT2);
             }
 
-            if (pathpointnum > 1)
-                AM_DrawFline(end.x, end.y, mo->x >> FRACTOMAPBITS, mo->y >> FRACTOMAPBITS, &pathcolor, &PUTDOT2);
+            AM_DrawFline(end.x, end.y, viewx >> FRACTOMAPBITS, viewy >> FRACTOMAPBITS, &pathcolor, &PUTDOT2);
         }
     }
 }
@@ -2085,17 +2065,15 @@ static void AM_DrawSolidCrosshair(void)
     *dot = am_crosshaircolor;
 }
 
-#define DARKLEVELS 6
-
 void AM_StatusBarShadow(void)
 {
-    for (int i = 0; i < DARKLEVELS; i++)
+    for (int i = 24, y = 0; y < 6; i -= 4, y++)
     {
-        byte    *colormap = &colormaps[0][(DARKLEVELS - i) * 1024];
+        byte    *colormap = &colormaps[0][i * 256];
 
         for (int x = 0; x < MAPWIDTH; x++)
         {
-            byte    *dot = &mapscreen[(MAPHEIGHT - i - 1) * MAPWIDTH + x];
+            byte    *dot = &mapscreen[(MAPHEIGHT - y - 1) * MAPWIDTH + x];
 
             *dot = *(*dot + colormap);
         }
@@ -2167,7 +2145,7 @@ void AM_Drawer(void)
 
     AM_DrawPlayer();
 
-    if (r_screensize < r_screensize_max)
+    if (r_screensize < r_screensize_max && !vanilla)
         AM_StatusBarShadow();
 
     if (!am_followmode)

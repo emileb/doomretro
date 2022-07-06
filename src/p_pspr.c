@@ -9,8 +9,8 @@
   Copyright © 1993-2022 by id Software LLC, a ZeniMax Media company.
   Copyright © 2013-2022 by Brad Harding <mailto:brad@doomretro.com>.
 
-  DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
-  <https://github.com/bradharding/doomretro/wiki/CREDITS>.
+  DOOM Retro is a fork of Chocolate DOOM. For a list of acknowledgments,
+  see <https://github.com/bradharding/doomretro/wiki/ACKNOWLEDGMENTS>.
 
   This file is a part of DOOM Retro.
 
@@ -50,35 +50,10 @@
 #define LOWERSPEED  (6 * FRACUNIT)
 #define RAISESPEED  (6 * FRACUNIT)
 
-dboolean        autoaim = autoaim_default;
-dboolean        centerweapon = centerweapon_default;
-int             weaponbob = weaponbob_default;
-dboolean        weaponbounce = weaponbounce_default;
-dboolean        weaponrecoil = weaponrecoil_default;
+bool        successfulshot;
+bool        skippsprinterp;
 
-uint64_t        stat_shotsfired_fists = 0;
-uint64_t        stat_shotsfired_chainsaw = 0;
-uint64_t        stat_shotsfired_pistol = 0;
-uint64_t        stat_shotsfired_shotgun = 0;
-uint64_t        stat_shotsfired_supershotgun = 0;
-uint64_t        stat_shotsfired_chaingun = 0;
-uint64_t        stat_shotsfired_rocketlauncher = 0;
-uint64_t        stat_shotsfired_plasmarifle = 0;
-uint64_t        stat_shotsfired_bfg9000 = 0;
-uint64_t        stat_shotssuccessful_fists = 0;
-uint64_t        stat_shotssuccessful_chainsaw = 0;
-uint64_t        stat_shotssuccessful_pistol = 0;
-uint64_t        stat_shotssuccessful_shotgun = 0;
-uint64_t        stat_shotssuccessful_supershotgun = 0;
-uint64_t        stat_shotssuccessful_chaingun = 0;
-uint64_t        stat_shotssuccessful_rocketlauncher = 0;
-uint64_t        stat_shotssuccessful_plasmarifle = 0;
-uint64_t        stat_shotssuccessful_bfg9000 = 0;
-
-dboolean        successfulshot;
-dboolean        skippsprinterp;
-
-extern dboolean hitwall;
+extern bool hitwall;
 
 //
 // A_Recoil
@@ -152,8 +127,7 @@ void P_EquipWeapon(weapontype_t weapon)
 
 //
 // P_BringUpWeapon
-// Starts bringing the pending weapon up
-// from the bottom of the screen.
+// Starts bringing the pending weapon up from the bottom of the screen.
 //
 static void P_BringUpWeapon(void)
 {
@@ -177,9 +151,9 @@ static void P_BringUpWeapon(void)
 // Returns true if there is enough ammo to shoot.
 // If not, selects the next weapon to use.
 //
-dboolean P_CheckAmmo(weapontype_t weapon)
+bool P_CheckAmmo(weapontype_t weapon)
 {
-    ammotype_t  ammotype = weaponinfo[weapon].ammotype;
+    const ammotype_t    ammotype = weaponinfo[weapon].ammotype;
 
     // Some do not need ammunition anyway.
     if (ammotype == am_noammo)
@@ -190,7 +164,6 @@ dboolean P_CheckAmmo(weapontype_t weapon)
         return true;
 
     // Out of ammo, pick a weapon to change to.
-    // Preferences are set here.
     if (viewplayer->weaponowned[wp_plasma]
         && viewplayer->ammo[am_cell] >= weaponinfo[wp_plasma].ammopershot)
         P_EquipWeapon(wp_plasma);
@@ -220,7 +193,7 @@ dboolean P_CheckAmmo(weapontype_t weapon)
 //
 static void P_SubtractAmmo(void)
 {
-    ammotype_t  ammotype = weaponinfo[viewplayer->readyweapon].ammotype;
+    const ammotype_t    ammotype = weaponinfo[viewplayer->readyweapon].ammotype;
 
     if (ammotype != am_noammo)
     {
@@ -234,7 +207,7 @@ static void P_SubtractAmmo(void)
 //
 void P_FireWeapon(void)
 {
-    weapontype_t    readyweapon = viewplayer->readyweapon;
+    const weapontype_t  readyweapon = viewplayer->readyweapon;
 
     if (!P_CheckAmmo(readyweapon) || (automapactive && !am_followmode))
         return;
@@ -284,8 +257,8 @@ void P_DropWeapon(void)
 //
 void A_WeaponReady(mobj_t *actor, player_t *player, pspdef_t *psp)
 {
-    weapontype_t    readyweapon = player->readyweapon;
-    weapontype_t    pendingweapon = player->pendingweapon;
+    const weapontype_t  readyweapon = player->readyweapon;
+    const weapontype_t  pendingweapon = player->pendingweapon;
 
     if (readyweapon == wp_chainsaw && psp->state == &states[S_SAW])
         S_StartSound(actor, sfx_sawidl);
@@ -370,15 +343,15 @@ void A_Lower(mobj_t *actor, player_t *player, pspdef_t *psp)
         return;         // don't bring weapon back up
     }
 
-    // The old weapon has been lowered off the screen,
-    // so change the weapon and start raising it
+    // Player is dead, so keep the weapon off screen.
     if (player->health <= 0)
     {
-        // Player is dead, so keep the weapon off screen.
         P_SetPsprite(ps_weapon, S_NULL);
         return;
     }
 
+    // The old weapon has been lowered off the screen,
+    // so change the weapon and start raising it
     if (player->pendingweapon != wp_nochange)
         player->readyweapon = player->pendingweapon;
 
@@ -655,7 +628,7 @@ static void P_BulletSlope(mobj_t *actor)
 //
 // P_GunShot
 //
-static void P_GunShot(mobj_t *actor, dboolean accurate)
+static void P_GunShot(mobj_t *actor, bool accurate)
 {
     angle_t angle = actor->angle;
 
@@ -670,7 +643,7 @@ static void P_GunShot(mobj_t *actor, dboolean accurate)
 //
 void A_FirePistol(mobj_t *actor, player_t *player, pspdef_t *psp)
 {
-    weaponinfo_t    readyweapon = weaponinfo[player->readyweapon];
+    const weaponinfo_t  readyweapon = weaponinfo[player->readyweapon];
 
     if (!(readyweapon.flags & WPF_SILENT))
         P_NoiseAlert(actor);
@@ -700,7 +673,7 @@ void A_FirePistol(mobj_t *actor, player_t *player, pspdef_t *psp)
 //
 void A_FireShotgun(mobj_t *actor, player_t *player, pspdef_t *psp)
 {
-    weaponinfo_t    readyweapon = weaponinfo[player->readyweapon];
+    const weaponinfo_t  readyweapon = weaponinfo[player->readyweapon];
 
     if (!(readyweapon.flags & WPF_SILENT))
         P_NoiseAlert(actor);
@@ -734,7 +707,7 @@ void A_FireShotgun(mobj_t *actor, player_t *player, pspdef_t *psp)
 //
 void A_FireShotgun2(mobj_t *actor, player_t *player, pspdef_t *psp)
 {
-    weaponinfo_t    readyweapon = weaponinfo[player->readyweapon];
+    const weaponinfo_t  readyweapon = weaponinfo[player->readyweapon];
 
     if (!(readyweapon.flags & WPF_SILENT))
         P_NoiseAlert(actor);
@@ -785,7 +758,7 @@ void A_CloseShotgun2(mobj_t *actor, player_t *player, pspdef_t *psp)
 //
 void A_FireCGun(mobj_t *actor, player_t *player, pspdef_t *psp)
 {
-    weaponinfo_t    readyweapon = weaponinfo[player->readyweapon];
+    const weaponinfo_t  readyweapon = weaponinfo[player->readyweapon];
 
     // [BH] Fix <https://doomwiki.org/wiki/Chaingun_makes_two_sounds_firing_single_bullet>.
     if (!player->ammo[readyweapon.ammotype])
@@ -866,7 +839,7 @@ void A_BFGSpray(mobj_t *actor, player_t *player, pspdef_t *psp)
         for (int j = 0; j < 15; j++)
             damage += (M_Random() & 7);
 
-        P_DamageMobj(linetarget, mo, mo, damage, true);
+        P_DamageMobj(linetarget, mo, mo, damage, true, false);
     }
 
     viewplayer->shotsfired[wp_bfg]++;
@@ -1148,9 +1121,9 @@ void A_WeaponJump(mobj_t *actor, player_t *player, pspdef_t *psp)
 //
 void A_ConsumeAmmo(mobj_t *actor, player_t *player, pspdef_t *psp)
 {
-    state_t         *state = psp->state;
-    weaponinfo_t    readyweapon = weaponinfo[player->readyweapon];
-    ammotype_t      type = readyweapon.ammotype;
+    state_t             *state = psp->state;
+    const weaponinfo_t  readyweapon = weaponinfo[player->readyweapon];
+    const ammotype_t    type = readyweapon.ammotype;
 
     if (!state || type == am_noammo)
         return;
@@ -1167,9 +1140,9 @@ void A_ConsumeAmmo(mobj_t *actor, player_t *player, pspdef_t *psp)
 //
 void A_CheckAmmo(mobj_t *actor, player_t *player, pspdef_t *psp)
 {
-    state_t         *state = psp->state;
-    weaponinfo_t    readyweapon = weaponinfo[player->readyweapon];
-    ammotype_t      type = readyweapon.ammotype;
+    state_t             *state = psp->state;
+    const weaponinfo_t  readyweapon = weaponinfo[player->readyweapon];
+    const ammotype_t    type = readyweapon.ammotype;
 
     if (!state || type == am_noammo)
         return;

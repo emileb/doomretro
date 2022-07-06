@@ -9,8 +9,8 @@
   Copyright © 1993-2022 by id Software LLC, a ZeniMax Media company.
   Copyright © 2013-2022 by Brad Harding <mailto:brad@doomretro.com>.
 
-  DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
-  <https://github.com/bradharding/doomretro/wiki/CREDITS>.
+  DOOM Retro is a fork of Chocolate DOOM. For a list of acknowledgments,
+  see <https://github.com/bradharding/doomretro/wiki/ACKNOWLEDGMENTS>.
 
   This file is a part of DOOM Retro.
 
@@ -38,14 +38,16 @@
 
 #pragma once
 
-extern dboolean     canmodify;
-extern dboolean     samelevel;
-extern dboolean     skipblstart;
+extern bool         canmodify;
+extern bool         samelevel;
+extern bool         skipblstart;
 extern const char   *linespecials[];
 
-extern dboolean     allowmonstertelefrags;
-extern dboolean     compat_corpsegibs;
-extern dboolean     compat_limitpain;
+extern bool         allowmonstertelefrags;
+extern bool         compat_corpsegibs;
+extern bool         compat_light;
+extern bool         compat_limitpain;
+extern bool         nograduallighting;
 
 extern char         mapnum[6];
 extern char         maptitle[256];
@@ -63,9 +65,9 @@ char *P_GetInterBackrop(int map);
 int P_GetInterMusic(int map);
 char *P_GetInterText(int map);
 char *P_GetInterSecretText(int map);
-dboolean P_GetMapEndBunny(int map);
-dboolean P_GetMapEndCast(int map);
-dboolean P_GetMapEndGame(int map);
+bool P_GetMapEndBunny(int map);
+bool P_GetMapEndCast(int map);
+bool P_GetMapEndGame(int map);
 int P_GetMapEndPic(int map);
 int P_GetMapEnterPic(int map);
 void P_GetMapLiquids(int map);
@@ -74,11 +76,11 @@ char *P_GetMapMusicComposer(int map);
 char *P_GetMapMusicTitle(int map);
 char *P_GetMapName(int map);
 int P_GetMapNext(int map);
-dboolean P_GetMapNoJump(int map);
+bool P_GetMapNoJump(int map);
 void P_GetMapNoLiquids(int map);
-dboolean P_GetMapNoMouselook(int map);
+bool P_GetMapNoMouselook(int map);
 int P_GetMapPar(int map);
-dboolean P_GetMapPistolStart(int map);
+bool P_GetMapPistolStart(int map);
 int P_GetMapSecretNext(int map);
 int P_GetMapSky1Texture(int map);
 int P_GetMapSky1ScrollDelta(int map);

@@ -9,8 +9,8 @@
   Copyright © 1993-2022 by id Software LLC, a ZeniMax Media company.
   Copyright © 2013-2022 by Brad Harding <mailto:brad@doomretro.com>.
 
-  DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
-  <https://github.com/bradharding/doomretro/wiki/CREDITS>.
+  DOOM Retro is a fork of Chocolate DOOM. For a list of acknowledgments,
+  see <https://github.com/bradharding/doomretro/wiki/ACKNOWLEDGMENTS>.
 
   This file is a part of DOOM Retro.
 
@@ -43,7 +43,7 @@
 //
 // TELEPORTATION
 //
-dboolean EV_Teleport(line_t *line, int side, mobj_t *thing)
+bool EV_Teleport(line_t *line, int side, mobj_t *thing)
 {
     // Don't teleport missiles.
     // Don't teleport if hit back of line, so you can get out of teleporter.
@@ -139,7 +139,7 @@ dboolean EV_Teleport(line_t *line, int side, mobj_t *thing)
 // Silent TELEPORTATION, by Lee Killough
 // Primarily for rooms-over-rooms etc.
 //
-dboolean EV_SilentTeleport(line_t *line, int side, mobj_t *thing)
+bool EV_SilentTeleport(line_t *line, int side, mobj_t *thing)
 {
     // don't teleport missiles
     // Don't teleport if hit back of line,
@@ -193,7 +193,7 @@ dboolean EV_SilentTeleport(line_t *line, int side, mobj_t *thing)
                 if (player && player->mo == thing)
                 {
                     // Save the current deltaviewheight, used in stepping
-                    fixed_t deltaviewheight = player->deltaviewheight;
+                    const fixed_t   deltaviewheight = player->deltaviewheight;
 
                     // Clear deltaviewheight, since we don't want any changes
                     player->deltaviewheight = 0;
@@ -222,7 +222,7 @@ dboolean EV_SilentTeleport(line_t *line, int side, mobj_t *thing)
 // maximum fixed_t units to move object to avoid hiccups
 #define FUDGEFACTOR 10
 
-dboolean EV_SilentLineTeleport(line_t *line, int side, mobj_t *thing, dboolean reverse)
+bool EV_SilentLineTeleport(line_t *line, int side, mobj_t *thing, bool reverse)
 {
     if (side || (thing->flags & MF_MISSILE))
         return false;
@@ -260,7 +260,7 @@ dboolean EV_SilentLineTeleport(line_t *line, int side, mobj_t *thing, dboolean r
             player_t    *player = (thing->player && thing->player->mo == thing ? thing->player : NULL);
 
             // Whether walking towards first side of exit linedef steps down
-            dboolean    stepdown = (l->frontsector->floorheight < l->backsector->floorheight);
+            bool        stepdown = (l->frontsector->floorheight < l->backsector->floorheight);
 
             // Height of thing above ground
             fixed_t     z = thing->z - thing->floorz;

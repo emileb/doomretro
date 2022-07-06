@@ -9,8 +9,8 @@
   Copyright © 1993-2022 by id Software LLC, a ZeniMax Media company.
   Copyright © 2013-2022 by Brad Harding <mailto:brad@doomretro.com>.
 
-  DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
-  <https://github.com/bradharding/doomretro/wiki/CREDITS>.
+  DOOM Retro is a fork of Chocolate DOOM. For a list of acknowledgments,
+  see <https://github.com/bradharding/doomretro/wiki/ACKNOWLEDGMENTS>.
 
   This file is a part of DOOM Retro.
 
@@ -90,7 +90,8 @@ extern int          numcolormaps;   // killough 04/04/98: dynamic number of maps
 extern lighttable_t **colormaps;
 extern int          extralight;
 extern lighttable_t *fixedcolormap;
-extern dboolean     setsizeneeded;
+extern bool         setsizeneeded;
+extern bool         drawbloodsplats;
 
 //
 // Function pointers to switch refresh/drawing functions.
@@ -105,7 +106,6 @@ extern void (*altbmapwallcolfunc)(void);
 extern void (*segcolfunc)(void);
 extern void (*translatedcolfunc)(void);
 extern void (*basecolfunc)(void);
-extern void (*fuzzcolfunc)(void);
 extern void (*tlcolfunc)(void);
 extern void (*tl50colfunc)(void);
 extern void (*tl50segcolfunc)(void);
@@ -156,3 +156,4 @@ void R_ExecuteSetViewSize(void);
 
 void R_InitLightTables(void);
 void R_InitColumnFunctions(void);
+void R_UpdateMobjColfunc(mobj_t *mobj);

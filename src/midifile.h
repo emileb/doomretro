@@ -9,8 +9,8 @@
   Copyright © 1993-2022 by id Software LLC, a ZeniMax Media company.
   Copyright © 2013-2022 by Brad Harding <mailto:brad@doomretro.com>.
 
-  DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
-  <https://github.com/bradharding/doomretro/wiki/CREDITS>.
+  DOOM Retro is a fork of Chocolate DOOM. For a list of acknowledgments,
+  see <https://github.com/bradharding/doomretro/wiki/ACKNOWLEDGMENTS>.
 
   This file is a part of DOOM Retro.
 
@@ -207,6 +207,6 @@ midi_track_iter_t *MIDI_IterateTrack(midi_file_t *file, unsigned int track);
 unsigned int MIDI_GetDeltaTime(midi_track_iter_t *iter);
 
 // Get a pointer to the next MIDI event.
-dboolean MIDI_GetNextEvent(midi_track_iter_t *iter, midi_event_t **event);
+bool MIDI_GetNextEvent(midi_track_iter_t *iter, midi_event_t **event);
 
 #endif

@@ -9,8 +9,8 @@
   Copyright © 1993-2022 by id Software LLC, a ZeniMax Media company.
   Copyright © 2013-2022 by Brad Harding <mailto:brad@doomretro.com>.
 
-  DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
-  <https://github.com/bradharding/doomretro/wiki/CREDITS>.
+  DOOM Retro is a fork of Chocolate DOOM. For a list of acknowledgments,
+  see <https://github.com/bradharding/doomretro/wiki/ACKNOWLEDGMENTS>.
 
   This file is a part of DOOM Retro.
 
@@ -83,7 +83,7 @@ int         numlumps;
 static int          numwads;
 static wadfile_t    *wadlist[MAXWADS];
 
-static dboolean IsFreedoom(const char *iwadname)
+static bool IsFreedoom(const char *iwadname)
 {
     FILE        *fp = fopen(iwadname, "rb");
     wadinfo_t   header;
@@ -100,7 +100,7 @@ static dboolean IsFreedoom(const char *iwadname)
 
         fseek(fp, LONG(header.infotableofs), SEEK_SET);
 
-        for (header.numlumps = LONG(header.numlumps); header.numlumps && fread(&lump, sizeof(lump), 1, fp); header.numlumps--)
+        for (int i = LONG(header.numlumps); i && fread(&lump, sizeof(lump), 1, fp); i--)
             if (n[0] == 'F' && n[1] == 'R' && n[2] == 'E' && n[3] == 'E' && n[4] == 'D' && n[5] == 'O' && n[6] == 'O' && n[7] == 'M')
             {
                 result = true;
@@ -112,7 +112,7 @@ static dboolean IsFreedoom(const char *iwadname)
     return result;
 }
 
-static dboolean IsBFGEdition(const char *iwadname)
+static bool IsBFGEdition(const char *iwadname)
 {
     FILE        *fp = fopen(iwadname, "rb");
     wadinfo_t   header;
@@ -130,7 +130,7 @@ static dboolean IsBFGEdition(const char *iwadname)
 
         fseek(fp, LONG(header.infotableofs), SEEK_SET);
 
-        for (header.numlumps = LONG(header.numlumps); header.numlumps && fread(&lump, sizeof(lump), 1, fp); header.numlumps--)
+        for (int i = LONG(header.numlumps); i && fread(&lump, sizeof(lump), 1, fp); i--)
             if (n[0] == 'D' && n[1] == 'M' && n[2] == 'E' && n[3] == 'N' && n[4] == 'U' && n[5] == 'P' && n[6] == 'I' && n[7] == 'C')
             {
                 result1 = true;
@@ -151,7 +151,7 @@ static dboolean IsBFGEdition(const char *iwadname)
     return (result1 && result2);
 }
 
-dboolean IsUltimateDOOM(const char *iwadname)
+bool IsUltimateDOOM(const char *iwadname)
 {
     FILE        *fp = fopen(iwadname, "rb");
     wadinfo_t   header;
@@ -168,7 +168,7 @@ dboolean IsUltimateDOOM(const char *iwadname)
 
         fseek(fp, LONG(header.infotableofs), SEEK_SET);
 
-        for (header.numlumps = LONG(header.numlumps); header.numlumps && fread(&lump, sizeof(lump), 1, fp); header.numlumps--)
+        for (int i = LONG(header.numlumps); i && fread(&lump, sizeof(lump), 1, fp); i--)
             if (n[0] == 'E' && n[1] == '4' && n[2] == 'M' && n[3] == '1')
             {
                 result = true;
@@ -207,23 +207,26 @@ static int LevenshteinDistance(char *string1, char *string2)
     {
         int *column = malloc((length1 + 1) * sizeof(int));
 
-        for (int y = 1; (size_t)y <= length1; y++)
-            column[y] = y;
-
-        for (int x = 1; (size_t)x <= length2; x++)
+        if (column)
         {
-            column[0] = x;
+            for (int y = 1; (size_t)y <= length1; y++)
+                column[y] = y;
 
-            for (int y = 1, lastdiagonal = x - 1, olddiagonal; (size_t)y <= length1; y++)
+            for (int x = 1; (size_t)x <= length2; x++)
             {
-                olddiagonal = column[y];
-                column[y] = MIN(MIN(column[y], column[y - 1]) + 1, lastdiagonal + (string1[y - 1] != string2[x - 1]));
-                lastdiagonal = olddiagonal;
-            }
-        }
+                column[0] = x;
 
-        result = column[length1];
-        free(column);
+                for (int y = 1, lastdiagonal = x - 1, olddiagonal; (size_t)y <= length1; y++)
+                {
+                    olddiagonal = column[y];
+                    column[y] = MIN(MIN(column[y], column[y - 1]) + 1, lastdiagonal + (string1[y - 1] != string2[x - 1]));
+                    lastdiagonal = olddiagonal;
+                }
+            }
+
+            result = column[length1];
+            free(column);
+        }
     }
 
     return result;
@@ -280,9 +283,9 @@ char *W_GuessFilename(char *path, char *string)
 // Files with a .wad extension are wadlink files
 //  with multiple lumps.
 //
-dboolean W_AddFile(char *filename, dboolean automatic)
+bool W_AddFile(char *filename, bool automatic)
 {
-    static dboolean packagewadadded;
+    static bool     packagewadadded;
     wadinfo_t       header;
     size_t          length;
     int             startlump;
@@ -370,18 +373,18 @@ dboolean W_AddFile(char *filename, dboolean automatic)
         || M_StringCompare(file, "SIGIL.wad"))
     {
         autosigil = automatic;
-        C_Output(ITALICS("SIGIL") " is now available to play from the episode menu.");
+        C_Output("John Romero's " ITALICS("SIGIL") " is now available to play from the episode menu.");
     }
     else if (M_StringCompare(file, "SIGIL_SHREDS.WAD") || M_StringCompare(file, "SIGIL_SHREDS_COMPAT.wad"))
     {
         buckethead = true;
-        C_Output("Buckethead's soundtrack will be played during " ITALICS("SIGIL."));
+        C_Output("Buckethead's soundtrack will now be heard while playing " ITALICS("SIGIL."));
     }
     else if (M_StringCompare(file, "DOOM.WAD"))
-        C_Output(ITALICS("E1M4B: Phobos Mission Control") " and " ITALICS("E1M8B: Tech Gone Bad")
+        C_Output("John Romero's " ITALICS("E1M4B: Phobos Mission Control") " and " ITALICS("E1M8B: Tech Gone Bad")
             " are now available to play using the " BOLD("map") " CCMD.");
     else if (M_StringCompare(file, "NERVE.WAD"))
-        C_Output(ITALICS("No Rest For The Living") " is now available to play from the expansion menu.");
+        C_Output("Nerve Software's " ITALICS("No Rest For The Living") " is now available to play from the expansion menu.");
 
     if (!packagewadadded)
     {
@@ -414,7 +417,7 @@ unsigned int W_LumpNameHash(const char *s)
     return hash;
 }
 
-dboolean HasDehackedLump(const char *pwadname)
+bool HasDehackedLump(const char *pwadname)
 {
     FILE        *fp = fopen(pwadname, "rb");
     filelump_t  lump;
@@ -430,7 +433,7 @@ dboolean HasDehackedLump(const char *pwadname)
     {
         fseek(fp, LONG(header.infotableofs), SEEK_SET);
 
-        for (header.numlumps = LONG(header.numlumps); header.numlumps && fread(&lump, sizeof(lump), 1, fp); header.numlumps--)
+        for (int i = LONG(header.numlumps); i && fread(&lump, sizeof(lump), 1, fp); i--)
             if (n[0] == 'D' && n[1] == 'E' && n[2] == 'H' && n[3] == 'A' && n[4] == 'C' && n[5] == 'K' && n[6] == 'E' && n[7] == 'D')
             {
                 result = true;
@@ -466,7 +469,7 @@ GameMission_t IWADRequiredByPWAD(char *pwadname)
 
             fseek(fp, LONG(header.infotableofs), SEEK_SET);
 
-            for (header.numlumps = LONG(header.numlumps); header.numlumps && fread(&lump, sizeof(lump), 1, fp); header.numlumps--)
+            for (int i = LONG(header.numlumps); (i && fread(&lump, sizeof(lump), 1, fp)); i--)
                 if (n[0] == 'E' && isdigit((int)n[1]) && n[2] == 'M' && isdigit((int)n[3]) && n[4] == '\0')
                 {
                     result = doom;

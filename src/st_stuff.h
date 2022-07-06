@@ -9,8 +9,8 @@
   Copyright © 1993-2022 by id Software LLC, a ZeniMax Media company.
   Copyright © 2013-2022 by Brad Harding <mailto:brad@doomretro.com>.
 
-  DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
-  <https://github.com/bradharding/doomretro/wiki/CREDITS>.
+  DOOM Retro is a fork of Chocolate DOOM. For a list of acknowledgments,
+  see <https://github.com/bradharding/doomretro/wiki/ACKNOWLEDGMENTS>.
 
   This file is a part of DOOM Retro.
 
@@ -61,6 +61,7 @@
 
 #define ST_NUMFACES             (ST_FACESTRIDE * ST_NUMPAINFACES + ST_NUMEXTRAFACES)
 
+#define ST_STRAIGHTFACE         1
 #define ST_STRAIGHTFACECOUNT    (TICRATE / 2)
 
 #define MAPCHANGETICS           TICRATE
@@ -70,13 +71,13 @@
 //
 
 // Called by main loop.
-dboolean ST_Responder(event_t *ev);
+bool ST_Responder(event_t *ev);
 
 // Called by main loop.
 void ST_Ticker(void);
 
 // Called by main loop.
-void ST_Drawer(dboolean fullscreen, dboolean refresh);
+void ST_Drawer(bool fullscreen, bool refresh);
 
 // Called when the console player is spawned on each level.
 void ST_Start(void);
@@ -84,15 +85,15 @@ void ST_Start(void);
 // Called by startup code.
 void ST_Init(void);
 
-extern dboolean idclev;
+extern bool     idclev;
 extern int      idclevtics;
-extern dboolean idmus;
+extern bool     idmus;
 extern int      st_palette;
-extern dboolean oldweaponsowned[NUMWEAPONS];
+extern bool     oldweaponsowned[NUMWEAPONS];
 extern patch_t  *tallnum[10];
 extern patch_t  *tallpercent;
 extern short    tallpercentwidth;
-extern dboolean emptytallpercent;
+extern bool     emptytallpercent;
 extern int      caretcolor;
 extern patch_t  *faces[ST_NUMFACES];
 extern int      st_faceindex;
@@ -108,4 +109,4 @@ extern patch_t  *brdr_tr;
 extern patch_t  *brdr_bl;
 extern patch_t  *brdr_br;
 
-extern dboolean st_drawbrdr;
+extern bool     st_drawbrdr;

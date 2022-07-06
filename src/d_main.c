@@ -9,8 +9,8 @@
   Copyright © 1993-2022 by id Software LLC, a ZeniMax Media company.
   Copyright © 2013-2022 by Brad Harding <mailto:brad@doomretro.com>.
 
-  DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
-  <https://github.com/bradharding/doomretro/wiki/CREDITS>.
+  DOOM Retro is a fork of Chocolate DOOM. For a list of acknowledgments,
+  see <https://github.com/bradharding/doomretro/wiki/ACKNOWLEDGMENTS>.
 
   This file is a part of DOOM Retro.
 
@@ -134,16 +134,6 @@ char            *savegamefolder;
 
 char            *pwadfile = "";
 
-dboolean        fade = fade_default;
-char            *iwadfolder = iwadfolder_default;
-dboolean        melt = melt_default;
-int             turbo = turbo_default;
-int             units = units_default;
-
-#if defined(_WIN32)
-char            *wad = wad_default;
-#endif
-
 char            *packageconfig;
 char            *packagewad;
 
@@ -153,35 +143,33 @@ static char     dehwarning[256] = "";
 char            *previouswad;
 #endif
 
-dboolean        devparm;                // started game with -devparm
-dboolean        fastparm;               // checkparm of -fast
-dboolean        freeze;
-dboolean        nomonsters;             // checkparm of -nomonsters
-dboolean        pistolstart;            // [BH] checkparm of -pistolstart
-dboolean        regenhealth;
-dboolean        respawnitems;
-dboolean        respawnmonsters;        // checkparm of -respawn
-
-uint64_t        stat_runs = 0;
+bool            devparm;                // started game with -devparm
+bool            fastparm;               // checkparm of -fast
+bool            freeze;
+bool            nomonsters;             // checkparm of -nomonsters
+bool            pistolstart;            // [BH] checkparm of -pistolstart
+bool            regenhealth;
+bool            respawnitems;
+bool            respawnmonsters;        // checkparm of -respawn
 
 skill_t         startskill;
 int             startepisode;
 static int      startmap;
-dboolean        autostart;
+bool            autostart;
 
-dboolean        advancetitle;
-dboolean        dowipe;
-static dboolean forcewipe;
+bool            advancetitle;
+bool            dowipe = false;
+static bool     forcewipe;
 
 static byte     fadescreen[MAXSCREENAREA];
 int             fadecount = 0;
 
-dboolean        splashscreen = true;
+bool            splashscreen = true;
 
 static int      startuptimer;
 
-dboolean        realframe;
-static dboolean error;
+bool            realframe;
+static bool     error;
 
 struct tm       gamestarttime;
 
@@ -211,9 +199,9 @@ void D_PostEvent(event_t *ev)
 //
 // D_FadeScreen
 //
-void D_FadeScreen(dboolean screenshot)
+void D_FadeScreen(bool screenshot)
 {
-    if (togglingvanilla || (!screenshot && !fade))
+    if ((!fade && !screenshot) || togglingvanilla)
         return;
 
     memcpy(fadescreen, screens[0], SCREENAREA);
@@ -227,46 +215,25 @@ static void D_UpdateFade(void)
 {
     static byte *tinttab;
     static int  fadewait;
-    int         tics = I_GetTimeMS();
+    const int   tics = I_GetTimeMS();
 
     if (fadewait < tics)
     {
-        byte *tinttabs[FADECOUNT + 1] = {
-            NULL, tinttab90, tinttab80, tinttab70, tinttab60, tinttab50, tinttab40, tinttab30, tinttab20, tinttab10
+        byte *tinttabs[FADECOUNT + 1] =
+        {
+            PLAYPAL,   tinttab90, tinttab80, tinttab70, tinttab60,
+            tinttab50, tinttab40, tinttab30, tinttab20, tinttab10
         };
 
         fadewait = tics + FADETICS;
         tinttab = tinttabs[fadecount--];
     }
 
-    if (tinttab)
+    for (int i = 0; i < SCREENAREA; i++)
     {
-        for (int i = 0; i < SCREENAREA; i++)
-        {
-            byte    *dot = *screens + i;
+        byte    *dot = *screens + i;
 
-            *dot = tinttab[(*dot << 8) + fadescreen[i]];
-        }
-
-        if (r_ditheredlighting)
-            for (int y = 0; y < SCREENAREA; y += 2 * SCREENWIDTH)
-            {
-                for (int x = y; x < y + SCREENWIDTH; x += 2)
-                {
-                    byte    *dot = *screens + x;
-
-                    *dot = tinttab90[(*dot << 8) + fadescreen[x]];
-                }
-
-                y += 2 * SCREENWIDTH;
-
-                for (int x = y + 1; x < y + SCREENWIDTH; x += 2)
-                {
-                    byte    *dot = *screens + x;
-
-                    *dot = tinttab90[(*dot << 8) + fadescreen[x]];
-                }
-            }
+        *dot = tinttab[(*dot << 8) + fadescreen[i]];
     }
 }
 
@@ -275,19 +242,19 @@ static void D_UpdateFade(void)
 //
 void D_FadeScreenToBlack(void)
 {
-    int volume = current_music_volume;
-
     if (!fade)
         return;
 
-    for (double i = 0.9; i >= 0.0; i -= 0.1)
+    for (double i = 0.95; i >= 0.0; i -= 0.05)
     {
         I_SetPaletteWithBrightness(PLAYPAL, i);
-        blitfunc();
         I_SetExternalAutomapPalette();
-        I_SetMusicVolume((int)((double)volume * i));
-        I_Sleep(30);
+        I_SetMusicVolume((int)(current_music_volume * i));
+        I_Sleep(20);
+        blitfunc();
     }
+
+    I_Sleep(200);
 }
 
 //
@@ -300,13 +267,13 @@ gamestate_t wipegamestate = GS_TITLESCREEN;
 
 void D_Display(void)
 {
-    static dboolean     pausedstate = false;
+    static bool         pausedstate = false;
     static gamestate_t  oldgamestate = GS_NONE;
     static int          saved_gametime = -1;
     int                 nowtime;
     int                 tics;
     int                 wipestart;
-    dboolean            done;
+    bool                done;
 
     if (vid_capfps != TICRATE && (realframe = (gametime > saved_gametime)))
         saved_gametime = gametime;
@@ -336,7 +303,7 @@ void D_Display(void)
 
     if (gamestate != GS_LEVEL)
     {
-        if (gamestate != oldgamestate && !splashscreen)
+        if (gamestate != oldgamestate)
             I_SetPalette(PLAYPAL);
 
         switch (gamestate)
@@ -509,9 +476,13 @@ static void D_DoomLoop(void)
     {
         TryRunTics();       // will run at least one tic
 
-        S_UpdateSounds();   // move positional sounds
-
-        D_Display();        // update display, next frame, with current state
+        if (splashscreen)
+            D_SplashDrawer();
+        else
+        {
+            S_UpdateSounds();   // move positional sounds
+            D_Display();        // update display, next frame, with current state
+        }
     }
 }
 
@@ -531,6 +502,8 @@ static patch_t  *fineprintlump;
 static patch_t  *logolump[18];
 static patch_t  *titlelump;
 static byte     *splashpal;
+static short    fineprintx;
+static short    logox;
 
 //
 // D_PageTicker
@@ -554,7 +527,7 @@ void D_PageTicker(void)
 
     if (pagetic < 0)
     {
-        D_AdvanceTitle();
+        advancetitle = true;
 
         if (splashscreen)
         {
@@ -565,35 +538,26 @@ void D_PageTicker(void)
 }
 
 //
+// D_SplashDrawer
+//
+void D_SplashDrawer(void)
+{
+    memset(screens[0], nearestblack, SCREENAREA);
+    V_DrawBigPatch(logox, 167, logolump[BETWEEN(0, 94 - logotic, 17)]);
+    V_DrawBigPatch(fineprintx, 365, fineprintlump);
+    I_SetSimplePalette(&splashpal[pagetic < 9 ? (9 - pagetic) * 768 : (pagetic <= 94 ? 0 : (pagetic - 94) * 768)]);
+    blitfunc();
+}
+
+//
 // D_PageDrawer
 //
 void D_PageDrawer(void)
 {
-    if (splashscreen)
-    {
-        int x = (SCREENWIDTH - NONWIDEWIDTH) / 2;
-
-        memset(screens[0], nearestblack, SCREENAREA);
-        V_DrawBigPatch(x + 143, 167, logolump[BETWEEN(0, 94 - logotic, 17)]);
-        V_DrawBigPatch(x + 12, 365, fineprintlump);
-        I_SetSimplePalette(&splashpal[pagetic < 9 ? (9 - pagetic) * 768 : (pagetic <= 94 ? 0 : (pagetic - 94) * 768)]);
-
-        return;
-    }
-
     if (SCREENWIDTH != NONWIDEWIDTH)
         memset(screens[0], pillarboxcolor, SCREENAREA);
 
     V_DrawWidePatch((SCREENWIDTH / SCREENSCALE - SHORT(pagelump->width)) / 2, 0, 0, pagelump);
-}
-
-//
-// D_AdvanceTitle
-// Called after each title sequence finishes
-//
-void D_AdvanceTitle(void)
-{
-    advancetitle = true;
 }
 
 //
@@ -609,7 +573,7 @@ void D_DoAdvanceTitle(void)
 
     if (titlesequence == 1)
     {
-        static dboolean flag = true;
+        static bool flag = true;
 
         if (flag)
         {
@@ -676,7 +640,7 @@ void D_StartTitle(int page)
     if (mapwindow)
         AM_ClearFB();
 
-    D_AdvanceTitle();
+    advancetitle = true;
 }
 
 #define MAXDEHFILES 16
@@ -684,9 +648,9 @@ void D_StartTitle(int page)
 static char dehfiles[MAXDEHFILES][MAX_PATH];
 static int  dehfilecount;
 
-dboolean    dehfileignored = false;
+bool        dehfileignored = false;
 
-static dboolean DehFileProcessed(char *path)
+static bool DehFileProcessed(char *path)
 {
     for (int i = 0; i < dehfilecount; i++)
         if (M_StringCompare(path, dehfiles[i]))
@@ -747,8 +711,8 @@ static char *FindDehPath(char *path, char *ext, char *pattern)
 
 typedef struct
 {
-    char        filename[MAX_PATH];
-    dboolean    present;
+    char    filename[MAX_PATH];
+    bool    present;
 } loaddehlast_t;
 
 // [BH] A list of DeHackEd files to load last
@@ -840,7 +804,7 @@ static void LoadCfgFile(char *path)
         M_LoadCVARs(cfgpath);
 }
 
-static dboolean D_IsDOOM1IWAD(char *filename)
+static bool D_IsDOOM1IWAD(char *filename)
 {
     char    *file = leafname(filename);
 
@@ -848,22 +812,24 @@ static dboolean D_IsDOOM1IWAD(char *filename)
         || M_StringCompare(file, "DOOM1.WAD")
         || M_StringCompare(file, "DOOMU.WAD")
         || M_StringCompare(file, "BFGDOOM.WAD")
+        || M_StringCompare(file, "UNITYDOOM.WAD")
         || M_StringCompare(file, "DOOMBFG.WAD")
         || M_StringCompare(file, "DOOMUNITY.WAD"));
 }
 
-static dboolean D_IsDOOM2IWAD(char *filename)
+static bool D_IsDOOM2IWAD(char *filename)
 {
     char    *file = leafname(filename);
 
     return (M_StringCompare(file, "DOOM2.WAD")
         || M_StringCompare(file, "DOOM2F.WAD")
         || M_StringCompare(file, "BFGDOOM2.WAD")
+        || M_StringCompare(file, "UNITYDOOM2.WAD")
         || M_StringCompare(file, "DOOM2BFG.WAD")
         || M_StringCompare(file, "DOOM2UNITY.WAD"));
 }
 
-dboolean D_IsDOOMIWAD(char *filename)
+bool D_IsDOOMIWAD(char *filename)
 {
     char    *file = leafname(filename);
 
@@ -873,7 +839,7 @@ dboolean D_IsDOOMIWAD(char *filename)
         || M_StringCompare(file, "rekkrsa.wad"));
 }
 
-static dboolean D_IsUnsupportedIWAD(char *filename)
+static bool D_IsUnsupportedIWAD(char *filename)
 {
     const struct
     {
@@ -909,12 +875,12 @@ static dboolean D_IsUnsupportedIWAD(char *filename)
     return false;
 }
 
-static dboolean D_IsCfgFile(char *filename)
+static bool D_IsCfgFile(char *filename)
 {
     return M_StringEndsWith(filename, ".cfg");
 }
 
-static dboolean D_IsDehFile(char *filename)
+static bool D_IsDehFile(char *filename)
 {
     return (M_StringEndsWith(filename, ".deh") || M_StringEndsWith(filename, ".bex"));
 }
@@ -981,14 +947,14 @@ static void D_CheckSupportedPWAD(char *filename)
         moreblood = true;
 }
 
-static dboolean D_IsUnsupportedPWAD(char *filename)
+static bool D_IsUnsupportedPWAD(char *filename)
 {
     return (error = (M_StringCompare(leafname(filename), DOOMRETRO_WAD)));
 }
 
-static dboolean D_CheckParms(void)
+static bool D_CheckParms(void)
 {
-    dboolean    result = false;
+    bool    result = false;
 
     if (myargc == 2
         && (M_StringEndsWith(myargv[1], ".wad") || M_StringEndsWith(myargv[1], ".iwad") || M_StringEndsWith(myargv[1], ".pwad")))
@@ -1203,7 +1169,7 @@ static char *invalidwad;
 static int D_OpenWADLauncher(void)
 {
     int             iwadfound = -1;
-    dboolean        fileopenedok;
+    bool            fileopenedok;
 
 #if defined(_WIN32)
     OPENFILENAME    ofn;
@@ -1239,8 +1205,8 @@ static int D_OpenWADLauncher(void)
 
     if (fileopenedok)
     {
-        dboolean    onlyoneselected;
-        dboolean    guess = false;
+        bool    onlyoneselected;
+        bool    guess = false;
 
 #if defined(__APPLE__)
         NSArray     *urls = [panel URLs];
@@ -1515,16 +1481,16 @@ static int D_OpenWADLauncher(void)
         else
         {
             // more than one file was selected
-            dboolean    isDOOM2 = false;
-            dboolean    sharewareiwad = false;
+            bool    isDOOM2 = false;
+            bool    sharewareiwad = false;
 
 #if defined(_WIN32)
-            LPSTR       iwadpass1 = ofn.lpstrFile;
-            LPSTR       iwadpass2 = ofn.lpstrFile;
-            LPSTR       pwadpass1 = ofn.lpstrFile;
-            LPSTR       pwadpass2 = ofn.lpstrFile;
-            LPSTR       cfgpass = ofn.lpstrFile;
-            LPSTR       dehpass = ofn.lpstrFile;
+            LPSTR   iwadpass1 = ofn.lpstrFile;
+            LPSTR   iwadpass2 = ofn.lpstrFile;
+            LPSTR   pwadpass1 = ofn.lpstrFile;
+            LPSTR   pwadpass2 = ofn.lpstrFile;
+            LPSTR   cfgpass = ofn.lpstrFile;
+            LPSTR   dehpass = ofn.lpstrFile;
 
             iwadpass1 = &iwadpass1[lstrlen(iwadpass1) + 1];
 
@@ -1721,7 +1687,7 @@ static int D_OpenWADLauncher(void)
                 // if an IWAD has now been found, make second pass through the PWADs to merge them
                 if (iwadfound)
                 {
-                    dboolean    mapspresent = false;
+                    bool    mapspresent = false;
 
 #if defined(_WIN32)
                     pwadpass2 = &pwadpass2[lstrlen(pwadpass2) + 1];
@@ -1846,7 +1812,7 @@ static void D_ProcessDehOnCmdLine(void)
 
     if (p || (p = M_CheckParm("-bex")))
     {
-        dboolean    deh = true;
+        bool    deh = true;
 
         while (++p < myargc)
             if (*myargv[p] == '-')
@@ -1866,7 +1832,7 @@ static void D_ProcessDehOnCmdLine(void)
 
 static void D_ProcessDehInWad(void)
 {
-    dboolean    process = (!M_CheckParm("-nodeh") && !M_CheckParm("-nobex"));
+    const bool  process = (!M_CheckParm("-nodeh") && !M_CheckParm("-nobex"));
     int         j = 0;
 
     if (*dehwarning)
@@ -1874,41 +1840,38 @@ static void D_ProcessDehInWad(void)
 
     if (doom4vanilla)
     {
-        for (int i = 0; i < numlumps; i++)
-            if (M_StringCompare(lumpinfo[i]->name, "DEHACKED")
-                && process
-                && !M_StringEndsWith(lumpinfo[i]->wadfile->path, DOOMRETRO_WAD)
-                && !M_StringEndsWith(lumpinfo[i]->wadfile->path, "D4V.WAD"))
-                ProcessDehFile(NULL, i, false);
+        if (process)
+            for (int i = 0; i < numlumps; i++)
+                if (M_StringCompare(lumpinfo[i]->name, "DEHACKED")
+                    && !M_StringEndsWith(lumpinfo[i]->wadfile->path, DOOMRETRO_WAD)
+                    && !M_StringEndsWith(lumpinfo[i]->wadfile->path, "D4V.WAD"))
+                    ProcessDehFile(NULL, i, false);
 
         for (int i = 0; i < numlumps; i++)
             if (M_StringCompare(lumpinfo[i]->name, "DEHACKED")
                 && M_StringEndsWith(lumpinfo[i]->wadfile->path, "D4V.WAD"))
+            {
                 ProcessDehFile(NULL, i, false);
+                break;
+            }
+    }
 
+    if (chex1)
+        ProcessDehFile(NULL, W_GetNumForName("CHEXBEX"), true);
+
+    if (process)
         for (int i = 0; i < numlumps; i++)
             if (M_StringCompare(lumpinfo[i]->name, "DEHACKED")
-                && M_StringEndsWith(lumpinfo[i]->wadfile->path, DOOMRETRO_WAD))
+                && !M_StringEndsWith(lumpinfo[i]->wadfile->path, DOOMRETRO_WAD))
                 ProcessDehFile(NULL, i, false);
-    }
-    else if (hacx || FREEDOOM || REKKRSA)
-    {
-        for (int i = 0; i < numlumps; i++)
-            if (M_StringCompare(lumpinfo[i]->name, "DEHACKED")
-                && (process || M_StringEndsWith(lumpinfo[i]->wadfile->path, DOOMRETRO_WAD)))
-                ProcessDehFile(NULL, i, false);
-    }
-    else
-    {
-        if (chex1)
-            ProcessDehFile(NULL, W_GetNumForName("CHEXBEX"), true);
 
-        for (int i = numlumps - 1; i >= 0; i--)
-            if (M_StringCompare(lumpinfo[i]->name, "DEHACKED")
-                && !M_StringEndsWith(lumpinfo[i]->wadfile->path, "SIGIL_v1_2.wad")
-                && (process || M_StringEndsWith(lumpinfo[i]->wadfile->path, DOOMRETRO_WAD)))
-                ProcessDehFile(NULL, i, false);
-    }
+    for (int i = numlumps - 1; i >= 0; i--)
+        if (M_StringCompare(lumpinfo[i]->name, "DEHACKED")
+            && M_StringEndsWith(lumpinfo[i]->wadfile->path, DOOMRETRO_WAD))
+        {
+            ProcessDehFile(NULL, i, false);
+            break;
+        }
 
     while (*loaddehlast[j].filename)
     {
@@ -1921,7 +1884,7 @@ static void D_ProcessDehInWad(void)
 
 static void D_ParseStartupString(const char *string)
 {
-    size_t  len = strlen(string);
+    const size_t    len = strlen(string);
 
     for (size_t i = 0, start = 0; i < len; i++)
         if (string[i] == '\n' || i == len - 1)
@@ -2257,14 +2220,12 @@ static void D_DoomMainSetup(void)
 
     D_SetSaveGameFolder(true);
 
-    C_Output("All screenshots taken will be saved in " BOLD("%s") ".", screenshotfolder);
+    D_SetScreenshotsFolder();
 
     C_Output("All files created using the " BOLD("condump") " CCMD will be saved in "
         BOLD("%s" DIR_SEPARATOR_S "console" DIR_SEPARATOR_S) ".", appdatafolder);
 
-#if !defined(__APPLE__)
     free(appdatafolder);
-#endif
 
     // Check for -file in shareware
     if (modifiedgame)
@@ -2421,7 +2382,6 @@ static void D_DoomMainSetup(void)
         G_LoadGame(P_SaveGameFile(startloadgame));
     }
 
-    fineprintlump = W_CacheLastLumpName("FINEPRNT");
     splashpal = W_CacheLastLumpName("SPLSHPAL");
 
     for (int i = 0; i < 18; i++)
@@ -2431,6 +2391,11 @@ static void D_DoomMainSetup(void)
         M_snprintf(buffer, sizeof(buffer), "DRLOGO%02i", i + 1);
         logolump[i] = W_CacheLastLumpName(buffer);
     }
+
+    fineprintlump = W_CacheLastLumpName("DRFNPRNT");
+
+    logox = (SCREENWIDTH - SHORT(logolump[0]->width)) / 2;
+    fineprintx = (SCREENWIDTH - SHORT(fineprintlump->width)) / 2;
 
     if (autosigil)
     {

@@ -9,8 +9,8 @@
   Copyright © 1993-2022 by id Software LLC, a ZeniMax Media company.
   Copyright © 2013-2022 by Brad Harding <mailto:brad@doomretro.com>.
 
-  DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
-  <https://github.com/bradharding/doomretro/wiki/CREDITS>.
+  DOOM Retro is a fork of Chocolate DOOM. For a list of acknowledgments,
+  see <https://github.com/bradharding/doomretro/wiki/ACKNOWLEDGMENTS>.
 
   This file is a part of DOOM Retro.
 
@@ -43,17 +43,19 @@
 #include "states.h"
 #include "tables.h"
 
+#define FUZZYBLOOD         -1
 #define REDBLOOD            184
 #define GREENBLOOD          122
 #define BLUEBLOOD           204
-#define FUZZYBLOOD          -1
 
+#define BLOODSPLATLUMPS     12
 #define CORPSEBLOODSPLATS   512
 
 // killough 11/98:
 // For torque simulation:
 #define OVERDRIVE           6
 #define MAXGEAR             (OVERDRIVE + 16)
+#define MAXGEARTIME         15
 
 // killough 11/98:
 // Whether an object is "sentient" or not. Used for environmental influences.
@@ -280,9 +282,6 @@ enum
     // Convert all red to green
     MF2_REDTOGREEN                  = 0x00000400,
 
-    // Convert all green to red
-    MF2_GREENTORED                  = 0x00000800,
-
     // Convert all red to blue
     MF2_REDTOBLUE                   = 0x00001000,
 
@@ -497,7 +496,7 @@ typedef struct mobj_s
 
     char                name[33];
 
-    dboolean            madesound;
+    bool                madesound;
     mobjtype_t          inflicter;
 } mobj_t;
 
@@ -509,9 +508,9 @@ typedef struct bloodsplat_s
     int                 patch;
     fixed_t             width;
     struct sector_s     *sector;
-    dboolean            flip;
-    int                 blood;
-    void                (*colfunc)(void);
+    int                 color;
+    int                 viscolor;
+    void                (*viscolfunc)(void);
 } bloodsplat_t;
 
 extern int  prevthingx, prevthingy;

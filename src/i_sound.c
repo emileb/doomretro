@@ -9,8 +9,8 @@
   Copyright © 1993-2022 by id Software LLC, a ZeniMax Media company.
   Copyright © 2013-2022 by Brad Harding <mailto:brad@doomretro.com>.
 
-  DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
-  <https://github.com/bradharding/doomretro/wiki/CREDITS>.
+  DOOM Retro is a fork of Chocolate DOOM. For a list of acknowledgments,
+  see <https://github.com/bradharding/doomretro/wiki/ACKNOWLEDGMENTS>.
 
   This file is a part of DOOM Retro.
 
@@ -58,7 +58,7 @@ struct allocated_sound_s
     allocated_sound_t       *next;
 };
 
-static dboolean             sound_initialized;
+static bool                 sound_initialized;
 
 static allocated_sound_t    *channels_playing[s_channels_max];
 
@@ -106,7 +106,7 @@ static void FreeAllocatedSound(allocated_sound_t *snd)
 
 // Search from the tail backwards along the allocated sounds list, find and free a sound that is
 // not in use, to free up memory. Return true for success.
-static dboolean FindAndFreeSound(void)
+static bool FindAndFreeSound(void)
 {
     allocated_sound_t   *snd = allocated_sounds_tail;
 
@@ -271,7 +271,7 @@ static void ExpandSoundData(sfxinfo_t *sfxinfo, byte *data, int samplerate, int 
 
 // Load and convert a sound effect
 // Returns true if successful
-dboolean CacheSFX(sfxinfo_t *sfxinfo)
+bool CacheSFX(sfxinfo_t *sfxinfo)
 {
     // need to load the sound
     int     lumpnum = sfxinfo->lumpnum;
@@ -286,34 +286,20 @@ dboolean CacheSFX(sfxinfo_t *sfxinfo)
         uint8_t         *buffer = NULL;
         uint32_t        length;
 
-        if (!SDL_LoadWAV_RW(rwops, 1, &spec, &buffer, &length))
-            return false;
-        else
+        if (SDL_LoadWAV_RW(rwops, 1, &spec, &buffer, &length))
         {
-            int bits;
-
-            if (spec.channels != 1)
+            if (spec.channels == 1 && SDL_AUDIO_ISINT(spec.format))
             {
-                SDL_FreeWAV(buffer);
-                return false;
-            }
+                int bits = SDL_AUDIO_BITSIZE(spec.format);
 
-            if (SDL_AUDIO_ISINT(spec.format))
-            {
-                if ((bits = SDL_AUDIO_BITSIZE(spec.format)) != 8 && bits != 16)
+                if (bits == 8 || bits == 16)
                 {
-                    SDL_FreeWAV(buffer);
-                    return false;
+                    ExpandSoundData(sfxinfo, buffer, spec.freq, bits, length);
+                    return true;
                 }
             }
-            else
-            {
-                SDL_FreeWAV(buffer);
-                return false;
-            }
 
-            ExpandSoundData(sfxinfo, buffer, spec.freq, bits, length);
-            return true;
+            SDL_FreeWAV(buffer);
         }
     }
     else if (lumplen >= 8 && data[0] == 0x03 && data[1] == 0x00)
@@ -326,14 +312,14 @@ dboolean CacheSFX(sfxinfo_t *sfxinfo)
         // We also discard sound lumps that are less than 49 samples long, as this is how DMX behaves -
         // although the actual cut-off length seems to vary slightly depending on the sample rate. This
         // needs further investigation to better understand the correct behavior.
-        if (length > lumplen - 8 || length <= 48)
-            return false;
-
-        ExpandSoundData(sfxinfo, data + 16, (data[2] | (data[3] << 8)), 8, length - 32);
-        return true;
+        if (length > 48 && length <= lumplen - 8)
+        {
+            ExpandSoundData(sfxinfo, data + 16, (data[2] | (data[3] << 8)), 8, length - 32);
+            return true;
+        }
     }
-    else
-        return false;
+
+    return false;
 }
 
 void I_UpdateSoundParms(int channel, int vol, int sep)
@@ -409,12 +395,12 @@ void I_FadeOutSound(int channel)
         FreeAllocatedSound(snd);
 }
 
-dboolean I_SoundIsPlaying(int channel)
+bool I_SoundIsPlaying(int channel)
 {
     return Mix_Playing(channel);
 }
 
-dboolean I_AnySoundStillPlaying(void)
+bool I_AnySoundStillPlaying(void)
 {
     return Mix_Playing(-1);
 }
@@ -429,7 +415,7 @@ void I_ShutdownSound(void)
     sound_initialized = false;
 }
 
-dboolean I_InitSound(void)
+bool I_InitSound(void)
 {
     const SDL_version   *linked = Mix_Linked_Version();
     uint16_t            mixer_format;

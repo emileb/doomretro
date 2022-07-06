@@ -9,8 +9,8 @@
   Copyright © 1993-2022 by id Software LLC, a ZeniMax Media company.
   Copyright © 2013-2022 by Brad Harding <mailto:brad@doomretro.com>.
 
-  DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
-  <https://github.com/bradharding/doomretro/wiki/CREDITS>.
+  DOOM Retro is a fork of Chocolate DOOM. For a list of acknowledgments,
+  see <https://github.com/bradharding/doomretro/wiki/ACKNOWLEDGMENTS>.
 
   This file is a part of DOOM Retro.
 
@@ -90,9 +90,9 @@ static void wipe_Melt(int i, int dy)
         d[j] = *s++;
 }
 
-static dboolean wipe_doMelt(void)
+static bool wipe_doMelt(void)
 {
-    dboolean    done = true;
+    bool    done = true;
 
     for (int i = 0; i < SCREENWIDTH / 2; i++)
         if (y[i] < 0)
@@ -125,10 +125,10 @@ void wipe_EndScreen(void)
     memcpy(screens[0], screens[2], SCREENAREA);
 }
 
-dboolean wipe_ScreenWipe(void)
+bool wipe_ScreenWipe(void)
 {
     // when false, stop the wipe
-    static dboolean go;
+    static bool go;
 
     // initial stuff
     if (!go)

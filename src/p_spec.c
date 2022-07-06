@@ -9,8 +9,8 @@
   Copyright © 1993-2022 by id Software LLC, a ZeniMax Media company.
   Copyright © 2013-2022 by Brad Harding <mailto:brad@doomretro.com>.
 
-  DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
-  <https://github.com/bradharding/doomretro/wiki/CREDITS>.
+  DOOM Retro is a fork of Chocolate DOOM. For a list of acknowledgments,
+  see <https://github.com/bradharding/doomretro/wiki/ACKNOWLEDGMENTS>.
 
   This file is a part of DOOM Retro.
 
@@ -60,7 +60,7 @@
 #include "w_wad.h"
 #include "z_zone.h"
 
-dboolean islightspecial[] =
+const bool islightspecial[] =
 {
     false, true,  true,  true, false, false, false, false, true,
     false, false, false, true, true,  false, false, false, true
@@ -72,11 +72,11 @@ dboolean islightspecial[] =
 //
 typedef struct
 {
-    dboolean    istexture;
-    int         picnum;
-    int         basepic;
-    int         numpics;
-    int         speed;
+    bool    istexture;
+    int     picnum;
+    int     basepic;
+    int     numpics;
+    int     speed;
 } anim_t;
 
 #if defined(_MSC_VER) || defined(__GNUC__)
@@ -100,10 +100,7 @@ typedef struct
 
 #define MAXANIMS    32
 
-uint64_t        stat_secretsfound = 0;
-
-dboolean        r_liquid_bob = r_liquid_bob_default;
-
+int             animatedliquidtic;
 fixed_t         animatedliquiddiff;
 fixed_t         animatedliquidxdir;
 fixed_t         animatedliquidydir;
@@ -129,7 +126,7 @@ static anim_t   *lastanim;
 static anim_t   *anims;             // new structure w/o limits -- killough
 
 terraintype_t   *terraintypes;
-dboolean        *isteleport;
+bool            *isteleport;
 
 // killough 03/07/98: Initialize generalized scrolling
 static void P_SpawnScrollers(void);
@@ -168,8 +165,6 @@ static void SetTerrainType(anim_t *anim, terraintype_t terraintype)
 //
 void P_InitPicAnims(void)
 {
-    size_t      size = ((size_t)numflats + 1) * sizeof(dboolean);
-
     int         lump = W_GetNumForName("ANIMATED");
     animdef_t   *animdefs = W_CacheLumpNum(lump);
     size_t      maxanims = 0;
@@ -187,8 +182,8 @@ void P_InitPicAnims(void)
     short       SLIME01 = R_CheckFlatNumForName("SLIME01");
     short       SLIME08 = R_CheckFlatNumForName("SLIME08");
 
-    terraintypes = Z_Calloc(1, size, PU_STATIC, NULL);
-    isteleport = Z_Calloc(1, size, PU_STATIC, NULL);
+    terraintypes = Z_Calloc(1, ((size_t)numflats + 1) * sizeof(*terraintypes), PU_STATIC, NULL);
+    isteleport = Z_Calloc(1, ((size_t)numflats + 1) * sizeof(*isteleport), PU_STATIC, NULL);
 
     RROCK05 = R_CheckFlatNumForName("RROCK05");
     RROCK08 = R_CheckFlatNumForName("RROCK08");
@@ -224,8 +219,8 @@ void P_InitPicAnims(void)
         }
         else
         {
-            int         basepic;
-            dboolean    isliquid = false;
+            int     basepic;
+            bool    isliquid = false;
 
             if (R_CheckFlatNumForName(animdefs[i].startname) == -1)
                 continue;
@@ -323,7 +318,7 @@ void P_InitPicAnims(void)
 
     while (SC_GetString())
     {
-        dboolean    noliquid = M_StringCompare(sc_String, "NOLIQUID");
+        const bool  noliquid = M_StringCompare(sc_String, "NOLIQUID");
 
         if (noliquid || M_StringCompare(sc_String, "LIQUID"))
         {
@@ -402,7 +397,7 @@ void P_SetLiquids(void)
     numliquid = 0;
 
     for (int i = 0; i < numsectors; i++)
-        if ((sectors[i].terraintype = terraintypes[sectors[i].floorpic]) != SOLID)
+        if ((sectors[i].terraintype = terraintypes[sectors[i].floorpic]) >= LIQUID)
             numliquid++;
 }
 
@@ -503,7 +498,7 @@ sector_t *getSector(int currentSector, int line, int side)
 // Given the sector number and the line number,
 //  it will tell you whether the line is two-sided or not.
 //
-dboolean twoSided(int sector, int line)
+bool twoSided(int sector, int line)
 {
     // jff 1/26/98 return what is actually needed, whether the line
     // has two sidedefs, rather than whether the 2S flag is set
@@ -894,26 +889,26 @@ int P_FindLineFromLineTag(const line_t *line, int start)
 // Hash the sector tags across the sectors and linedefs.
 void P_InitTagLists(void)
 {
-    for (int i = numsectors; --i >= 0; )                    // Initially make all slots empty.
+    for (int i = numsectors; --i >= 0; )                            // Initially make all slots empty.
         sectors[i].firsttag = -1;
 
-    for (int i = numsectors; --i >= 0; )                    // Proceed from last to first sector
-    {                                                       // so that lower sectors appear first
-        int j = (unsigned int)sectors[i].tag % numsectors;  // Hash func
+    for (int i = numsectors; --i >= 0; )                            // Proceed from last to first sector
+    {                                                               // so that lower sectors appear first
+        const int   j = (unsigned int)sectors[i].tag % numsectors;  // Hash func
 
-        sectors[i].nexttag = sectors[j].firsttag;           // Prepend sector to chain
+        sectors[i].nexttag = sectors[j].firsttag;                   // Prepend sector to chain
         sectors[j].firsttag = i;
     }
 
     // killough 04/17/98: same thing, only for linedefs
-    for (int i = numlines; --i >= 0; )                      // Initially make all slots empty.
+    for (int i = numlines; --i >= 0; )                              // Initially make all slots empty.
         lines[i].firsttag = -1;
 
-    for (int i = numlines; --i >= 0; )                      // Proceed from last to first linedef
-    {                                                       // so that lower linedefs appear first
-        int j = (unsigned int)lines[i].tag % numlines;      // Hash func
+    for (int i = numlines; --i >= 0; )                              // Proceed from last to first linedef
+    {                                                               // so that lower linedefs appear first
+        const int   j = (unsigned int)lines[i].tag % numlines;      // Hash func
 
-        lines[i].nexttag = lines[j].firsttag;               // Prepend linedef to chain
+        lines[i].nexttag = lines[j].firsttag;                       // Prepend linedef to chain
         lines[j].firsttag = i;
     }
 }
@@ -949,12 +944,12 @@ int P_FindMinSurroundingLight(sector_t *sec, int min)
 //  generalized locked doors
 //
 // killough 11/98: reformatted
-dboolean P_CanUnlockGenDoor(line_t *line)
+bool P_CanUnlockGenDoor(line_t *line)
 {
-    static char     buffer[1024];
+    static char buffer[1024];
 
     // does this line special distinguish between skulls and keys?
-    const dboolean  skulliscard = (line->special & LockedNKeys) >> LockedNKeysShift;
+    const bool  skulliscard = (line->special & LockedNKeys) >> LockedNKeysShift;
 
     // determine for each case of lock type if player's keys are adequate
     switch ((line->special & LockedKey) >> LockedKeyShift)
@@ -964,7 +959,7 @@ dboolean P_CanUnlockGenDoor(line_t *line)
                 && viewplayer->cards[it_bluecard] <= 0 && viewplayer->cards[it_blueskull] <= 0
                 && viewplayer->cards[it_yellowcard] <= 0 && viewplayer->cards[it_yellowskull] <= 0)
             {
-                if (vid_widescreen && r_hud && (!viewplayer->neededcardflash || viewplayer->neededcard != it_allkeys))
+                if (!viewplayer->neededcardflash || viewplayer->neededcard != it_allkeys)
                 {
                     viewplayer->neededcard = it_allkeys;
                     viewplayer->neededcardflash = NEEDEDCARDFLASH;
@@ -983,7 +978,7 @@ dboolean P_CanUnlockGenDoor(line_t *line)
         case RCard:
             if (viewplayer->cards[it_redcard] <= 0 && (!skulliscard || viewplayer->cards[it_redskull] <= 0))
             {
-                if (vid_widescreen && r_hud && (!viewplayer->neededcardflash || viewplayer->neededcard != it_redcard))
+                if (!viewplayer->neededcardflash || viewplayer->neededcard != it_redcard)
                 {
                     viewplayer->neededcard = it_redcard;
                     viewplayer->neededcardflash = NEEDEDCARDFLASH;
@@ -991,7 +986,7 @@ dboolean P_CanUnlockGenDoor(line_t *line)
 
                 M_snprintf(buffer, sizeof(buffer), (skulliscard ? s_PD_REDK : s_PD_REDC), playername,
                     (M_StringCompare(playername, playername_default) ? "" : "s"),
-                    (viewplayer->cards[it_redskull] == CARDNOTFOUNDYET ? "keycard or skull key" : "keycard"));
+                    (viewplayer->cards[it_redskull] == CARDNOTFOUNDYET ? s_KEYCARDORSKULLKEY : s_KEYCARD));
                 HU_PlayerMessage(buffer, false, false);
                 S_StartSound(viewplayer->mo, sfx_noway);
 
@@ -1003,7 +998,7 @@ dboolean P_CanUnlockGenDoor(line_t *line)
         case BCard:
             if (viewplayer->cards[it_bluecard] <= 0 && (!skulliscard || viewplayer->cards[it_blueskull] <= 0))
             {
-                if (vid_widescreen && r_hud && (!viewplayer->neededcardflash || viewplayer->neededcard != it_bluecard))
+                if (!viewplayer->neededcardflash || viewplayer->neededcard != it_bluecard)
                 {
                     viewplayer->neededcard = it_bluecard;
                     viewplayer->neededcardflash = NEEDEDCARDFLASH;
@@ -1011,7 +1006,7 @@ dboolean P_CanUnlockGenDoor(line_t *line)
 
                 M_snprintf(buffer, sizeof(buffer), (skulliscard ? s_PD_BLUEK : s_PD_BLUEC), playername,
                     (M_StringCompare(playername, playername_default) ? "" : "s"),
-                    (viewplayer->cards[it_blueskull] == CARDNOTFOUNDYET ? "keycard or skull key" : "keycard"));
+                    (viewplayer->cards[it_blueskull] == CARDNOTFOUNDYET ? s_KEYCARDORSKULLKEY : s_KEYCARD));
                 HU_PlayerMessage(buffer, false, false);
                 S_StartSound(viewplayer->mo, sfx_noway);
 
@@ -1023,7 +1018,7 @@ dboolean P_CanUnlockGenDoor(line_t *line)
         case YCard:
             if (viewplayer->cards[it_yellowcard] <= 0 && (!skulliscard || viewplayer->cards[it_yellowskull] <= 0))
             {
-                if (vid_widescreen && r_hud && (!viewplayer->neededcardflash || viewplayer->neededcard != it_yellowcard))
+                if (!viewplayer->neededcardflash || viewplayer->neededcard != it_yellowcard)
                 {
                     viewplayer->neededcard = it_yellowcard;
                     viewplayer->neededcardflash = NEEDEDCARDFLASH;
@@ -1031,7 +1026,7 @@ dboolean P_CanUnlockGenDoor(line_t *line)
 
                 M_snprintf(buffer, sizeof(buffer), (skulliscard ? s_PD_YELLOWK : s_PD_YELLOWC), playername,
                     (M_StringCompare(playername, playername_default) ? "" : "s"),
-                    (viewplayer->cards[it_yellowskull] == CARDNOTFOUNDYET ? "keycard or skull key" : "keycard"));
+                    (viewplayer->cards[it_yellowskull] == CARDNOTFOUNDYET ? s_KEYCARDORSKULLKEY : s_KEYCARD));
                 HU_PlayerMessage(buffer, false, false);
                 S_StartSound(viewplayer->mo, sfx_noway);
 
@@ -1043,7 +1038,7 @@ dboolean P_CanUnlockGenDoor(line_t *line)
         case RSkull:
             if (viewplayer->cards[it_redskull] <= 0 && (!skulliscard || viewplayer->cards[it_redcard] <= 0))
             {
-                if (vid_widescreen && r_hud && (!viewplayer->neededcardflash || viewplayer->neededcard != it_redskull))
+                if (!viewplayer->neededcardflash || viewplayer->neededcard != it_redskull)
                 {
                     viewplayer->neededcard = it_redskull;
                     viewplayer->neededcardflash = NEEDEDCARDFLASH;
@@ -1051,7 +1046,7 @@ dboolean P_CanUnlockGenDoor(line_t *line)
 
                 M_snprintf(buffer, sizeof(buffer), (skulliscard ? s_PD_REDK : s_PD_REDS), playername,
                     (M_StringCompare(playername, playername_default) ? "" : "s"),
-                    (viewplayer->cards[it_redcard] == CARDNOTFOUNDYET ? "keycard or skull key" : "skull key"));
+                    (viewplayer->cards[it_redcard] == CARDNOTFOUNDYET ? s_KEYCARDORSKULLKEY : s_SKULLKEY));
                 HU_PlayerMessage(buffer, false, false);
                 S_StartSound(viewplayer->mo, sfx_noway);
 
@@ -1063,7 +1058,7 @@ dboolean P_CanUnlockGenDoor(line_t *line)
         case BSkull:
             if (viewplayer->cards[it_blueskull] <= 0 && (!skulliscard || viewplayer->cards[it_bluecard] <= 0))
             {
-                if (vid_widescreen && r_hud && (!viewplayer->neededcardflash || viewplayer->neededcard != it_blueskull))
+                if (!viewplayer->neededcardflash || viewplayer->neededcard != it_blueskull)
                 {
                     viewplayer->neededcard = it_blueskull;
                     viewplayer->neededcardflash = NEEDEDCARDFLASH;
@@ -1071,7 +1066,7 @@ dboolean P_CanUnlockGenDoor(line_t *line)
 
                 M_snprintf(buffer, sizeof(buffer), (skulliscard ? s_PD_BLUEK : s_PD_BLUES), playername,
                     (M_StringCompare(playername, playername_default) ? "" : "s"),
-                    (viewplayer->cards[it_bluecard] == CARDNOTFOUNDYET ? "keycard or skull key" : "skull key"));
+                    (viewplayer->cards[it_bluecard] == CARDNOTFOUNDYET ? s_KEYCARDORSKULLKEY : s_SKULLKEY));
                 HU_PlayerMessage(buffer, false, false);
                 S_StartSound(viewplayer->mo, sfx_noway);
 
@@ -1083,7 +1078,7 @@ dboolean P_CanUnlockGenDoor(line_t *line)
         case YSkull:
             if (viewplayer->cards[it_yellowskull] <= 0 && (!skulliscard || viewplayer->cards[it_yellowcard] <= 0))
             {
-                if (vid_widescreen && r_hud && (!viewplayer->neededcardflash || viewplayer->neededcard != it_yellowskull))
+                if (!viewplayer->neededcardflash || viewplayer->neededcard != it_yellowskull)
                 {
                     viewplayer->neededcard = it_yellowskull;
                     viewplayer->neededcardflash = NEEDEDCARDFLASH;
@@ -1091,7 +1086,7 @@ dboolean P_CanUnlockGenDoor(line_t *line)
 
                 M_snprintf(buffer, sizeof(buffer), (skulliscard ? s_PD_YELLOWK : s_PD_YELLOWS), playername,
                     (M_StringCompare(playername, playername_default) ? "" : "s"),
-                    (viewplayer->cards[it_yellowcard] == CARDNOTFOUNDYET ? "keycard or skull key" : "skull key"));
+                    (viewplayer->cards[it_yellowcard] == CARDNOTFOUNDYET ? s_KEYCARDORSKULLKEY : s_SKULLKEY));
                 HU_PlayerMessage(buffer, false, false);
                 S_StartSound(viewplayer->mo, sfx_noway);
 
@@ -1105,7 +1100,7 @@ dboolean P_CanUnlockGenDoor(line_t *line)
                 || viewplayer->cards[it_bluecard] <= 0 || viewplayer->cards[it_blueskull] <= 0
                 || viewplayer->cards[it_yellowcard] <= 0 || viewplayer->cards[it_yellowskull] <= 0))
             {
-                if (vid_widescreen && r_hud && (!viewplayer->neededcardflash || viewplayer->neededcard != it_allkeys))
+                if (!viewplayer->neededcardflash || viewplayer->neededcard != it_allkeys)
                 {
                     viewplayer->neededcard = it_allkeys;
                     viewplayer->neededcardflash = NEEDEDCARDFLASH;
@@ -1123,7 +1118,7 @@ dboolean P_CanUnlockGenDoor(line_t *line)
                 || (viewplayer->cards[it_bluecard] <= 0 && viewplayer->cards[it_blueskull] <= 0)
                 || (viewplayer->cards[it_yellowcard] <= 0 && viewplayer->cards[it_yellowskull] <= 0)))
             {
-                if (vid_widescreen && r_hud && (!viewplayer->neededcardflash || viewplayer->neededcard != it_allkeys))
+                if (!viewplayer->neededcardflash || viewplayer->neededcard != it_allkeys)
                 {
                     viewplayer->neededcard = it_allkeys;
                     viewplayer->neededcardflash = NEEDEDCARDFLASH;
@@ -1155,7 +1150,7 @@ dboolean P_CanUnlockGenDoor(line_t *line)
 //  succeeding in starting multiple specials on one sector
 //
 // killough 11/98: reformatted
-dboolean P_SectorActive(special_e t, sector_t *sec)
+bool P_SectorActive(special_e t, sector_t *sec)
 {
     return (t == floor_special ? !!sec->floordata :     // return whether
         (t == ceiling_special ? !!sec->ceilingdata :    // thinker of same
@@ -1173,7 +1168,7 @@ dboolean P_SectorActive(special_e t, sector_t *sec)
 //
 // jff 2/27/98 Added to check for zero tag allowed for regular special types
 //
-dboolean P_CheckTag(line_t *line)
+bool P_CheckTag(line_t *line)
 {
     // tag not zero, allowed
     if (line->tag)
@@ -1273,7 +1268,7 @@ void P_CrossSpecialLine(line_t *line, int side, mobj_t *thing)
     {
         // pointer to line function is NULL by default, set non-NULL if
         // line special is walkover generalized linedef type
-        dboolean (*linefunc)(line_t *line) = NULL;
+        bool (*linefunc)(line_t *line) = NULL;
 
         // check each range of generalized linedefs
         if (line->special >= GenEnd)
@@ -1366,7 +1361,7 @@ void P_CrossSpecialLine(line_t *line, int side, mobj_t *thing)
 
     if (!thing->player)
     {
-        dboolean    okay = false;
+        bool    okay = false;
 
         switch (line->special)
         {
@@ -2038,7 +2033,7 @@ void P_ShootSpecialLine(mobj_t *thing, line_t *line)
     // jff 02/04/98 add check here for generalized linedef
     // pointer to line function is NULL by default, set non-null if
     // line special is gun triggered generalized linedef type
-    dboolean (*linefunc)(line_t *line) = NULL;
+    bool (*linefunc)(line_t *line) = NULL;
 
     // check each range of generalized linedefs
     if (line->special >= GenEnd)
@@ -2197,20 +2192,20 @@ void P_PlayerInSpecialSector(sector_t *sector)
         {
             case DamageNegative5Or10PercentHealth:
                 if (!(leveltime & 31) && !(viewplayer->cheats & CF_GODMODE) && !viewplayer->powers[pw_ironfeet])
-                    P_DamageMobj(viewplayer->mo, NULL, NULL, 10, true);
+                    P_DamageMobj(viewplayer->mo, NULL, NULL, 10, true, false);
 
                 break;
 
             case DamageNegative2Or5PercentHealth:
                 if (!(leveltime & 31) && !(viewplayer->cheats & CF_GODMODE) && !viewplayer->powers[pw_ironfeet])
-                    P_DamageMobj(viewplayer->mo, NULL, NULL, 5, true);
+                    P_DamageMobj(viewplayer->mo, NULL, NULL, 5, true, false);
 
                 break;
 
             case DamageNegative10Or20PercentHealth:
             case DamageNegative10Or20PercentHealthAndLightBlinks_2Hz:
                 if (!(leveltime & 31) && !(viewplayer->cheats & CF_GODMODE) && (!viewplayer->powers[pw_ironfeet] || M_Random() < 5))
-                    P_DamageMobj(viewplayer->mo, NULL, NULL, 20, true);
+                    P_DamageMobj(viewplayer->mo, NULL, NULL, 20, true, false);
 
                 break;
 
@@ -2225,7 +2220,7 @@ void P_PlayerInSpecialSector(sector_t *sector)
 
             case DamageNegative10Or20PercentHealthAndEndLevel:
                 if (!(leveltime & 0x1F))
-                    P_DamageMobj(viewplayer->mo, NULL, NULL, 20, true);
+                    P_DamageMobj(viewplayer->mo, NULL, NULL, 20, true, false);
 
                 if (viewplayer->health <= 10)
                     G_ExitLevel();
@@ -2239,23 +2234,23 @@ void P_PlayerInSpecialSector(sector_t *sector)
         {
             case 0:
                 if (!viewplayer->powers[pw_invulnerability] && !viewplayer->powers[pw_ironfeet])
-                    P_DamageMobj(viewplayer->mo, NULL, NULL, 10000, false);
+                    P_DamageMobj(viewplayer->mo, NULL, NULL, 10000, false, false);
 
                 break;
 
             case 1:
-                P_DamageMobj(viewplayer->mo, NULL, NULL, 10000, false);
+                P_DamageMobj(viewplayer->mo, NULL, NULL, 10000, false, false);
 
                 break;
 
             case 2:
-                P_DamageMobj(viewplayer->mo, NULL, NULL, 10000, false);
+                P_DamageMobj(viewplayer->mo, NULL, NULL, 10000, false, false);
                 G_ExitLevel();
 
                 break;
 
             case 3:
-                P_DamageMobj(viewplayer->mo, NULL, NULL, 10000, false);
+                P_DamageMobj(viewplayer->mo, NULL, NULL, 10000, false, false);
                 G_SecretExitLevel();
 
                 break;
@@ -2272,21 +2267,21 @@ void P_PlayerInSpecialSector(sector_t *sector)
             case 1:
                 // 2/5 damage per 31 tics
                 if (!(leveltime & 31) && !(viewplayer->cheats & CF_GODMODE) && !viewplayer->powers[pw_ironfeet])
-                    P_DamageMobj(viewplayer->mo, NULL, NULL, 5, true);
+                    P_DamageMobj(viewplayer->mo, NULL, NULL, 5, true, false);
 
                 break;
 
             case 2:
                 // 5/10 damage per 31 tics
                 if (!(leveltime & 31) && !(viewplayer->cheats & CF_GODMODE) && !viewplayer->powers[pw_ironfeet])
-                    P_DamageMobj(viewplayer->mo, NULL, NULL, 10, true);
+                    P_DamageMobj(viewplayer->mo, NULL, NULL, 10, true, false);
 
                 break;
 
             case 3:
                 // 10/20 damage per 31 tics
                 if (!(leveltime & 31) && !(viewplayer->cheats & CF_GODMODE) && (!viewplayer->powers[pw_ironfeet] || M_Random() < 5))
-                    P_DamageMobj(viewplayer->mo, NULL, NULL, 20, true);
+                    P_DamageMobj(viewplayer->mo, NULL, NULL, 20, true, false);
 
                 break;
         }
@@ -2321,7 +2316,7 @@ void P_UpdateSpecials(void)
                     flattranslation[i] = firstflat + pic;
             }
 
-    animatedliquiddiff += animatedliquiddiffs[gametime & 63];
+    animatedliquiddiff += animatedliquiddiffs[animatedliquidtic & 63];
     animatedliquidxoffs += animatedliquidxdir;
 
     if (animatedliquidxoffs > 64 * FRACUNIT)
@@ -2399,10 +2394,10 @@ void P_UpdateSpecials(void)
 //
 // Special stuff that cannot be categorized
 //
-dboolean EV_DoDonut(line_t *line)
+bool EV_DoDonut(line_t *line)
 {
-    int         secnum = -1;
-    dboolean    rtn = false;
+    int     secnum = -1;
+    bool    rtn = false;
 
     while ((secnum = P_FindSectorFromLineTag(line, secnum)) >= 0)
     {
@@ -2442,7 +2437,7 @@ dboolean EV_DoDonut(line_t *line)
             floor->speed = FLOORSPEED / 2;
             floor->texture = s3->floorpic;
             floor->floordestheight = s3->floorheight;
-            floor->stopsound = (floor->sector->floorheight != floor->floordestheight);
+            floor->stopsound = (s2->floorheight != floor->floordestheight);
 
             // Spawn lowering donut-hole
             floor = Z_Calloc(1, sizeof(*floor), PU_LEVSPEC, NULL);
@@ -2456,7 +2451,7 @@ dboolean EV_DoDonut(line_t *line)
             floor->sector = s1;
             floor->speed = FLOORSPEED / 2;
             floor->floordestheight = s3->floorheight;
-            floor->stopsound = (floor->sector->floorheight != floor->floordestheight);
+            floor->stopsound = (s1->floorheight != floor->floordestheight);
 
             break;
         }
@@ -2710,33 +2705,33 @@ void T_Scroll(scroll_t *scroller)
             break;
 
         case sc_carry:
-        {
-            fixed_t height;
-            fixed_t waterheight;    // killough 04/04/98: add waterheight
-
-            // killough 03/07/98: Carry things on floor
-            // killough 03/20/98: Use new sector list which reflects true members
-            // killough 03/27/98: Fix carrier bug
-            // killough 04/04/98: Underwater, carry things even w/o gravity
-            sec = sectors + scroller->affectee;
-            height = sec->floorheight;
-            waterheight = (sec->heightsec && sec->heightsec->floorheight > height ? sec->heightsec->floorheight : FIXED_MIN);
-
-            // Move objects only if on floor or underwater,
-            // non-floating, and clipped.
-            for (msecnode_t *node = sec->touching_thinglist; node; node = node->m_snext)
             {
-                mobj_t  *thing = node->m_thing;
+                fixed_t height;
+                fixed_t waterheight;    // killough 04/04/98: add waterheight
 
-                if (!(thing->flags & MF_NOCLIP) && (!((thing->flags & MF_NOGRAVITY) || thing->z > height) || thing->z < waterheight))
+                // killough 03/07/98: Carry things on floor
+                // killough 03/20/98: Use new sector list which reflects true members
+                // killough 03/27/98: Fix carrier bug
+                // killough 04/04/98: Underwater, carry things even w/o gravity
+                sec = sectors + scroller->affectee;
+                height = sec->floorheight;
+                waterheight = (sec->heightsec && sec->heightsec->floorheight > height ? sec->heightsec->floorheight : FIXED_MIN);
+
+                // Move objects only if on floor or underwater,
+                // non-floating, and clipped.
+                for (msecnode_t *node = sec->touching_thinglist; node; node = node->m_snext)
                 {
-                    thing->momx += dx;
-                    thing->momy += dy;
+                    mobj_t  *thing = node->m_thing;
+
+                    if (!(thing->flags & MF_NOCLIP) && (!((thing->flags & MF_NOGRAVITY) || thing->z > height) || thing->z < waterheight))
+                    {
+                        thing->momx += dx;
+                        thing->momy += dy;
+                    }
                 }
             }
 
             break;
-        }
     }
 }
 
@@ -2757,7 +2752,7 @@ void T_Scroll(scroll_t *scroller)
 //
 // accel: true if this is an accelerative effect
 //
-static void Add_Scroller(int type, fixed_t dx, fixed_t dy, int control, int affectee, dboolean accel)
+static void Add_Scroller(int type, fixed_t dx, fixed_t dy, int control, int affectee, bool accel)
 {
     scroll_t    *scroller = Z_Calloc(1, sizeof(*scroller), PU_LEVSPEC, NULL);
 
@@ -2770,7 +2765,6 @@ static void Add_Scroller(int type, fixed_t dx, fixed_t dy, int control, int affe
         scroller->last_height = sectors[control].floorheight + sectors[control].ceilingheight;
 
     scroller->affectee = affectee;
-
     scroller->thinker.function = &T_Scroll;
     scroller->thinker.menu = (type != sc_carry);
     P_AddThinker(&scroller->thinker);
@@ -2785,7 +2779,7 @@ static void Add_Scroller(int type, fixed_t dx, fixed_t dy, int control, int affe
 //
 // killough 10/98:
 // fix scrolling aliasing problems, caused by long linedefs causing overflowing
-static void Add_WallScroller(int64_t dx, int64_t dy, const line_t *l, int control, dboolean accel)
+static void Add_WallScroller(int64_t dx, int64_t dy, const line_t *l, int control, bool accel)
 {
     fixed_t x = ABS(l->dx);
     fixed_t y = ABS(l->dy);
@@ -2796,8 +2790,8 @@ static void Add_WallScroller(int64_t dx, int64_t dy, const line_t *l, int contro
 
     d = FixedDiv(x, finesine[(tantoangle[FixedDiv(y, x) >> DBITS] + ANG90) >> ANGLETOFINESHIFT]);
 
-    x = (fixed_t)(((int64_t)dy * -(int64_t)l->dy - (int64_t)dx * (int64_t)l->dx) / (int64_t)d); // killough 10/98:
-    y = (fixed_t)(((int64_t)dy * (int64_t)l->dx - (int64_t)dx * (int64_t)l->dy) / (int64_t)d);  // Use int64_t arithmetic
+    x = (fixed_t)((dy * -(int64_t)l->dy - dx * (int64_t)l->dx) / d);    // killough 10/98:
+    y = (fixed_t)((dy * (int64_t)l->dx - dx * (int64_t)l->dy) / d);     // Use int64_t arithmetic
     Add_Scroller(sc_side, x, y, control, *l->sidenum, accel);
 }
 
@@ -2815,11 +2809,11 @@ static void P_SpawnScrollers(void)
 
     for (int i = 0; i < numlines; i++, l++)
     {
-        fixed_t     dx = l->dx >> SCROLL_SHIFT;                             // direction and speed of scrolling
-        fixed_t     dy = l->dy >> SCROLL_SHIFT;
-        int         control = -1;                                           // no control sector or acceleration
-        dboolean    accel = false;
-        int         special = l->special;
+        fixed_t dx = l->dx >> SCROLL_SHIFT;                                 // direction and speed of scrolling
+        fixed_t dy = l->dy >> SCROLL_SHIFT;
+        int     control = -1;                                               // no control sector or acceleration
+        bool    accel = false;
+        int     special = l->special;
 
         // killough 03/07/98: Types 245-249 are same as 250-254 except that the
         // first side's sector's heights cause scrolling when they change, and
@@ -3078,7 +3072,6 @@ static void Add_Pusher(int type, int x_mag, int y_mag, mobj_t *source, int affec
     }
 
     pusher->affectee = affectee;
-
     pusher->thinker.function = &T_Pusher;
     pusher->thinker.menu = false;
     P_AddThinker(&pusher->thinker);
@@ -3094,7 +3087,7 @@ static void Add_Pusher(int type, int x_mag, int y_mag, mobj_t *source, int affec
 
 static pusher_t *tmpusher;  // pusher structure for blockmap searches
 
-static dboolean PIT_PushThing(mobj_t *thing)
+static bool PIT_PushThing(mobj_t *thing)
 {
     if ((sentient(thing) || (thing->flags & MF_SHOOTABLE)) && !(thing->flags & MF_NOCLIP))
     {
@@ -3325,9 +3318,9 @@ static void P_SpawnPushers(void)
         }
 }
 
-dboolean    zerotag_manual;
+bool    zerotag_manual;
 
-dboolean P_ProcessNoTagLines(line_t *line, sector_t **sec, int *secnum)
+bool P_ProcessNoTagLines(line_t *line, sector_t **sec, int *secnum)
 {
     zerotag_manual = false;
 

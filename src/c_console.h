@@ -9,8 +9,8 @@
   Copyright © 1993-2022 by id Software LLC, a ZeniMax Media company.
   Copyright © 2013-2022 by Brad Harding <mailto:brad@doomretro.com>.
 
-  DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
-  <https://github.com/bradharding/doomretro/wiki/CREDITS>.
+  DOOM Retro is a fork of Chocolate DOOM. For a list of acknowledgments,
+  see <https://github.com/bradharding/doomretro/wiki/ACKNOWLEDGMENTS>.
 
   This file is a part of DOOM Retro.
 
@@ -67,7 +67,7 @@
 #define CONSOLESCROLLBARHEIGHT  (gamestate != GS_TITLESCREEN ? 173 : 369)
 #define CONSOLESCROLLBARX       (SCREENWIDTH - CONSOLETEXTX - CONSOLESCROLLBARWIDTH)
 
-#define CONSOLETEXTPIXELWIDTH   (SCREENWIDTH - CONSOLETEXTX * 2 - (CONSOLESCROLLBARWIDTH + 10) * scrollbardrawn)
+#define CONSOLETEXTPIXELWIDTH   (SCREENWIDTH - CONSOLETEXTX * 2 - (scrollbardrawn ? CONSOLESCROLLBARWIDTH + 10 : 0))
 
 #define CONSOLEINPUTX           CONSOLETEXTX
 #define CONSOLEINPUTY           (CONSOLEHEIGHT - 16)
@@ -121,6 +121,7 @@
 typedef enum
 {
     inputstring,
+    cheatstring,
     outputstring,
     dividerstring,
     warningstring,
@@ -137,13 +138,20 @@ typedef struct
     stringtype_t    stringtype;
     int             wrap;
     int             indent;
-    dboolean        bold;
-    dboolean        italics;
+    bool            bold;
+    bool            italics;
     patch_t         *header;
     int             tabs[3];
     int             tics;
     char            timestamp[9];
 } console_t;
+
+extern patch_t      *consolefont[CONSOLEFONTSIZE];
+extern patch_t      *degree;
+extern patch_t      *lsquote;
+extern patch_t      *ldquote;
+extern patch_t      *unknownchar;
+extern patch_t      *altunderscores;
 
 extern patch_t      *bindlist;
 extern patch_t      *cmdlist;
@@ -155,7 +163,7 @@ extern patch_t      *thinglist;
 
 extern console_t    *console;
 
-extern dboolean     consoleactive;
+extern bool         consoleactive;
 extern int          consoleheight;
 extern int          consoledirection;
 
@@ -171,7 +179,7 @@ extern char         consolecheat[255];
 extern char         consolecheatparm[3];
 extern char         consolecmdparm[255];
 
-extern dboolean     scrollbardrawn;
+extern bool         scrollbardrawn;
 
 typedef struct
 {
@@ -200,11 +208,12 @@ typedef struct
 extern autocomplete_t   autocompletelist[];
 
 void C_Input(const char *string, ...);
+void C_Cheat(const char *string);
 void C_IntCVAROutput(const char *cvar, int value);
 void C_PctCVAROutput(const char *cvar, int value);
 void C_StrCVAROutput(const char *cvar, const char *string);
 void C_Output(const char *string, ...);
-dboolean C_OutputNoRepeat(const char *string, ...);
+bool C_OutputNoRepeat(const char *string, ...);
 void C_TabbedOutput(const int tabs[3], const char *string, ...);
 void C_Header(const int tabs[3], patch_t *header, const char *string);
 void C_Warning(const int minwarninglevel, const char *string, ...);
@@ -216,9 +225,9 @@ void C_ShowConsole(void);
 void C_HideConsole(void);
 void C_HideConsoleFast(void);
 void C_Drawer(void);
-dboolean C_ExecuteInputString(const char *input);
-dboolean C_ValidateInput(char *input);
-dboolean C_Responder(event_t *ev);
+bool C_ExecuteInputString(const char *input);
+bool C_ValidateInput(char *input);
+bool C_Responder(event_t *ev);
 void C_PrintCompileDate(void);
 void C_PrintSDLVersions(void);
 void C_UpdateFPSOverlay(void);

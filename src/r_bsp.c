@@ -9,8 +9,8 @@
   Copyright © 1993-2022 by id Software LLC, a ZeniMax Media company.
   Copyright © 2013-2022 by Brad Harding <mailto:brad@doomretro.com>.
 
-  DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
-  <https://github.com/bradharding/doomretro/wiki/CREDITS>.
+  DOOM Retro is a fork of Chocolate DOOM. For a list of acknowledgments,
+  see <https://github.com/bradharding/doomretro/wiki/ACKNOWLEDGMENTS>.
 
   This file is a part of DOOM Retro.
 
@@ -73,7 +73,7 @@ byte        *solidcol;
 //
 // Replaces the old R_Clip*WallSegment functions. It draws bits of walls in those
 // columns which aren't solid, and updates the solidcol[] array appropriately
-static void R_ClipWallSegment(int first, int last, dboolean solid)
+static void R_ClipWallSegment(int first, int last, bool solid)
 {
     while (first < last)
         if (solidcol[first])
@@ -241,7 +241,7 @@ static void R_InterpolateSector(sector_t *sector)
 //
 // killough 04/11/98, 04/13/98: fix bugs, add 'back' parameter
 //
-sector_t *R_FakeFlat(sector_t *sec, sector_t *tempsec, int *floorlightlevel, int *ceilinglightlevel, dboolean back)
+sector_t *R_FakeFlat(sector_t *sec, sector_t *tempsec, int *floorlightlevel, int *ceilinglightlevel, bool back)
 {
     const sector_t  *s = sec->heightsec;
 
@@ -254,7 +254,7 @@ sector_t *R_FakeFlat(sector_t *sec, sector_t *tempsec, int *floorlightlevel, int
     if (s)
     {
         sector_t    *heightsec = viewplayer->mo->subsector->sector->heightsec;
-        dboolean    underwater = (heightsec && viewz <= heightsec->interpfloorheight);
+        bool        underwater = (heightsec && viewz <= heightsec->interpfloorheight);
 
         // Replace sector being drawn, with a copy to be hacked
         *tempsec = *sec;
@@ -413,7 +413,7 @@ static void R_AddLine(seg_t *line)
 // Checks BSP node/subtree bounding box.
 // Returns true if some part of the bbox might be visible.
 //
-static dboolean R_CheckBBox(const fixed_t *bspcoord)
+static bool R_CheckBBox(const fixed_t *bspcoord)
 {
     const byte checkcoord[12][4] =
     {

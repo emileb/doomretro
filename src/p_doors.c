@@ -9,8 +9,8 @@
   Copyright © 1993-2022 by id Software LLC, a ZeniMax Media company.
   Copyright © 2013-2022 by Brad Harding <mailto:brad@doomretro.com>.
 
-  DOOM Retro is a fork of Chocolate DOOM. For a list of credits, see
-  <https://github.com/bradharding/doomretro/wiki/CREDITS>.
+  DOOM Retro is a fork of Chocolate DOOM. For a list of acknowledgments,
+  see <https://github.com/bradharding/doomretro/wiki/ACKNOWLEDGMENTS>.
 
   This file is a part of DOOM Retro.
 
@@ -42,16 +42,15 @@
 #include "m_config.h"
 #include "m_misc.h"
 #include "p_local.h"
+#include "p_setup.h"
 #include "p_tick.h"
 #include "s_sound.h"
 #include "z_zone.h"
 
-dboolean    r_graduallighting = r_graduallighting_default;
-
 static void T_GradualLightingToDoor(vldoor_t *door)
 {
-    sector_t    *sec = door->sector;
-    fixed_t     level = door->topheight - sec->floorheight;
+    sector_t        *sec = door->sector;
+    const fixed_t   level = door->topheight - sec->floorheight;
 
     if (level > 0)
     {
@@ -137,7 +136,7 @@ void T_VerticalDoor(vldoor_t *door)
 
             // killough 10/98: implement gradual lighting effects
             // [BH] enhanced to apply effects to all doors
-            if (r_graduallighting)
+            if (r_graduallighting && !nograduallighting)
                 T_GradualLightingToDoor(door);
 
             if (res == pastdest)
@@ -153,7 +152,7 @@ void T_VerticalDoor(vldoor_t *door)
                     case genRaise:
                     case genClose:
                         door->sector->ceilingdata = NULL;
-                        P_RemoveThinker(&door->thinker);        // unlink and free
+                        P_RemoveThinkerNow(&door->thinker);     // unlink and free
 
                         break;
 
@@ -208,7 +207,7 @@ void T_VerticalDoor(vldoor_t *door)
 
             // killough 10/98: implement gradual lighting effects
             // [BH] enhanced to apply effects to all doors
-            if (r_graduallighting)
+            if (r_graduallighting && !nograduallighting)
                 T_GradualLightingToDoor(door);
 
             if (res == pastdest)
@@ -232,7 +231,7 @@ void T_VerticalDoor(vldoor_t *door)
                     case genCdO:
                     case genBlazeCdO:
                         door->sector->ceilingdata = NULL;
-                        P_RemoveThinker(&door->thinker);        // unlink and free
+                        P_RemoveThinkerNow(&door->thinker);     // unlink and free
 
                         break;
 
@@ -249,7 +248,7 @@ void T_VerticalDoor(vldoor_t *door)
 // EV_DoLockedDoor
 // Move a locked door up/down
 //
-dboolean EV_DoLockedDoor(line_t *line, vldoor_e type, mobj_t *thing, fixed_t speed)
+bool EV_DoLockedDoor(line_t *line, vldoor_e type, mobj_t *thing, fixed_t speed)
 {
     player_t    *player = thing->player;
     static char buffer[1024];
@@ -267,7 +266,7 @@ dboolean EV_DoLockedDoor(line_t *line, vldoor_e type, mobj_t *thing, fixed_t spe
                 // [BH] flash needed key on HUD
                 if (player->cards[it_blueskull] == CARDNOTFOUNDYET)
                 {
-                    if (vid_widescreen && r_hud && (!player->neededcardflash || player->neededcard != it_blueskull))
+                    if (!player->neededcardflash || player->neededcard != it_blueskull)
                     {
                         player->neededcard = it_blueskull;
                         player->neededcardflash = NEEDEDCARDFLASH;
@@ -278,7 +277,7 @@ dboolean EV_DoLockedDoor(line_t *line, vldoor_e type, mobj_t *thing, fixed_t spe
                 }
                 else
                 {
-                    if (vid_widescreen && r_hud && (!player->neededcardflash || player->neededcard != it_bluecard))
+                    if (!player->neededcardflash || player->neededcard != it_bluecard)
                     {
                         player->neededcard = it_bluecard;
                         player->neededcardflash = NEEDEDCARDFLASH;
@@ -306,7 +305,7 @@ dboolean EV_DoLockedDoor(line_t *line, vldoor_e type, mobj_t *thing, fixed_t spe
                 // [BH] flash needed key on HUD
                 if (player->cards[it_redskull] == CARDNOTFOUNDYET)
                 {
-                    if (vid_widescreen && r_hud && (!player->neededcardflash || player->neededcard != it_redskull))
+                    if (!player->neededcardflash || player->neededcard != it_redskull)
                     {
                         player->neededcard = it_redskull;
                         player->neededcardflash = NEEDEDCARDFLASH;
@@ -317,7 +316,7 @@ dboolean EV_DoLockedDoor(line_t *line, vldoor_e type, mobj_t *thing, fixed_t spe
                 }
                 else
                 {
-                    if (vid_widescreen && r_hud && (!player->neededcardflash || player->neededcard != it_redcard))
+                    if (!player->neededcardflash || player->neededcard != it_redcard)
                     {
                         player->neededcard = it_redcard;
                         player->neededcardflash = NEEDEDCARDFLASH;
@@ -345,7 +344,7 @@ dboolean EV_DoLockedDoor(line_t *line, vldoor_e type, mobj_t *thing, fixed_t spe
                 // [BH] flash needed key on HUD
                 if (player->cards[it_yellowskull] == CARDNOTFOUNDYET)
                 {
-                    if (vid_widescreen && r_hud && (!player->neededcardflash || player->neededcard != it_yellowskull))
+                    if (!player->neededcardflash || player->neededcard != it_yellowskull)
                     {
                         player->neededcard = it_yellowskull;
                         player->neededcardflash = NEEDEDCARDFLASH;
@@ -356,7 +355,7 @@ dboolean EV_DoLockedDoor(line_t *line, vldoor_e type, mobj_t *thing, fixed_t spe
                 }
                 else
                 {
-                    if (vid_widescreen && r_hud && (!player->neededcardflash || player->neededcard != it_yellowcard))
+                    if (!player->neededcardflash || player->neededcard != it_yellowcard)
                     {
                         player->neededcard = it_yellowcard;
                         player->neededcardflash = NEEDEDCARDFLASH;
@@ -380,10 +379,10 @@ dboolean EV_DoLockedDoor(line_t *line, vldoor_e type, mobj_t *thing, fixed_t spe
     return EV_DoDoor(line, type, speed);
 }
 
-dboolean EV_DoDoor(line_t *line, vldoor_e type, fixed_t speed)
+bool EV_DoDoor(line_t *line, vldoor_e type, fixed_t speed)
 {
     int         secnum = -1;
-    dboolean    rtn = false;
+    bool        rtn = false;
     sector_t    *sec;
 
     if (P_ProcessNoTagLines(line, &sec, &secnum))
@@ -524,7 +523,7 @@ void EV_VerticalDoor(line_t *line, mobj_t *thing)
                 // [BH] flash needed key on HUD
                 if (player->cards[it_blueskull] == CARDNOTFOUNDYET)
                 {
-                    if (vid_widescreen && r_hud && (!player->neededcardflash || player->neededcard != it_blueskull))
+                    if (!player->neededcardflash || player->neededcard != it_blueskull)
                     {
                         player->neededcard = it_blueskull;
                         player->neededcardflash = NEEDEDCARDFLASH;
@@ -535,7 +534,7 @@ void EV_VerticalDoor(line_t *line, mobj_t *thing)
                 }
                 else
                 {
-                    if (vid_widescreen && r_hud && (!player->neededcardflash || player->neededcard != it_bluecard))
+                    if (!player->neededcardflash || player->neededcard != it_bluecard)
                     {
                         player->neededcard = it_bluecard;
                         player->neededcardflash = NEEDEDCARDFLASH;
@@ -566,7 +565,7 @@ void EV_VerticalDoor(line_t *line, mobj_t *thing)
                 // [BH] flash needed key on HUD
                 if (player->cards[it_yellowskull] == CARDNOTFOUNDYET)
                 {
-                    if (vid_widescreen && r_hud && (!player->neededcardflash || player->neededcard != it_yellowskull))
+                    if (!player->neededcardflash || player->neededcard != it_yellowskull)
                     {
                         player->neededcard = it_yellowskull;
                         player->neededcardflash = NEEDEDCARDFLASH;
@@ -577,7 +576,7 @@ void EV_VerticalDoor(line_t *line, mobj_t *thing)
                 }
                 else
                 {
-                    if (vid_widescreen && r_hud && (!player->neededcardflash || player->neededcard != it_yellowcard))
+                    if (!player->neededcardflash || player->neededcard != it_yellowcard)
                     {
                         player->neededcard = it_yellowcard;
                         player->neededcardflash = NEEDEDCARDFLASH;
@@ -608,7 +607,7 @@ void EV_VerticalDoor(line_t *line, mobj_t *thing)
                 // [BH] flash needed key on HUD
                 if (player->cards[it_redskull] == CARDNOTFOUNDYET)
                 {
-                    if (vid_widescreen && r_hud && (!player->neededcardflash || player->neededcard != it_redskull))
+                    if (!player->neededcardflash || player->neededcard != it_redskull)
                     {
                         player->neededcard = it_redskull;
                         player->neededcardflash = NEEDEDCARDFLASH;
@@ -619,7 +618,7 @@ void EV_VerticalDoor(line_t *line, mobj_t *thing)
                 }
                 else
                 {
-                    if (vid_widescreen && r_hud && (!player->neededcardflash || player->neededcard != it_redcard))
+                    if (!player->neededcardflash || player->neededcard != it_redcard)
                     {
                         player->neededcard = it_redcard;
                         player->neededcardflash = NEEDEDCARDFLASH;
