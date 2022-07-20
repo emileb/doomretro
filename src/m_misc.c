@@ -391,6 +391,8 @@ char *M_TempFile(char *s)
 
     if (!tempdir)
         tempdir = ".";
+#elif defined(__ANDROID__)
+    tempdir = "./user_files/doomretro";
 #else
     tempdir = "/tmp";
 #endif
