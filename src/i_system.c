@@ -245,6 +245,11 @@ void I_Quit(bool shutdown)
     exit(0);
 }
 
+
+#ifdef __ANDROID__
+#include "LogWritter.h"
+#endif
+
 //
 // I_Error
 //
@@ -290,6 +295,10 @@ void I_Error(const char *error, ...)
     M_vsnprintf(msgbuf, sizeof(msgbuf) - 1, error, args);
     va_end(args);
 
+#ifdef __ANDROID__
+    LOGI("%s",msgbuf);
+    LogWritter_Write(msgbuf);
+#endif
     M_snprintf(msgbuf, sizeof(msgbuf), "%s\n", msgbuf);
 
     SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, DOOMRETRO_NAME, msgbuf, NULL);

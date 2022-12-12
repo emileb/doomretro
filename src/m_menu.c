@@ -80,7 +80,12 @@ static char     *messagestring;
 static int      messagelastmenuactive;
 
 // timed message = no input from user
+#ifdef __ANDROID__
+bool messageneedsinput; //Make global
+#else
 static bool     messageneedsinput;
+#endif
+
 
 static void (*messageroutine)(int);
 
@@ -2097,7 +2102,13 @@ void M_QuitDOOM(int choice)
 
     M_snprintf(line2, sizeof(line2), (usinggamecontroller ? s_DOSA : s_DOSY), DESKTOP);
     M_snprintf(endstring, sizeof(endstring), "%s\n\n%s", line1, line2);
+
+#ifndef __ANDROID__
     M_StartMessage(endstring, &M_QuitResponse, true);
+#else
+    M_QuitResponse( 'y' ); // Don't bother with confirmation
+#endif
+
 }
 
 static void M_SliderSound(void)
@@ -2782,6 +2793,9 @@ bool M_Responder(event_t *ev)
     {
         key = ev->data1;
         usinggamecontroller = false;
+#ifdef __ANDROID__ // Trying to fix buttons not working if key_up is not received
+        keydown = 0;
+#endif
     }
     else if (ev->type == ev_keyup)
     {
@@ -2983,7 +2997,9 @@ bool M_Responder(event_t *ev)
             functionkey = 0;
             return false;
         }
-
+#ifdef __ANDROID__ // Need to reset this once got input
+        messageNeedsInput = false;
+#endif
         keydown = key;
         menuactive = messagelastmenuactive;
         messagetoprint = false;

@@ -83,7 +83,8 @@
 #include <fnmatch.h>
 #include <libgen.h>
 
-#if !defined(__OpenBSD__) && !defined(__HAIKU__)
+
+#if !defined(__OpenBSD__) && !defined(__HAIKU__) && !defined(__ANDROID__)
 #include <wordexp.h>
 #endif
 #endif
@@ -420,6 +421,11 @@ void D_Display(void)
             D_UpdateFade();
 
         // normal update
+
+#ifdef __ANDROID__ // The touch controls change the viewport, call this to fix. This function does not exist in SDL2
+        SDL_ForceupdateViewport(renderer);
+#endif
+
         blitfunc();
         mapblitfunc();
 
@@ -446,6 +452,10 @@ void D_Display(void)
 
         wipestart = nowtime;
         done = wipe_ScreenWipe();
+
+#ifdef __ANDROID__ // The touch controls change the viewport, call this to fix. This function does not exist in SDL2
+        SDL_ForceupdateViewport(renderer);
+#endif
 
         blitfunc();
         mapblitfunc();
@@ -1088,7 +1098,8 @@ static bool D_CheckParms(void)
             else
             {
                 // otherwise try the iwadfolder CVAR
-#if defined(_WIN32) || defined(__OpenBSD__) || defined(__HAIKU__)
+#if defined(_WIN32) || defined(__OpenBSD__) || defined(__HAIKU__)  || defined(__ANDROID__)
+
                 M_snprintf(fullpath, sizeof(fullpath), "%s" DIR_SEPARATOR_S "%s", iwadfolder, iwadsrequired[iwadrequired]);
 #else
                 wordexp_t   p;

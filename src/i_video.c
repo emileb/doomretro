@@ -756,6 +756,10 @@ void I_StartTic(void)
     I_GetEvent();
     I_ReadMouse();
     I_UpdateGameControllerRumble();
+#ifdef __ANDROID__
+    extern void I_UpdateAndroid(void);
+    I_UpdateAndroid();
+#endif
 }
 
 static void UpdateGrab(void)
@@ -1123,9 +1127,14 @@ bool I_CreateExternalAutomap(void)
     MAPWIDTH = MIN(((displays[am_display - 1].w * MAPHEIGHT / displays[am_display - 1].h + 1) & ~3), MAXWIDTH);
     MAPAREA = MAPWIDTH * MAPHEIGHT;
 
+
     maprenderer = SDL_CreateRenderer(mapwindow, -1, SDL_RENDERER_TARGETTEXTURE);
+#ifdef __ANDROID__
+    if( M_CheckParm("-android_aspect") )
+#endif
     SDL_RenderSetLogicalSize(maprenderer, MAPWIDTH, MAPHEIGHT);
     mapsurface = SDL_CreateRGBSurface(0, MAPWIDTH, MAPHEIGHT, 8, 0, 0, 0, 0);
+
     pixelformat = SDL_GetWindowPixelFormat(mapwindow);
     SDL_PixelFormatEnumToMasks(pixelformat, &bpp, &rmask, &gmask, &bmask, &amask);
     mapbuffer = SDL_CreateRGBSurface(0, MAPWIDTH, MAPHEIGHT, bpp, rmask, gmask, bmask, amask);
@@ -1406,6 +1415,9 @@ static void SetVideoMode(bool createwindow, bool output)
             if (!width || !height)
                 I_Error("Graphics couldn't be %s.", (english == english_american ? "initialized" : "initialised"));
 
+#ifdef __ANDROID__
+            SDL_GL_SetAttribute( SDL_GL_DEPTH_SIZE, 16 ); // Defaults to 24 which is not needed and fails on old Tegras
+#endif
             if (createwindow)
                 window = SDL_CreateWindow(DOOMRETRO_NAME, SDL_WINDOWPOS_UNDEFINED_DISPLAY(displayindex),
                     SDL_WINDOWPOS_UNDEFINED_DISPLAY(displayindex), width, height,
@@ -1502,6 +1514,10 @@ static void SetVideoMode(bool createwindow, bool output)
     displaycenterx = displaywidth / 2;
     displaycentery = displayheight / 2;
 
+#ifdef __ANDROID__
+    rendererflags  = SDL_RENDERER_ACCELERATED;
+#endif
+
     if (createwindow && !(renderer = SDL_CreateRenderer(window, -1, rendererflags)) && !software)
     {
         if ((renderer = SDL_CreateRenderer(window, -1, (SDL_RENDERER_SOFTWARE | SDL_RENDERER_TARGETTEXTURE))))
@@ -1512,6 +1528,10 @@ static void SetVideoMode(bool createwindow, bool output)
         }
     }
 
+<<<<<<< HEAD
+#ifdef __ANDROID__
+    if( M_CheckParm("-android_aspect") )
+#endif
     SDL_RenderSetLogicalSize(renderer, !vid_widescreen * SCREENWIDTH, ACTUALHEIGHT);
 
     if (output)
