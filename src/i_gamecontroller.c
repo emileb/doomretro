@@ -61,6 +61,9 @@ static int                  currentstrength;
 
 void I_InitGameController(void)
 {
+#ifdef __ANDROID__
+    return; // Do not want the accelerometer 'joystick'!!
+#endif
     if (gamecontrollerconnected)
         return;
 

@@ -206,6 +206,12 @@ char *M_ExtractFolder(char *path)
 
 char *M_GetAppDataFolder(void)
 {
+#ifdef __ANDROID__
+    char    *path = malloc(MAX_PATH);
+    return strcpy(path,"./user_files/doomretro/"); // CWD
+    return path;
+#endif
+
     char    *executablefolder = M_GetExecutableFolder();
 
 #if defined(_WIN32)
@@ -279,9 +285,15 @@ char *M_GetResourceFolder(void)
 
     return (char *)resourceURL.fileSystemRepresentation;
 #else
-    free(resourcefolder);
+
+#ifdef __ANDROID__
+    char    *path = malloc(MAX_PATH);
+    return strcpy(path,"./res/");
+    return path;
+#else
     // And on Linux, fall back to the same folder as the executable.
     return executablefolder;
+#endif
 #endif
 
 #else
@@ -306,6 +318,10 @@ char *M_GetExecutableFolder(void)
     }
 
     return folder;
+#elif defined(__ANDROID__)
+    char    *exe = malloc(MAX_PATH);
+    strcpy(exe,"."); // CWD
+    return exe;
 #elif defined(__linux__) || defined(__NetBSD__) || defined(__sun)
     char    exe[MAX_PATH];
 
@@ -380,6 +396,8 @@ char *M_TempFile(char *s)
 
     if (!tempdir)
         tempdir = ".";
+#elif defined(__ANDROID__)
+    tempdir = "./user_files/doomretro";
 #else
     tempdir = "/tmp";
 #endif
