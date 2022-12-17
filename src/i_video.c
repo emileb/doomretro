@@ -1528,7 +1528,6 @@ static void SetVideoMode(bool createwindow, bool output)
         }
     }
 
-<<<<<<< HEAD
 #ifdef __ANDROID__
     if( M_CheckParm("-android_aspect") )
 #endif
