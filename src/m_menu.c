@@ -3135,7 +3135,7 @@ bool M_Responder(event_t *ev)
             return false;
         }
 #ifdef __ANDROID__ // Need to reset this once got input
-        messageNeedsInput = false;
+        messageneedsinput = false;
 #endif
         keydown = key;
         menuactive = messagelastmenuactive;

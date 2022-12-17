@@ -13,10 +13,11 @@
 #include "doomstat.h"
 
 #include <android/log.h>
+#ifndef LOGI
 #define LOGI(...) ((void)__android_log_print(ANDROID_LOG_INFO,"JNI", __VA_ARGS__))
 #define LOGW(...) ((void)__android_log_print(ANDROID_LOG_WARN, "JNI", __VA_ARGS__))
 #define LOGE(...) ((void)__android_log_print(ANDROID_LOG_ERROR,"JNI", __VA_ARGS__))
-
+#endif
 
 
 // FIFO STUFF ////////////////////
@@ -93,8 +94,8 @@ void PortableAction(int state, int action)
 
 	int key = -1;
 
-	if ((action >= PORT_ACT_MENU_UP && action <= PORT_ACT_MENU_ABORT) &&
-	    ( PortableGetScreenMode() == TS_MENU ) || ( PortableGetScreenMode() == TS_Y_N ))
+	if (((action >= PORT_ACT_MENU_UP) && (action <= PORT_ACT_MENU_ABORT)) &&
+			(( PortableGetScreenMode() == TS_MENU ) || ( PortableGetScreenMode() == TS_Y_N )))
 	{
 	    SDL_Scancode scanCode = 0;
 
@@ -320,7 +321,7 @@ void PortableAutomapControl(float zoom, float x, float y)
 
 extern bool menuactive;
 extern bool paused;
-extern bool	messageNeedsInput;
+extern bool	messageneedsinput;
 extern bool automapactive;
 
 
@@ -328,7 +329,7 @@ touchscreemode_t PortableGetScreenMode()
 {
     if(menuactive || paused)
     {
-        if( messageNeedsInput )
+        if( messageneedsinput )
             return TS_Y_N;
         else
             return TS_MENU;
@@ -349,7 +350,8 @@ int PortableShowKeyboard(void){
 	return 0;
 }
 
-
+void D_PostEvent(event_t *ev);
+bool C_ExecuteInputString(const char *input);
 void I_UpdateAndroid(void)
 {
 	event_t *ev;
