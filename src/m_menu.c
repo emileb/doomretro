@@ -3158,7 +3158,7 @@ bool M_Responder(event_t *ev)
     }
 
     // F-Keys
-    if (!paused && !splashscreen)
+    if (!paused && !splashscreen && (key == KEY_MINUS || key == KEY_EQUALS))
     {
         // Screen size down
         if (key == KEY_MINUS)
