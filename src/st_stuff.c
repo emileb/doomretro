@@ -1100,8 +1100,10 @@ bool ST_Responder(const event_t *ev)
             return true;
         }
 
+#ifndef __ANDROID__ // Stop keyboard hiding on every key
         if (!messagetoprint)
             C_HideConsole();
+#endif
     }
 
     return false;

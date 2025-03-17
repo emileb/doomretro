@@ -78,7 +78,8 @@
 #include <fnmatch.h>
 #include <libgen.h>
 
-#if !defined(__OpenBSD__) && !defined(__HAIKU__)
+
+#if !defined(__OpenBSD__) && !defined(__HAIKU__) && !defined(__ANDROID__)
 #include <wordexp.h>
 #endif
 #endif
@@ -268,6 +269,10 @@ void D_FadeScreenToBlack(void)
 // wipegamestate can be set to -1 to force a wipe on the next draw
 gamestate_t wipegamestate = GS_TITLESCREEN;
 
+#ifdef __ANDROID__
+extern SDL_Renderer *renderer;
+#endif
+
 void D_Display(void)
 {
     static bool         pausedstate;
@@ -423,6 +428,11 @@ void D_Display(void)
             D_UpdateFade();
 
         // normal update
+
+#ifdef __ANDROID__ // The touch controls change the viewport, call this to fix. This function does not exist in SDL2
+        SDL_ForceupdateViewport(renderer);
+#endif
+
         blitfunc();
         mapblitfunc();
 
@@ -452,6 +462,10 @@ void D_Display(void)
 
         wipestart = nowtime;
         done = Wipe_ScreenWipe();
+
+#ifdef __ANDROID__ // The touch controls change the viewport, call this to fix. This function does not exist in SDL2
+        SDL_ForceupdateViewport(renderer);
+#endif
 
         blitfunc();
         mapblitfunc();
@@ -1294,8 +1308,9 @@ static bool D_CheckParms(void)
             }
             else
             {
+
                 // otherwise try the wadfolder CVAR
-#if defined(_WIN32) || defined(__OpenBSD__) || defined(__HAIKU__)
+#if defined(_WIN32) || defined(__OpenBSD__) || defined(__HAIKU__) || defined(__ANDROID__)
                 M_snprintf(fullpath, sizeof(fullpath), "%s" DIR_SEPARATOR_S "%s", wadfolder,
                     (M_StringCompare(leafname(myargv[1]), "chex2.wad") ? "chex.wad" : iwadsrequired[iwadrequired]));
 #else
@@ -2836,6 +2851,13 @@ static void D_DoomMainSetup(void)
         else
             creditlump = W_CacheLumpName(gamemission == doom ? (gamemode == shareware ? "CREDIT1" : "CREDIT2") : "CREDIT3");
     }
+
+#ifdef __ANDROID__
+    if (M_CheckParm("-freelook_on"))
+        freelook = 1;
+    else if (M_CheckParm("-freelook_off"))
+        freelook = 0;
+#endif
 
     if (gameaction != ga_loadgame)
     {

@@ -87,7 +87,7 @@ static bool         manuallypositioning;
 
 SDL_Window          *window = NULL;
 static unsigned int windowid;
-static SDL_Renderer *renderer = NULL;
+SDL_Renderer *renderer = NULL;
 static SDL_Texture  *texture;
 static SDL_Texture  *texture_upscaled;
 static SDL_Surface  *surface;
@@ -672,7 +672,13 @@ void I_StartTic(void)
 {
     I_GetEvent();
     I_ReadMouse();
+
     I_ReadController();
+
+#ifdef __ANDROID__
+    extern void I_UpdateAndroid(void);
+    I_UpdateAndroid();
+#endif
 }
 
 static inline void UpdateGrab(void)
@@ -1047,6 +1053,11 @@ void I_SetExternalAutomapPalette(void)
     }
 }
 
+#ifdef __ANDROID__
+extern int mobile_screen_width;
+extern int mobile_screen_height;
+#endif
+
 static void GetDisplays(void)
 {
     if ((numdisplays = MIN(SDL_GetNumVideoDisplays(), vid_display_max)) <= 0)
@@ -1055,6 +1066,11 @@ static void GetDisplays(void)
     for (int i = 0; i < numdisplays; i++)
         if (SDL_GetDisplayBounds(i, &displays[i]) < 0)
             I_SDLError("SDL_GetDisplayBounds", -1);
+
+#ifdef __ANDROID__
+    displays[displayindex].w = mobile_screen_width;
+    displays[displayindex].h = mobile_screen_height;
+#endif
 
     if ((double)displays[displayindex].w / displays[displayindex].h <= NONWIDEASPECTRATIO)
     {
@@ -1402,6 +1418,9 @@ static void SetVideoMode(const bool createwindow, const bool output)
                 I_Error("Graphics couldn't be %s.",
                     (english == english_american ? "initialized" : "initialised"));
 
+#ifdef __ANDROID__
+            SDL_GL_SetAttribute( SDL_GL_DEPTH_SIZE, 16 ); // Defaults to 24 which is not needed and fails on old Tegras
+#endif
             if (createwindow)
                 if (!(window = SDL_CreateWindow(DOOMRETRO_NAME, SDL_WINDOWPOS_UNDEFINED_DISPLAY(displayindex),
                     SDL_WINDOWPOS_UNDEFINED_DISPLAY(displayindex), width, height,
@@ -1500,6 +1519,10 @@ static void SetVideoMode(const bool createwindow, const bool output)
     windowid = SDL_GetWindowID(window);
 
     SDL_GetWindowSize(window, &displaywidth, &displayheight);
+
+#ifdef __ANDROID__
+    rendererflags  = SDL_RENDERER_ACCELERATED;
+#endif
 
     if (createwindow && !(renderer = SDL_CreateRenderer(window, -1, rendererflags)) && !software)
     {
