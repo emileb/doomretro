@@ -1087,6 +1087,19 @@ enum
 #define KEYMARK2_DEFAULT                    0
 #define KEYMENU_DEFAULT                     KEY_ESCAPE
 #define KEYMENU2_DEFAULT                    0
+
+#ifdef __ANDROID__
+#define KEYNEXTWEAPON_DEFAULT              ']'
+#define KEYPREVWEAPON_DEFAULT              '['
+#define KEYNEXTWEAPON2_DEFAULT              0
+#define KEYPREVWEAPON2_DEFAULT              0
+#define KEYPATH_DEFAULT                     'p'
+#define KEYPATH2_DEFAULT                    0
+#define KEYPISTOL_DEFAULT                   0
+#define KEYPISTOL2_DEFAULT                  0
+#define KEYPLASMARIFLE_DEFAULT              0
+#define KEYPLASMARIFLE2_DEFAULT             0
+#else
 #define KEYNEXTWEAPON_DEFAULT               0
 #define KEYNEXTWEAPON2_DEFAULT              0
 #define KEYPATH_DEFAULT                     'p'
@@ -1097,6 +1110,8 @@ enum
 #define KEYPLASMARIFLE2_DEFAULT             0
 #define KEYPREVWEAPON_DEFAULT               0
 #define KEYPREVWEAPON2_DEFAULT              0
+#endif
+
 #define KEYRIGHT_DEFAULT                    KEY_RIGHTARROW
 #define KEYRIGHT2_DEFAULT                   0
 #define KEYROCKETLAUNCHER_DEFAULT           0

@@ -798,6 +798,11 @@ void G_BuildTiccmd(ticcmd_t *cmd)
         }
     }
 
+#ifdef __ANDROID__
+    extern void G_AndroidBuildTiccmd(ticcmd_t *cmd);
+    G_AndroidBuildTiccmd(cmd);
+#endif
+
     if (forward)
         cmd->forwardmove += BETWEEN(-MAXPLMOVE, forward, MAXPLMOVE);
 

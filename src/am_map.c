@@ -1472,6 +1472,10 @@ static void AM_DoFollowPlayer(void)
     m_y = (mo->y >> FRACTOMAPBITS) - m_h / 2;
 }
 
+#ifdef __ANDROID__
+void Mobile_AM_controls(double *zoom, fixed_t *pan_x, fixed_t *pan_y );
+#endif
+
 //
 // Updates on Game Tic
 //
@@ -1483,8 +1487,35 @@ void AM_Ticker(void)
     if (am_followmode)
         AM_DoFollowPlayer();
 
+#ifdef __ANDROID__
+    double  zoom = 0;
+    fixed_t touchX = 0;
+    fixed_t touchY = 0;
+
+    Mobile_AM_controls(&zoom, &touchX, &touchY);
+
+    if (am_followmode && (touchX || touchY))    // Turn off follow mode
+        AM_ToggleFollowMode(false);
+
+    if (zoom > 0)
+    {
+        mtof_zoommul = (int)((1. + zoom) * FRACUNIT);
+        ftom_zoommul = (int)(FRACUNIT / (1. + zoom));
+    }
+    else if (zoom < 0)
+    {
+        mtof_zoommul = (int)(FRACUNIT / (1. - zoom));
+        ftom_zoommul = (int)((1. - zoom) * FRACUNIT);
+    }
+    else
+    {
+        ftom_zoommul = FRACUNIT;
+        mtof_zoommul = FRACUNIT;
+    }
+#else
     if (!consoleactive && !paused)
         AM_ApplyZoom();
+#endif
 
     // Change the zoom if necessary
     if (ftom_zoommul != FRACUNIT)
@@ -1495,6 +1526,14 @@ void AM_Ticker(void)
     {
         AM_UpdateTouchpadPan();
 
+#ifdef __ANDROID__
+        if (touchX || touchY)
+        {
+            m_paninc.x = touchX;
+            m_paninc.y = touchY;
+        }
+        else
+#endif
         if (!mousedragging && !touchpaddragging)
         {
             if (movement)
@@ -1516,6 +1555,12 @@ void AM_Ticker(void)
     }
 
     movement = false;
+
+#ifdef __ANDROID__
+    // Touch pan is a per-frame delta, so never let it carry over
+    m_paninc.x = 0;
+    m_paninc.y = 0;
+#endif
 }
 
 //

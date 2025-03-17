@@ -87,7 +87,12 @@ static char     *messagestring;
 static int      messagelastmenuactive;
 
 // timed message = no input from user
+#ifdef __ANDROID__
+bool messageneedsinput; //Make global
+#else
 static bool     messageneedsinput;
+#endif
+
 
 static void (*messageroutine)(int);
 
@@ -2709,7 +2714,11 @@ void M_QuitDOOM(int choice)
             M_snprintf(quitmessage, sizeof(quitmessage), *endmsg[NUM_QUITMESSAGES + msg], WINDOWS);
     }
 
+#ifndef __ANDROID__
     M_StartButtonMessage(quitmessage, &M_QuitResponse, true);
+#else
+    M_QuitResponse('y');    // Don't bother with confirmation
+#endif
 }
 
 static void M_SliderSound(void)
@@ -4109,6 +4118,10 @@ bool M_Responder(event_t *ev)
         key = ev->data1;
         usingcontroller = false;
 
+#ifdef __ANDROID__ // Trying to fix buttons not working if key_up is not received
+        keydown = 0;
+#endif
+
         if (messagetoprint && quitmessagebuttons)
         {
             usingmouse = false;
@@ -4361,6 +4374,10 @@ bool M_Responder(event_t *ev)
         if (messageneedsinput && key != keyboardmenu && key != keyboardmenu2 && ch != 'y' && ch != 'n'
             && key != KEY_BACKSPACE && !(SDL_GetModState() & (KMOD_ALT | KMOD_CTRL)) && key != functionkey)
             return false;
+
+#ifdef __ANDROID__ // Need to reset this once got input
+        messageneedsinput = false;
+#endif
 
         keydown = key;
         menuactive = messagelastmenuactive;
