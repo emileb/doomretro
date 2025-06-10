@@ -345,9 +345,16 @@ touchscreemode_t PortableGetScreenMode()
         return TS_BLANK;
 }
 
-int PortableShowKeyboard(void){
+int PortableShowKeyboard(void)
+{
 
 	return 0;
+}
+
+bool PortableSetAlwaysRun(bool run)
+{
+    run ? PortableCommand("alwaysrun on") : PortableCommand("alwaysrun off");
+    return false;
 }
 
 void D_PostEvent(event_t *ev);
