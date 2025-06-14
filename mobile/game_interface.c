@@ -11,6 +11,7 @@
 #include "m_fixed.h"
 #include "m_controls.h"
 #include "doomstat.h"
+#include "CStringFifo.h"
 
 #include <android/log.h>
 #ifndef LOGI
@@ -19,6 +20,7 @@
 #define LOGE(...) ((void)__android_log_print(ANDROID_LOG_ERROR,"JNI", __VA_ARGS__))
 #endif
 
+static CStringFIFO m_CmdFifo;
 
 // FIFO STUFF ////////////////////
 // Copied from FTEQW, I don't know if this is thread safe, but it's safe enough for a game :)
@@ -225,12 +227,10 @@ void PortableAction(int state, int action)
 	}
 }
 
-static char* consoleCmd = NULL;
 void PortableCommand(const char * cmd)
 {
-	static char cmdBuffer[256];
-	snprintf(cmdBuffer, 256, "%s\n", cmd);
-	consoleCmd =  cmdBuffer;
+    LOGI("PortableCommand: %s", cmd);
+    cstr_fifo_push(&m_CmdFifo, cmd);
 }
 
 // =================== FORWARD and SIDE MOVMENT ==============
@@ -302,7 +302,9 @@ void PortableLookYaw(int mode, float yaw)
 
 
 extern int main_android(int argc, char *argv[]);
-void PortableInit(int argc,const char ** argv){
+void PortableInit(int argc,const char ** argv)
+{
+    cstr_fifo_init(&m_CmdFifo);
 	main_android(argc,(char **)argv);
 }
 
@@ -372,11 +374,12 @@ void I_UpdateAndroid(void)
 		events_used++;
 	}
 
-	if( consoleCmd != NULL )
-	{
-		C_ExecuteInputString( consoleCmd );
-		consoleCmd = NULL;
-	}
+    const char *consoleCmd;
+    while((consoleCmd = cstr_fifo_pop(&m_CmdFifo)))
+    {
+        C_ExecuteInputString( consoleCmd );
+        free(consoleCmd);
+    }
 }
 
 void Mobile_AM_controls(double *zoom, fixed_t *pan_x, fixed_t *pan_y )
