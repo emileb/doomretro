@@ -431,9 +431,9 @@ void G_AndroidBuildTiccmd(ticcmd_t *cmd)
         look_yaw_mouse = 0;
         cmd->angleturn += look_yaw_joy * 1000;
 
-        cmd->angleturn += look_pitch_mouse * 7000;
+        cmd->pitch += look_pitch_mouse * 4000;
         look_pitch_mouse = 0;
-        cmd->angleturn += look_pitch_joy * -200;
+        cmd->pitch += look_pitch_joy * -100;
     }
 
 	if (newweapon != -1)
