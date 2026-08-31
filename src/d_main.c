@@ -430,6 +430,7 @@ void D_Display(void)
         // normal update
 
 #ifdef __ANDROID__ // The touch controls change the viewport, call this to fix. This function does not exist in SDL2
+        int SDL_ForceupdateViewport(SDL_Renderer * renderer);
         SDL_ForceupdateViewport(renderer);
 #endif
 
@@ -464,6 +465,7 @@ void D_Display(void)
         done = Wipe_ScreenWipe();
 
 #ifdef __ANDROID__ // The touch controls change the viewport, call this to fix. This function does not exist in SDL2
+        int SDL_ForceupdateViewport(SDL_Renderer * renderer);
         SDL_ForceupdateViewport(renderer);
 #endif
 

@@ -48,6 +48,9 @@
 #include "g_game.h"
 #include "hu_stuff.h"
 #include "i_colors.h"
+#ifdef __ANDROID__
+#include "LogWritter.h"
+#endif
 #include "i_controller.h"
 #include "i_swap.h"
 #include "i_system.h"
