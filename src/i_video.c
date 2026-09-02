@@ -2531,9 +2531,13 @@ void I_InitGraphics(void)
 #endif
 
     SDL_SetHintWithPriority(SDL_HINT_RENDER_BATCHING, "0", SDL_HINT_OVERRIDE);
+#if SDL_VERSION_ATLEAST(2, 0, 22)
     SDL_SetHintWithPriority(SDL_HINT_MOUSE_RELATIVE_MODE_CENTER, "0", SDL_HINT_OVERRIDE);
+#endif
     SDL_SetHintWithPriority(SDL_HINT_MOUSE_RELATIVE_MODE_WARP, "0", SDL_HINT_OVERRIDE);
+#if SDL_VERSION_ATLEAST(2, 0, 14)
     SDL_SetHintWithPriority(SDL_HINT_MOUSE_RELATIVE_SCALING, "0", SDL_HINT_OVERRIDE);
+#endif
 
 #if defined(_WIN32)
     I_BeginStartupFade();

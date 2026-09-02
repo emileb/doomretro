@@ -321,8 +321,10 @@ double I_GetMusicDuration(void *handle, void *data, int size)
 {
     double  duration = 0.0;
 
+#if SDL_MIXER_VERSION_ATLEAST(2, 6, 0)
     if (handle)
         duration = Mix_MusicDuration(handle);
+#endif
 
     if (duration > 0.0 || size < 14)
         return duration;

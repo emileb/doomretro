@@ -23,7 +23,8 @@ ANDROID_FILES = \
 FILE_LIST := $(wildcard $(LOCAL_PATH)*.c)
 LOCAL_SRC_FILES := $(ANDROID_FILES) $(FILE_LIST:$(LOCAL_PATH)%=%)
 LOCAL_SRC_FILES += miniz/miniz.c
-LOCAL_SRC_FILES += cJSON/cJSON.c
+LOCAL_SRC_FILES += yyjson/yyjson.c
+LOCAL_SRC_FILES += nano_bsp/nano_bsp.c
 
 LOCAL_LDLIBS += -llog -lz -lGLESv1_CM
 
